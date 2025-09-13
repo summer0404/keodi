@@ -1,5 +1,5 @@
 {
-  "name": "api-gateway",
+  "name": "auth-service",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -21,13 +21,15 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
-    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.0",
     "@nestjs/mapped-types": "*",
     "@nestjs/microservices": "^11.1.6",
     "@nestjs/platform-express": "^11.0.1",
-    "class-transformer": "^0.5.1",
+    "@prisma/client": "^6.16.1",
+    "bcrypt": "^6.0.0",
     "class-validator": "^0.14.2",
+    "dotenv": "^17.2.2",
     "kafkajs": "^2.2.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
@@ -50,6 +52,7 @@
     "globals": "^16.0.0",
     "jest": "^29.7.0",
     "prettier": "^3.4.2",
+    "prisma": "^6.16.1",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
