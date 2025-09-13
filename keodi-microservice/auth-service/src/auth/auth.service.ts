@@ -5,6 +5,7 @@ import { RpcException } from '@nestjs/microservices'
 import * as bcrypt from 'bcrypt'
 import { UserDto } from 'src/dtos/user.dto';
 import { JwtService } from '@nestjs/jwt';
+import { access } from 'fs';
 
 @Injectable()
 export class AuthService {
@@ -31,24 +32,41 @@ export class AuthService {
 
             if (isExistingUsername) throw new RpcException({
                 status: HttpStatus.BAD_REQUEST,
-                message: 'This username has been existing'
+                message: 'Username already exists'
             })
 
-            //Mã hóa password
-            const hashedPassword = await bcrypt.hash(data.password, Number(process.env.SALT_ROUNDS))
+            //Kiểm tra email đã tồn tại chưa
+            const isExistingEmail = await this.prismaService.user.findUnique({ where: {email: data.email }})
+
+            if(isExistingEmail) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'Email already exists'
+            })
 
             //Tạo người dùng mới
             const newUser = await this.prismaService.user.create({
                 data: {
                     username: data.username,
-                    password: hashedPassword,
+                    //Tạo người dùng với mật khẩu mã hóa
+                    password: await bcrypt.hash(data.password, Number(process.env.SALT_ROUNDS)),
                     email: data.email
                 }
             })
 
             //Tạo access và refresh token rồi trả về
-            return this.generateToken(newUser)
+            const tokens = this.generateToken(newUser)
 
+            await this.prismaService.user.update({
+                where: {
+                    id: newUser.id
+                },
+                data: {
+                    //Mã hóa refreshToken
+                    refreshToken: await bcrypt.hash(tokens.refreshToken, Number(process.env.SALT_ROUNDS))
+                }
+            })
+
+            return tokens
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {
