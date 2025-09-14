@@ -1,5 +1,3 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from "class-validator"
-
 export class UserDto{
     id: number
     username: string
