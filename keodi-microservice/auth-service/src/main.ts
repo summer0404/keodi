@@ -15,7 +15,7 @@ async function bootstrap() {
       transport: Transport.KAFKA,
       options:{
         client: {
-          cliendId: 'auth-client',
+          clientId: 'auth-client',
           brokers: [process.env.KAFKA_BROKER],
         },
         consumer: {
