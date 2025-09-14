@@ -3,9 +3,12 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import { GoogleStrategy } from './google.strategy';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
+    PassportModule,
     ClientsModule.registerAsync([
       {
         name: 'AUTH_SERVICE',
@@ -28,9 +31,12 @@ import { ConfigService } from '@nestjs/config';
           }
         }
       }
-    ])
+    ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [
+    AuthService,
+    GoogleStrategy
+  ],
 })
 export class AuthModule { }
