@@ -4,3 +4,10 @@ import { CreateUserDto } from "./user.dto";
 export class RegisterDto extends CreateUserDto{}
 
 export class LoginDto extends PickType(RegisterDto, ['username', 'password']){}
+
+export class ForgotPasswordDto extends PickType(RegisterDto, ['email'] as const) {}
+
+export class ResetPasswordDto {
+    newPassword: string
+    userId: number
+}

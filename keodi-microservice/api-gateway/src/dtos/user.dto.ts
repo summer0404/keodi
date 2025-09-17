@@ -1,23 +1,43 @@
 import { ApiProperty } from "@nestjs/swagger"
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength } from "class-validator"
+import {
+    IsEmail,
+    IsNotEmpty,
+    IsString,
+    Matches,
+    MaxLength,
+    MinLength
+} from "class-validator"
 
 export class CreateUserDto {
-    @IsNotEmpty()
-    @IsString()
-    @ApiProperty({ example: 'abc123', description: 'Tên đăng nhập' })
-    username: string
+    @IsNotEmpty({ message: 'Username is required' })
+    @IsString({ message: 'Username must be a string' })
+    @MaxLength(20, { message: 'Username must not exceed 20 characters' })
+    @MinLength(3, { message: 'Username must be at least 3 characters long' })
+    @Matches(/^(?!\d+$)[A-Za-z0-9._]+$/, {
+        message: 'Username can only contain letters, numbers, underscores, and dots, and cannot be only numbers'
+    })
+    @ApiProperty({
+        example: '_Abc123.example',
+        description: 'Login username (3–20 chars, only letters, numbers, underscores, dots, not only numbers, case-insensitive)'
+    })
+    username: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @MinLength(8, { message: 'Mật khẩu có ít nhất 8 ký tự' })
-    @Matches(/.*[A-Z].*/, { message: 'Mật khẩu phải chứa ít nhất 1 chữ hoa' })
-    @Matches(/.*\d.*/, { message: 'Mật khẩu phải chứa ít nhất 1 số' })
-    @Matches(/.*[@$!%*?&^+].*/, { message: 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt' })
-    @ApiProperty({ example: 'Abc123!@#', description: 'Mật khẩu (tối thiểu 8 ký tự, gồm ít nhất 1 chữ hoa, 1 số, 1 ký tự đặc biệt)' })
+
+    @IsNotEmpty({ message: 'Password is required' })
+    @IsString({ message: 'Password must be a string' })
+    @MinLength(8, { message: 'Password must be at least 8 characters long' })
+    @Matches(/.*[A-Z].*/, { message: 'Password must contain at least one uppercase letter' })
+    @Matches(/.*\d.*/, { message: 'Password must contain at least one number' })
+    @Matches(/.*[@$!%*?&^+].*/, { message: 'Password must contain at least one special character' })
+    @ApiProperty({
+        example: 'Abc123!@#',
+        description: 'Password (minimum 8 characters, must include at least 1 uppercase letter, 1 number, and 1 special character)'
+    })
     password: string
 
-    @IsEmail()
-    @IsNotEmpty()
-    @ApiProperty({ example: 'hello@example.com', description: 'Email người dùng' })
+
+    @IsNotEmpty({ message: 'Email is required' })
+    @IsEmail({}, { message: 'Invalid email format' })
+    @ApiProperty({ example: 'hello@example.com', description: 'User email' })
     email: string
 }

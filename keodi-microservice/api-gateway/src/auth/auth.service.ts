@@ -3,7 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { ClientKafka } from '@nestjs/microservices';
 import { Response } from 'express';
 import { firstValueFrom } from 'rxjs';
-import { LoginDto, RegisterDto } from 'src/dtos/auth.dto';
+import {
+    ForgotPasswordDto,
+    LoginDto,
+    RegisterDto,
+    ResetPasswordDto,
+    ValidateOTPDto
+} from 'src/dtos/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +22,9 @@ export class AuthService {
         this.client.subscribeToResponseOf('auth.register')
         this.client.subscribeToResponseOf('auth.login')
         this.client.subscribeToResponseOf('auth.google')
+        this.client.subscribeToResponseOf('auth.forgot-password')
+        this.client.subscribeToResponseOf('auth.validate-forgot-password-otp')
+        this.client.subscribeToResponseOf('auth.reset-password')
         await this.client.connect()
     }
 
@@ -69,6 +78,30 @@ export class AuthService {
             })
 
             return res.redirect(`${this.configService.get<string>('FRONTEND_URL')}/auth-google`)
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async forgotPassword(body: ForgotPasswordDto) {
+        try {
+            return await firstValueFrom(this.client.send('auth.forgot-password', body))
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async validateForgotPassworOtp(body: ValidateOTPDto) {
+        try {
+            return await firstValueFrom(this.client.send('auth.validate-forgot-password-otp', body))
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async resetPassword(body: (ResetPasswordDto & { userId: number })) {
+        try {
+            return await firstValueFrom(this.client.send('auth.reset-password', body))
         } catch (error) {
             throw error
         }

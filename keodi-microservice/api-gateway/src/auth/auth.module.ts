@@ -5,6 +5,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { GoogleStrategy } from './google.strategy';
 import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [
@@ -21,11 +22,11 @@ import { PassportModule } from '@nestjs/passport';
             transport: Transport.KAFKA,
             options: {
               client: {
-                clientId: 'auth-client',
+                clientId: 'api-gateway-client',
                 brokers,
               },
               consumer: {
-                groupId: 'auth-consumer',
+                groupId: 'api-gateway-consumer',
               },
             },
           }
@@ -36,7 +37,8 @@ import { PassportModule } from '@nestjs/passport';
   controllers: [AuthController],
   providers: [
     AuthService,
-    GoogleStrategy
+    GoogleStrategy,
+    JwtStrategy,
   ],
 })
 export class AuthModule { }

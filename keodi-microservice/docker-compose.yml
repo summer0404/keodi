@@ -1,4 +1,11 @@
 services:
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    
+
   postgres:
     image: postgres:15
     container_name: auth-db
@@ -37,6 +44,15 @@ services:
       interval: 5s
       retries: 10
 
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./notification-service/.env.local
+    depends_on:
+      - kafka
   auth-service:
     build: ./auth-service
     container_name: auth-service
@@ -46,7 +62,9 @@ services:
       - ./auth-service/.env.local
     depends_on:
       - kafka
+      - redis
       - postgres
+      - notification-service
 
   api-gateway:
     build: ./api-gateway

@@ -11,11 +11,18 @@ async function bootstrap() {
   app.use(cookieParser())
 
   const config = new DocumentBuilder()
-  .setTitle('API Document')
-  .setDescription('List of APIs for KEODI')
-  .setVersion('1.0')
-  .addBearerAuth()
-  .build();
+    .setTitle('API Document')
+    .setDescription('List of APIs for KEODI')
+    .setVersion('1.0')
+    .addBearerAuth( // 👈 thêm dòng này
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'access-token',
+    )
+    .build();
 
   app.useGlobalPipes(new ValidationPipe())
   app.enableCors();
