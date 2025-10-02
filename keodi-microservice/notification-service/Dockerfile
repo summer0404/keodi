@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install -g wait-port
+RUN npm install && npm install -g wait-port
 
 COPY . .
 

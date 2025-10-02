@@ -136,7 +136,7 @@ export class AuthService {
                 //Tạo người dùng mới
                 googleUser = await this.prismaService.user.create({
                     data: {
-                        username: user.email,
+                        username: user.email.split('@')[0], //Chỉ lấy phần tên trước @
                         email: user.email,
                         password: hashPassword
                     }
