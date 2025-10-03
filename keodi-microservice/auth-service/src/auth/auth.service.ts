@@ -1,21 +1,27 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { LoginDto, RegisterDto } from 'src/dtos/auth.dto';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from 'src/dtos/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { RpcException } from '@nestjs/microservices'
+import { ClientKafka, RpcException } from '@nestjs/microservices'
 import * as bcrypt from 'bcrypt'
 import { UserDto } from 'src/dtos/user.dto';
 import { JwtService } from '@nestjs/jwt';
+import { OtpService } from './otp.service';
+import { ValidateOTPDto } from 'src/dtos/otp.dto';
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly prismaService: PrismaService,
-        private readonly jwtService: JwtService
+        private readonly jwtService: JwtService,
+        private readonly otpService: OtpService,
+        @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientKafka
     ) { }
 
     private generateToken(user: UserDto) {
         const payload = {
             sub: user.id,
+            email: user.email,
+            username: user.username
         }
 
         return {
@@ -125,12 +131,12 @@ export class AuthService {
 
             if (!googleUser) {
                 //Tạo mật khẩu ngẫu nhiên cho người dùng
-                const hashPassword = await bcrypt.hash(`${process.env.GOOGLE_AUTH_PASSWORD_DEFAULT}${Math.floor(Math.random() * 1000000)}`,Number(process.env.SALT_ROUNDS))
+                const hashPassword = await bcrypt.hash(`${process.env.GOOGLE_AUTH_PASSWORD_DEFAULT}${Math.floor(Math.random() * 1000000)}`, Number(process.env.SALT_ROUNDS))
 
                 //Tạo người dùng mới
                 googleUser = await this.prismaService.user.create({
                     data: {
-                        username: user.email,
+                        username: user.email.split('@')[0], //Chỉ lấy phần tên trước @
                         email: user.email,
                         password: hashPassword
                     }
@@ -150,6 +156,93 @@ export class AuthService {
             })
 
             return tokens
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+        try {
+            const isExistingUser = await this.prismaService.user.findUnique({ where: { email: forgotPasswordDto.email } })
+
+            if (!isExistingUser) throw new RpcException({
+                status: HttpStatus.NOT_FOUND,
+                message: 'User with this email does not exist'
+            })
+
+            const otp = await this.otpService.generateOTP({
+                userId: isExistingUser.id,
+                purpose: 'forgot-password'
+            })
+
+            this.notificationClient.emit('notification.forgot-password', { to: forgotPasswordDto.email, code: otp })
+
+            return { userId: isExistingUser.id }
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async validateForgotPasswordOTP(data: (Omit<ValidateOTPDto, 'purpose'>)) {
+        try {
+            //Check if OTP is correct
+            if (await this.otpService.validateOTP({
+                userId: data.userId,
+                otp: data.otp,
+                purpose: 'forgot-password'
+            })) {
+                //If correct: return a temporary token for user to reset
+                const payload = { sub: data.userId }
+                return {
+                    resetToken: this.jwtService.sign(payload, { expiresIn: '10m' })
+                }
+            } else {
+                //If incorrect: throw error
+                throw new RpcException({
+                    status: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid OTP'
+                })
+            }
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async resetPassword(data: ResetPasswordDto) {
+        try {        
+
+            //update new password
+            await this.prismaService.user.update({
+                where: {
+                    id: data.userId
+                },
+                data: {
+                    password: await bcrypt.hash(data.newPassword, Number(process.env.SALT_ROUNDS))
+                }
+            })
+
+            return { message: 'Password reset successfully' }
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {

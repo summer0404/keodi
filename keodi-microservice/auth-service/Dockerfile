@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install -g wait-port
+RUN npm install && npm install -g wait-port
 
 COPY . .
 
@@ -14,7 +14,7 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD wait-port kafka:9092 && npx prisma migrate dev && npm run start
+CMD wait-port kafka:9092 && npx prisma migrate deploy && npm run start
 
 
 

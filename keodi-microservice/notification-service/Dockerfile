@@ -10,9 +10,6 @@ COPY . .
 
 RUN npm run build
 
-EXPOSE 3000
+EXPOSE  3002
 
 CMD wait-port kafka:9092 && npm run start
-
-
-
