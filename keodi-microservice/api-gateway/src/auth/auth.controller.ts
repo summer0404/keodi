@@ -81,6 +81,8 @@ export class AuthController {
     return await this.authService.forgotPasswordOTP(body)
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Post('reset-password-otp')
   @ApiOperation({ summary: 'Send OTP email for password reset. OTP is valid in 5 minutes' })
   @ApiOkResponse({
