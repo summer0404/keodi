@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { OtpPurpose } from 'src/enums/otp.enum';
 
 @Controller()
 export class NotificationController {
@@ -8,6 +9,11 @@ export class NotificationController {
 
   @EventPattern('notification.forgot-password')
   async forgotPassword(@Payload() data: any) {
-    return await this.notificationService.sendForgotPasswordOTPByEmail(data)
+    return await this.notificationService.sendOTPByEmail(data, OtpPurpose.FORGOT_PASSWORD)
+  }
+
+  @EventPattern('notification.reset-password')
+  async resetPassword(@Payload() data: any) {
+    return await this.notificationService.sendOTPByEmail(data, OtpPurpose.RESET_PASSWORD)
   }
 }

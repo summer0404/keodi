@@ -2,12 +2,12 @@ import { Controller } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
-  ForgotPasswordDto,
   LoginDto,
   RegisterDto,
   ResetPasswordDto
 } from 'src/dtos/auth.dto';
 import { ValidateOTPDto } from 'src/dtos/otp.dto';
+import { OtpPurpose } from 'src/enums/otp.enum';
 
 @Controller()
 export class AuthController {
@@ -28,14 +28,19 @@ export class AuthController {
     return await this.authService.googleCallback(data)
   }
 
-  @MessagePattern('auth.forgot-password')
-  async forgotPassword(@Payload() data: ForgotPasswordDto) {
-    return await this.authService.forgotPassword(data)
+  @MessagePattern('auth.forgot-password-otp')
+  async forgotPasswordOTP(@Payload() data: { email: string }) {
+    return await this.authService.sendOTPWithPurpose(data.email, OtpPurpose.FORGOT_PASSWORD)
   }
 
-  @MessagePattern('auth.validate-forgot-password-otp')
-  async validateForgotPasswordOTP(@Payload() data: (Omit<ValidateOTPDto, 'purpose'>)) {
-    return await this.authService.validateForgotPasswordOTP(data)
+  @MessagePattern('auth.reset-password-otp')
+  async resetPasswordOTP(@Payload() data: { email: string }) {
+    return await this.authService.sendOTPWithPurpose(data.email, OtpPurpose.RESET_PASSWORD)
+  }
+
+  @MessagePattern('auth.validate-otp')
+  async validateOTP(@Payload() data: ValidateOTPDto) {
+    return await this.authService.validateOTPWithPurpose(data)
   }
 
   @MessagePattern('auth.reset-password')

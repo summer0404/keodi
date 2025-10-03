@@ -4,10 +4,11 @@ import { ClientKafka } from '@nestjs/microservices';
 import { Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 import {
-    ForgotPasswordDto,
+    ForgotPasswordOTPDto,
     LoginDto,
     RegisterDto,
     ResetPasswordDto,
+    ResetPasswordOTPDto,
     ValidateOTPDto
 } from 'src/dtos/auth.dto';
 
@@ -22,8 +23,9 @@ export class AuthService {
         this.client.subscribeToResponseOf('auth.register')
         this.client.subscribeToResponseOf('auth.login')
         this.client.subscribeToResponseOf('auth.google')
-        this.client.subscribeToResponseOf('auth.forgot-password')
-        this.client.subscribeToResponseOf('auth.validate-forgot-password-otp')
+        this.client.subscribeToResponseOf('auth.forgot-password-otp')
+        this.client.subscribeToResponseOf('auth.reset-password-otp')
+        this.client.subscribeToResponseOf('auth.validate-otp')
         this.client.subscribeToResponseOf('auth.reset-password')
         await this.client.connect()
     }
@@ -83,17 +85,25 @@ export class AuthService {
         }
     }
 
-    async forgotPassword(body: ForgotPasswordDto) {
+    async forgotPasswordOTP(body: ForgotPasswordOTPDto) {
         try {
-            return await firstValueFrom(this.client.send('auth.forgot-password', body))
+            return await firstValueFrom(this.client.send('auth.forgot-password-otp', body))
         } catch (error) {
             throw error
         }
     }
 
-    async validateForgotPassworOtp(body: ValidateOTPDto) {
+    async resetPasswordOTP(body: ResetPasswordOTPDto) {
         try {
-            return await firstValueFrom(this.client.send('auth.validate-forgot-password-otp', body))
+            return await firstValueFrom(this.client.send('auth.reset-password-otp', body))
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async validateOtp(body: ValidateOTPDto, purpose: string) {
+        try {
+            return await firstValueFrom(this.client.send('auth.validate-otp', { ...body, purpose }))
         } catch (error) {
             throw error
         }

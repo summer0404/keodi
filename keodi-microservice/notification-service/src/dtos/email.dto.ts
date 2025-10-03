@@ -1,5 +1,5 @@
-export class SendForgetPasswordOTPMailDto {
+export class SendOTPMailDto {
     to: string
     code: string
-    subject?: string = 'Your OTP Code for Password Reset'
+    subject?: string 
 }

@@ -1,19 +1,20 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { EmailService } from './channels/email.service';
-import { SendForgetPasswordOTPMailDto } from 'src/dtos/email.dto';
+import { SendOTPMailDto } from 'src/dtos/email.dto';
 import { RpcException } from '@nestjs/microservices';
+import { getEmailSubject } from 'src/utils/email.helper';
 
 @Injectable()
 export class NotificationService {
   constructor(private readonly emailService: EmailService) { }
 
-  async sendForgotPasswordOTPByEmail(sendEmail: SendForgetPasswordOTPMailDto) {
+  async sendOTPByEmail(sendEmail: SendOTPMailDto, purpose: string) {
     try {
-      return await this.emailService.sendForgetPasswordOTPMail(sendEmail)
+      return await this.emailService.sendOTPMail({...sendEmail, subject: getEmailSubject(purpose)});
     } catch (error) {
       console.error(error)
       if (error instanceof RpcException) {
-        throw error;
+        throw error;  
       }
       throw new RpcException({
         status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,

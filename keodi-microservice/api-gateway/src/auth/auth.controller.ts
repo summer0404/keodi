@@ -2,14 +2,17 @@ import { Body, Controller, Get, HttpStatus, Post, Req, Res, UnauthorizedExceptio
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
-  ForgotPasswordDto,
-  ForgotPasswordResponseDto,
+  ForgotPasswordOTPDto,
+  ForgotPasswordOTPResponseDto,
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
+  ResetPasswordOTPDto,
+  ResetPasswordOTPResponseDto,
   ResetPasswordResponseDto,
   ValidateForgotPasswordOTPResponseDto,
-  ValidateOTPDto
+  ValidateOTPDto,
+  ValidateResetPasswordOTPResponseDto
 } from 'src/dtos/auth.dto';
 import {
   ApiBadRequestResponse,
@@ -24,6 +27,8 @@ import {
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from './jwt.guard';
+import { OtpPurpose } from 'src/enums/otp.enum';
+
 
 @ApiTags('auth')
 @ApiBadRequestResponse({ description: 'Invalid input data' })
@@ -66,25 +71,46 @@ export class AuthController {
     return await this.authService.googleCallback(res, req.user)
   }
 
-  @Post('forgot-password')
-  @ApiOperation({ summary: 'Send OTP email for password reset' })
+  @Post('forgot-password-otp')
+  @ApiOperation({ summary: 'Send OTP email for password reset. OTP is valid in 3 minutes' })
   @ApiOkResponse({
     description: 'Sends an email containing an OTP to verify the user. The frontend should navigate the user to the OTP input page.',
-    type: ForgotPasswordResponseDto
+    type: ForgotPasswordOTPResponseDto
   })
-  async forgotPassword(@Body() body: ForgotPasswordDto) {
-    return await this.authService.forgotPassword(body)
+  async forgotPasswordOTP(@Body() body: ForgotPasswordOTPDto) {
+    return await this.authService.forgotPasswordOTP(body)
+  }
+
+  @Post('reset-password-otp')
+  @ApiOperation({ summary: 'Send OTP email for password reset. OTP is valid in 5 minutes' })
+  @ApiOkResponse({
+    description: 'Sends an email containing an OTP to verify the user. The frontend should navigate the user to the OTP input page.',
+    type: ResetPasswordOTPResponseDto
+  })
+  async resetPasswordOTP(@Body() body: ResetPasswordOTPDto) {
+    return await this.authService.resetPasswordOTP(body)
   }
 
   @Post('validate-forgot-password-otp')
-  @ApiOperation({ summary: 'Validate OTP sent to user by email to reset password' })
+  @ApiOperation({ summary: 'Validate OTP sent to user by email to reset password. ' })
   @ApiOkResponse({
     description: 'Sends an reset token, frontend should set Authorization header with this token to reset password',
     type: ValidateForgotPasswordOTPResponseDto
   })
   async validateForgotPasswordOtp(@Body() body: ValidateOTPDto) {
-    return await this.authService.validateForgotPassworOtp(body)
+    return await this.authService.validateOtp(body, OtpPurpose.FORGOT_PASSWORD)
   }
+
+  @Post('validate-reset-password-otp')
+  @ApiOperation({ summary: 'Validate OTP sent to user by email to reset password. ' })
+  @ApiOkResponse({
+    description: 'Sends an reset token, frontend should set Authorization header with this token to reset password',
+    type: ValidateResetPasswordOTPResponseDto
+  })
+  async validateResetPasswordOtp(@Body() body: ValidateOTPDto) {
+    return await this.authService.validateOtp(body, OtpPurpose.RESET_PASSWORD)
+  }
+
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')

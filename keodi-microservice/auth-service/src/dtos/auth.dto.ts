@@ -5,7 +5,9 @@ export class RegisterDto extends CreateUserDto{}
 
 export class LoginDto extends PickType(RegisterDto, ['username', 'password']){}
 
-export class ForgotPasswordDto extends PickType(RegisterDto, ['email'] as const) {}
+export class ForgotPasswordValidateDto extends PickType(RegisterDto, ['email'] as const) {}
+
+export class ResetPasswordValidateDto extends ForgotPasswordValidateDto {}
 
 export class ResetPasswordDto {
     newPassword: string
