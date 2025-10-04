@@ -7,7 +7,9 @@ export class RegisterDto extends CreateUserDto { }
 
 export class LoginDto extends PickType(RegisterDto, ['username', 'password'] as const) { }
 
-export class ForgotPasswordDto extends PickType(RegisterDto, ['email'] as const) { }
+export class ForgotPasswordOTPDto extends PickType(RegisterDto, ['email'] as const) { }
+
+export class ResetPasswordOTPDto extends ForgotPasswordOTPDto { }
 
 export class ValidateOTPDto {
     @ApiProperty({
@@ -63,7 +65,11 @@ export class ValidateForgotPasswordOTPResponseDto {
     resetToken: string
 }
 
-export class ForgotPasswordResponseDto {
+export class ValidateResetPasswordOTPResponseDto extends ValidateForgotPasswordOTPResponseDto { }
+
+export class ForgotPasswordOTPResponseDto {
     @ApiProperty({ example: 4, description: 'Indicates if the reset email was sent successfully and used to verify OTP' })
     userId: number;
 }
+
+export class ResetPasswordOTPResponseDto extends ForgotPasswordOTPResponseDto { }

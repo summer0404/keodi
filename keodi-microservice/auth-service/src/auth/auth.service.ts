@@ -1,7 +1,7 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from 'src/dtos/auth.dto';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { LoginDto, RegisterDto, ResetPasswordDto } from 'src/dtos/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { ClientKafka, RpcException } from '@nestjs/microservices'
+import { RpcException } from '@nestjs/microservices'
 import * as bcrypt from 'bcrypt'
 import { UserDto } from 'src/dtos/user.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -13,8 +13,7 @@ export class AuthService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly jwtService: JwtService,
-        private readonly otpService: OtpService,
-        @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientKafka
+        private readonly otpService: OtpService
     ) { }
 
     private generateToken(user: UserDto) {
@@ -168,21 +167,16 @@ export class AuthService {
         }
     }
 
-    async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    async sendOTPWithPurpose(email: string, purpose: string) {
         try {
-            const isExistingUser = await this.prismaService.user.findUnique({ where: { email: forgotPasswordDto.email } })
+            const isExistingUser = await this.prismaService.user.findUnique({ where: { email } })
 
             if (!isExistingUser) throw new RpcException({
                 status: HttpStatus.NOT_FOUND,
                 message: 'User with this email does not exist'
             })
 
-            const otp = await this.otpService.generateOTP({
-                userId: isExistingUser.id,
-                purpose: 'forgot-password'
-            })
-
-            this.notificationClient.emit('notification.forgot-password', { to: forgotPasswordDto.email, code: otp })
+            await this.otpService.sendOTP(email, isExistingUser.id, purpose)
 
             return { userId: isExistingUser.id }
         } catch (error) {
@@ -197,13 +191,13 @@ export class AuthService {
         }
     }
 
-    async validateForgotPasswordOTP(data: (Omit<ValidateOTPDto, 'purpose'>)) {
+    async validateOTPWithPurpose(data: ValidateOTPDto) {
         try {
             //Check if OTP is correct
             if (await this.otpService.validateOTP({
                 userId: data.userId,
                 otp: data.otp,
-                purpose: 'forgot-password'
+                purpose: data.purpose
             })) {
                 //If correct: return a temporary token for user to reset
                 const payload = { sub: data.userId }
@@ -230,7 +224,7 @@ export class AuthService {
     }
 
     async resetPassword(data: ResetPasswordDto) {
-        try {        
+        try {
 
             //update new password
             await this.prismaService.user.update({

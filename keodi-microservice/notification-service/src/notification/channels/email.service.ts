@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import * as nodemailer from "nodemailer"
-import { SendForgetPasswordOTPMailDto } from "src/dtos/email.dto";
+import { SendOTPMailDto } from "src/dtos/email.dto";
 import forgotPasswordTemplate from "./templates/forgot-password.template";
 import { RpcException } from "@nestjs/microservices";
 
@@ -21,22 +21,22 @@ export class EmailService {
         } as nodemailer.TransportOptions)
     }
 
-    async sendForgetPasswordOTPMail(sendMailDto: SendForgetPasswordOTPMailDto) {
+    async sendOTPMail(sendMailDto: SendOTPMailDto) {
         try {
             await this.transporter.sendMail({
                 from: `"Keodi Authentication" <${process.env.BREVO_SMTP_USER}>`,
                 to: sendMailDto.to,
-                subject: 'Your OTP Code for Password Reset',
+                subject: sendMailDto.subject,
                 html: forgotPasswordTemplate(sendMailDto.code)
             })
 
-            this.logger.log(`Forgot password OTP sent to ${sendMailDto.to}`)
+            this.logger.log(`OTP sent to ${sendMailDto.to}`)
         } catch (error) {
-            this.logger.log(`Failed to send forgot password OTP to ${sendMailDto.to}`)
+            this.logger.log(`Failed to send OTP to ${sendMailDto.to}`)
             console.log(error)
             throw new RpcException({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: 'Error when sending forgot password OTP mail to user'
+                message: 'Error when sending OTP mail to user'
             })
         }
     }
