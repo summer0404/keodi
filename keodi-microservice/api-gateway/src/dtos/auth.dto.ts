@@ -35,6 +35,8 @@ export class ValidateOTPDto {
     otp: string
 }
 
+export class ResendVerifyEmailDto extends PickType(RegisterDto, ['email']){}
+
 export class ResetPasswordDto {
     @IsNotEmpty({ message: 'Password is required' })
     @IsString({ message: 'Password must be a string' })
@@ -49,6 +51,7 @@ export class ResetPasswordDto {
     newPassword: string
 }
 
+
 export class AuthResponseDto {
     @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...', description: 'JWT - access token' })
     accessToken: string
@@ -56,6 +59,11 @@ export class AuthResponseDto {
 
 export class ResetPasswordResponseDto {
     @ApiProperty({ example: "Password reset successfully", description: 'Valid OTP' })
+    message: string
+}
+
+export class RegisterOkResponseDto {
+    @ApiProperty({ example: "User created successfully"})
     message: string
 }
 

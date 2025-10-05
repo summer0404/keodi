@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
@@ -6,6 +6,7 @@ import {
   ForgotPasswordOTPResponseDto,
   LoginDto,
   RegisterDto,
+  RegisterOkResponseDto,
   ResetPasswordDto,
   ResetPasswordOTPDto,
   ResetPasswordOTPResponseDto,
@@ -39,9 +40,9 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'User registration' })
-  @ApiOkResponse({ description: 'Registration successful', type: AuthResponseDto })
-  async register(@Res({ passthrough: true }) res: Response, @Body() body: RegisterDto) {
-    return await this.authService.register(res, body)
+  @ApiOkResponse({ description: 'Registration successful', type: RegisterOkResponseDto })
+  async register(@Body() body: RegisterDto) {
+    return await this.authService.register(body)
   }
 
   @Post('login')
@@ -126,6 +127,25 @@ export class AuthController {
     return await this.authService.resetPassword({
       newPassword: body.newPassword,
       userId: req.user?.id
-    })
+    });
   }
+
+  @Get('verify-email/:token')
+  @ApiOperation({ summary: 'Verify Email' })
+  @ApiResponse({
+    description: 'Returns an HTML page notifying successful or failed email verification'
+  })
+  async verifyEmail(@Param('token') token: string) {
+    return await this.authService.verifyEmail(token);
+  }
+
+  @Get('resend-verify-email/:userId')
+  @ApiOperation({ summary: 'Resend verify email'})
+  @ApiResponse({
+    description: 'Returns an HTML page notifying successful or failed email resend',
+  })
+  async resendVerifyEmail(@Param('userId') userId: number){
+    return await this.authService.resendVerifyEmail(userId)
+  }
+
 }

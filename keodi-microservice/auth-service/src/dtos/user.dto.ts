@@ -1,9 +1,11 @@
-export class UserDto{
-    id: number
-    username: string
-    password: string
-    email: string
-    refreshToken: string | null
+export class UserDto {
+    id: number;
+    username: string;
+    email: string;
+    password: string;
+    refreshToken: string | null;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export class CreateUserDto {

@@ -1,8 +1,9 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import * as nodemailer from "nodemailer"
-import { SendOTPMailDto } from "src/dtos/email.dto";
+import { SendOTPMailDto, SendVerifyURLDto } from "src/dtos/email.dto";
 import forgotPasswordTemplate from "./templates/forgot-password.template";
 import { RpcException } from "@nestjs/microservices";
+import verifyAccountTemplate from "./templates/verify-account.template";
 
 @Injectable()
 export class EmailService {
@@ -37,6 +38,26 @@ export class EmailService {
             throw new RpcException({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
                 message: 'Error when sending OTP mail to user'
+            })
+        }
+    }
+
+    async sendVerifyURL(sendMailDto: SendVerifyURLDto) {
+        try {
+            await this.transporter.sendMail({
+                from: `"Keodi Authentication" <${process.env.BREVO_SMTP_USER}>`,
+                to: sendMailDto.to,
+                subject: sendMailDto.subject,
+                html: verifyAccountTemplate(sendMailDto.url)
+            })
+
+            this.logger.log(`Verification URL sent to ${sendMailDto.to}`)
+        } catch (error) {
+            this.logger.log(`Failed to send verification URL to ${sendMailDto.to}`)
+            console.log(error)
+            throw new RpcException({
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Error when sending verification URL mail to user'
             })
         }
     }
