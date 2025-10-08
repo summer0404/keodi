@@ -29,7 +29,7 @@ export class NotificationService {
     } catch (error) {
       console.error(error)
       if (error instanceof RpcException) {
-        throw error;
+        throw error;  
       }
       throw new RpcException({
         status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,

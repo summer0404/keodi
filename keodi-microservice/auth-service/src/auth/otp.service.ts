@@ -45,7 +45,7 @@ export class OtpService {
 
     async validateOTP(validateOTPDto: ValidateOTPDto): Promise<boolean> {
         const otp = await this.redisService.get(`otp:${validateOTPDto.purpose}:${validateOTPDto.userId}`)
-
+        
         if (!otp) return false
 
         if (!(await bcrypt.compare(validateOTPDto.otp, otp))) return false
