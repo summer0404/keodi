@@ -1,0 +1,12 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { ClientKafka } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
+
+@Injectable()
+export class UserService {
+    constructor(@Inject('AUTH_SERVICE') private readonly client: ClientKafka) { }
+
+    async unverifyUser(userId: number) {
+        return await firstValueFrom(this.client.send('user.unverify', { userId }))
+    }
+}
