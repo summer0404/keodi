@@ -54,8 +54,13 @@ export class AuthController {
     return await this.authService.verifyEmail(data.token)
   }
 
+  @MessagePattern('auth.external-resend-verify-email')
+  async externalResendVerifyEmail(@Payload() data: {userId: number}){
+    return await this.authService.externalResendVerifyEmail(data.userId, VerifyUrlPurpose.VERIFY_EMAIL)
+  }
+
   @MessagePattern('auth.resend-verify-email')
-  async resendVerifyEmail(@Payload() data: {userId: number}){
+  async resendVerifyEmail(@Payload() data: { userId: number}){
     return await this.authService.resendVerifyEmail(data.userId, VerifyUrlPurpose.VERIFY_EMAIL)
   }
 }

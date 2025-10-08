@@ -115,8 +115,11 @@ export class AuthService {
 
 
             if (!existingUser.isVerify) throw new RpcException({
-                status: HttpStatus.UNAUTHORIZED,
-                message: "Email has not been verified"
+                status: HttpStatus.FORBIDDEN,
+                message: "Email has not been verified",
+                data: {
+                    userId: existingUser.id
+                }
             })
 
             const tokens = this.generateAccessAndRefreshToken(existingUser)
@@ -301,7 +304,7 @@ export class AuthService {
             if (existUser.isVerify) return alreadyVerifiedTemplate()
 
             try {
-                await this.jwtService.verifyAsync(token, { secret: process.env.JWT_SECRET})
+                await this.jwtService.verifyAsync(token, { secret: process.env.JWT_SECRET })
             } catch (error) {
                 return failVerifyAccountTemplate(existUser.id)
             }
@@ -331,25 +334,60 @@ export class AuthService {
         }
     }
 
-    async resendVerifyEmail(userId: number, purpose: string) {
+    async externalResendVerifyEmail(userId: number, purpose: string) {
         try {
-            const existUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
 
-            if (!existUser) return emailNotRegisteredTemplate()
+            if (!existingUser) return emailNotRegisteredTemplate()
 
-            if (existUser.isVerify) return alreadyVerifiedTemplate()
+            if (existingUser.isVerify) return alreadyVerifiedTemplate()
 
             //Time limit resend
-            const timeHaveToWaitToResend: number = await this.timeWaitingToResend(existUser.email, purpose)
+            const timeHaveToWaitToResend: number = await this.timeWaitingToResend(existingUser.email, purpose)
             if (timeHaveToWaitToResend > 0) return resendTooSoonTemplate(timeHaveToWaitToResend, userId)
 
-            await this.sendVerifyUrlWithPurpose(existUser.email, purpose)
+            await this.sendVerifyUrlWithPurpose(existingUser.email, purpose)
 
             return resendSuccessTemplate()
 
         } catch (error) {
             console.log(error)
             return resendFailedTemplate()
+        }
+    }
+
+    async resendVerifyEmail(userId: number, purpose: string) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: {id: Number(userId)}})
+
+            if(!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: "User not found"
+            })
+
+            if(existingUser.isVerify) throw new RpcException({
+                status: HttpStatus.CONFLICT,
+                message: "Account already verified"
+            })
+
+            const timeHaveToWaitToResend: number = await this.timeWaitingToResend(existingUser.email, purpose)
+            if(timeHaveToWaitToResend > 0) throw new RpcException({
+                status: HttpStatus.TOO_MANY_REQUESTS,
+                message: `Too many request, please wait ${timeHaveToWaitToResend} seconds to resend`
+            })
+
+            await this.sendVerifyUrlWithPurpose(existingUser.email, purpose)
+
+            return { message: "resend email successfully"}
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
         }
     }
 }

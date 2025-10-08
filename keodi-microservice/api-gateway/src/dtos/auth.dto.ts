@@ -67,6 +67,14 @@ export class RegisterOkResponseDto {
     message: string
 }
 
+export class UnverifiedAccountResponse{
+    @ApiProperty({ example: "Your account has not verifed"})
+    message: string
+
+    @ApiProperty({ example: "userId used for resend verify email"})
+    data: { userId: number}
+}
+
 
 export class ValidateForgotPasswordOTPResponseDto {
     @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...', description: 'JWT - access token' })

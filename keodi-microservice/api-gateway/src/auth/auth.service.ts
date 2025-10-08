@@ -28,6 +28,7 @@ export class AuthService {
         this.client.subscribeToResponseOf('auth.validate-otp')
         this.client.subscribeToResponseOf('auth.reset-password')
         this.client.subscribeToResponseOf('auth.verify-email')
+        this.client.subscribeToResponseOf('auth.external-resend-verify-email')
         this.client.subscribeToResponseOf('auth.resend-verify-email')
         await this.client.connect()
     }
@@ -117,7 +118,15 @@ export class AuthService {
         }
     }
 
-    async resendVerifyEmail(userId: number) {
+    async externalResendVerifyEmail(userId: number) {
+        try {
+            return await firstValueFrom(this.client.send('auth.external-resend-verify-email', { userId }))
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async resendVerifyEmail(userId: number){
         try {
             return await firstValueFrom(this.client.send('auth.resend-verify-email', { userId }))
         } catch (error) {

@@ -11,6 +11,7 @@ import {
   ResetPasswordOTPDto,
   ResetPasswordOTPResponseDto,
   ResetPasswordResponseDto,
+  UnverifiedAccountResponse,
   ValidateForgotPasswordOTPResponseDto,
   ValidateOTPDto,
   ValidateResetPasswordOTPResponseDto
@@ -18,6 +19,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiOkResponse,
   ApiOperation,
@@ -49,6 +51,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Login' })
   @ApiOkResponse({ description: 'Login successful', type: AuthResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid login credentials' })
+    @ApiForbiddenResponse({
+    description: 'Returns message notify that user email is not verified',
+    type: UnverifiedAccountResponse
+  })
   async login(@Res({ passthrough: true }) res: Response, @Body() body: LoginDto) {
     return await this.authService.login(res, body)
   }
@@ -139,13 +145,23 @@ export class AuthController {
     return await this.authService.verifyEmail(token);
   }
 
-  @Get('resend-verify-email/:userId')
-  @ApiOperation({ summary: 'Resend verify email'})
+  @Get('external-resend-verify-email/:userId')
+  @ApiOperation({ summary: 'Resend verify email - use by email'})
   @ApiResponse({
     description: 'Returns an HTML page notifying successful or failed email resend',
+  })
+  async externalResendVerifyEmail(@Param('userId') userId: number){
+    return await this.authService.externalResendVerifyEmail(userId)
+  }
+
+  @Get('resed-verify-email/:userId')
+  @ApiOperation({ summary: 'Resend verify email'})
+  @ApiOkResponse({
+    description: 'Returns message notify that successfully resend email'
   })
   async resendVerifyEmail(@Param('userId') userId: number){
     return await this.authService.resendVerifyEmail(userId)
   }
+
 
 }
