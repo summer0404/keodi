@@ -6,6 +6,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { OtpService } from './otp.service';
 import { RedisService } from './redis.service';
+import { VerifyUrlService } from './verifyUrl.service';
 
 @Module({
   imports: [
@@ -33,7 +34,8 @@ import { RedisService } from './redis.service';
   providers: [
     AuthService,
     OtpService,
-    RedisService
+    RedisService,
+    VerifyUrlService
   ],
 })
 export class AuthModule { }

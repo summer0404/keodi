@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
@@ -6,10 +6,12 @@ import {
   ForgotPasswordOTPResponseDto,
   LoginDto,
   RegisterDto,
+  RegisterOkResponseDto,
   ResetPasswordDto,
   ResetPasswordOTPDto,
   ResetPasswordOTPResponseDto,
   ResetPasswordResponseDto,
+  UnverifiedAccountResponse,
   ValidateForgotPasswordOTPResponseDto,
   ValidateOTPDto,
   ValidateResetPasswordOTPResponseDto
@@ -17,6 +19,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiOkResponse,
   ApiOperation,
@@ -39,15 +42,19 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'User registration' })
-  @ApiOkResponse({ description: 'Registration successful', type: AuthResponseDto })
-  async register(@Res({ passthrough: true }) res: Response, @Body() body: RegisterDto) {
-    return await this.authService.register(res, body)
+  @ApiOkResponse({ description: 'Registration successful', type: RegisterOkResponseDto })
+  async register(@Body() body: RegisterDto) {
+    return await this.authService.register(body)
   }
 
   @Post('login')
   @ApiOperation({ summary: 'Login' })
   @ApiOkResponse({ description: 'Login successful', type: AuthResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid login credentials' })
+    @ApiForbiddenResponse({
+    description: 'Returns message notify that user email is not verified',
+    type: UnverifiedAccountResponse
+  })
   async login(@Res({ passthrough: true }) res: Response, @Body() body: LoginDto) {
     return await this.authService.login(res, body)
   }
@@ -126,6 +133,35 @@ export class AuthController {
     return await this.authService.resetPassword({
       newPassword: body.newPassword,
       userId: req.user?.id
-    })
+    });
   }
+
+  @Get('verify-email/:token')
+  @ApiOperation({ summary: 'Verify Email' })
+  @ApiResponse({
+    description: 'Returns an HTML page notifying successful or failed email verification'
+  })
+  async verifyEmail(@Param('token') token: string) {
+    return await this.authService.verifyEmail(token);
+  }
+
+  @Get('external-resend-verify-email/:userId')
+  @ApiOperation({ summary: 'Resend verify email - use by email'})
+  @ApiResponse({
+    description: 'Returns an HTML page notifying successful or failed email resend',
+  })
+  async externalResendVerifyEmail(@Param('userId') userId: number){
+    return await this.authService.externalResendVerifyEmail(userId)
+  }
+
+  @Get('resend-verify-email/:userId')
+  @ApiOperation({ summary: 'Resend verify email'})
+  @ApiOkResponse({
+    description: 'Returns message notify that successfully resend email'
+  })
+  async resendVerifyEmail(@Param('userId') userId: number){
+    return await this.authService.resendVerifyEmail(userId)
+  }
+
+
 }

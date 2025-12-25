@@ -7,16 +7,32 @@ import { UserDto } from 'src/dtos/user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { OtpService } from './otp.service';
 import { ValidateOTPDto } from 'src/dtos/otp.dto';
+import { VerifyUrlService } from './verifyUrl.service';
+import { VerifyUrlPurpose } from 'src/enums/verifyUrl.enum';
+import {
+    alreadyVerifiedTemplate,
+    emailNotRegisteredTemplate,
+    failVerifyAccountTemplate,
+    successVerifyAccountTemplate
+} from 'src/templates/verify-email-response.template';
+import {
+    resendFailedTemplate,
+    resendSuccessTemplate,
+    resendTooSoonTemplate
+} from 'src/templates/resend-verify-email-response.template';
+import { getTTLForPurpose } from 'src/utils/ttl-redis.helper';
+import { timeLimitResend } from 'src/utils/time-limit-resend';
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly jwtService: JwtService,
-        private readonly otpService: OtpService
+        private readonly otpService: OtpService,
+        private readonly verifyUrlService: VerifyUrlService
     ) { }
 
-    private generateToken(user: UserDto) {
+    private generateAccessAndRefreshToken(user: UserDto) {
         const payload = {
             sub: user.id,
             email: user.email,
@@ -29,9 +45,24 @@ export class AuthService {
         }
     }
 
+    private async timeWaitingToResend(email: string, purpose: string): Promise<number> {
+        const ttl = await this.verifyUrlService.getTTLToken(email, purpose)
+
+        if (ttl < 0) return 0
+
+        if (getTTLForPurpose(purpose) - ttl >= timeLimitResend(purpose)) return 0
+
+        return timeLimitResend(purpose) - (getTTLForPurpose(purpose) - ttl)
+    }
+
+    private async sendVerifyUrlWithPurpose(email: string, purpose: string) {
+        const token = this.jwtService.sign({ email }, { expiresIn: '1h' })
+
+        await this.verifyUrlService.sendVerifyUrlWithPurpose(email, token, purpose)
+    }
+
     async register(data: RegisterDto) {
         try {
-            //Kiểm tra username đã tồn tại chưa
             const isExistingUsername = await this.prismaService.user.findUnique({ where: { username: data.username } })
 
             if (isExistingUsername) throw new RpcException({
@@ -39,7 +70,6 @@ export class AuthService {
                 message: 'Username already exists'
             })
 
-            //Kiểm tra email đã tồn tại chưa
             const isExistingEmail = await this.prismaService.user.findUnique({ where: { email: data.email } })
 
             if (isExistingEmail) throw new RpcException({
@@ -47,30 +77,17 @@ export class AuthService {
                 message: 'Email already exists'
             })
 
-            //Tạo người dùng mới
             const newUser = await this.prismaService.user.create({
                 data: {
                     username: data.username,
-                    //Tạo người dùng với mật khẩu mã hóa
                     password: await bcrypt.hash(data.password, Number(process.env.SALT_ROUNDS)),
                     email: data.email
                 }
             })
 
-            //Tạo access và refresh token rồi trả về
-            const tokens = this.generateToken(newUser)
+            await this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL)
 
-            await this.prismaService.user.update({
-                where: {
-                    id: newUser.id
-                },
-                data: {
-                    //Mã hóa refreshToken
-                    refreshToken: await bcrypt.hash(tokens.refreshToken, Number(process.env.SALT_ROUNDS))
-                }
-            })
-
-            return tokens
+            return { message: 'User created successfully' }
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {
@@ -85,29 +102,34 @@ export class AuthService {
 
     async login(data: LoginDto) {
         try {
-            //Kiểm tra người dùng có tồn tại trong hệ thống chưa
-            const isExistingUser = await this.prismaService.user.findUnique({ where: { username: data.username } })
-            if (!isExistingUser) throw new RpcException({
+            const existingUser = await this.prismaService.user.findUnique({ where: { username: data.username } })
+            if (!existingUser) throw new RpcException({
                 status: HttpStatus.UNAUTHORIZED,
                 message: "Invalid username"
             })
 
-            //Kiểm tra mật khẩu người dùng
-            if (!(await bcrypt.compare(data.password, isExistingUser.password))) throw new RpcException({
+            if (!(await bcrypt.compare(data.password, existingUser.password))) throw new RpcException({
                 status: HttpStatus.UNAUTHORIZED,
                 message: "Invalid password"
             })
 
-            //Tạo token mới
-            const tokens = this.generateToken(isExistingUser)
+
+            if (!existingUser.isVerify) throw new RpcException({
+                status: HttpStatus.FORBIDDEN,
+                message: "Email has not been verified",
+                data: {
+                    userId: existingUser.id
+                }
+            })
+
+            const tokens = this.generateAccessAndRefreshToken(existingUser)
 
             await this.prismaService.user.update({
                 where: {
-                    id: isExistingUser.id
+                    id: existingUser.id
                 },
                 data: {
-                    //Mã hóa refreshToken
-                    refreshToken: await bcrypt.hash(isExistingUser.refreshToken, Number(process.env.SALT_ROUNDS))
+                    refreshToken: await bcrypt.hash(tokens.refreshToken, Number(process.env.SALT_ROUNDS))
                 }
             })
 
@@ -129,27 +151,25 @@ export class AuthService {
             let googleUser: UserDto | null = await this.prismaService.user.findUnique({ where: { username: user.email } })
 
             if (!googleUser) {
-                //Tạo mật khẩu ngẫu nhiên cho người dùng
                 const hashPassword = await bcrypt.hash(`${process.env.GOOGLE_AUTH_PASSWORD_DEFAULT}${Math.floor(Math.random() * 1000000)}`, Number(process.env.SALT_ROUNDS))
 
-                //Tạo người dùng mới
                 googleUser = await this.prismaService.user.create({
                     data: {
-                        username: user.email.split('@')[0], //Chỉ lấy phần tên trước @
+                        username: user.email.split('@')[0],
                         email: user.email,
-                        password: hashPassword
+                        password: hashPassword,
+                        isVerify: true
                     }
                 })
             }
 
-            const tokens = this.generateToken(googleUser)
+            const tokens = this.generateAccessAndRefreshToken(googleUser)
 
             await this.prismaService.user.update({
                 where: {
                     id: googleUser.id
                 },
                 data: {
-                    //Mã hóa refreshToken
                     refreshToken: await bcrypt.hash(tokens.refreshToken, Number(process.env.SALT_ROUNDS))
                 }
             })
@@ -179,6 +199,30 @@ export class AuthService {
             await this.otpService.sendOTP(email, isExistingUser.id, purpose)
 
             return { userId: isExistingUser.id }
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async sendEmailVerifyUrl(email: string, purpose: string) {
+        try {
+            const isExistingUser = await this.prismaService.user.findUnique({ where: { email } })
+
+            if (!isExistingUser) throw new RpcException({
+                status: HttpStatus.NOT_FOUND,
+                message: 'User with this email does not exist'
+            })
+
+            await this.sendVerifyUrlWithPurpose(email, purpose)
+
+            return { message: "Verification email has sent" }
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {
@@ -237,6 +281,104 @@ export class AuthService {
             })
 
             return { message: 'Password reset successfully' }
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async verifyEmail(token: string) {
+        try {
+            const validPayload = this.jwtService.decode(token)
+
+            const existUser = await this.prismaService.user.findUnique({ where: { email: validPayload.email } })
+
+            if (!existUser) return emailNotRegisteredTemplate()
+
+            if (existUser.isVerify) return alreadyVerifiedTemplate()
+
+            try {
+                await this.jwtService.verifyAsync(token, { secret: process.env.JWT_SECRET })
+            } catch (error) {
+                return failVerifyAccountTemplate(existUser.id)
+            }
+
+            if (!(await this.verifyUrlService.validateVerifyUrl({
+                email: validPayload.email,
+                purpose: VerifyUrlPurpose.VERIFY_EMAIL,
+                token
+            })))
+                return failVerifyAccountTemplate(existUser.id)
+
+            await this.prismaService.user.update({
+                where: { id: existUser.id },
+                data: { isVerify: true }
+            })
+
+            return successVerifyAccountTemplate()
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async externalResendVerifyEmail(userId: number, purpose: string) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+
+            if (!existingUser) return emailNotRegisteredTemplate()
+
+            if (existingUser.isVerify) return alreadyVerifiedTemplate()
+
+            //Time limit resend
+            const timeHaveToWaitToResend: number = await this.timeWaitingToResend(existingUser.email, purpose)
+            if (timeHaveToWaitToResend > 0) return resendTooSoonTemplate(timeHaveToWaitToResend, userId)
+
+            await this.sendVerifyUrlWithPurpose(existingUser.email, purpose)
+
+            return resendSuccessTemplate()
+
+        } catch (error) {
+            console.log(error)
+            return resendFailedTemplate()
+        }
+    }
+
+    async resendVerifyEmail(userId: number, purpose: string) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: {id: Number(userId)}})
+
+            if(!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: "User not found"
+            })
+
+            if(existingUser.isVerify) throw new RpcException({
+                status: HttpStatus.CONFLICT,
+                message: "Account already verified"
+            })
+
+            const timeHaveToWaitToResend: number = await this.timeWaitingToResend(existingUser.email, purpose)
+            if(timeHaveToWaitToResend > 0) throw new RpcException({
+                status: HttpStatus.TOO_MANY_REQUESTS,
+                message: `Too many request, please wait ${timeHaveToWaitToResend} seconds to resend`
+            })
+
+            await this.sendVerifyUrlWithPurpose(existingUser.email, purpose)
+
+            return { message: "resend email successfully"}
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {

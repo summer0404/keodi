@@ -19,30 +19,9 @@ export class AuthService {
         private readonly configService: ConfigService
     ) { }
 
-    async onModuleInit() {
-        this.client.subscribeToResponseOf('auth.register')
-        this.client.subscribeToResponseOf('auth.login')
-        this.client.subscribeToResponseOf('auth.google')
-        this.client.subscribeToResponseOf('auth.forgot-password-otp')
-        this.client.subscribeToResponseOf('auth.reset-password-otp')
-        this.client.subscribeToResponseOf('auth.validate-otp')
-        this.client.subscribeToResponseOf('auth.reset-password')
-        await this.client.connect()
-    }
-
-    async register(@Res({ passthrough: true }) res: Response, body: RegisterDto) {
+    async register(body: RegisterDto) {
         try {
-            const response = await firstValueFrom(this.client.send('auth.register', body))
-            res.cookie('refreshToken', response.refreshToken, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'none',
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            })
-
-            return {
-                accessToken: response.accessToken
-            }
+            return await firstValueFrom(this.client.send('auth.register', body))
         } catch (error) {
             throw error
         }
@@ -112,6 +91,30 @@ export class AuthService {
     async resetPassword(body: (ResetPasswordDto & { userId: number })) {
         try {
             return await firstValueFrom(this.client.send('auth.reset-password', body))
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async verifyEmail(token: string) {
+        try {
+            return await firstValueFrom(this.client.send('auth.verify-email', { token }))
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async externalResendVerifyEmail(userId: number) {
+        try {
+            return await firstValueFrom(this.client.send('auth.external-resend-verify-email', { userId }))
+        } catch (error) {
+            throw error
+        }
+    }
+
+    async resendVerifyEmail(userId: number){
+        try {
+            return await firstValueFrom(this.client.send('auth.resend-verify-email', { userId }))
         } catch (error) {
             throw error
         }

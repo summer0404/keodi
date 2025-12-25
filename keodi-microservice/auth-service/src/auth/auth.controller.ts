@@ -8,6 +8,7 @@ import {
 } from 'src/dtos/auth.dto';
 import { ValidateOTPDto } from 'src/dtos/otp.dto';
 import { OtpPurpose } from 'src/enums/otp.enum';
+import { VerifyUrlPurpose } from 'src/enums/verifyUrl.enum';
 
 @Controller()
 export class AuthController {
@@ -46,5 +47,20 @@ export class AuthController {
   @MessagePattern('auth.reset-password')
   async resetPassword(@Payload() data: ResetPasswordDto) {
     return await this.authService.resetPassword(data)
+  }
+
+  @MessagePattern('auth.verify-email')
+  async verifyEmail(@Payload() data: {token: string}){
+    return await this.authService.verifyEmail(data.token)
+  }
+
+  @MessagePattern('auth.external-resend-verify-email')
+  async externalResendVerifyEmail(@Payload() data: {userId: number}){
+    return await this.authService.externalResendVerifyEmail(data.userId, VerifyUrlPurpose.VERIFY_EMAIL)
+  }
+
+  @MessagePattern('auth.resend-verify-email')
+  async resendVerifyEmail(@Payload() data: { userId: number}){
+    return await this.authService.resendVerifyEmail(data.userId, VerifyUrlPurpose.VERIFY_EMAIL)
   }
 }

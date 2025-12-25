@@ -5,6 +5,8 @@ import { AuthModule } from './auth/auth.module';
 import { APP_FILTER } from '@nestjs/core';
 import { ConvertToHttpExceptionFilter } from './filters/rpc-to-http-exception.filter';
 import { ConfigModule } from '@nestjs/config';
+import { UserModule } from './user/user.module';
+import { KafkaModule } from './shared/kafka.module';
 
 @Module({
   controllers: [
@@ -19,7 +21,9 @@ import { ConfigModule } from '@nestjs/config';
   ],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    AuthModule
+    AuthModule,
+    UserModule,
+    KafkaModule
   ],
 })
 export class AppModule { }
