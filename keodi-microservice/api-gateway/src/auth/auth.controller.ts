@@ -154,7 +154,7 @@ export class AuthController {
     return await this.authService.externalResendVerifyEmail(userId)
   }
 
-  @Get('resed-verify-email/:userId')
+  @Get('resend-verify-email/:userId')
   @ApiOperation({ summary: 'Resend verify email'})
   @ApiOkResponse({
     description: 'Returns message notify that successfully resend email'
