@@ -46,6 +46,16 @@ services:
       interval: 5s
       retries: 10
 
+  core-service:
+    build: ./core-service
+    container_name: core-service
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./core-service/.env.local
+    depends_on:
+      - kafka
+
   notification-service:
     build: ./notification-service
     container_name: notification-service

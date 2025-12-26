@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  engineType      = "binary"
+  binaryTargets   = ["native"]
+  previewFeatures = ["postgresqlExtensions"]
+  transpile       = true
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [postgis]
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  phoneNumber String?   @unique @db.VarChar(12)
+  firstName   String    @db.VarChar(50)
+  lastName    String    @db.VarChar(50)
+  dateOfBirth DateTime?
+}
+
+model Place {
+  id             String                               @id
+  name           String
+  altName        String?
+  amenity        String?
+  brand          String?
+  cuisine        String?
+  street         String?
+  houseNumber    String?
+  phone          String?
+  openingHours   String?
+  internetAccess String?
+  takeaway       Boolean?
+  wheelchair     Boolean?
+  operator       String?
+  checkDate      DateTime?
+  createdAt      DateTime                             @default(now())
+  updatedAt      DateTime                             @updatedAt
+  geom           Unsupported("geography(Point,4326)")
+}
