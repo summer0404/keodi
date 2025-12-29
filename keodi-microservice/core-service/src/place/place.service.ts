@@ -1,10 +1,48 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class PlaceService {
-    constructor(private readonly prismaService: PrismaService) { }
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly userService: UserService
+    ) { }
+
+    async forYouForNewMembers(
+        lng: number, 
+        lat: number, 
+        radius: number, 
+        limit: number
+    ) {
+        try {
+            
+
+            const places = await this.prismaService.$queryRaw<any[]>`
+                SELECT p.id, p.name, p.latitude, p.longitude,
+                    ST_Distance_Sphere(
+                    point(p.longitude, p.latitude), 
+                    point(${lng}, ${lat})
+                    ) AS distance
+                FROM Place p
+                WHERE p.distance <= ${radius}
+                ORDER BY distance ASC
+                LIMIT 50;
+                `;
+
+            return places.slice(0, limit);
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
 
     async getById(id: string) {
         try {

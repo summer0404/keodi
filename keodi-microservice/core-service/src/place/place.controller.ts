@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { PlaceService } from './place.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
