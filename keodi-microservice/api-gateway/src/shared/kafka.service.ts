@@ -3,28 +3,39 @@ import { ClientKafka } from "@nestjs/microservices";
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
-    constructor(@Inject('AUTH_SERVICE') private readonly client: ClientKafka) { }
+    constructor(
+        @Inject('AUTH_SERVICE') private readonly authClient: ClientKafka,
+        @Inject('CORE_SERVICE') private readonly coreClient: ClientKafka
+    ) { }
 
     async onModuleInit() {
         //auth topic
-        this.client.subscribeToResponseOf('auth.register')
-        this.client.subscribeToResponseOf('auth.login')
-        this.client.subscribeToResponseOf('auth.google')
-        this.client.subscribeToResponseOf('auth.forgot-password-otp')
-        this.client.subscribeToResponseOf('auth.reset-password-otp')
-        this.client.subscribeToResponseOf('auth.validate-otp')
-        this.client.subscribeToResponseOf('auth.reset-password')
-        this.client.subscribeToResponseOf('auth.verify-email')
-        this.client.subscribeToResponseOf('auth.external-resend-verify-email')
-        this.client.subscribeToResponseOf('auth.resend-verify-email')
+        this.authClient.subscribeToResponseOf('auth.register')
+        this.authClient.subscribeToResponseOf('auth.login')
+        this.authClient.subscribeToResponseOf('auth.google')
+        this.authClient.subscribeToResponseOf('auth.forgot-password-otp')
+        this.authClient.subscribeToResponseOf('auth.reset-password-otp')
+        this.authClient.subscribeToResponseOf('auth.validate-otp')
+        this.authClient.subscribeToResponseOf('auth.reset-password')
+        this.authClient.subscribeToResponseOf('auth.verify-email')
+        this.authClient.subscribeToResponseOf('auth.external-resend-verify-email')
+        this.authClient.subscribeToResponseOf('auth.resend-verify-email')
 
         //user topic
-        this.client.subscribeToResponseOf('user.unverify')
+        this.authClient.subscribeToResponseOf('user.unverify')
 
-        await this.client.connect()
+        //place topic 
+        this.coreClient.subscribeToResponseOf('place.get-by-id')
+
+        await this.authClient.connect()
+        await this.coreClient.connect()
     }
 
-    getClient(): ClientKafka{
-        return this.client
+    getAuthClient(): ClientKafka{
+        return this.authClient
+    }
+
+    getCoreClient(): ClientKafka{
+        return this.coreClient
     }
 }

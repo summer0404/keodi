@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
@@ -29,8 +40,9 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
-import { JwtAuthGuard } from './jwt.guard';
 import { OtpPurpose } from 'src/enums/otp.enum';
+import { SkipAuth } from 'src/decorators/skip-auth.decorator';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 
 @ApiTags('auth')
@@ -40,6 +52,7 @@ import { OtpPurpose } from 'src/enums/otp.enum';
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
+  @SkipAuth()
   @Post('register')
   @ApiOperation({ summary: 'User registration' })
   @ApiOkResponse({ description: 'Registration successful', type: RegisterOkResponseDto })
@@ -47,11 +60,12 @@ export class AuthController {
     return await this.authService.register(body)
   }
 
+  @SkipAuth()
   @Post('login')
   @ApiOperation({ summary: 'Login' })
   @ApiOkResponse({ description: 'Login successful', type: AuthResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid login credentials' })
-    @ApiForbiddenResponse({
+  @ApiForbiddenResponse({
     description: 'Returns message notify that user email is not verified',
     type: UnverifiedAccountResponse
   })
@@ -59,12 +73,14 @@ export class AuthController {
     return await this.authService.login(res, body)
   }
 
+  @SkipAuth()
   @Get('google')
   @ApiOperation({ summary: 'Login with Google' })
   @ApiResponse({ description: 'Redirect to Google account selection page' })
   @UseGuards(AuthGuard('google'))
   async googleLogin() { }
 
+  @SkipAuth()
   @Get('google/callback')
   @ApiOperation({ summary: 'Google callback for backend' })
   @ApiResponse({ description: 'Redirect to frontend login result page (/auth-google)' })
@@ -78,6 +94,7 @@ export class AuthController {
     return await this.authService.googleCallback(res, req.user)
   }
 
+  @SkipAuth()
   @Post('forgot-password-otp')
   @ApiOperation({ summary: 'Send OTP email for password reset. OTP is valid in 3 minutes' })
   @ApiOkResponse({
@@ -88,7 +105,6 @@ export class AuthController {
     return await this.authService.forgotPasswordOTP(body)
   }
 
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @Post('reset-password-otp')
   @ApiOperation({ summary: 'Send OTP email for password reset. OTP is valid in 5 minutes' })
@@ -100,6 +116,7 @@ export class AuthController {
     return await this.authService.resetPasswordOTP(body)
   }
 
+  @SkipAuth()
   @Post('validate-forgot-password-otp')
   @ApiOperation({ summary: 'Validate OTP sent to user by email to reset password. ' })
   @ApiOkResponse({
@@ -110,6 +127,7 @@ export class AuthController {
     return await this.authService.validateOtp(body, OtpPurpose.FORGOT_PASSWORD)
   }
 
+  @SkipAuth()
   @Post('validate-reset-password-otp')
   @ApiOperation({ summary: 'Validate OTP sent to user by email to reset password. ' })
   @ApiOkResponse({
@@ -121,7 +139,6 @@ export class AuthController {
   }
 
 
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password' })
@@ -136,6 +153,7 @@ export class AuthController {
     });
   }
 
+  @SkipAuth()
   @Get('verify-email/:token')
   @ApiOperation({ summary: 'Verify Email' })
   @ApiResponse({
@@ -145,23 +163,33 @@ export class AuthController {
     return await this.authService.verifyEmail(token);
   }
 
+  @SkipAuth()
   @Get('external-resend-verify-email/:userId')
-  @ApiOperation({ summary: 'Resend verify email - use by email'})
+  @ApiOperation({ summary: 'Resend verify email - use by email' })
   @ApiResponse({
     description: 'Returns an HTML page notifying successful or failed email resend',
   })
-  async externalResendVerifyEmail(@Param('userId') userId: number){
+  async externalResendVerifyEmail(@Param('userId') userId: number) {
     return await this.authService.externalResendVerifyEmail(userId)
   }
 
+  @SkipAuth()
   @Get('resend-verify-email/:userId')
-  @ApiOperation({ summary: 'Resend verify email'})
+  @ApiOperation({ summary: 'Resend verify email' })
   @ApiOkResponse({
     description: 'Returns message notify that successfully resend email'
   })
-  async resendVerifyEmail(@Param('userId') userId: number){
+  async resendVerifyEmail(@Param('userId') userId: number) {
     return await this.authService.resendVerifyEmail(userId)
   }
 
-
+  @ApiBearerAuth('access-token')
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user info' })
+  @ApiOkResponse({
+    description: 'Returns current user info',
+  })
+  async me(@CurrentUser() user: any) {
+    return user
+  }
 }
