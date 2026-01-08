@@ -1,13 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class PlaceService {
     constructor(
         private readonly prismaService: PrismaService,
-        private readonly userService: UserService
     ) { }
 
     async forYouForNewMembers(

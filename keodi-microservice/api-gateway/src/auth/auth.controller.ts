@@ -43,6 +43,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { OtpPurpose } from 'src/enums/otp.enum';
 import { SkipAuth } from 'src/decorators/skip-auth.decorator';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
+import { CurrentUserDto } from 'src/dtos/user.dto';
 
 
 @ApiTags('auth')
@@ -183,13 +184,13 @@ export class AuthController {
     return await this.authService.resendVerifyEmail(userId)
   }
 
-  @ApiBearerAuth('access-token')
   @Get('me')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current user info' })
   @ApiOkResponse({
     description: 'Returns current user info',
   })
-  async me(@CurrentUser() user: any) {
+  async me(@CurrentUser() user: CurrentUserDto) {
     return user
   }
 }

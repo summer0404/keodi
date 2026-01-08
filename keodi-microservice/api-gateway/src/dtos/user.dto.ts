@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger"
+import { ApiProperty, PickType } from "@nestjs/swagger"
 import {
     IsEmail,
     IsNotEmpty,
@@ -40,4 +40,17 @@ export class CreateUserDto {
     @IsEmail({}, { message: 'Invalid email format' })
     @ApiProperty({ example: 'hello@example.com', description: 'User email' })
     email: string
+}
+
+export class UpdateUsernameDto extends PickType(CreateUserDto, ['username'] as const) {}
+
+export class CurrentUserDto {
+    @ApiProperty({ example: 1, description: 'User ID' })
+    id: number;
+
+    @ApiProperty({ example: '_Abc123.example', description: 'Username' })
+    username: string;
+
+    @ApiProperty({ example: '', description: 'Email' })
+    email: string;
 }

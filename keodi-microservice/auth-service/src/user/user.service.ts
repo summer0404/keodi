@@ -36,4 +36,42 @@ export class UserService {
             })
         }
     }
+    
+    async updateUsername(userId: number, newUsername: string) {
+        try {
+
+            const existingUsername = await this.prismaService.user.findUnique({ where: { username: newUsername } })
+            if (existingUsername) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'Username already used'
+            })
+
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+            if (!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+
+            await this.prismaService.user.update({
+                where: {
+                    id: existingUser.id
+                },
+                data: {
+                    username: newUsername
+                }
+            })
+            
+            return { message: "Username updated successfully" }
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
 }

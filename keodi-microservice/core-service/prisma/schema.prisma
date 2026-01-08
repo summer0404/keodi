@@ -16,15 +16,15 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
+  // directUrl  = env("DIRECT_URL")
   extensions = [postgis]
 }
 
 model User {
-  id             Int             @id @default(autoincrement())
+  id             Int             @id
   phoneNumber    String?         @unique @db.VarChar(12)
-  firstName      String          @db.VarChar(50)
-  lastName       String          @db.VarChar(50)
+  firstName      String?         @db.VarChar(50)
+  lastName       String?         @db.VarChar(50)
   dateOfBirth    DateTime?
   userAttributes UserAttribute[]
   userActions    UserActions[]

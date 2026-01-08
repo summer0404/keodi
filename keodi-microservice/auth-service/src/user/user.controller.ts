@@ -10,4 +10,9 @@ export class UserController {
   async unverifyUser(@Payload() data: { userId: number }){
     return await this.userService.unverifyUser(data.userId)
   }
+
+  @MessagePattern('user.update-username')
+  async updateUsername(@Payload() data: { userId: number; username: string }){
+    return await this.userService.updateUsername(data.userId, data.username)
+  }
 }

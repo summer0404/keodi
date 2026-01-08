@@ -12,9 +12,12 @@ export class ConvertToHttpExceptionFilter implements ExceptionFilter {
         const response = ctx.getResponse();
 
         if (exception.response) {
+            const message = Array.isArray(exception.response.message)
+                ? exception.response.message[0]
+                : exception.response.message;
             return response.status(Number(exception.response.statusCode)).json({
                 status: exception.response.statusCode,
-                message: exception.response.message[0]
+                message
             })
         }
 
