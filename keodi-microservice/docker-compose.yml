@@ -5,10 +5,9 @@ services:
     ports:
       - "6379:6379"
     
-
-  postgres:
+  auth-postgres:
     image: postgres:15
-    container_name: auth-db
+    container_name: auth_db
     environment:
       POSTGRES_DB: auth-db
       POSTGRES_USER: admin
@@ -16,7 +15,19 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - auth_postgres_data:/var/lib/postgresql/data
+
+  core-postgres:
+    image: postgis/postgis:15-3.4
+    container_name: core_db
+    environment:
+      POSTGRES_DB: core_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: coredb123
+    ports:
+      - "5433:5432"
+    volumes:
+      - core_postgres_data:/var/lib/postgresql/data
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -55,6 +66,7 @@ services:
       - ./core-service/.env.local
     depends_on:
       - kafka
+      - core-postgres
 
   notification-service:
     build: ./notification-service
@@ -76,7 +88,7 @@ services:
     depends_on:
       - kafka
       - redis
-      - postgres
+      - auth-postgres
       - notification-service
 
   api-gateway:
@@ -91,4 +103,5 @@ services:
       - auth-service
 
 volumes:
-  postgres_data:
+  auth_postgres_data:
+  core_postgres_data:

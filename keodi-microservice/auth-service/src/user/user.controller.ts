@@ -12,7 +12,7 @@ export class UserController {
   }
 
   @MessagePattern('user.update-username')
-  async updateUsername(@Payload() data: { userId: number; newUsername: string }){
-    return await this.userService.updateUsername(data.userId, data.newUsername)
+  async updateUsername(@Payload() data: { userId: number; username: string }){
+    return await this.userService.updateUsername(data.userId, data.username)
   }
 }
