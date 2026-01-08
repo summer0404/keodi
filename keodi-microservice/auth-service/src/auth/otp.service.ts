@@ -1,11 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { RedisService } from "./redis.service";
 import { GenerateOTPDto, ValidateOTPDto } from "src/dtos/otp.dto";
 import { randomInt } from "crypto";
 import * as bcrypt from 'bcrypt'
 import { ClientKafka } from "@nestjs/microservices";
 import { OtpPurpose } from "src/enums/otp.enum";
 import { getTTLForPurpose } from "src/utils/ttl-redis.helper";
+import { RedisService } from "src/redis/redis.service";
 
 @Injectable()
 export class OtpService {

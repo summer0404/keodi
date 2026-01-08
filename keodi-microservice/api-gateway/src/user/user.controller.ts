@@ -1,9 +1,10 @@
-import { Body, Controller, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Query, Req } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { SkipAuth } from 'src/decorators/skip-auth.decorator';
 import { CurrentUserDto, UpdateUsernameDto } from 'src/dtos/user.dto';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
+import { CurrentAccessToken } from 'src/decorators/current-access-token.decorator';
 
 @Controller('user')
 export class UserController {
@@ -22,9 +23,10 @@ export class UserController {
   @ApiOperation({ description: 'Use this API to update username of a user' })
   @ApiOkResponse({ description: 'Return message inform that update username successfully' })
   async updateUsername(
+    @CurrentAccessToken() accessToken: string,
     @CurrentUser() user: CurrentUserDto,
-    @Body() data: UpdateUsernameDto
+    @Body() data: UpdateUsernameDto,
   ) {
-    return await this.userService.updateUsername(user.id, data.username)
+    return await this.userService.updateUsername(user.id, data.username, accessToken)
   }
 }

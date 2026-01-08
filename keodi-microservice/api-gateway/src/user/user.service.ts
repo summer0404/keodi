@@ -10,7 +10,7 @@ export class UserService {
         return await firstValueFrom(this.client.send('user.unverify', { userId }))
     }
 
-    async updateUsername(userId: number, username: string) {
-        return await firstValueFrom(this.client.send('user.update-username', { userId, username }))
+    async updateUsername(userId: number, username: string, accessToken: string) {
+        return await firstValueFrom(this.client.send('user.update-username', { userId, username, accessToken }))
     }
 }

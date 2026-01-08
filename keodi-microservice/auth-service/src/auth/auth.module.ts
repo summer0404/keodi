@@ -5,8 +5,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { OtpService } from './otp.service';
-import { RedisService } from './redis.service';
 import { VerifyUrlService } from './verifyUrl.service';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -28,13 +28,13 @@ import { VerifyUrlService } from './verifyUrl.service';
           }
         }
       }
-    ])
+    ]),
+    RedisModule
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
     OtpService,
-    RedisService,
     VerifyUrlService
   ],
 })

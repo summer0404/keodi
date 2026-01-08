@@ -1,10 +1,14 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class UserService {
-    constructor(private readonly prismaService: PrismaService) { }
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly redisService: RedisService
+    ) { }
 
     async unverifyUser(userId: number) {
         try {
@@ -37,7 +41,7 @@ export class UserService {
         }
     }
     
-    async updateUsername(userId: number, newUsername: string) {
+    async updateUsername(userId: number, newUsername: string, accessToken: string) {
         try {
 
             const existingUsername = await this.prismaService.user.findUnique({ where: { username: newUsername } })
@@ -60,6 +64,8 @@ export class UserService {
                     username: newUsername
                 }
             })
+
+            await this.redisService.set(`blacklist_token:${accessToken}`, 'true', 3600)
             
             return { message: "Username updated successfully" }
         } catch (error) {
