@@ -1,5 +1,5 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ClientKafka, RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RedisService } from 'src/redis/redis.service';
 
@@ -7,7 +7,8 @@ import { RedisService } from 'src/redis/redis.service';
 export class UserService {
     constructor(
         private readonly prismaService: PrismaService,
-        private readonly redisService: RedisService
+        private readonly redisService: RedisService,
+        @Inject('CORE_SERVICE') private readonly coreClient: ClientKafka
     ) { }
 
     async unverifyUser(userId: number) {
@@ -79,5 +80,26 @@ export class UserService {
                 message: error.message ?? error
             })
         }
+    }
+
+    async createUserInfomation(userId: number) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+            if (!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+
+            this.coreClient.emit('user.create-infomation', { userId: existingUser.id })
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }  
     }
 }

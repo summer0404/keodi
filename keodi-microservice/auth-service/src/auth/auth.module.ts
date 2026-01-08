@@ -24,7 +24,20 @@ import { RedisModule } from 'src/redis/redis.module';
             brokers: [process.env.KAFKA_BROKER as string].filter((broker): broker is string => typeof broker === 'string')
           },
           consumer: {
-            groupId: 'auth-consumer'
+            groupId: 'notification-consumer'
+          }
+        }
+      },
+      {
+        name: 'CORE_SERVICE',
+        transport: Transport.KAFKA,
+        options: {
+          client: {
+            clientId: 'auth-client',
+            brokers: [process.env.KAFKA_BROKER as string].filter((broker): broker is string => typeof broker === 'string')
+          },
+          consumer: {
+            groupId: 'core-consumer'
           }
         }
       }

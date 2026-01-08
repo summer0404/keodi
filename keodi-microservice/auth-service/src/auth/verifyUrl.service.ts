@@ -10,7 +10,7 @@ import { RedisService } from "src/redis/redis.service";
 export class VerifyUrlService{
     constructor (
         private readonly redisService: RedisService,
-        @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientKafka 
+        @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientKafka ,
     ){}
 
     async sendVerifyUrlWithPurpose (email: string, token: string, purpose: string) {

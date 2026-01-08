@@ -1,11 +1,15 @@
-import { Injectable, ExecutionContext, UnauthorizedException  } from "@nestjs/common";
+import { Injectable, ExecutionContext, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { AuthGuard } from "@nestjs/passport";
 import { IS_PUBLIC_KEY } from "src/decorators/skip-auth.decorator";
+import { RedisService } from "src/redis/redis.service";
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') { 
-    constructor(private reflector: Reflector){
+export class JwtAuthGuard extends AuthGuard('jwt') {
+    constructor(
+        private reflector: Reflector,
+        private readonly redisService: RedisService
+    ) {
         super()
     }
 
@@ -34,7 +38,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         return user
     }
 
-    canActivate(context: ExecutionContext){
+    canActivate(context: ExecutionContext) {
+        /*--------Check that api is public --------*/
         const skipAuth = this.reflector.getAllAndOverride<boolean>(
             IS_PUBLIC_KEY,
             [
@@ -42,10 +47,25 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
                 context.getClass()
             ],
         )
-
-        if(skipAuth){
+        if (skipAuth) {
             return true
         }
+        /*-----------------------------------------*/
+
+
+        /*-------- Check if token is blacklisted --------*/
+        const request = context.switchToHttp().getRequest();
+        const token = request.headers['authorization']?.split(' ')[1];
+
+        if (token) {
+            return this.redisService.has(`blacklist_token:${token}`).then(isBlacklisted => {
+                if (isBlacklisted) {
+                    throw new UnauthorizedException('Token has been revoked');
+                }
+                return super.canActivate(context) as Promise<boolean>;
+            });
+        }
+        /*------------------------------------------------*/
 
         return super.canActivate(context)
     }

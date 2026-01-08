@@ -29,7 +29,7 @@ export class AuthService {
         private readonly prismaService: PrismaService,
         private readonly jwtService: JwtService,
         private readonly otpService: OtpService,
-        private readonly verifyUrlService: VerifyUrlService
+        private readonly verifyUrlService: VerifyUrlService,
     ) { }
 
     private generateAccessAndRefreshToken(user: UserDto) {
@@ -358,27 +358,27 @@ export class AuthService {
 
     async resendVerifyEmail(userId: number, purpose: string) {
         try {
-            const existingUser = await this.prismaService.user.findUnique({ where: {id: Number(userId)}})
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
 
-            if(!existingUser) throw new RpcException({
+            if (!existingUser) throw new RpcException({
                 status: HttpStatus.BAD_REQUEST,
                 message: "User not found"
             })
 
-            if(existingUser.isVerify) throw new RpcException({
+            if (existingUser.isVerify) throw new RpcException({
                 status: HttpStatus.CONFLICT,
                 message: "Account already verified"
             })
 
             const timeHaveToWaitToResend: number = await this.timeWaitingToResend(existingUser.email, purpose)
-            if(timeHaveToWaitToResend > 0) throw new RpcException({
+            if (timeHaveToWaitToResend > 0) throw new RpcException({
                 status: HttpStatus.TOO_MANY_REQUESTS,
                 message: `Too many request, please wait ${timeHaveToWaitToResend} seconds to resend`
             })
 
             await this.sendVerifyUrlWithPurpose(existingUser.email, purpose)
 
-            return { message: "resend email successfully"}
+            return { message: "resend email successfully" }
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {

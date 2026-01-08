@@ -9,6 +9,7 @@ import { UserModule } from './user/user.module';
 import { KafkaModule } from './shared/kafka.module';
 import { JwtAuthGuard } from './auth/jwt.guard';
 import { PlaceModule } from './place/place.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   controllers: [
@@ -30,7 +31,8 @@ import { PlaceModule } from './place/place.module';
     AuthModule,
     UserModule,
     KafkaModule,
-    PlaceModule
+    PlaceModule,
+    RedisModule
   ],
 })
 export class AppModule { }
