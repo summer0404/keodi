@@ -15,7 +15,7 @@ import {
 @Injectable()
 export class AuthService {
     constructor(
-        @Inject('AUTH_SERVICE') private client: ClientKafka,
+        @Inject('KAFKA_SERVICE') private client: ClientKafka,
         private readonly configService: ConfigService
     ) { }
 

@@ -1,10 +1,15 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ClientKafka, RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class UserService {
-    constructor(private readonly prismaService: PrismaService) { }
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly redisService: RedisService,
+        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka
+    ) { }
 
     async unverifyUser(userId: number) {
         try {
@@ -36,8 +41,8 @@ export class UserService {
             })
         }
     }
-    
-    async updateUsername(userId: number, newUsername: string) {
+
+    async updateUsername(userId: number, newUsername: string, accessToken: string) {
         try {
 
             const existingUsername = await this.prismaService.user.findUnique({ where: { username: newUsername } })
@@ -60,7 +65,9 @@ export class UserService {
                     username: newUsername
                 }
             })
-            
+
+            await this.redisService.set(`blacklist_token:${accessToken}`, 'true', 3600)
+
             return { message: "Username updated successfully" }
         } catch (error) {
             console.error(error)
@@ -68,6 +75,40 @@ export class UserService {
                 throw error;
             }
 
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async createUserInfomation(
+        userId: number,
+        firstName?: string,
+        lastName?: string,
+        picture?: string
+    ) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+            if (!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+
+            this.kafkaClient.emit(
+                'user.create',
+                {
+                    userId: existingUser.id,
+                    firstName,
+                    lastName,
+                    picture
+                }
+            )
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
             throw new RpcException({
                 status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
                 message: error.message ?? error

@@ -1,17 +1,17 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { RedisService } from "./redis.service";
 import { GenerateOTPDto, ValidateOTPDto } from "src/dtos/otp.dto";
 import { randomInt } from "crypto";
 import * as bcrypt from 'bcrypt'
 import { ClientKafka } from "@nestjs/microservices";
 import { OtpPurpose } from "src/enums/otp.enum";
 import { getTTLForPurpose } from "src/utils/ttl-redis.helper";
+import { RedisService } from "src/redis/redis.service";
 
 @Injectable()
 export class OtpService {
     constructor(
         private readonly redisService: RedisService,
-        @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientKafka
+        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka
     ) { }
 
     async generateOTP(generateOTPDto: GenerateOTPDto) {
@@ -33,10 +33,10 @@ export class OtpService {
 
         switch (purpose) {
             case OtpPurpose.FORGOT_PASSWORD:
-                this.notificationClient.emit('notification.forgot-password', { to: email, code: otp })
+                this.kafkaClient.emit('notification.forgot-password', { to: email, code: otp })
                 break
             case OtpPurpose.RESET_PASSWORD:
-                this.notificationClient.emit('notification.reset-password', { to: email, code: otp })
+                this.kafkaClient.emit('notification.reset-password', { to: email, code: otp })
                 break
             default:
                 break

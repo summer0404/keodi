@@ -8,7 +8,7 @@ import { KafkaService } from './kafka.service';
     imports: [
         ClientsModule.registerAsync([
             {
-                name: 'AUTH_SERVICE',
+                name: 'KAFKA_SERVICE',
                 inject: [ConfigService],
                 useFactory: async (config: ConfigService) => {
                     const brokersString = config.get<string>('KAFKA_BROKER');
@@ -18,11 +18,11 @@ import { KafkaService } from './kafka.service';
                         transport: Transport.KAFKA,
                         options: {
                             client: {
-                                clientId: 'api-gateway-auth-client',
+                                clientId: 'api-gateway-client',
                                 brokers,
                             },
                             consumer: {
-                                groupId: 'api-gateway-auth-consumer',
+                                groupId: 'api-gateway-consumer',
                                 allowAutoTopicCreation: true,
                             },
                             subscribe: {
@@ -31,31 +31,6 @@ import { KafkaService } from './kafka.service';
                         },
                     };
                 },
-            },
-            {
-                name: 'CORE_SERVICE',
-                inject: [ConfigService],
-                useFactory: async (config: ConfigService) => {
-                    const brokersString = config.get<string>('KAFKA_BROKER');
-                    const brokers = brokersString ? brokersString.split(',') : [];
-                    
-                    return {
-                        transport: Transport.KAFKA,
-                        options: {
-                            client: {
-                                clientId: 'api-gateway-core-client',
-                                brokers,
-                            },
-                            consumer: {
-                                groupId: 'api-gateway-core-consumer',
-                                allowAutoTopicCreation: true,
-                            },
-                            subscribe: {
-                                fromBeginning: false,
-                            },
-                        },
-                    };
-                }
             }
         ]),
     ],

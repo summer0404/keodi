@@ -15,7 +15,7 @@ async function bootstrap() {
     .setTitle('API Document')
     .setDescription('List of APIs for KEODI')
     .setVersion('1.0')
-    .addBearerAuth( // 👈 thêm dòng này
+    .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',

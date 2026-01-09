@@ -4,10 +4,12 @@ import { AuthController } from './auth.controller';
 import { GoogleStrategy } from './google.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
     PassportModule,
+    RedisModule
   ],
   controllers: [AuthController],
   providers: [
