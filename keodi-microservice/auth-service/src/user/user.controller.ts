@@ -15,4 +15,5 @@ export class UserController {
   async updateUsername(@Payload() data: { userId: number; username: string; accessToken: string }){
     return await this.userService.updateUsername(data.userId, data.username, data.accessToken)
   }
+
 }

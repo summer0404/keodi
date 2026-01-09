@@ -1,10 +1,30 @@
-import { Body, Controller, Param, Patch, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  FileTypeValidator,
+  HttpStatus,
+  Param,
+  ParseFilePipe,
+  Patch,
+  UploadedFile,
+  UseInterceptors
+} from '@nestjs/common';
 import { UserService } from './user.service';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation
+} from '@nestjs/swagger';
 import { SkipAuth } from 'src/decorators/skip-auth.decorator';
-import { CurrentUserDto, UpdateUsernameDto } from 'src/dtos/user.dto';
+import {
+  CurrentUserDto,
+  UpdateUsernameDto
+} from 'src/dtos/user.dto';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { CurrentAccessToken } from 'src/decorators/current-access-token.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('user')
 export class UserController {
@@ -28,5 +48,39 @@ export class UserController {
     @Body() data: UpdateUsernameDto,
   ) {
     return await this.userService.updateUsername(user.id, data.username, accessToken)
+  }
+
+  @ApiBearerAuth('access-token')
+  @Patch('picture')
+  @UseInterceptors(FileInterceptor('picture'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        picture: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOperation({ description: 'Use this API to update profile picture of a user' })
+  @ApiOkResponse({ description: 'Return message inform that update profile picture successfully' })
+  async updatePicture(
+    @CurrentUser() user: CurrentUserDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ })],
+        fileIsRequired: true,
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY
+      })
+    ) file: Express.Multer.File,
+  ) {
+    return await this.userService.updatePicture(
+      user.id,
+      file.buffer,
+      file.mimetype,
+    )
   }
 }

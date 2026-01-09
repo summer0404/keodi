@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class UserService {
-    constructor(@Inject('AUTH_SERVICE') private readonly client: ClientKafka) { }
+    constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) { }
 
     async unverifyUser(userId: number) {
         return await firstValueFrom(this.client.send('user.unverify', { userId }))
@@ -12,5 +12,13 @@ export class UserService {
 
     async updateUsername(userId: number, username: string, accessToken: string) {
         return await firstValueFrom(this.client.send('user.update-username', { userId, username, accessToken }))
+    }
+
+    async updatePicture(userId: number, file: Buffer, type: string) {
+        return await firstValueFrom(this.client.send('user.update-picture', { 
+            userId, 
+            file, 
+            type,
+        }))
     }
 }

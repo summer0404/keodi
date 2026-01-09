@@ -8,7 +8,7 @@ export class UserService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly redisService: RedisService,
-        @Inject('CORE_SERVICE') private readonly coreClient: ClientKafka
+        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka
     ) { }
 
     async unverifyUser(userId: number) {
@@ -41,7 +41,7 @@ export class UserService {
             })
         }
     }
-    
+
     async updateUsername(userId: number, newUsername: string, accessToken: string) {
         try {
 
@@ -67,7 +67,7 @@ export class UserService {
             })
 
             await this.redisService.set(`blacklist_token:${accessToken}`, 'true', 3600)
-            
+
             return { message: "Username updated successfully" }
         } catch (error) {
             console.error(error)
@@ -82,7 +82,12 @@ export class UserService {
         }
     }
 
-    async createUserInfomation(userId: number) {
+    async createUserInfomation(
+        userId: number,
+        firstName?: string,
+        lastName?: string,
+        picture?: string
+    ) {
         try {
             const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
             if (!existingUser) throw new RpcException({
@@ -90,7 +95,15 @@ export class UserService {
                 message: 'User not found'
             })
 
-            this.coreClient.emit('user.create-infomation', { userId: existingUser.id })
+            this.kafkaClient.emit(
+                'user.create',
+                {
+                    userId: existingUser.id,
+                    firstName,
+                    lastName,
+                    picture
+                }
+            )
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {
@@ -100,6 +113,6 @@ export class UserService {
                 status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
                 message: error.message ?? error
             })
-        }  
+        }
     }
 }

@@ -26,6 +26,7 @@ model User {
   firstName      String?         @db.VarChar(50)
   lastName       String?         @db.VarChar(50)
   dateOfBirth    DateTime?
+  picture        String?
   userAttributes UserAttribute[]
   userActions    UserActions[]
   reviews        Reviews[]

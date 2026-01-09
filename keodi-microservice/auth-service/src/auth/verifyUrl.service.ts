@@ -10,7 +10,7 @@ import { RedisService } from "src/redis/redis.service";
 export class VerifyUrlService{
     constructor (
         private readonly redisService: RedisService,
-        @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientKafka ,
+        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
     ){}
 
     async sendVerifyUrlWithPurpose (email: string, token: string, purpose: string) {
@@ -22,7 +22,7 @@ export class VerifyUrlService{
 
         switch(purpose) {
             case VerifyUrlPurpose.VERIFY_EMAIL:
-                this.notificationClient.emit('notification.verify-email', {to: email, url: process.env.VERIFY_EMAIL_API + token})
+                this.kafkaClient.emit('notification.verify-email', {to: email, url: process.env.VERIFY_EMAIL_API + token})
                 break
             default:
                 break

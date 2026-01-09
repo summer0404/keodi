@@ -22,6 +22,7 @@ import {
 } from 'src/templates/resend-verify-email-response.template';
 import { getTTLForPurpose } from 'src/utils/ttl-redis.helper';
 import { timeLimitResend } from 'src/utils/time-limit-resend';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly otpService: OtpService,
         private readonly verifyUrlService: VerifyUrlService,
+        private readonly userService: UserService
     ) { }
 
     private generateAccessAndRefreshToken(user: UserDto) {
@@ -58,7 +60,7 @@ export class AuthService {
     private async sendVerifyUrlWithPurpose(email: string, purpose: string) {
         const token = this.jwtService.sign({ email }, { expiresIn: '1h' })
 
-        await this.verifyUrlService.sendVerifyUrlWithPurpose(email, token, purpose)
+        this.verifyUrlService.sendVerifyUrlWithPurpose(email, token, purpose)
     }
 
     async register(data: RegisterDto) {
@@ -85,7 +87,8 @@ export class AuthService {
                 }
             })
 
-            await this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL)
+            this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL)
+            this.userService.createUserInfomation(newUser.id)
 
             return { message: 'User created successfully' }
         } catch (error) {
@@ -161,6 +164,13 @@ export class AuthService {
                         isVerify: true
                     }
                 })
+
+                this.userService.createUserInfomation(
+                    googleUser.id,
+                    user.firstName,
+                    user.lastName,
+                    user.picture
+                )
             }
 
             const tokens = this.generateAccessAndRefreshToken(googleUser)
@@ -220,7 +230,7 @@ export class AuthService {
                 message: 'User with this email does not exist'
             })
 
-            await this.sendVerifyUrlWithPurpose(email, purpose)
+            this.sendVerifyUrlWithPurpose(email, purpose)
 
             return { message: "Verification email has sent" }
         } catch (error) {

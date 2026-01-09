@@ -6,7 +6,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConvertToHttpExceptionFilter } from './filters/rpc-to-http-exception.filter';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
-import { KafkaModule } from './shared/kafka.module';
+import { KafkaModule } from './kafka/kafka.module';
 import { JwtAuthGuard } from './auth/jwt.guard';
 import { PlaceModule } from './place/place.module';
 import { RedisModule } from './redis/redis.module';
