@@ -24,6 +24,7 @@ export class KafkaService implements OnModuleInit {
         this.kafkaClient.subscribeToResponseOf('user.unverify')
         this.kafkaClient.subscribeToResponseOf('user.update-username')
         this.kafkaClient.subscribeToResponseOf('user.update-picture')
+        this.kafkaClient.subscribeToResponseOf('user.get')
 
         //place topic 
         this.kafkaClient.subscribeToResponseOf('place.get-by-id')
