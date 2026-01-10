@@ -119,4 +119,24 @@ export class UserService {
             })
         }
     }
+
+    async getById(userId: number) {
+        try {
+            const user = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+            if (!user) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+            return user
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
 }

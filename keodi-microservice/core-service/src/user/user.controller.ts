@@ -38,4 +38,11 @@ export class UserController {
       data.type
     )
   }
+
+  @MessagePattern('user.get')
+  async getById(
+    @Payload() data: { userId: number }
+  ){
+    return await this.userService.getById(data.userId)
+  }
 }

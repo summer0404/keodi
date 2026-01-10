@@ -11,6 +11,7 @@ import {
     ResetPasswordOTPDto,
     ValidateOTPDto
 } from 'src/dtos/auth.dto';
+import { CurrentUserDto } from 'src/dtos/user.dto';
 
 @Injectable()
 export class AuthService {
@@ -118,5 +119,18 @@ export class AuthService {
         } catch (error) {
             throw error
         }
+    }
+
+    async me (user: CurrentUserDto) {
+        try {
+            const userInfo = await firstValueFrom(this.client.send('user.get', { userId: user.id }))
+
+            return {
+                ...userInfo,
+                ...user
+            }
+        } catch (error) {
+            throw error
+        }  
     }
 }

@@ -89,3 +89,29 @@ export class ForgotPasswordOTPResponseDto {
 }
 
 export class ResetPasswordOTPResponseDto extends ForgotPasswordOTPResponseDto { }
+
+export class MeResponseDto {
+    @ApiProperty({ example: 1, description: 'User ID' })
+    id: number;
+
+    @ApiProperty({ example: 'johndoe', description: 'Username' })
+    username: string;
+
+    @ApiProperty({ example: 'user@example.comn', description: 'Email address' })
+    email: string;
+
+    @ApiProperty({ example: 'John', description: 'First name' })
+    firstName: string | null;
+
+    @ApiProperty({ example: 'Doe', description: 'Last name' })
+    lastName: string | null;
+
+    @ApiProperty({ example: 'https://example.com/profile.jpg', description: 'Profile picture URL', nullable: true })
+    picture: string | null;
+
+    @ApiProperty({ example: '1990-01-01', description: "user's date of birth" })
+    dateOfBirth: Date | null;
+
+    @ApiProperty({ example: '+1234567890', description: "user's phone number", nullable: true })
+    phoneNumber: string | null;
+}
