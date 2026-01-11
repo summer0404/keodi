@@ -1,7 +1,10 @@
 import { ApiProperty, PickType } from "@nestjs/swagger"
+import { Type } from "class-transformer";
 import {
+    IsDate,
     IsEmail,
     IsNotEmpty,
+    IsOptional,
     IsString,
     Matches,
     MaxLength,
@@ -53,4 +56,42 @@ export class CurrentUserDto {
 
     @ApiProperty({ example: '', description: 'Email' })
     email: string;
+}
+
+export class UpdateUserProfileDto {
+    @IsOptional()
+    @IsString({ message: 'First name must be a string' })
+    @MaxLength(50, { message: 'First name must not exceed 50 characters' })
+    @ApiProperty({
+        example: 'John',
+        description: 'First name of the user (max 50 characters)'
+    })
+    firstName?: string;
+
+    @IsOptional()
+    @IsString({ message: 'Last name must be a string' })
+    @MaxLength(50, { message: 'Last name must not exceed 50 characters' })
+    @ApiProperty({
+        example: 'Doe',
+        description: 'Last name of the user (max 50 characters)'
+    })
+    lastName?: string
+
+    @IsOptional()
+    @IsString({ message: 'Phone number must be a string' })
+    @MaxLength(12, { message: 'Phone number must not exceed 12 characters' })
+    @ApiProperty({
+        example: '+1234567890',
+        description: 'Phone number of the user (max 12 characters)'
+    })
+    phoneNumber?: string
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate({ message: 'Date of birth must be a valid date' })
+    @ApiProperty({
+        example: '1990-01-01',
+        description: 'Date of birth of the user (YYYY-MM-DD format)'
+    })
+    dateOfBirth?: Date
 }
