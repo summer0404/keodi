@@ -15,12 +15,14 @@ import {
   ApiBody,
   ApiConsumes,
   ApiOkResponse,
-  ApiOperation
+  ApiOperation,
+  ApiResponse
 } from '@nestjs/swagger';
 import { SkipAuth } from 'src/decorators/skip-auth.decorator';
 import {
   CurrentUserDto,
-  UpdateUsernameDto
+  UpdateUsernameDto,
+  UpdateUserProfileDto
 } from 'src/dtos/user.dto';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { CurrentAccessToken } from 'src/decorators/current-access-token.decorator';
@@ -82,5 +84,14 @@ export class UserController {
       file.buffer,
       file.mimetype,
     )
+  }
+
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ description: "Use this API to update profile of a user"})
+  @ApiResponse({ description: 'Return message inform that update profile successfully' })
+  @Patch()
+  async updateProfile (@Body() body: UpdateUserProfileDto, @CurrentUser() user: CurrentUserDto) {
+    return await this.userService.updateProfile(user.id, body)
   }
 }

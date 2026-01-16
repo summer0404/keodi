@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { UpdateUserProfileDto } from 'src/dtos/user.dto';
 
 @Injectable()
 export class UserService {
@@ -20,5 +21,9 @@ export class UserService {
             file, 
             type,
         }))
+    }
+
+    async updateProfile(userId: number, data: UpdateUserProfileDto) {
+        return await firstValueFrom(this.client.send('user.update-profile', { userId, data }))
     }
 }
