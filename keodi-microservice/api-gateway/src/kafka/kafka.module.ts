@@ -13,7 +13,7 @@ import { KafkaService } from './kafka.service';
                 useFactory: async (config: ConfigService) => {
                     const brokersString = config.get<string>('KAFKA_BROKER');
                     const brokers = brokersString ? brokersString.split(',') : [];
-
+                    console.log('Kafka Brokers:', brokers);
                     return {
                         transport: Transport.KAFKA,
                         options: {

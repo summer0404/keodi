@@ -6,24 +6,22 @@ import { RpcException } from "@nestjs/microservices";
 export class S3Service {
     private readonly s3Client: S3Client;
     private readonly bucket: string;
-    private readonly endpoint: string;
+    private readonly region: string;
 
     constructor() {
-        const endpoint = process.env.S3_ENDPOINT;
         const region = process.env.S3_REGION;
         const accessKeyId = process.env.S3_ACCESS_KEY;
         const secretAccessKey = process.env.S3_SECRET_KEY;
         const bucket = process.env.S3_BUCKET;
 
-        if (!endpoint || !region || !accessKeyId || !secretAccessKey || !bucket) {
+        if (!region || !accessKeyId || !secretAccessKey || !bucket) {
             throw new Error('Missing S3 configuration in environment variables');
         }
 
         this.bucket = bucket;
-        this.endpoint = endpoint;
+        this.region = region;
         
         this.s3Client = new S3Client({
-            endpoint,
             region,
             credentials: {
                 accessKeyId,
@@ -42,7 +40,7 @@ export class S3Service {
                 });
             }
 
-            const key = `user_${userId}_picture.jpg`;
+            const key = `user_images/user_${userId}_picture.jpg`;
 
             await this.s3Client.send(new PutObjectCommand({
                 Bucket: this.bucket,
@@ -51,7 +49,7 @@ export class S3Service {
                 ContentType: contentType,
             }));
 
-            return `${this.endpoint}/${this.bucket}/${key}`;
+            return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
         } catch (error) {
             console.error(error);
             
