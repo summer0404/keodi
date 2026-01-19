@@ -1,0 +1,210 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlaceImageType {
+  FEATURE
+  COVER
+  GALLERY
+}
+
+enum UserImageType {
+  PICTURE
+  GALLERY
+}
+
+enum UserActionType {
+  CLICK
+  RATE_1
+  RATE_2
+  RATE_3
+  RATE_4
+  RATE_5
+  READ_REVIEWS
+  FAVORITE
+  GET_DIRECTION
+}
+
+model User {
+  id          String    @id
+  phoneNumber String?   @unique @map("phone_number") @db.VarChar(12)
+  firstName   String?   @map("first_name") @db.VarChar(50)
+  lastName    String?   @map("last_name") @db.VarChar(50)
+  dateOfBirth DateTime? @map("date_of_birth")
+  pictureUrl  String?   @map("picture_url")
+
+  userImages     UserImage[]
+  userAttributes UserAttribute[]
+  userActions    UserAction[]
+  reviews        Review[]
+
+  @@map("users")
+}
+
+model Image {
+  id  String @id @default(cuid())
+  url String
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userImages  UserImage[]
+  placeImages PlaceImage[]
+
+  @@map("images")
+}
+
+model UserImage {
+  userId  String        @map("user_id")
+  imageId String        @map("image_id")
+  type    UserImageType @default(GALLERY)
+
+  user  User  @relation(fields: [userId], references: [id])
+  image Image @relation(fields: [imageId], references: [id])
+
+  @@id([userId, imageId])
+  @@map("user_images")
+}
+
+model PlaceImage {
+  placeId String         @map("place_id")
+  imageId String         @map("image_id")
+  type    PlaceImageType @default(GALLERY)
+
+  place Place @relation(fields: [placeId], references: [id])
+  image Image @relation(fields: [imageId], references: [id])
+
+  @@id([placeId, imageId])
+  @@map("place_images")
+}
+
+model ReviewImage {
+  reviewId String @map("review_id")
+  imageId  String @map("image_id")
+  review   Review @relation(fields: [reviewId], references: [id])
+
+  @@id([reviewId, imageId])
+  @@map("review_images")
+}
+
+model Place {
+  id              String  @id @default(cuid())
+  fromGoogle      Boolean @map("from_google")
+  name            String
+  description     String?
+  mainCategory    String  @map("main_category")
+  rating          Float
+  googleMapLink   String  @map("google_map_link")
+  website         String?
+  phoneNumber     String? @map("phone_number")
+  featureImageUrl String? @map("feature_image_url")
+
+  latitude    Float
+  longitude   Float
+  ward        String?
+  street      String?
+  city        String?
+  countryCode String? @map("country_code")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  placeAttributes PlaceAttribute[]
+  userActions     UserAction[]
+  reviews         Review[]
+  placeImages     PlaceImage[]
+  openingHours    OpeningHour[]
+
+  @@map("places")
+}
+
+model OpeningHour {
+  id        String @id @default(cuid())
+  placeId   String @map("place_id")
+  dayOfWeek Int    @map("day_of_week")
+
+  openTime  DateTime @map("open_time") @db.Time
+  closeTime DateTime @map("close_time") @db.Time
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("opening_hours")
+}
+
+model Attribute {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  placeAttributes PlaceAttribute[]
+  userAttributes  UserAttribute[]
+
+  @@map("attributes")
+}
+
+model PlaceAttribute {
+  placeId     String @map("place_id")
+  attributeId String @map("attribute_id")
+  score       Float
+
+  place     Place     @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, attributeId])
+  @@map("place_attributes")
+}
+
+model UserAttribute {
+  userId      String @map("user_id")
+  attributeId String @map("attribute_id")
+  score       Float
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, attributeId])
+  @@map("user_attributes")
+}
+
+model UserAction {
+  id        BigInt         @id @default(autoincrement())
+  userId    String         @map("user_id")
+  placeId   String         @map("place_id")
+  action    UserActionType
+  score     Float
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("user_actions")
+}
+
+model Review {
+  id               String  @id @default(cuid())
+  placeId          String  @map("place_id")
+  userId           String? @map("user_id")
+  fromGoogle       Boolean @map("from_google")
+  name             String
+  rating           Int
+  text             String?
+  originalLanguage String? @map("original_language")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  images ReviewImage[]
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id])
+
+  @@map("reviews")
+}

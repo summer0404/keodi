@@ -1,0 +1,134 @@
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
+import { UpdateUserProfileDto } from 'src/common/dtos/user.dto';
+import { ImageService } from 'src/modules/image/image.service';
+import { PrismaService } from 'src/database/prisma.service';
+
+@Injectable()
+export class UserService {
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly imageService: ImageService
+    ) { }
+
+    async create(
+        userId: string,
+        firstName?: string,
+        lastName?: string,
+        picture?: string
+    ) {
+        try {
+            await this.prismaService.user.create({
+                data: {
+                    id: userId,
+                    lastName: lastName ? lastName : null,
+                    firstName: firstName ? firstName : null,
+                    pictureUrl: picture ? picture : null
+                }
+            })
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async updatePicture(
+        file: Buffer,
+        userId: string,
+        type?: string
+    ) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: userId } })
+
+            if (!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+
+            const image = await this.imageService.updateUserProfilePicture(
+                existingUser.id,
+                userId,
+                file,
+                type
+            );
+
+            if (!existingUser.pictureUrl || existingUser.pictureUrl !== image.url) {
+                await this.prismaService.user.update({
+                    where: {
+                        id: existingUser.id
+                    },
+                    data: {
+                        pictureUrl: image.url
+                    }
+                })
+            }
+
+            return { message: "Profile picture updated successfully" }
+
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async getById(userId: string) {
+        try {
+            const user = await this.prismaService.user.findUnique({ where: { id: userId } })
+            if (!user) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+            return user
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async updateProfile(
+        userId: string,
+        data: UpdateUserProfileDto
+    ) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: userId } })
+            if (!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+            await this.prismaService.user.update({
+                where: {
+                    id: existingUser.id
+                },
+                data: data
+            })
+            return { message: "Profile updated successfully" }
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+}
