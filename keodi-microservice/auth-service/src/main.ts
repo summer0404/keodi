@@ -7,7 +7,6 @@ async function bootstrap() {
   const app = await NestFactory.createMicroservice(
     AppModule,
     {
-      name: 'AUTH_SERVICE',
       transport: Transport.KAFKA,
       options:{
         client: {

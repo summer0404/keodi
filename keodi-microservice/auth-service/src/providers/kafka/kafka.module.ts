@@ -1,20 +1,35 @@
 import { Module } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { ClientsModule, Transport } from "@nestjs/microservices";
 
 @Module({
     imports: [
-        ClientsModule.register([
+        ClientsModule.registerAsync([
             {
                 name: 'KAFKA_SERVICE',
-                transport: Transport.KAFKA,
-                options: {
-                    client: {
-                        clientId: 'auth-client',
-                        brokers: [process.env.KAFKA_BROKER as string].filter((broker): broker is string => typeof broker === 'string')
-                    }
+                inject: [ConfigService],
+                useFactory: async (configService: ConfigService) => {
+                    const brokersString = configService.get<string>('KAFKA_BROKER');
+                    const brokers = brokersString ? brokersString.split(',') : [];
+                    return {
+                        transport: Transport.KAFKA,
+                        options: {
+                            client: {
+                                clientId: 'auth-client',
+                                brokers,
+                            },
+                            consumer: {
+                                groupId: 'auth-consumer',
+                                allowAutoTopicCreation: true,
+                            },
+                            subscribe: {
+                                fromBeginning: false,
+                            },
+                        },
+                    };
                 }
             }
-        ]),
+        ])
     ],
     exports: [ClientsModule]
 })

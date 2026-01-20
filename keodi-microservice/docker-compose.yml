@@ -45,7 +45,7 @@ services:
       - auth_postgres_data:/var/lib/postgresql/data
 
   core-postgres:
-    image: postgis/postgis:15-3.4
+    image: postgres:15
     container_name: core_db
     environment:
       POSTGRES_DB: core_db
