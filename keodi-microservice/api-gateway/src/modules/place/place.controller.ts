@@ -1,8 +1,9 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { PlaceService } from './place.service';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 @Controller('places')
+@ApiBearerAuth('access-token')
 export class PlaceController {
   constructor(private readonly placeService: PlaceService) {}
 

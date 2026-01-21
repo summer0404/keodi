@@ -47,6 +47,8 @@ model User {
   userAttributes UserAttribute[]
   userActions    UserAction[]
   reviews        Review[]
+  userCategories UserCategory[]
+  places         Place[]
 
   @@map("users")
 }
@@ -58,8 +60,9 @@ model Image {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  userImages  UserImage[]
-  placeImages PlaceImage[]
+  userImages   UserImage[]
+  placeImages  PlaceImage[]
+  reviewImages ReviewImage[]
 
   @@map("images")
 }
@@ -69,8 +72,8 @@ model UserImage {
   imageId String        @map("image_id")
   type    UserImageType @default(GALLERY)
 
-  user  User  @relation(fields: [userId], references: [id])
-  image Image @relation(fields: [imageId], references: [id])
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
 
   @@id([userId, imageId])
   @@map("user_images")
@@ -81,8 +84,8 @@ model PlaceImage {
   imageId String         @map("image_id")
   type    PlaceImageType @default(GALLERY)
 
-  place Place @relation(fields: [placeId], references: [id])
-  image Image @relation(fields: [imageId], references: [id])
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
 
   @@id([placeId, imageId])
   @@map("place_images")
@@ -91,7 +94,8 @@ model PlaceImage {
 model ReviewImage {
   reviewId String @map("review_id")
   imageId  String @map("image_id")
-  review   Review @relation(fields: [reviewId], references: [id])
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  image    Image  @relation(fields: [imageId], references: [id], onDelete: Cascade)
 
   @@id([reviewId, imageId])
   @@map("review_images")
@@ -99,18 +103,19 @@ model ReviewImage {
 
 model Place {
   id              String  @id @default(cuid())
-  fromGoogle      Boolean @map("from_google")
+  fromGoogle      Boolean @default(false) @map("from_google")
   name            String
   description     String?
-  mainCategory    String  @map("main_category")
   rating          Float
   googleMapLink   String  @map("google_map_link")
   website         String?
   phoneNumber     String? @map("phone_number")
   featureImageUrl String? @map("feature_image_url")
+  ownerId         String?
 
   latitude    Float
   longitude   Float
+  fullAddress String? @map("full_address")
   ward        String?
   street      String?
   city        String?
@@ -124,6 +129,8 @@ model Place {
   reviews         Review[]
   placeImages     PlaceImage[]
   openingHours    OpeningHour[]
+  placeCategories PlaceCategory[]
+  owner           User?            @relation(fields: [ownerId], references: [id])
 
   @@map("places")
 }
@@ -150,10 +157,31 @@ model Attribute {
   @@map("attributes")
 }
 
+model Category {
+  id              String          @id @default(cuid())
+  name            String          @unique
+  placeCategories PlaceCategory[]
+  userCategories  UserCategory[]
+
+  @@map("categories")
+}
+
+model PlaceCategory {
+  placeId    String  @map("place_id")
+  categoryId String  @map("category_id")
+  isMain     Boolean @default(false) @map("is_main")
+
+  place    Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, categoryId])
+  @@map("place_categories")
+}
+
 model PlaceAttribute {
   placeId     String @map("place_id")
   attributeId String @map("attribute_id")
-  score       Float
+  score       Float  @default(0)
 
   place     Place     @relation(fields: [placeId], references: [id], onDelete: Cascade)
   attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
@@ -162,10 +190,21 @@ model PlaceAttribute {
   @@map("place_attributes")
 }
 
+model UserCategory {
+  userId     String @map("user_id")
+  categoryId String @map("category_id")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, categoryId])
+  @@map("user_categories")
+}
+
 model UserAttribute {
   userId      String @map("user_id")
   attributeId String @map("attribute_id")
-  score       Float
+  score       Float  @default(0)
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
@@ -192,8 +231,9 @@ model Review {
   id               String  @id @default(cuid())
   placeId          String  @map("place_id")
   userId           String? @map("user_id")
-  fromGoogle       Boolean @map("from_google")
-  name             String
+  fromGoogle       Boolean @default(false) @map("from_google")
+  reviewerName     String  @map("reviewer_name")
+  reviewerPicture  String? @map("reviewer_picture")
   rating           Int
   text             String?
   originalLanguage String? @map("original_language")

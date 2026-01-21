@@ -58,17 +58,18 @@ CREATE TABLE "review_images" (
 -- CreateTable
 CREATE TABLE "places" (
     "id" TEXT NOT NULL,
-    "from_google" BOOLEAN NOT NULL,
+    "from_google" BOOLEAN NOT NULL DEFAULT false,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "main_category" TEXT NOT NULL,
     "rating" DOUBLE PRECISION NOT NULL,
     "google_map_link" TEXT NOT NULL,
     "website" TEXT,
     "phone_number" TEXT,
     "feature_image_url" TEXT,
+    "ownerId" TEXT,
     "latitude" DOUBLE PRECISION NOT NULL,
     "longitude" DOUBLE PRECISION NOT NULL,
+    "full_address" TEXT,
     "ward" TEXT,
     "street" TEXT,
     "city" TEXT,
@@ -99,19 +100,44 @@ CREATE TABLE "attributes" (
 );
 
 -- CreateTable
+CREATE TABLE "categories" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "place_categories" (
+    "place_id" TEXT NOT NULL,
+    "category_id" TEXT NOT NULL,
+    "is_main" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "place_categories_pkey" PRIMARY KEY ("place_id","category_id")
+);
+
+-- CreateTable
 CREATE TABLE "place_attributes" (
     "place_id" TEXT NOT NULL,
     "attribute_id" TEXT NOT NULL,
-    "score" DOUBLE PRECISION NOT NULL,
+    "score" DOUBLE PRECISION NOT NULL DEFAULT 0,
 
     CONSTRAINT "place_attributes_pkey" PRIMARY KEY ("place_id","attribute_id")
+);
+
+-- CreateTable
+CREATE TABLE "user_categories" (
+    "user_id" TEXT NOT NULL,
+    "category_id" TEXT NOT NULL,
+
+    CONSTRAINT "user_categories_pkey" PRIMARY KEY ("user_id","category_id")
 );
 
 -- CreateTable
 CREATE TABLE "user_attributes" (
     "user_id" TEXT NOT NULL,
     "attribute_id" TEXT NOT NULL,
-    "score" DOUBLE PRECISION NOT NULL,
+    "score" DOUBLE PRECISION NOT NULL DEFAULT 0,
 
     CONSTRAINT "user_attributes_pkey" PRIMARY KEY ("user_id","attribute_id")
 );
@@ -133,8 +159,9 @@ CREATE TABLE "reviews" (
     "id" TEXT NOT NULL,
     "place_id" TEXT NOT NULL,
     "user_id" TEXT,
-    "from_google" BOOLEAN NOT NULL,
-    "name" TEXT NOT NULL,
+    "from_google" BOOLEAN NOT NULL DEFAULT false,
+    "reviewer_name" TEXT NOT NULL,
+    "reviewer_picture" TEXT,
     "rating" INTEGER NOT NULL,
     "text" TEXT,
     "original_language" TEXT,
@@ -150,29 +177,50 @@ CREATE UNIQUE INDEX "users_phone_number_key" ON "users"("phone_number");
 -- CreateIndex
 CREATE UNIQUE INDEX "attributes_name_key" ON "attributes"("name");
 
--- AddForeignKey
-ALTER TABLE "user_images" ADD CONSTRAINT "user_images_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- CreateIndex
+CREATE UNIQUE INDEX "categories_name_key" ON "categories"("name");
 
 -- AddForeignKey
-ALTER TABLE "user_images" ADD CONSTRAINT "user_images_image_id_fkey" FOREIGN KEY ("image_id") REFERENCES "images"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "user_images" ADD CONSTRAINT "user_images_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "place_images" ADD CONSTRAINT "place_images_place_id_fkey" FOREIGN KEY ("place_id") REFERENCES "places"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "user_images" ADD CONSTRAINT "user_images_image_id_fkey" FOREIGN KEY ("image_id") REFERENCES "images"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "place_images" ADD CONSTRAINT "place_images_image_id_fkey" FOREIGN KEY ("image_id") REFERENCES "images"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "place_images" ADD CONSTRAINT "place_images_place_id_fkey" FOREIGN KEY ("place_id") REFERENCES "places"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "review_images" ADD CONSTRAINT "review_images_review_id_fkey" FOREIGN KEY ("review_id") REFERENCES "reviews"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "place_images" ADD CONSTRAINT "place_images_image_id_fkey" FOREIGN KEY ("image_id") REFERENCES "images"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "review_images" ADD CONSTRAINT "review_images_review_id_fkey" FOREIGN KEY ("review_id") REFERENCES "reviews"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "review_images" ADD CONSTRAINT "review_images_image_id_fkey" FOREIGN KEY ("image_id") REFERENCES "images"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "places" ADD CONSTRAINT "places_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "opening_hours" ADD CONSTRAINT "opening_hours_place_id_fkey" FOREIGN KEY ("place_id") REFERENCES "places"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "place_categories" ADD CONSTRAINT "place_categories_place_id_fkey" FOREIGN KEY ("place_id") REFERENCES "places"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "place_categories" ADD CONSTRAINT "place_categories_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "place_attributes" ADD CONSTRAINT "place_attributes_place_id_fkey" FOREIGN KEY ("place_id") REFERENCES "places"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "place_attributes" ADD CONSTRAINT "place_attributes_attribute_id_fkey" FOREIGN KEY ("attribute_id") REFERENCES "attributes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_categories" ADD CONSTRAINT "user_categories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_categories" ADD CONSTRAINT "user_categories_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_attributes" ADD CONSTRAINT "user_attributes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

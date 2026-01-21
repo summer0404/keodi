@@ -89,7 +89,7 @@ export class AuthService {
         }
     }
 
-    async resetPassword(body: (ResetPasswordDto & { userId: number })) {
+    async resetPassword(body: (ResetPasswordDto & { userId: string })) {
         try {
             return await firstValueFrom(this.client.send('auth.reset-password', body))
         } catch (error) {
@@ -105,7 +105,7 @@ export class AuthService {
         }
     }
 
-    async externalResendVerifyEmail(userId: number) {
+    async externalResendVerifyEmail(userId: string) {
         try {
             return await firstValueFrom(this.client.send('auth.external-resend-verify-email', { userId }))
         } catch (error) {
@@ -113,7 +113,7 @@ export class AuthService {
         }
     }
 
-    async resendVerifyEmail(userId: number){
+    async resendVerifyEmail(userId: string){
         try {
             return await firstValueFrom(this.client.send('auth.resend-verify-email', { userId }))
         } catch (error) {

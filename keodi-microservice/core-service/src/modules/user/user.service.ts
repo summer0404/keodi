@@ -113,6 +113,20 @@ export class UserService {
                 status: HttpStatus.BAD_REQUEST,
                 message: 'User not found'
             })
+
+            if (data.phoneNumber) {
+                const userWithPhoneNumber = await this.prismaService.user.findUnique({
+                    where: { phoneNumber: data.phoneNumber }
+                })
+
+                if (userWithPhoneNumber && userWithPhoneNumber.id !== existingUser.id) {
+                    throw new RpcException({
+                        status: HttpStatus.BAD_REQUEST,
+                        message: 'Phone number already in use'
+                    })
+                }
+            }
+
             await this.prismaService.user.update({
                 where: {
                     id: existingUser.id

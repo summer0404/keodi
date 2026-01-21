@@ -6,13 +6,20 @@ import { PrismaClient } from '@prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
     constructor() {
         const connectionString = process.env.DATABASE_URL!;
-        super({ adapter: new PrismaPg({ connectionString }) });
+        super({
+            adapter: new PrismaPg({
+                connectionString,
+                ssl: {
+                    rejectUnauthorized: false,
+                }
+            })
+        });
     }
 
     async onModuleInit() {
         await this.$connect();
     }
-    
+
     async onModuleDestroy() {
         await this.$disconnect();
     }

@@ -171,7 +171,7 @@ export class AuthController {
   @ApiResponse({
     description: 'Returns an HTML page notifying successful or failed email resend',
   })
-  async externalResendVerifyEmail(@Param('userId') userId: number) {
+  async externalResendVerifyEmail(@Param('userId') userId: string) {
     return await this.authService.externalResendVerifyEmail(userId)
   }
 
@@ -181,7 +181,7 @@ export class AuthController {
   @ApiOkResponse({
     description: 'Returns message notify that successfully resend email'
   })
-  async resendVerifyEmail(@Param('userId') userId: number) {
+  async resendVerifyEmail(@Param('userId') userId: string) {
     return await this.authService.resendVerifyEmail(userId)
   }
 
