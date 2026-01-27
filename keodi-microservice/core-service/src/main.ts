@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Transport } from '@nestjs/microservices';
-import { PlaceService } from './place/place.service';
+import { PlaceService } from './modules/place/place.service';
 
 async function bootstrap() {
   const app = await NestFactory.createMicroservice(
@@ -9,7 +9,6 @@ async function bootstrap() {
     {
       transport: Transport.KAFKA,
       options: {
-        name: 'CORE_SERVICE',
         client: {
           clientId: 'core-client',
           brokers: [process.env.KAFKA_BROKER],
