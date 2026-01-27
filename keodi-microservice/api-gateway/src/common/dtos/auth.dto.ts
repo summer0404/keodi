@@ -1,7 +1,6 @@
 import { ApiProperty, PickType } from "@nestjs/swagger";
 import { CreateUserDto } from "./user.dto";
-import { IsInt, IsNotEmpty, IsString, IsUUID, Matches, MaxLength, MinLength } from "class-validator";
-import { Type } from "class-transformer";
+import { IsNotEmpty, IsString, Matches, MaxLength, MinLength } from "class-validator";
 
 export class RegisterDto extends CreateUserDto { }
 
@@ -17,8 +16,7 @@ export class ValidateOTPDto {
         description: 'ID of the user requesting password reset',
     })
     @IsNotEmpty()
-    @IsInt()
-    @Type(() => Number)
+    @IsString()
     userId: string
 
     @ApiProperty({
