@@ -29,6 +29,7 @@ export class KafkaService implements OnModuleInit {
 
         //place topic 
         this.kafkaClient.subscribeToResponseOf('place.get-by-id')
+        this.kafkaClient.subscribeToResponseOf('place.near-me')
 
         await this.kafkaClient.connect()
     }
