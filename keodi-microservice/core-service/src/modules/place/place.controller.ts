@@ -9,6 +9,8 @@ interface NearMePayload {
   radius: number;
   page: number;
   limit: number;
+  sortBy: string;
+  sortOrder: string;
 }
 
 @Controller('place')
@@ -22,7 +24,9 @@ export class PlaceController {
             data.longitude,
             data.radius,
             data.page,
-            data.limit
+            data.limit,
+            data.sortBy,
+            data.sortOrder
         );
     }
 

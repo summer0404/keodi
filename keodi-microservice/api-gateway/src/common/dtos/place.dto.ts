@@ -1,7 +1,8 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNumber, IsOptional, Max, Min } from "class-validator";
+import { IsEnum, IsNumber, IsOptional, Max, Min } from "class-validator";
+import { SortBy, SortOrder } from "../enums/sort.enum";
 
 export class NearMeQueryDto {
     @ApiProperty({description: 'User latitude', example: 10.76407 })
@@ -40,6 +41,16 @@ export class NearMeQueryDto {
     @Min(1)
     @Max(100)
     limit?: number = 10;
+
+    @ApiProperty({description: 'Sort by field', enum: SortBy, default: SortBy.DISTANCE, required: false})
+    @IsOptional()
+    @IsEnum(SortBy)
+    sortBy?: SortBy = SortBy.DISTANCE;
+
+    @ApiProperty({description: 'Sort order', enum: SortOrder, default: SortOrder.ASC, required: false })
+    @IsOptional()
+    @IsEnum(SortOrder)
+    sortOrder?: SortOrder = SortOrder.ASC;
 }
 
 export class PlaceDistanceDto {

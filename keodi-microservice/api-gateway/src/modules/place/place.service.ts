@@ -16,6 +16,8 @@ export class PlaceService {
                 radius: query.radius || 5,
                 page: query.page || 1,
                 limit: query.limit || 20,
+                sortBy: query.sortBy || 'distance',
+                sortOrder: query.sortOrder || 'asc',
             })
         );
     }

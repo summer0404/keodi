@@ -1,32 +1,12 @@
 /* eslint-disable prettier/prettier */
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { Prisma, Place } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 
-export 
-interface PlaceWithDistance {
-    id: string;
-    fromGoogle: boolean;
-    name: string;
-    description: string | null;
-    rating: number;
-    googleMapLink: string;
-    website: string | null;
-    phoneNumber: string | null;
-    featureImageUrl: string | null;
-    ownerId: string | null;
-    latitude: number;
-    longitude: number;
-    fullAddress: string | null;
-    ward: string | null;
-    street: string | null;
-    city: string | null;
-    countryCode: string | null;
-    createdAt: Date;
-    updatedAt: Date;
+export interface PlaceWithDistance extends Place {
     distance: number;
 }
-
 
 @Injectable()
 export class PlaceService {
@@ -39,14 +19,28 @@ export class PlaceService {
         longitude: number,
         radiusKm: number,
         page: number,
-        limit: number
+        limit: number,
+        sortBy: string,
+        sortOrder: string
     ) {
         try {
             const latDelta = radiusKm /111;
             const lngDelta = radiusKm / (111* Math.cos((latitude * Math.PI) / 180))
 
             const offset = (page - 1) * limit;
+
+            const order = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
             
+            let orderByClause = 'ORDER BY distance ASC';
+
+            if (sortBy === 'rating') {
+                orderByClause = `ORDER BY rating ${order}`;
+            } else if (sortBy === 'name') {
+                orderByClause = `ORDER BY name ${order}`;
+            } else {
+                orderByClause = `ORDER BY distance ${order}`;
+            }
+
             const places = await this.prismaService.$queryRaw<PlaceWithDistance[]>`
                 SELECT * FROM (
                     SELECT
@@ -83,7 +77,7 @@ export class PlaceService {
                         AND longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
                 ) AS places_with_distance
                 WHERE distance <= ${radiusKm}
-                ORDER BY distance
+                ${Prisma.raw(orderByClause)}
                 LIMIT ${limit}
                 OFFSET ${offset}
             `;
