@@ -3,23 +3,23 @@ import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import * as bcrypt from 'bcrypt';
 import {
-    LoginDto,
-    RegisterDto,
-    ResetPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
 } from 'src/common/dtos/auth.dto';
 import { ValidateOTPDto } from 'src/common/dtos/otp.dto';
 import { UserDto } from 'src/common/dtos/user.dto';
 import { VerifyUrlPurpose } from 'src/common/enums/verifyUrl.enum';
 import {
-    resendFailedTemplate,
-    resendSuccessTemplate,
-    resendTooSoonTemplate,
+  resendFailedTemplate,
+  resendSuccessTemplate,
+  resendTooSoonTemplate,
 } from 'src/common/templates/resend-verify-email-response.template';
 import {
-    alreadyVerifiedTemplate,
-    emailNotRegisteredTemplate,
-    failVerifyAccountTemplate,
-    successVerifyAccountTemplate,
+  alreadyVerifiedTemplate,
+  emailNotRegisteredTemplate,
+  failVerifyAccountTemplate,
+  successVerifyAccountTemplate,
 } from 'src/common/templates/verify-email-response.template';
 import { timeLimitResend } from 'src/common/utils/time-limit-resend';
 import { getTTLForPurpose } from 'src/common/utils/ttl-redis.helper';
@@ -36,7 +36,7 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly verifyUrlService: VerifyUrlService,
     private readonly userService: UserService,
-  ) {}
+  ) { }
 
   private generateAccessAndRefreshToken(user: UserDto) {
     const payload = {

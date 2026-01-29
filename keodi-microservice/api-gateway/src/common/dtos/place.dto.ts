@@ -1,10 +1,12 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEnum, IsNumber, IsOptional, Max, Min } from "class-validator";
-import { SortBy, SortOrder } from "../enums/sort.enum";
+import { IsNumber, IsOptional, Max, Min } from "class-validator";
+import { PaginationQueryDto } from "./pagination.dto";
 
-export class NearMeQueryDto {
+export const DEFAULT_RADIUS = 5;
+
+export class NearMeQueryDto extends PaginationQueryDto {
     @ApiProperty({description: 'User latitude', example: 10.76407 })
     @Type (() => Number)
     @IsNumber()
@@ -19,38 +21,13 @@ export class NearMeQueryDto {
     @Max(180)
     longitude: number;
 
-    @ApiProperty({description: 'Search radius in kilometers', example: 5, default: 5, required: false})
+    @ApiProperty({description: 'Search radius in kilometers', example: 5, default: DEFAULT_RADIUS, required: false})
     @Type(() => Number)
     @IsNumber()
     @IsOptional()
     @Min(0.1)
     @Max(100)
-    radius?: number = 5;
-
-    @ApiProperty({description: 'Page number', example: 1, default: 1, required: false})
-    @Type(() => Number)
-    @IsNumber()
-    @IsOptional()
-    @Min(1)
-    page?: number = 1;
-
-    @ApiProperty({description: 'Items per page', example: 10, default: 10, required: false})
-    @Type(() => Number)
-    @IsNumber()
-    @IsOptional()
-    @Min(1)
-    @Max(100)
-    limit?: number = 10;
-
-    @ApiProperty({description: 'Sort by field', enum: SortBy, default: SortBy.DISTANCE, required: false})
-    @IsOptional()
-    @IsEnum(SortBy)
-    sortBy?: SortBy = SortBy.DISTANCE;
-
-    @ApiProperty({description: 'Sort order', enum: SortOrder, default: SortOrder.ASC, required: false })
-    @IsOptional()
-    @IsEnum(SortOrder)
-    sortOrder?: SortOrder = SortOrder.ASC;
+    radius?: number = DEFAULT_RADIUS;
 }
 
 export class PlaceDistanceDto {

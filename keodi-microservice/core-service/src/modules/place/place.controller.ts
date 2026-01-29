@@ -1,7 +1,8 @@
 /* eslint-disable prettier/prettier */
 import { Controller } from '@nestjs/common';
-import { PlaceService } from './place.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
+import { PlaceService } from './place.service';
 
 interface NearMePayload {
   latitude: number;
@@ -9,8 +10,8 @@ interface NearMePayload {
   radius: number;
   page: number;
   limit: number;
-  sortBy: string;
-  sortOrder: string;
+  sortBy: SortBy;
+  sortOrder: SortOrder;
 }
 
 @Controller('place')

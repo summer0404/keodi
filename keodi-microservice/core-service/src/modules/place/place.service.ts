@@ -1,7 +1,8 @@
 /* eslint-disable prettier/prettier */
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { Prisma, Place } from '@prisma/client';
+import { Place, Prisma } from '@prisma/client';
+import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PrismaService } from 'src/database/prisma.service';
 
 export interface PlaceWithDistance extends Place {
@@ -20,8 +21,8 @@ export class PlaceService {
         radiusKm: number,
         page: number,
         limit: number,
-        sortBy: string,
-        sortOrder: string
+        sortBy: SortBy,
+        sortOrder: SortOrder
     ) {
         try {
             const latDelta = radiusKm /111;
@@ -29,17 +30,8 @@ export class PlaceService {
 
             const offset = (page - 1) * limit;
 
-            const order = sortOrder.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-            
-            let orderByClause = 'ORDER BY distance ASC';
-
-            if (sortBy === 'rating') {
-                orderByClause = `ORDER BY rating ${order}`;
-            } else if (sortBy === 'name') {
-                orderByClause = `ORDER BY name ${order}`;
-            } else {
-                orderByClause = `ORDER BY distance ${order}`;
-            }
+            const order = sortOrder.toUpperCase();
+            const orderByClause = `ORDER BY ${sortBy} ${order}`;
 
             const places = await this.prismaService.$queryRaw<PlaceWithDistance[]>`
                 SELECT * FROM (

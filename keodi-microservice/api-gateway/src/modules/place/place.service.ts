@@ -2,7 +2,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { NearMePlacesResponseDto, NearMeQueryDto } from 'src/common/dtos/place.dto';
+import { DEFAULT_LIMIT, DEFAULT_PAGE } from 'src/common/dtos/pagination.dto';
+import { DEFAULT_RADIUS, NearMePlacesResponseDto, NearMeQueryDto } from 'src/common/dtos/place.dto';
+import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 
 @Injectable()
 export class PlaceService {
@@ -13,11 +15,11 @@ export class PlaceService {
             this.client.send('place.near-me', {
                 latitude: query.latitude,
                 longitude: query.longitude,
-                radius: query.radius || 5,
-                page: query.page || 1,
-                limit: query.limit || 20,
-                sortBy: query.sortBy || 'distance',
-                sortOrder: query.sortOrder || 'asc',
+                radius: query.radius || DEFAULT_RADIUS,
+                page: query.page || DEFAULT_PAGE,
+                limit: query.limit || DEFAULT_LIMIT,
+                sortBy: query.sortBy || SortBy.DISTANCE,
+                sortOrder: query.sortOrder || SortOrder.ASC,
             })
         );
     }
