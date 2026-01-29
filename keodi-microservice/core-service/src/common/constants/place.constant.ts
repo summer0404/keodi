@@ -1,0 +1,7 @@
+export const  GeoConstants = {
+    KILOMETERS_PER_DEGREE_LATITUDE: 111,
+
+    EARTH_RADIUS_IN_KILOMETERS: 6371,
+    
+    DEGREES_IN_HALF_CIRCLE: 180,
+}

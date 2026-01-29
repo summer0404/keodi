@@ -1,12 +1,12 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, GetObjectCommandInput, PutObjectCommand, PutObjectCommandInput, S3Client } from "@aws-sdk/client-s3";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 @Injectable()
 export class S3Service {
     private readonly s3Client: S3Client;
     private readonly bucket: string;
-    private readonly region: string;
 
     constructor() {
         const region = process.env.S3_REGION;
@@ -19,8 +19,7 @@ export class S3Service {
         }
 
         this.bucket = bucket;
-        this.region = region;
-        
+
         this.s3Client = new S3Client({
             region,
             credentials: {
@@ -31,7 +30,16 @@ export class S3Service {
         });
     }
 
-    async uploadImage(body: Buffer, userId: string, contentType: string = 'image/jpeg'): Promise<string> {
+    async generateImageViewPresignedUrl(key: string): Promise<string> {
+        const params: GetObjectCommandInput = {
+            Bucket: this.bucket,
+            Key: key,
+        };
+        const command = new GetObjectCommand(params);
+        return await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
+    }
+
+    async uploadImage(body: Buffer, key: string, contentType: string = 'image/jpeg') {
         try {
             if (!body || body.length === 0) {
                 throw new RpcException({
@@ -40,23 +48,19 @@ export class S3Service {
                 });
             }
 
-            const key = `user_images/user_${userId}_picture.jpg`;
-
-            await this.s3Client.send(new PutObjectCommand({
+            return await this.s3Client.send(new PutObjectCommand({
                 Bucket: this.bucket,
                 Key: key,
                 Body: body,
                 ContentType: contentType,
             }));
-
-            return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
         } catch (error) {
             console.error(error);
-            
+
             if (error instanceof RpcException) {
                 throw error;
             }
-            
+
             throw new RpcException({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
                 message: error.message || 'Failed to upload file to S3'

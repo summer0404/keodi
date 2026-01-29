@@ -111,7 +111,7 @@ model Place {
   website         String?
   phoneNumber     String? @map("phone_number")
   featureImageUrl String? @map("feature_image_url")
-  ownerId         String?
+  ownerId         String? @map("owner_id")
 
   latitude    Float
   longitude   Float

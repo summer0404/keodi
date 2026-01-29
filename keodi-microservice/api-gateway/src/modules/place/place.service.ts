@@ -2,8 +2,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { DEFAULT_LIMIT, DEFAULT_PAGE } from 'src/common/dtos/pagination.dto';
-import { DEFAULT_RADIUS, NearMePlacesResponseDto, NearMeQueryDto } from 'src/common/dtos/place.dto';
+import { PaginationConstants } from 'src/common/constants/pagination.constants';
+import { PlaceConstants } from 'src/common/constants/place.constant';
+import { NearMePlacesResponseDto, NearMeQueryDto } from 'src/common/dtos/place.dto';
 import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 
 @Injectable()
@@ -15,9 +16,9 @@ export class PlaceService {
             this.client.send('place.near-me', {
                 latitude: query.latitude,
                 longitude: query.longitude,
-                radius: query.radius || DEFAULT_RADIUS,
-                page: query.page || DEFAULT_PAGE,
-                limit: query.limit || DEFAULT_LIMIT,
+                radius: query.radius || PlaceConstants.DEFAULT_RADIUS,
+                page: query.page || PaginationConstants.DEFAULT_PAGE,
+                limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
                 sortBy: query.sortBy || SortBy.DISTANCE,
                 sortOrder: query.sortOrder || SortOrder.ASC,
             })

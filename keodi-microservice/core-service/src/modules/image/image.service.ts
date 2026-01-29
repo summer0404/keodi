@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { UserImageType } from '@prisma/client';
+import { ImageConstants } from 'src/common/constants/image.constant';
 import { PrismaService } from 'src/database/prisma.service';
 import { S3Service } from 'src/providers/s3/s3.service';
 
@@ -11,18 +12,11 @@ export class ImageService {
         private readonly s3Service: S3Service
     ) { }
 
-    private readonly ALLOWED_MIME_TYPES = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/webp'
-    ];
-
     private validateImageFile(mimetype: string): void {
-        if (!this.ALLOWED_MIME_TYPES.includes(mimetype)) {
+        if (!ImageConstants.ALLOWED_MIME_TYPES.includes(mimetype)) {
             throw new RpcException({
                 status: HttpStatus.BAD_REQUEST,
-                message: `Invalid file type. Only ${this.ALLOWED_MIME_TYPES.join(', ')} are allowed`
+                message: `Invalid file type. Only ${ImageConstants.ALLOWED_MIME_TYPES.join(', ')} are allowed`
             });
         }
 
@@ -48,8 +42,26 @@ export class ImageService {
         // }
     }
 
+    async getImageViewUrl(key: string): Promise<string> {
+        try {
+            if (key.startsWith('http://') || key.startsWith('https://')) {
+                return key;
+            }
+
+            return await this.s3Service.generateImageViewPresignedUrl(key);
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
     async updateUserProfilePicture(
-        id: string,
         userId: string,
         file: Buffer,
         type?: string
@@ -58,9 +70,11 @@ export class ImageService {
             this.validateImageFile(type);
         }
         try {
+            const key = `${ImageConstants.IMAGE_FOLDERS.USER_IMAGES}/user_${userId}_picture.jpg`;
+
             const fileBuffer = Buffer.isBuffer(file) ? file : Buffer.from(file, 'base64');
 
-            const imageUrl = await this.s3Service.uploadImage(fileBuffer, userId, type);
+            await this.s3Service.uploadImage(fileBuffer, key, type);
 
             const existingPictureUrl = await this.prismaService.userImage.findFirst({
                 where: {
@@ -71,13 +85,13 @@ export class ImageService {
 
             if (existingPictureUrl) {
                 return await this.prismaService.image.update({
-                    where: { id },
-                    data: { url: imageUrl },
+                    where: { id: existingPictureUrl.imageId },
+                    data: { url: key },
                 });
             } else {
                 return await this.prismaService.image.create({
                     data: {
-                        url: imageUrl,
+                        url: key,
                         userImages: {
                             create: {
                                 userId,
