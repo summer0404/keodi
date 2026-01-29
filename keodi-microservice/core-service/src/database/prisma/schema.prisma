@@ -132,6 +132,7 @@ model Place {
   placeCategories PlaceCategory[]
   owner           User?            @relation(fields: [ownerId], references: [id])
 
+  @@index([latitude, longitude]) 
   @@map("places")
 }
 
