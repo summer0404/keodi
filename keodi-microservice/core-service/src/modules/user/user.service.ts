@@ -53,8 +53,7 @@ export class UserService {
 
             const image = await this.imageService.updateUserProfilePicture(
                 existingUser.id,
-                userId,
-                file,
+                file, 
                 type
             );
 
@@ -90,7 +89,13 @@ export class UserService {
                 status: HttpStatus.BAD_REQUEST,
                 message: 'User not found'
             })
-            return user
+
+            const pictureUrl = user.pictureUrl ? await this.imageService.getImageViewUrl(user.pictureUrl) : null;
+
+            return {
+                ...user,
+                pictureUrl
+            }
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {

@@ -3,8 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsNumber, IsOptional, Max, Min } from "class-validator";
 import { PaginationQueryDto } from "./pagination.dto";
-
-export const DEFAULT_RADIUS = 5;
+import { PlaceConstants } from "../constants/place.constant";
 
 export class NearMeQueryDto extends PaginationQueryDto {
     @ApiProperty({description: 'User latitude', example: 10.76407 })
@@ -21,13 +20,13 @@ export class NearMeQueryDto extends PaginationQueryDto {
     @Max(180)
     longitude: number;
 
-    @ApiProperty({description: 'Search radius in kilometers', example: 5, default: DEFAULT_RADIUS, required: false})
+    @ApiProperty({description: 'Search radius in kilometers', example: 5, default: PlaceConstants.DEFAULT_RADIUS, required: false})
     @Type(() => Number)
     @IsNumber()
     @IsOptional()
     @Min(0.1)
     @Max(100)
-    radius?: number = DEFAULT_RADIUS;
+    radius?: number = PlaceConstants.DEFAULT_RADIUS;
 }
 
 export class PlaceDistanceDto {
