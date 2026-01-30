@@ -7,6 +7,8 @@ export const ImageConstants = {
     ],
 
     IMAGE_FOLDERS: {
-        USER_IMAGES: 'user-images'
-    }
+        USER_IMAGES: 'user_images'
+    },
+
+    PUBLIC_IMAGE_FOLDERS: ['user_images']
 };

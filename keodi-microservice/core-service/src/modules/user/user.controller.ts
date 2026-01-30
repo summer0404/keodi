@@ -58,4 +58,17 @@ export class UserController {
       data.data
     )
   }
+
+  @MessagePattern('user.onboarding')
+  async onBoarding(
+    @Payload() data: { 
+      userId: string,
+      categoryIds: string[]
+    }
+  ){
+    return await this.userService.onBoarding(
+      data.userId,
+      data.categoryIds
+    )
+  }
 }

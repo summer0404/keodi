@@ -132,7 +132,7 @@ model Place {
   placeCategories PlaceCategory[]
   owner           User?            @relation(fields: [ownerId], references: [id])
 
-  @@index([latitude, longitude]) 
+  @@index([latitude, longitude])
   @@map("places")
 }
 
@@ -161,6 +161,7 @@ model Attribute {
 model Category {
   id              String          @id @default(cuid())
   name            String          @unique
+  isSelectable    Boolean         @default(false) @map("is_selectable")
   placeCategories PlaceCategory[]
   userCategories  UserCategory[]
 

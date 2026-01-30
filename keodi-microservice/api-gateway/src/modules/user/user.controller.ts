@@ -16,7 +16,6 @@ import {
   ApiConsumes,
   ApiOkResponse,
   ApiOperation,
-  ApiResponse
 } from '@nestjs/swagger';
 import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import {
@@ -27,6 +26,7 @@ import {
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentAccessToken } from 'src/common/decorators/current-access-token.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CategoryOnboardingDto } from 'src/common/dtos/category.dto';
 
 @Controller('users')
 export class UserController {
@@ -89,9 +89,23 @@ export class UserController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: "Use this API to update profile of a user"})
-  @ApiResponse({ description: 'Return message inform that update profile successfully' })
+  @ApiOkResponse({ description: 'Return message inform that update profile successfully' })
   @Patch()
   async updateProfile (@Body() body: UpdateUserProfileDto, @CurrentUser() user: CurrentUserDto) {
     return await this.userService.updateProfile(user.id, body)
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ description: 'Use this API to onboarding user with selected categories' })
+  @ApiOkResponse({ description: 'Return message inform that onboarding user successfully' })
+  @Patch('onboarding')
+  async onBoarding(
+    @CurrentUser() user: CurrentUserDto,
+    @Body() data: CategoryOnboardingDto
+  ) {
+    return await this.userService.onBoarding(
+      user.id,
+      data.categoryIds
+    )
   }
 }

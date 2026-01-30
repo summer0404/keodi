@@ -150,4 +150,37 @@ export class UserService {
             })
         }
     }
+
+    async onBoarding(
+        userId: string,
+        categoryIds: string[],
+    ){
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: userId } })
+
+            if(!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+
+            await this.prismaService.userCategory.createMany({
+                data: categoryIds.map(categoryId => ({
+                    userId: existingUser.id,
+                    categoryId
+                })),
+                skipDuplicates: true
+            })
+
+            return { message: "Onboarding completed successfully" }
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
 }

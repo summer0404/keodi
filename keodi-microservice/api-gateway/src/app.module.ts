@@ -10,6 +10,7 @@ import { KafkaModule } from './providers/kafka/kafka.module';
 import { JwtAuthGuard } from './modules/auth/jwt.guard';
 import { PlaceModule } from './modules/place/place.module';
 import { RedisModule } from './providers/redis/redis.module';
+import { CategoryModule } from './modules/category/category.module';
 
 @Module({
   controllers: [
@@ -32,6 +33,7 @@ import { RedisModule } from './providers/redis/redis.module';
     UserModule,
     KafkaModule,
     PlaceModule,
+    CategoryModule,
     RedisModule
   ],
 })

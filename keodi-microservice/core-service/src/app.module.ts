@@ -7,6 +7,7 @@ import { PrismaModule } from './database/prisma.module';
 import { UserModule } from './modules/user/user.module';
 import { ImageModule } from './modules/image/image.module';
 import { ReviewModule } from './modules/review/review.module';
+import { CategoryModule } from './modules/category/category.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { ReviewModule } from './modules/review/review.module';
     PrismaModule,
     UserModule,
     ImageModule,
-    ReviewModule
+    ReviewModule,
+    CategoryModule
   ],
   controllers: [AppController],
   providers: [AppService],
