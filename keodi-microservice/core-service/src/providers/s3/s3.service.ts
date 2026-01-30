@@ -2,11 +2,13 @@ import { GetObjectCommand, GetObjectCommandInput, PutObjectCommand, PutObjectCom
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { ImageConstants } from "src/common/constants/image.constant";
 
 @Injectable()
 export class S3Service {
     private readonly s3Client: S3Client;
     private readonly bucket: string;
+    private readonly region: string;
 
     constructor() {
         const region = process.env.S3_REGION;
@@ -19,6 +21,7 @@ export class S3Service {
         }
 
         this.bucket = bucket;
+        this.region = region;
 
         this.s3Client = new S3Client({
             region,
@@ -31,6 +34,10 @@ export class S3Service {
     }
 
     async generateImageViewPresignedUrl(key: string): Promise<string> {
+        if (ImageConstants.PUBLIC_IMAGE_FOLDERS.some(folder => key.startsWith(folder))) {
+            return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+        }
+
         const params: GetObjectCommandInput = {
             Bucket: this.bucket,
             Key: key,

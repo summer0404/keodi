@@ -1,8 +1,20 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { 
+  Controller, 
+  Get, 
+  Param, 
+  Query 
+} from '@nestjs/common';
 import { PlaceService } from './place.service';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { NearMePlacesResponseDto, NearMeQueryDto } from 'src/common/dtos/place.dto';
+import { 
+  ApiBearerAuth, 
+  ApiOkResponse, 
+  ApiOperation 
+} from '@nestjs/swagger';
+import { 
+  NearMePlacesResponseDto, 
+  NearMeQueryDto 
+} from 'src/common/dtos/place.dto';
 
 @Controller('places')
 @ApiBearerAuth('access-token')
@@ -11,6 +23,7 @@ export class PlaceController {
 
   @Get('near-me')
   @ApiOperation({ summary: 'Get places near user location'})
+  @ApiOkResponse({ description: 'List of nearby places', type: NearMePlacesResponseDto })
   async getNearbyPlaces(@Query() query: NearMeQueryDto): Promise<NearMePlacesResponseDto> {
     return await this.placeService.getNearbyPlaces(query);
   }
