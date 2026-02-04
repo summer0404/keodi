@@ -77,12 +77,14 @@ export class PlaceService {
                 OFFSET ${offset}
             `;
 
-            const places = rawPlaces.map(place => ({
-                ...place,
-                featureImageUrl: place.featureImageUrl
-                    ? this.imageService.getImageViewUrl(place.featureImageUrl)
-                    : null,
-            }));
+            const places = await Promise.all(
+                rawPlaces.map(async (place) => ({
+                    ...place,
+                    featureImageUrl: place.featureImageUrl
+                        ? await this.imageService.getImageViewUrl(place.featureImageUrl)
+                        : null,
+                }))
+            );
 
 
             const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
@@ -129,11 +131,20 @@ export class PlaceService {
 
     async getById(id: string) {
         try {
-
-            // TO DO: fetch and include image URL and using getImageViewUrl to get presigned URL
-            return await this.prismaService.place.findUnique({
+            const place = await this.prismaService.place.findUnique({
                 where: { id },
             });
+
+            if (!place) {
+                return null;
+            }
+
+            return {
+                ...place,
+                featureImageUrl: place.featureImageUrl
+                    ? await this.imageService.getImageViewUrl(place.featureImageUrl)
+                    : null,
+            };
         } catch (error) {
             console.error(error)
             if (error instanceof RpcException) {
