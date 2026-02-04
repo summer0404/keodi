@@ -11,7 +11,7 @@ import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 export class PlaceService {
     constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
 
-    async getNearbyPlaces(query: NearMeQueryDto): Promise<NearMePlacesResponseDto> {
+    async getNearbyPlaces(query: NearMeQueryDto, userId?: string): Promise<NearMePlacesResponseDto> {
         return await firstValueFrom(
             this.client.send('place.near-me', {
                 latitude: query.latitude,
@@ -21,11 +21,12 @@ export class PlaceService {
                 limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
                 sortBy: query.sortBy || SortBy.DISTANCE,
                 sortOrder: query.sortOrder || SortOrder.ASC,
+                userId,
             })
         );
     }
 
-    async getPlaceById(id: string): Promise<PlaceDistanceDto> {
-        return await firstValueFrom(this.client.send('place.get-by-id', { id }));
+    async getPlaceById(id: string, userId?: string): Promise<PlaceDistanceDto> {
+        return await firstValueFrom(this.client.send('place.get-by-id', { id, userId }));
     }
 }

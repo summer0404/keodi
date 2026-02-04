@@ -50,6 +50,7 @@ export class PlaceDistanceDto {
     createdAt: Date;
     updatedAt: Date;
     distance: number; // in kilometers
+    isFavorite: boolean;
 }
 
 export class NearMePlacesResponseDto extends PaginationResponseDto {

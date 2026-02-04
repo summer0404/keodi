@@ -9,6 +9,7 @@ import { ImageService } from '../image/image.service';
 
 export interface PlaceWithDistance extends Place {
     distance: number;
+    isFavorite: boolean;
 }
 
 @Injectable()
@@ -25,7 +26,8 @@ export class PlaceService {
         page: number,
         limit: number,
         sortBy: SortBy,
-        sortOrder: SortOrder
+        sortOrder: SortOrder,
+        userId?: string
     ) {
         try {
             const latDelta = radiusKm / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
@@ -39,37 +41,39 @@ export class PlaceService {
             const rawPlaces = await this.prismaService.$queryRaw<PlaceWithDistance[]>`
                 SELECT * FROM (
                     SELECT
-                        id,
-                        from_google as "fromGoogle",
-                        name,
-                        description,
-                        rating,
-                        google_map_link as "googleMapLink",
-                        website,
-                        phone_number as "phoneNumber",
-                        feature_image_url as "featureImageUrl",
-                        owner_id as "ownerId",
-                        latitude,
-                        longitude,
-                        full_address as "fullAddress",
-                        ward,
-                        street,
-                        city,
-                        country_code as "countryCode",
-                        created_at as "createdAt",
-                        updated_at as "updatedAt",
+                        p.id,
+                        p.from_google as "fromGoogle",
+                        p.name,
+                        p.description,
+                        p.rating,
+                        p.google_map_link as "googleMapLink",
+                        p.website,
+                        p.phone_number as "phoneNumber",
+                        p.feature_image_url as "featureImageUrl",
+                        p.owner_id as "ownerId",
+                        p.latitude,
+                        p.longitude,
+                        p.full_address as "fullAddress",
+                        p.ward,
+                        p.street,
+                        p.city,
+                        p.country_code as "countryCode",
+                        p.created_at as "createdAt",
+                        p.updated_at as "updatedAt",
                         (
                             ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(
                                 cos(radians(${latitude})) 
-                                * cos(radians(latitude)) 
-                                * cos(radians(longitude) - radians(${longitude})) 
+                                * cos(radians(p.latitude)) 
+                                * cos(radians(p.longitude) - radians(${longitude})) 
                                 + sin(radians(${latitude})) 
-                                * sin(radians(latitude))
+                                * sin(radians(p.latitude))
                             )
-                        ) AS distance
-                    FROM places
-                    WHERE latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
-                        AND longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
+                        ) AS distance,
+                        CASE WHEN f.user_id IS NOT NULL THEN true ELSE false END AS "isFavorite"
+                    FROM places p
+                    LEFT JOIN favorites f ON p.id = f.place_id AND f.user_id = ${userId ?? ''}
+                    WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
+                        AND p.longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
                 ) AS places_with_distance
                 WHERE distance <= ${radiusKm}
                 ${Prisma.raw(orderByClause)}
@@ -129,16 +133,40 @@ export class PlaceService {
         }
     }
 
-    async getById(id: string) {
+    async getById(id: string, userId?: string) {
         try {
-            const place = await this.prismaService.place.findUnique({
-                where: { id },
-            });
+            const result = await this.prismaService.$queryRaw<any[]>`
+                SELECT
+                    p.id,
+                    p.from_google as "fromGoogle",
+                    p.name,
+                    p.description,
+                    p.rating,
+                    p.google_map_link as "googleMapLink",
+                    p.website,
+                    p.phone_number as "phoneNumber",
+                    p.feature_image_url as "featureImageUrl",
+                    p.owner_id as "ownerId",
+                    p.latitude,
+                    p.longitude,
+                    p.full_address as "fullAddress",
+                    p.ward,
+                    p.street,
+                    p.city,
+                    p.country_code as "countryCode",
+                    p.created_at as "createdAt",
+                    p.updated_at as "updatedAt",
+                    CASE WHEN f.user_id IS NOT NULL THEN true ELSE false END AS "isFavorite"
+                FROM places p
+                LEFT JOIN favorites f ON p.id = f.place_id AND f.user_id = ${userId ?? ''}
+                WHERE p.id = ${id}
+            `;
 
-            if (!place) {
+            if (!result || result.length === 0) {
                 return null;
             }
 
+            const place = result[0];
             return {
                 ...place,
                 featureImageUrl: place.featureImageUrl

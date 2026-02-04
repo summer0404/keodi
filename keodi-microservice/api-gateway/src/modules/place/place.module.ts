@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
-import { PlaceService } from './place.service';
+import { RedisModule } from 'src/providers/redis/redis.module';
 import { PlaceController } from './place.controller';
+import { PlaceService } from './place.service';
 
 @Module({
+  imports: [RedisModule],
   controllers: [PlaceController],
   providers: [PlaceService],
 })
