@@ -1,6 +1,7 @@
 /* eslint-disable prettier/prettier */
-import { Injectable, HttpStatus } from "@nestjs/common";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
+import { SortBy, SortOrder } from "src/common/enums/sort.enum";
 import { PrismaService } from "src/database/prisma.service";
 
 @Injectable()
@@ -74,9 +75,22 @@ export class FavoriteService {
         }
     }
 
-    async getUserFavorites(userId: string, page: number, limit: number) {
+    async getUserFavorites(
+        userId: string,
+        page: number,
+        limit: number,
+        sortBy: SortBy = SortBy.CREATED_AT, sortOrder: SortOrder = SortOrder.DESC) {
         try {
             const offset = (page - 1) * limit;
+            const order = sortOrder.toLowerCase() as 'asc' | 'desc';
+
+            const orderByMap = {
+                [SortBy.NAME]: { place: { name: order } },
+                [SortBy.RATING]: { place: { rating: order } },
+                [SortBy.CREATED_AT]: { createdAt: order },
+            };
+
+            const orderBy = orderByMap[sortBy] || { createdAt: order };
 
             const [favorites, total] = await Promise.all([
                 this.prismaService.favorite.findMany({
@@ -86,7 +100,7 @@ export class FavoriteService {
                     },
                     skip: offset,
                     take: limit,
-                    orderBy: { createdAt: 'desc' }
+                    orderBy,
                 }),
                 this.prismaService.favorite.count({
                     where: { userId },
@@ -97,7 +111,7 @@ export class FavoriteService {
                 favorites: favorites.map(f => f.place),
                 total,
                 page,
-                totalPage: Math.ceil(total / limit),
+                totalPages: Math.ceil(total / limit),
                 limit
             };
         } catch (error) {
