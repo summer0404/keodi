@@ -132,10 +132,10 @@ export class PlaceService {
                 limit,
             };
         } catch (error) {
-            console.error(error);
             if (error instanceof RpcException) {
                 throw error;
             }
+            console.error(error);
             throw new RpcException({
                 status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
                 message: error.message ?? error,
@@ -156,7 +156,10 @@ export class PlaceService {
             });
 
             if (!place) {
-                return null;
+                throw new RpcException({
+                    status: HttpStatus.NOT_FOUND,
+                    message: `Place not found`,
+                });
             }
 
             return {
@@ -168,10 +171,10 @@ export class PlaceService {
                     : null,
             };
         } catch (error) {
-            console.error(error);
             if (error instanceof RpcException) {
                 throw error;
             }
+            console.error(error);
             throw new RpcException({
                 status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
                 message: error.message ?? error,

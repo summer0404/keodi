@@ -15,7 +15,6 @@ import {
   NearMePlacesResponseDto,
   NearMeQueryDto
 } from 'src/common/dtos/place.dto';
-import { JwtAuthGuard } from '../auth/jwt.guard';
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/common/dtos/user.dto';
