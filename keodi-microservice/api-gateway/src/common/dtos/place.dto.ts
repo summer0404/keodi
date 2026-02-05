@@ -2,8 +2,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsNumber, IsOptional, Max, Min } from "class-validator";
-import { PaginationQueryDto } from "./pagination.dto";
 import { PlaceConstants } from "../constants/place.constant";
+import { PaginationQueryDto, PaginationResponseDto } from "./pagination.dto";
 
 export class NearMeQueryDto extends PaginationQueryDto {
     @ApiProperty({description: 'User latitude', example: 10.76407 })
@@ -50,21 +50,10 @@ export class PlaceDistanceDto {
     createdAt: Date;
     updatedAt: Date;
     distance: number; // in kilometers
+    isFavorite: boolean;
 }
 
-export class NearMePlacesResponseDto {
-    @ApiProperty({ type: [PlaceDistanceDto] })
+export class NearMePlacesResponseDto extends PaginationResponseDto {
+    @ApiProperty({ type: [PlaceDistanceDto], description: 'List of nearby places' })
     places: PlaceDistanceDto[];
-
-    @ApiProperty({description: 'Total number of places found'})
-    total: number;
-
-    @ApiProperty({ description: 'Current page number' })
-    page: number;
-
-    @ApiProperty({description: 'Total number of pages' })
-    totalPages: number;
-
-    @ApiProperty({description: 'Items per page'})
-    limit: number;
 }

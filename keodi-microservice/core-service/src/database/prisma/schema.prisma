@@ -49,6 +49,7 @@ model User {
   reviews        Review[]
   userCategories UserCategory[]
   places         Place[]
+  favorites      Favorite[]
 
   @@map("users")
 }
@@ -131,6 +132,7 @@ model Place {
   openingHours    OpeningHour[]
   placeCategories PlaceCategory[]
   owner           User?            @relation(fields: [ownerId], references: [id])
+  favorites       Favorite[]
 
   @@index([latitude, longitude])
   @@map("places")
@@ -249,4 +251,17 @@ model Review {
   user  User? @relation(fields: [userId], references: [id])
 
   @@map("reviews")
+}
+
+model Favorite {
+  userId String @map("user_id")
+  placeId String @map("place_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation (fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation (fields: [placeId], references: [id], onDelete:Cascade)
+
+  @@id([userId, placeId])
+  @@map("favorites")
 }

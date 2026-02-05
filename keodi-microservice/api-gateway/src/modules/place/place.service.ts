@@ -4,14 +4,14 @@ import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PaginationConstants } from 'src/common/constants/pagination.constants';
 import { PlaceConstants } from 'src/common/constants/place.constant';
-import { NearMePlacesResponseDto, NearMeQueryDto } from 'src/common/dtos/place.dto';
+import { NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto } from 'src/common/dtos/place.dto';
 import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 
 @Injectable()
 export class PlaceService {
     constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
 
-    async getNearbyPlaces(query: NearMeQueryDto): Promise<NearMePlacesResponseDto> {
+    async getNearbyPlaces(query: NearMeQueryDto, userId?: string): Promise<NearMePlacesResponseDto> {
         return await firstValueFrom(
             this.client.send('place.near-me', {
                 latitude: query.latitude,
@@ -21,11 +21,12 @@ export class PlaceService {
                 limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
                 sortBy: query.sortBy || SortBy.DISTANCE,
                 sortOrder: query.sortOrder || SortOrder.ASC,
+                userId,
             })
         );
     }
 
-    async getPlaceById(id: string) {
-        return await firstValueFrom(this.client.send('place.get-by-id', { id }));
+    async getPlaceById(id: string, userId?: string): Promise<PlaceDistanceDto> {
+        return await firstValueFrom(this.client.send('place.get-by-id', { id, userId }));
     }
 }

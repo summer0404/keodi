@@ -1,10 +1,11 @@
 export enum SortBy {
-    DISTANCE = 'distance',
-    RATING = 'rating',
-    NAME = 'name',
+  DISTANCE = 'distance',
+  RATING = 'rating',
+  NAME = 'name',
+  CREATED_AT = 'createdAt',
 }
 
 export enum SortOrder {
-    ASC = 'asc',
-    DESC = 'desc',
+  ASC = 'asc',
+  DESC = 'desc',
 }

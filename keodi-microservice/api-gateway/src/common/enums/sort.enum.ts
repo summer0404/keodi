@@ -1,7 +1,8 @@
 export enum SortBy {
     DISTANCE = 'distance',
     RATING = 'rating',
-    NAME = 'name'
+    NAME = 'name',
+    CREATED_AT = 'createdAt'
 }
 
 export enum SortOrder {

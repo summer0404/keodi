@@ -11,6 +11,7 @@ import { JwtAuthGuard } from './modules/auth/jwt.guard';
 import { PlaceModule } from './modules/place/place.module';
 import { RedisModule } from './providers/redis/redis.module';
 import { CategoryModule } from './modules/category/category.module';
+import { FavoriteModule } from './modules/favorite/favorite.module';
 
 @Module({
   controllers: [
@@ -33,8 +34,9 @@ import { CategoryModule } from './modules/category/category.module';
     UserModule,
     KafkaModule,
     PlaceModule,
+    FavoriteModule,
     CategoryModule,
-    RedisModule
+    RedisModule,
   ],
 })
 export class AppModule { }

@@ -9,6 +9,7 @@ import { ImageService } from '../image/image.service';
 
 export interface PlaceWithDistance extends Place {
     distance: number;
+    isFavorite: boolean;
 }
 
 @Injectable()
@@ -25,7 +26,8 @@ export class PlaceService {
         page: number,
         limit: number,
         sortBy: SortBy,
-        sortOrder: SortOrder
+        sortOrder: SortOrder,
+        userId: string
     ) {
         try {
             const latDelta = radiusKm / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
@@ -36,40 +38,40 @@ export class PlaceService {
             const order = sortOrder.toUpperCase();
             const orderByClause = `ORDER BY ${sortBy} ${order}`;
 
-            const rawPlaces = await this.prismaService.$queryRaw<PlaceWithDistance[]>`
+            const rawPlaces = await this.prismaService.$queryRaw<any[]>`
                 SELECT * FROM (
                     SELECT
-                        id,
-                        from_google as "fromGoogle",
-                        name,
-                        description,
-                        rating,
-                        google_map_link as "googleMapLink",
-                        website,
-                        phone_number as "phoneNumber",
-                        feature_image_url as "featureImageUrl",
-                        owner_id as "ownerId",
-                        latitude,
-                        longitude,
-                        full_address as "fullAddress",
-                        ward,
-                        street,
-                        city,
-                        country_code as "countryCode",
-                        created_at as "createdAt",
-                        updated_at as "updatedAt",
+                        p.id,
+                        p.from_google as "fromGoogle",
+                        p.name,
+                        p.description,
+                        p.rating,
+                        p.google_map_link as "googleMapLink",
+                        p.website,
+                        p.phone_number as "phoneNumber",
+                        p.feature_image_url as "featureImageUrl",
+                        p.owner_id as "ownerId",
+                        p.latitude,
+                        p.longitude,
+                        p.full_address as "fullAddress",
+                        p.ward,
+                        p.street,
+                        p.city,
+                        p.country_code as "countryCode",
+                        p.created_at as "createdAt",
+                        p.updated_at as "updatedAt",
                         (
                             ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(
                                 cos(radians(${latitude})) 
-                                * cos(radians(latitude)) 
-                                * cos(radians(longitude) - radians(${longitude})) 
+                                * cos(radians(p.latitude)) 
+                                * cos(radians(p.longitude) - radians(${longitude})) 
                                 + sin(radians(${latitude})) 
-                                * sin(radians(latitude))
+                                * sin(radians(p.latitude))
                             )
                         ) AS distance
-                    FROM places
-                    WHERE latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
-                        AND longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
+                    FROM places p
+                    WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
+                        AND p.longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
                 ) AS places_with_distance
                 WHERE distance <= ${radiusKm}
                 ${Prisma.raw(orderByClause)}
@@ -78,14 +80,26 @@ export class PlaceService {
             `;
 
             const places = await Promise.all(
-                rawPlaces.map(async (place) => ({
-                    ...place,
-                    featureImageUrl: place.featureImageUrl
-                        ? await this.imageService.getImageViewUrl(place.featureImageUrl)
-                        : null,
-                }))
-            );
+                rawPlaces.map(async (place) => {
+                    const placeWithFavorites = await this.prismaService.place.findUnique({
+                        where: { id: place.id },
+                        include: {
+                            favorites: {
+                                where: { userId },
+                                select: { userId: true },
+                            },
+                        },
+                    });
 
+                    return {
+                        ...place,
+                        isFavorite: placeWithFavorites?.favorites && placeWithFavorites.favorites.length > 0,
+                        featureImageUrl: place.featureImageUrl
+                            ? await this.imageService.getImageViewUrl(place.featureImageUrl)
+                            : null,
+                    };
+                })
+            );
 
             const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
                 SELECT COUNT(*) as count
@@ -115,45 +129,56 @@ export class PlaceService {
                 total,
                 page,
                 totalPages,
-                limit
+                limit,
             };
         } catch (error) {
-            console.error(error);
             if (error instanceof RpcException) {
                 throw error;
             }
+            console.error(error);
             throw new RpcException({
                 status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+                message: error.message ?? error,
+            });
         }
     }
 
-    async getById(id: string) {
+    async getById(id: string, userId: string) {
         try {
             const place = await this.prismaService.place.findUnique({
                 where: { id },
+                include: {
+                    favorites: {
+                        where: { userId },
+                        select: { userId: true },
+                    },
+                },
             });
 
             if (!place) {
-                return null;
+                throw new RpcException({
+                    status: HttpStatus.NOT_FOUND,
+                    message: `Place not found`,
+                });
             }
 
             return {
                 ...place,
+                isFavorite: place.favorites && place.favorites.length > 0,
+                favorites: undefined,
                 featureImageUrl: place.featureImageUrl
                     ? await this.imageService.getImageViewUrl(place.featureImageUrl)
                     : null,
             };
         } catch (error) {
-            console.error(error)
             if (error instanceof RpcException) {
                 throw error;
             }
+            console.error(error);
             throw new RpcException({
                 status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+                message: error.message ?? error,
+            });
         }
     }
 }
