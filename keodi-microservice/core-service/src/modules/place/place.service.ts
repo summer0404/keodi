@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { Place, Prisma } from '@prisma/client';
@@ -164,8 +163,7 @@ export class PlaceService {
 
             return {
                 ...place,
-                isFavorite: place.favorites && place.favorites.length > 0,
-                favorites: undefined,
+                isFavorite: place.favorites.length > 0,
                 featureImageUrl: place.featureImageUrl
                     ? await this.imageService.getImageViewUrl(place.featureImageUrl)
                     : null,
