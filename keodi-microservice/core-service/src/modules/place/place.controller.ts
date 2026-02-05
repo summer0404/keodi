@@ -12,7 +12,7 @@ interface NearMePayload {
   limit: number;
   sortBy: SortBy;
   sortOrder: SortOrder;
-  userId?: string;
+  userId: string;
 }
 
 @Controller('place')
@@ -34,7 +34,7 @@ export class PlaceController {
     }
 
     @MessagePattern('place.get-by-id')
-    async get(@Payload() data: { id: string; userId?: string }) {
+    async get(@Payload() data: { id: string; userId: string }) {
         return await this.placeService.getById(data.id, data.userId);
     }
 }

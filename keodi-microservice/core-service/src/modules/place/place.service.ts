@@ -27,7 +27,7 @@ export class PlaceService {
         limit: number,
         sortBy: SortBy,
         sortOrder: SortOrder,
-        userId?: string
+        userId: string
     ) {
         try {
             const latDelta = radiusKm / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
@@ -84,18 +84,16 @@ export class PlaceService {
                     const placeWithFavorites = await this.prismaService.place.findUnique({
                         where: { id: place.id },
                         include: {
-                            favorites: userId
-                                ? {
-                                    where: { userId },
-                                    select: { userId: true },
-                                }
-                                : false,
+                            favorites: {
+                                where: { userId },
+                                select: { userId: true },
+                            },
                         },
                     });
 
                     return {
                         ...place,
-                        isFavorite: userId && placeWithFavorites?.favorites && placeWithFavorites.favorites.length > 0,
+                        isFavorite: placeWithFavorites?.favorites && placeWithFavorites.favorites.length > 0,
                         featureImageUrl: place.featureImageUrl
                             ? await this.imageService.getImageViewUrl(place.featureImageUrl)
                             : null,
@@ -145,17 +143,15 @@ export class PlaceService {
         }
     }
 
-    async getById(id: string, userId?: string) {
+    async getById(id: string, userId: string) {
         try {
             const place = await this.prismaService.place.findUnique({
                 where: { id },
                 include: {
-                    favorites: userId
-                        ? {
-                            where: { userId },
-                            select: { userId: true },
-                        }
-                        : false,
+                    favorites: {
+                        where: { userId },
+                        select: { userId: true },
+                    },
                 },
             });
 
@@ -165,7 +161,7 @@ export class PlaceService {
 
             return {
                 ...place,
-                isFavorite: userId && place.favorites && place.favorites.length > 0,
+                isFavorite: place.favorites && place.favorites.length > 0,
                 favorites: undefined,
                 featureImageUrl: place.featureImageUrl
                     ? await this.imageService.getImageViewUrl(place.featureImageUrl)

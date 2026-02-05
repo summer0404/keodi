@@ -26,7 +26,6 @@ export class PlaceController {
   constructor(private readonly placeService: PlaceService) {}
 
   @Get('near-me')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get places near user location'})
   @ApiOkResponse({ description: 'List of nearby places', type: NearMePlacesResponseDto })
   async getNearbyPlaces(
@@ -36,7 +35,6 @@ export class PlaceController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ description: 'Get place by id' })
   async getPlaceById(
     @CurrentUser() user: CurrentUserDto, 
