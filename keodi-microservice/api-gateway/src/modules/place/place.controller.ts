@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Query,
-  Req,
   UseGuards
 } from '@nestjs/common';
 import {
@@ -18,6 +17,8 @@ import {
 } from 'src/common/dtos/place.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { PlaceService } from './place.service';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { CurrentUserDto } from 'src/common/dtos/user.dto';
 
 @Controller('places')
 @ApiBearerAuth('access-token')
@@ -28,16 +29,18 @@ export class PlaceController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get places near user location'})
   @ApiOkResponse({ description: 'List of nearby places', type: NearMePlacesResponseDto })
-  async getNearbyPlaces(@Req() req, @Query() query: NearMeQueryDto): Promise<NearMePlacesResponseDto> {
-    const userId = req.user?.id;
-    return await this.placeService.getNearbyPlaces(query, userId);
+  async getNearbyPlaces(
+    @CurrentUser() user: CurrentUserDto, 
+    @Query() query: NearMeQueryDto): Promise<NearMePlacesResponseDto> {
+    return await this.placeService.getNearbyPlaces(query, user.id);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ description: 'Get place by id' })
-  async getPlaceById(@Req() req, @Param('id') id: string) {
-    const userId = req.user?.id;
-    return await this.placeService.getPlaceById(id, userId);
+  async getPlaceById(
+    @CurrentUser() user: CurrentUserDto, 
+    @Param('id') id: string) {
+    return await this.placeService.getPlaceById(id, user.id);
   }
 }

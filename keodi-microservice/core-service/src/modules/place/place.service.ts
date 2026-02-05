@@ -133,7 +133,7 @@ export class PlaceService {
         }
     }
 
-    async getById(id: string, userId?: string) {
+    async getById(id: string, userId: string) {
         try {
             const result = await this.prismaService.$queryRaw<any[]>`
                 SELECT

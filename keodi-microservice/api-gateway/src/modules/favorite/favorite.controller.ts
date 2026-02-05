@@ -5,17 +5,18 @@ import {
   Param,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { PaginationConstants } from 'src/common/constants/pagination.constants';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import {
   FavoriteResponseDto,
   FavoritesListResponseDto,
   GetFavoritesQueryDto,
   IsFavoriteResponseDto,
 } from 'src/common/dtos/favorite.dto';
+import { CurrentUserDto } from 'src/common/dtos/user.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { FavoriteService } from './favorite.service';
 
@@ -28,34 +29,42 @@ export class FavoriteController {
   @Post(':placeId')
   @ApiOperation({ summary: 'Add a place to favorites' })
   @ApiOkResponse({ type: FavoriteResponseDto })
-  async addFavorite(@Req() req, @Param('placeId') placeId: string) {
-    const userId = req.user.id;
-    return await this.favoriteService.addFavorite(userId, placeId);
+  async addFavorite(
+    @CurrentUser() user: CurrentUserDto,
+    @Param('placeId') placeId: string,
+  ) {
+    return await this.favoriteService.addFavorite(user.id, placeId);
   }
 
   @Delete(':placeId')
   @ApiOperation({ summary: 'Remove a place from favorites' })
   @ApiOkResponse({ type: FavoriteResponseDto })
-  async removeFavorite(@Req() req, @Param('placeId') placeId: string) {
-    const userId = req.user.id;
-    return await this.favoriteService.removeFavorite(userId, placeId);
+  async removeFavorite(
+    @CurrentUser() user: CurrentUserDto,
+    @Param('placeId') placeId: string,
+  ) {
+    return await this.favoriteService.removeFavorite(user.id, placeId);
   }
 
   @Get('check/:placeId')
   @ApiOperation({ summary: 'Check if a place is in favorites' })
   @ApiOkResponse({ type: IsFavoriteResponseDto })
-  async isFavorite(@Req() req, @Param('placeId') placeId: string) {
-    const userId = req.user.id;
-    return await this.favoriteService.isFavorite(userId, placeId);
+  async isFavorite(
+    @CurrentUser() user: CurrentUserDto,
+    @Param('placeId') placeId: string,
+  ) {
+    return await this.favoriteService.isFavorite(user.id, placeId);
   }
 
   @Get()
   @ApiOperation({ summary: "Get user's favorite places" })
   @ApiOkResponse({ type: FavoritesListResponseDto })
-  async getUserFavorites(@Req() req, @Query() query: GetFavoritesQueryDto) {
-    const userId = req.user.id;
+  async getUserFavorites(
+    @CurrentUser() user: CurrentUserDto,
+    @Query() query: GetFavoritesQueryDto,
+  ) {
     return await this.favoriteService.getUserFavorites(
-      userId,
+      user.id,
       query.page || PaginationConstants.DEFAULT_PAGE,
       query.limit || PaginationConstants.DEFAULT_LIMIT,
       query.sortBy,
