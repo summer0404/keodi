@@ -1,98 +1,87 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Button } from '@/components/ui/Button';
+import { View, Text, Modal, Pressable } from 'react-native';
+import Typography from '@/components/ui/Typography';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React, { useState } from 'react';
+import { ThreadsDatePicker } from '@/components/ui/DatePicker';
+import { Select } from '@/components/ui/Select';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
+import { useSettingStore } from '@/store/useSettingStore';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it nha em </ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { t } = useTranslation();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [date, setDate] = useState(new Date());
+  const [range, setRange] = useState('5');
+  const { language, setLanguage } = useSettingStore();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const options = [
+    { label: '2 km', value: '2' },
+    { label: '5 km', value: '5' },
+    { label: '15 km', value: '15' },
+    { label: '> 15 km', value: '15plus' },
+  ];
+
+  return (
+    <View className="flex-1 justify-center items-center p-4">
+      <View className="p-4">
+        <Select value={range} onChange={(value) => setRange(String(value))} options={options} />
+      </View>
+      <Button variant="default" onPress={() => setShowPicker(true)}>
+        {t('selectDate')}
+      </Button>
+      <Typography className="mt-4">{t('welcome')}</Typography>
+      <Pressable onPress={() => setModalVisible(true)}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Tiêu đề Card</CardTitle>
+            <CardDescription>Mô tả ngắn về nội dung của card này.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Typography>Đây là nội dung chính bên trong card.</Typography>
+          </CardContent>
+        </Card>
+      </Pressable>
+
+      <Button onPress={() => setLanguage('vi')}>Chuyển tiếng Việt</Button>
+
+      <Button onPress={() => setLanguage('en')}>Switch to English</Button>
+
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+          }}
+        >
+          <View style={{ backgroundColor: 'white', padding: 24, borderRadius: 12, minWidth: 250 }}>
+            <Text style={{ fontSize: 18, marginBottom: 16 }}>Đây là Modal!</Text>
+            <Button variant="default" onPress={() => setModalVisible(false)}>
+              Đóng
+            </Button>
+          </View>
+        </View>
+      </Modal>
+
+      <ThreadsDatePicker
+        visible={showPicker}
+        initialDate={date}
+        onClose={() => setShowPicker(false)}
+        onDateChange={(newDate) => {
+          setDate(newDate);
+          console.log('User picked:', newDate);
+        }}
+      />
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
