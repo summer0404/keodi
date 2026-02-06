@@ -1,0 +1,150 @@
+# ========================================
+# SECRETS & ENVIRONMENT (CRITICAL!)
+# ========================================
+.env
+.env.*
+!.env.example          # Allow template only
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.json
+
+# ========================================
+# PYTHON
+# ========================================
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ========================================
+# ML MODELS & ARTIFACTS (TOO LARGE!)
+# ========================================
+models_artifacts/
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.h5
+*.pb
+*.onnx
+*.bin
+*.safetensors
+checkpoints/
+
+# HuggingFace cache
+.cache/
+transformers_cache/
+
+# ========================================
+# TESTING & COVERAGE
+# ========================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ========================================
+# LOGS & DATABASES
+# ========================================
+*.log
+logs/
+*.sqlite
+*.db
+
+# ========================================
+# IDE & EDITORS
+# ========================================
+# VSCode
+.vscode/
+!.vscode/settings.json.example
+
+# PyCharm
+.idea/
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ========================================
+# OS
+# ========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ========================================
+# TEMPORARY FILES
+# ========================================
+tmp/
+temp/
+*.tmp
+
+# ========================================
+# CELERY
+# ========================================
+celerybeat-schedule
+celerybeat.pid
+
+# ========================================
+# JUPYTER NOTEBOOKS
+# ========================================
+.ipynb_checkpoints/
+*.ipynb
+
+# ========================================
+# DOCKER
+# ========================================
+docker-compose.override.yml
+
+# ========================================
+# OTHER
+# ========================================
+*.bak
+*.backup
+*.old
