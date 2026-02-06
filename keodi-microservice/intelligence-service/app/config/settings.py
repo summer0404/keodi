@@ -4,11 +4,6 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    """
-    Application settings loaded from environment variables.
-    Uses Pydantic for validation and type safety.
-    """
-
     # ========== Application ==========
     app_name: str
     app_version: str
@@ -28,7 +23,6 @@ class Settings(BaseSettings):
 
     @property
     def kafka_topics_list(self) -> List[str]:
-        """Parse comma-separated topics into list"""
         return [t.strip() for t in self.kafka_request_topics.split(',')]
 
     # ========== Database ==========
@@ -43,7 +37,6 @@ class Settings(BaseSettings):
 
     @property
     def redis_url(self) -> str:
-        """Construct Redis URL"""
         if self.redis_password:
             return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"

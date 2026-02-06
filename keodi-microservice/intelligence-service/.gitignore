@@ -3,7 +3,6 @@
 # ========================================
 .env
 .env.*
-!.env.example          # Allow template only
 *.pem
 *.key
 *.crt

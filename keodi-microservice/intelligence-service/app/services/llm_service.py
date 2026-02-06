@@ -1,8 +1,3 @@
-"""
-LLM Service - Unified interface for multiple LLM providers
-Supports: Groq (free), Modal (QWen GPU), Ollama (local)
-"""
-
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 import httpx
@@ -167,7 +162,6 @@ class LLMService:
 _llm_service: Optional[LLMService] = None
 
 def get_llm_service() -> LLMService:
-    """Get singleton LLM service instance"""
     global _llm_service
     if _llm_service is None:
         _llm_service = LLMService()
