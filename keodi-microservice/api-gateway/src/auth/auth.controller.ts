@@ -16,6 +16,7 @@ import {
   ForgotPasswordOTPDto,
   ForgotPasswordOTPResponseDto,
   LoginDto,
+  MeResponseDto,
   RegisterDto,
   RegisterOkResponseDto,
   ResetPasswordDto,
@@ -189,8 +190,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user info' })
   @ApiOkResponse({
     description: 'Returns current user info',
+    type: MeResponseDto
   })
   async me(@CurrentUser() user: CurrentUserDto) {
-    return user
+    return await this.authService.me(user)
   }
 }

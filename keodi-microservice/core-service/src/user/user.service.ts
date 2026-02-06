@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { UpdateUserProfileDto } from 'src/dtos/user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { S3Service } from 'src/s3/s3.service';
 
@@ -118,5 +119,54 @@ export class UserService {
                 message: error.message ?? error
             })
         }
+    }
+
+    async getById(userId: number) {
+        try {
+            const user = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+            if (!user) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+            return user
+        } catch (error) {
+            console.error(error)
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }
+    }
+
+    async updateProfile(
+        userId: number,
+        data: UpdateUserProfileDto
+    ) {
+        try {
+            const existingUser = await this.prismaService.user.findUnique({ where: { id: Number(userId) } })
+            if (!existingUser) throw new RpcException({
+                status: HttpStatus.BAD_REQUEST,
+                message: 'User not found'
+            })
+            await this.prismaService.user.update({
+                where: {
+                    id: existingUser.id
+                },
+                data: data
+            })
+            return { message: "Profile updated successfully" }
+        } catch (error) {
+            console.error(error)   
+            if (error instanceof RpcException) {
+                throw error;
+            }
+            throw new RpcException({
+                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error
+            })
+        }  
     }
 }
