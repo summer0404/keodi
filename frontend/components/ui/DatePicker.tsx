@@ -11,8 +11,34 @@ interface ThreadsDatePickerProps {
   initialDate?: Date;
 }
 
-const MONTH_NAMES_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const MONTH_NAMES_VI = ['tháng 1', 'tháng 2', 'tháng 3', 'tháng 4', 'tháng 5', 'tháng 6', 'tháng 7', 'tháng 8', 'tháng 9', 'tháng 10', 'tháng 11', 'tháng 12'];
+const MONTH_NAMES_EN = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+const MONTH_NAMES_VI = [
+  'tháng 1',
+  'tháng 2',
+  'tháng 3',
+  'tháng 4',
+  'tháng 5',
+  'tháng 6',
+  'tháng 7',
+  'tháng 8',
+  'tháng 9',
+  'tháng 10',
+  'tháng 11',
+  'tháng 12',
+];
 
 const getMonthName = (monthIndex: number, language: string): string => {
   if (language === 'en') {
@@ -28,8 +54,6 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
   initialDate = new Date(),
 }) => {
   const { language } = useSettingStore();
-  
-  // Tách ngày/tháng/năm
   const [selectedYear, setSelectedYear] = useState(initialDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(initialDate.getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState(initialDate.getDate());
@@ -43,13 +67,11 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
   }, []);
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
 
-  // Tính lại số ngày khi tháng/năm thay đổi
   const days = useMemo(() => {
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
     return Array.from({ length: daysInMonth }, (_, i) => i + 1);
   }, [selectedYear, selectedMonth]);
 
-  // Fix logic: Nếu đang chọn ngày 31 mà đổi sang tháng 2 (có 28 ngày) thì reset về ngày cuối của tháng đó
   useEffect(() => {
     const maxDay = new Date(selectedYear, selectedMonth, 0).getDate();
     if (selectedDay > maxDay) {
@@ -63,7 +85,6 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
     onClose();
   };
 
-  // Cấu hình kích thước
   const PICKER_HEIGHT = 200;
   const ITEM_HEIGHT = 40;
 
@@ -85,20 +106,19 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
             <Text className="text-lg font-bold text-black">Before day:</Text>
           </View>
 
-          {/* --- VÙNG CHỌN NGÀY --- */}
+          {/* --- Date --- */}
           <View className="flex-row justify-center relative mb-6">
-            {/* 1. HIGHLIGHT BAR (QUAN TRỌNG NHẤT) */}
-            {/* Nằm tuyệt đối ở giữa, đè dưới text */}
+            {/* 1. HIGHLIGHT BAR */}
             <View
               className="absolute w-full bg-gray-100 rounded-lg -z-10"
               style={{
-                height: ITEM_HEIGHT, // Cao bằng 1 dòng text (40)
-                top: (PICKER_HEIGHT - ITEM_HEIGHT) / 2, // Căn giữa theo chiều dọc
+                height: ITEM_HEIGHT,
+                top: (PICKER_HEIGHT - ITEM_HEIGHT) / 2,
               }}
             />
 
-            {/* 2. CÁC CỘT SCROLL PICKER */}
-            {/* Cột Ngày */}
+            {/* 2. SCROLL PICKER COLUMNS */}
+            {/* Day Column */}
             <View className="flex-1">
               <ScrollPicker
                 items={days}
@@ -109,18 +129,16 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
               />
             </View>
 
-            {/* Cột Tháng (Hiển thị text "tháng X") */}
+            {/* Month (Hiển thị text "tháng X") */}
             <View className="flex-[1.5]">
-              {/* Custom render hiển thị chữ 'tháng' thì xử lý ở lớp cha hoặc map data string */}
-              {/* Ở đây ta truyền mảng số, nhưng UI ScrollPicker có thể sửa để nhận object {label, value} nếu muốn phức tạp hơn. */}
-              {/* Cách đơn giản: Map mảng months thành chuỗi 'tháng X' */}
               <ScrollPicker
                 items={months.map((m) => getMonthName(m, language))}
                 value={getMonthName(selectedMonth, language)}
                 onValueChange={(val: string) => {
-                  const monthIndex = language === 'en' 
-                    ? MONTH_NAMES_EN.indexOf(val) + 1
-                    : MONTH_NAMES_VI.indexOf(val) + 1;
+                  const monthIndex =
+                    language === 'en'
+                      ? MONTH_NAMES_EN.indexOf(val) + 1
+                      : MONTH_NAMES_VI.indexOf(val) + 1;
                   setSelectedMonth(monthIndex);
                 }}
                 height={PICKER_HEIGHT}
@@ -128,7 +146,7 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
               />
             </View>
 
-            {/* Cột Năm */}
+            {/* Year Column */}
             <View className="flex-1">
               <ScrollPicker
                 items={years}
@@ -140,9 +158,9 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
             </View>
           </View>
 
-          {/* Button Xong */}
+          {/* Confirm Button */}
           <Button variant="default" size="lg" rounded="full" onPress={handleConfirm}>
-            Xong
+            Confirm
           </Button>
         </View>
       </View>
