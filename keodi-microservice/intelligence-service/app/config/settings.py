@@ -40,7 +40,6 @@ class Settings(BaseSettings):
     redis_host: str
     redis_port: int
     redis_password: str
-    redis_db: int
 
     @property
     def redis_url(self) -> str:
@@ -73,10 +72,6 @@ class Settings(BaseSettings):
     modal_api_token: str
     modal_model: str
     modal_keep_warm: int
-
-    # Ollama Configuration
-    ollama_model: str
-    ollama_base_url: str
 
     # LLM Performance
     llm_max_retries: int
