@@ -9,6 +9,7 @@ shared/prompts/
 ├── README.md                           # Tài liệu hướng dẫn
 ├── index.ts                            # Export tất cả templates
 ├── types.ts                            # TypeScript type definitions
+├── examples.ts                         # Ví dụ sử dụng (optional, có thể xóa)
 └── templates/                          # Thư mục chứa các prompt templates
     ├── example-prompt-1.template.ts    # Mẫu prompt 1
     └── example-prompt-2.template.ts    # Mẫu prompt 2
@@ -108,6 +109,8 @@ const prompt = examplePrompt2({
   focusAreas: ['key insights', 'action items']
 });
 ```
+
+**Xem file `examples.ts` để có thêm ví dụ chi tiết về cách sử dụng.**
 
 ## Types
 
