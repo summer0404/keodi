@@ -221,16 +221,45 @@ export class FriendService {
     }
   }
 
-  async getFriends(userId: string, page: number, limit: number) {
+  async getFriends(
+    userId: string,
+    page: number,
+    limit: number,
+    sortBy: string = 'createdAt',
+    sortOrder: string = 'desc',
+  ) {
     try {
       const offset = (page - 1) * limit;
+
+      // Build orderBy based on sortBy parameter
+      let orderBy: any;
+      if (sortBy === 'name') {
+        // Sort by friend's firstName and lastName
+        orderBy = [
+          { friend: { firstName: sortOrder } },
+          { friend: { lastName: sortOrder } },
+        ];
+      } else {
+        // Default to createdAt
+        orderBy = { createdAt: sortOrder };
+      }
 
       const [friends, total] = await Promise.all([
         this.prismaService.friendship.findMany({
           where: { userId },
           skip: offset,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy,
+          include: {
+            friend: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
+          },
         }),
         this.prismaService.friendship.count({ where: { userId } }),
       ]);
@@ -252,9 +281,28 @@ export class FriendService {
     }
   }
 
-  async getPendingRequests(userId: string, page: number, limit: number) {
+  async getPendingRequests(
+    userId: string,
+    page: number,
+    limit: number,
+    sortBy: string = 'createdAt',
+    sortOrder: string = 'desc',
+  ) {
     try {
       const offset = (page - 1) * limit;
+
+      // Build orderBy based on sortBy parameter
+      let orderBy: any;
+      if (sortBy === 'name') {
+        // Sort by sender's firstName and lastName
+        orderBy = [
+          { sender: { firstName: sortOrder } },
+          { sender: { lastName: sortOrder } },
+        ];
+      } else {
+        // Default to createdAt
+        orderBy = { createdAt: sortOrder };
+      }
 
       const [requests, total] = await Promise.all([
         this.prismaService.friendRequest.findMany({
@@ -264,8 +312,17 @@ export class FriendService {
           },
           skip: offset,
           take: limit,
-          orderBy: { createdAt: 'desc' },
-          //TODO:Include sender info
+          orderBy,
+          include: {
+            sender: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
+          },
         }),
         this.prismaService.friendRequest.count({
           where: { receiverId: userId, status: FriendRequestStatus.PENDING },

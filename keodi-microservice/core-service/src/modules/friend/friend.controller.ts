@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
-import { FriendService } from './friend.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { FriendService } from './friend.service';
 
 @Controller('friend')
 export class FriendController {
@@ -23,19 +23,41 @@ export class FriendController {
 
   @MessagePattern('friend.get-friends')
   async getFriends(
-    @Payload() data: { userId: string; page: number; limit: number },
+    @Payload()
+    data: {
+      userId: string;
+      page: number;
+      limit: number;
+      sortBy: string;
+      sortOrder: string;
+    },
   ) {
-    return this.friendService.getFriends(data.userId, data.page, data.limit);
+    return this.friendService.getFriends(
+      data.userId,
+      data.page,
+      data.limit,
+      data.sortBy,
+      data.sortOrder,
+    );
   }
 
   @MessagePattern('friend.get-pending-requests')
   async getPendingRequests(
-    @Payload() data: { userId: string; page: number; limit: number },
+    @Payload()
+    data: {
+      userId: string;
+      page: number;
+      limit: number;
+      sortBy: string;
+      sortOrder: string;
+    },
   ) {
     return this.friendService.getPendingRequests(
       data.userId,
       data.page,
       data.limit,
+      data.sortBy,
+      data.sortOrder,
     );
   }
 

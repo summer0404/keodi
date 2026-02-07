@@ -1,6 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
-import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
+import { Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+import { PaginationConstants } from '../constants/pagination.constants';
+import { FriendSortBy, SortOrder } from '../enums/sort.enum';
+import { PaginationResponseDto } from './pagination.dto';
 
 export class SendFriendRequestDto {
   @ApiProperty({
@@ -12,7 +23,99 @@ export class SendFriendRequestDto {
   receiverId: string;
 }
 
-export class GetFriendsQueryDto extends PaginationQueryDto {}
+export class GetFriendsQueryDto {
+  @ApiProperty({
+    description: 'Page number',
+    example: 1,
+    default: PaginationConstants.DEFAULT_PAGE,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  page?: number = PaginationConstants.DEFAULT_PAGE;
+
+  @ApiProperty({
+    description: 'Items per page',
+    example: 10,
+    default: PaginationConstants.DEFAULT_LIMIT,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  @Max(100)
+  limit?: number = PaginationConstants.DEFAULT_LIMIT;
+
+  @ApiProperty({
+    description: 'Sort by field',
+    enum: FriendSortBy,
+    default: FriendSortBy.CREATED_AT,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(FriendSortBy)
+  sortBy?: FriendSortBy = FriendSortBy.CREATED_AT;
+
+  @ApiProperty({
+    description: 'Sort order',
+    enum: SortOrder,
+    default: SortOrder.DESC,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(SortOrder)
+  sortOrder?: SortOrder = SortOrder.DESC;
+}
+
+export class GetPendingRequestsQueryDto {
+  @ApiProperty({
+    description: 'Page number',
+    example: 1,
+    default: PaginationConstants.DEFAULT_PAGE,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  page?: number = PaginationConstants.DEFAULT_PAGE;
+
+  @ApiProperty({
+    description: 'Items per page',
+    example: 10,
+    default: PaginationConstants.DEFAULT_LIMIT,
+    required: false,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  @Max(100)
+  limit?: number = PaginationConstants.DEFAULT_LIMIT;
+
+  @ApiProperty({
+    description: 'Sort by field',
+    enum: FriendSortBy,
+    default: FriendSortBy.CREATED_AT,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(FriendSortBy)
+  sortBy?: FriendSortBy = FriendSortBy.CREATED_AT;
+
+  @ApiProperty({
+    description: 'Sort order',
+    enum: SortOrder,
+    default: SortOrder.DESC,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(SortOrder)
+  sortOrder?: SortOrder = SortOrder.DESC;
+}
 
 export class FriendRequestResponseDto {
   @ApiProperty({

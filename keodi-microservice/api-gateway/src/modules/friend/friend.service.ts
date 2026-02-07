@@ -2,8 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PaginationConstants } from 'src/common/constants/pagination.constants';
-import { GetFriendsQueryDto } from 'src/common/dtos/friend.dto';
-import { PaginationQueryDto } from 'src/common/dtos/pagination.dto';
+import {
+  GetFriendsQueryDto,
+  GetPendingRequestsQueryDto,
+} from 'src/common/dtos/friend.dto';
 
 @Injectable()
 export class FriendService {
@@ -39,16 +41,20 @@ export class FriendService {
         userId,
         page: query.page || PaginationConstants.DEFAULT_PAGE,
         limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
+        sortBy: query.sortBy || 'createdAt',
+        sortOrder: query.sortOrder || 'desc',
       }),
     );
   }
 
-  async getPendingRequests(userId: string, query: PaginationQueryDto) {
+  async getPendingRequests(userId: string, query: GetPendingRequestsQueryDto) {
     return firstValueFrom(
       this.client.send('friend.get-pending-requests', {
         userId,
         page: query.page || PaginationConstants.DEFAULT_PAGE,
         limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
+        sortBy: query.sortBy || 'createdAt',
+        sortOrder: query.sortOrder || 'desc',
       }),
     );
   }

@@ -1,19 +1,19 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Query,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Post,
+    Query,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import {
-  GetFriendsQueryDto,
-  SendFriendRequestDto,
+    GetFriendsQueryDto,
+    GetPendingRequestsQueryDto,
+    SendFriendRequestDto,
 } from 'src/common/dtos/friend.dto';
-import { PaginationQueryDto } from 'src/common/dtos/pagination.dto';
 import { CurrentUserDto } from 'src/common/dtos/user.dto';
 import { FriendService } from './friend.service';
 
@@ -65,7 +65,7 @@ export class FriendController {
   @Get('requests/pending')
   async getPendingRequests(
     @CurrentUser() user: CurrentUserDto,
-    @Query() query: PaginationQueryDto,
+    @Query() query: GetPendingRequestsQueryDto,
   ) {
     return this.friendService.getPendingRequests(user.id, query);
   }
