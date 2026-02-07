@@ -1,39 +1,39 @@
 import {
-    Body,
-    Controller,
-    FileTypeValidator,
-    Get,
-    HttpStatus,
-    Param,
-    ParseFilePipe,
-    Patch,
-    UploadedFile,
-    UseInterceptors
+  Body,
+  Controller,
+  FileTypeValidator,
+  Get,
+  HttpStatus,
+  Param,
+  ParseFilePipe,
+  Patch,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-    ApiBearerAuth,
-    ApiBody,
-    ApiConsumes,
-    ApiOkResponse,
-    ApiOperation,
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
 } from '@nestjs/swagger';
 import { CurrentAccessToken } from 'src/common/decorators/current-access-token.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { CategoryOnboardingDto } from 'src/common/dtos/category.dto';
 import {
-    CurrentUserDto,
-    UpdateUsernameDto,
-    UpdateUserProfileDto
+  CurrentUserDto,
+  UpdateUsernameDto,
+  UpdateUserProfileDto,
 } from 'src/common/dtos/user.dto';
 import { UserService } from './user.service';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
-  @SkipAuth()
+  @SkipAuth() //Used for testing purposes - need to authorization this endpoint to admin later
   @Get('all')
   @ApiOperation({ description: 'Get all users (for testing purposes)' })
   @ApiOkResponse({ description: 'Return list of all users with their IDs' })
@@ -43,22 +43,32 @@ export class UserController {
 
   @SkipAuth() // Skip authentication for testing purposes - remove in production
   @Patch(':userId/unverify')
-  @ApiOperation({ description: 'Use this API to mark user as unverified account' })
-  @ApiOkResponse({ description: 'Return message inform that unverify user successfully' })
+  @ApiOperation({
+    description: 'Use this API to mark user as unverified account',
+  })
+  @ApiOkResponse({
+    description: 'Return message inform that unverify user successfully',
+  })
   async unverifyUser(@Param('userId') userId: string) {
-    return await this.userService.unverifyUser(userId)
+    return await this.userService.unverifyUser(userId);
   }
 
   @ApiBearerAuth('access-token')
   @Patch('username')
   @ApiOperation({ description: 'Use this API to update username of a user' })
-  @ApiOkResponse({ description: 'Return message inform that update username successfully' })
+  @ApiOkResponse({
+    description: 'Return message inform that update username successfully',
+  })
   async updateUsername(
     @CurrentAccessToken() accessToken: string,
     @CurrentUser() user: CurrentUserDto,
     @Body() data: UpdateUsernameDto,
   ) {
-    return await this.userService.updateUsername(user.id, data.username, accessToken)
+    return await this.userService.updateUsername(
+      user.id,
+      data.username,
+      accessToken,
+    );
   }
 
   @ApiBearerAuth('access-token')
@@ -76,45 +86,58 @@ export class UserController {
       },
     },
   })
-  @ApiOperation({ description: 'Use this API to update profile picture of a user' })
-  @ApiOkResponse({ description: 'Return message inform that update profile picture successfully' })
+  @ApiOperation({
+    description: 'Use this API to update profile picture of a user',
+  })
+  @ApiOkResponse({
+    description:
+      'Return message inform that update profile picture successfully',
+  })
   async updatePicture(
     @CurrentUser() user: CurrentUserDto,
     @UploadedFile(
       new ParseFilePipe({
-        validators: [new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ })],
+        validators: [
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
         fileIsRequired: true,
-        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY
-      })
-    ) file: Express.Multer.File,
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    file: Express.Multer.File,
   ) {
     return await this.userService.updatePicture(
       user.id,
       file.buffer,
       file.mimetype,
-    )
+    );
   }
 
-
   @ApiBearerAuth('access-token')
-  @ApiOperation({ description: "Use this API to update profile of a user"})
-  @ApiOkResponse({ description: 'Return message inform that update profile successfully' })
+  @ApiOperation({ description: 'Use this API to update profile of a user' })
+  @ApiOkResponse({
+    description: 'Return message inform that update profile successfully',
+  })
   @Patch()
-  async updateProfile (@Body() body: UpdateUserProfileDto, @CurrentUser() user: CurrentUserDto) {
-    return await this.userService.updateProfile(user.id, body)
+  async updateProfile(
+    @Body() body: UpdateUserProfileDto,
+    @CurrentUser() user: CurrentUserDto,
+  ) {
+    return await this.userService.updateProfile(user.id, body);
   }
 
   @ApiBearerAuth('access-token')
-  @ApiOperation({ description: 'Use this API to onboarding user with selected categories' })
-  @ApiOkResponse({ description: 'Return message inform that onboarding user successfully' })
+  @ApiOperation({
+    description: 'Use this API to onboarding user with selected categories',
+  })
+  @ApiOkResponse({
+    description: 'Return message inform that onboarding user successfully',
+  })
   @Patch('onboarding')
   async onBoarding(
     @CurrentUser() user: CurrentUserDto,
-    @Body() data: CategoryOnboardingDto
+    @Body() data: CategoryOnboardingDto,
   ) {
-    return await this.userService.onBoarding(
-      user.id,
-      data.categoryIds
-    )
+    return await this.userService.onBoarding(user.id, data.categoryIds);
   }
 }
