@@ -5,6 +5,11 @@ export enum SortBy {
   CREATED_AT = 'createdAt',
 }
 
+export enum FriendSortBy {
+  NAME = 'name',
+  CREATED_AT = 'createdAt',
+}
+
 export enum SortOrder {
   ASC = 'asc',
   DESC = 'desc',

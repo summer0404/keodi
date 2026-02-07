@@ -1,11 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
+import { FriendSortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
 export class FriendService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async sendRequest(senderId: string, receiverId: string) {
     // Can't send invite to yourself
@@ -225,23 +226,22 @@ export class FriendService {
     userId: string,
     page: number,
     limit: number,
-    sortBy: string = 'createdAt',
-    sortOrder: string = 'desc',
+    sortBy: FriendSortBy = FriendSortBy.CREATED_AT,
+    sortOrder: SortOrder = SortOrder.DESC,
   ) {
     try {
       const offset = (page - 1) * limit;
 
       // Build orderBy based on sortBy parameter
       let orderBy: any;
-      if (sortBy === 'name') {
+      if (sortBy === FriendSortBy.NAME) {
         // Sort by friend's firstName and lastName
         orderBy = [
           { friend: { firstName: sortOrder } },
           { friend: { lastName: sortOrder } },
         ];
       } else {
-        // Default to createdAt
-        orderBy = { createdAt: sortOrder };
+        orderBy = { createdAt: sortOrder }; //default
       }
 
       const [friends, total] = await Promise.all([
@@ -285,22 +285,20 @@ export class FriendService {
     userId: string,
     page: number,
     limit: number,
-    sortBy: string = 'createdAt',
-    sortOrder: string = 'desc',
+    sortBy: FriendSortBy = FriendSortBy.CREATED_AT,
+    sortOrder: SortOrder = SortOrder.DESC,
   ) {
     try {
       const offset = (page - 1) * limit;
 
-      // Build orderBy based on sortBy parameter
       let orderBy: any;
-      if (sortBy === 'name') {
+      if (sortBy === FriendSortBy.NAME) {
         // Sort by sender's firstName and lastName
         orderBy = [
           { sender: { firstName: sortOrder } },
           { sender: { lastName: sortOrder } },
         ];
       } else {
-        // Default to createdAt
         orderBy = { createdAt: sortOrder };
       }
 

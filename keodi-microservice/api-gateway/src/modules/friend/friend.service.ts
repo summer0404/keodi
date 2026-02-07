@@ -6,6 +6,7 @@ import {
   GetFriendsQueryDto,
   GetPendingRequestsQueryDto,
 } from 'src/common/dtos/friend.dto';
+import { FriendSortBy, SortOrder } from 'src/common/enums/sort.enum';
 
 @Injectable()
 export class FriendService {
@@ -41,8 +42,8 @@ export class FriendService {
         userId,
         page: query.page || PaginationConstants.DEFAULT_PAGE,
         limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
-        sortBy: query.sortBy || 'createdAt',
-        sortOrder: query.sortOrder || 'desc',
+        sortBy: query.sortBy || FriendSortBy.CREATED_AT,
+        sortOrder: query.sortOrder || SortOrder.DESC,
       }),
     );
   }
@@ -53,8 +54,8 @@ export class FriendService {
         userId,
         page: query.page || PaginationConstants.DEFAULT_PAGE,
         limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
-        sortBy: query.sortBy || 'createdAt',
-        sortOrder: query.sortOrder || 'desc',
+        sortBy: query.sortBy || FriendSortBy.CREATED_AT,
+        sortOrder: query.sortOrder || SortOrder.DESC,
       }),
     );
   }

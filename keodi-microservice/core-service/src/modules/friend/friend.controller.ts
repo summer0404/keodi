@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FriendService } from './friend.service';
+import { FriendSortBy, SortOrder } from 'src/common/enums/sort.enum';
 
 @Controller('friend')
 export class FriendController {
@@ -28,8 +29,8 @@ export class FriendController {
       userId: string;
       page: number;
       limit: number;
-      sortBy: string;
-      sortOrder: string;
+      sortBy: FriendSortBy;
+      sortOrder: SortOrder;
     },
   ) {
     return this.friendService.getFriends(
@@ -48,8 +49,8 @@ export class FriendController {
       userId: string;
       page: number;
       limit: number;
-      sortBy: string;
-      sortOrder: string;
+      sortBy: FriendSortBy;
+      sortOrder: SortOrder;
     },
   ) {
     return this.friendService.getPendingRequests(

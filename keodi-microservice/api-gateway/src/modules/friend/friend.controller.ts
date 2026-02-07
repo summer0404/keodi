@@ -65,7 +65,7 @@ export class FriendController {
     @CurrentUser() user: CurrentUserDto,
     @Body() dto: SendFriendRequestDto,
   ) {
-    return this.friendService.sendRequest(user.id, dto.receiverId);
+    return await this.friendService.sendRequest(user.id, dto.receiverId);
   }
 
   @Post('request/:requestId/accept')
@@ -104,7 +104,7 @@ export class FriendController {
     @CurrentUser() user: CurrentUserDto,
     @Param('requestId') requestId: string,
   ) {
-    return this.friendService.acceptRequest(user.id, requestId);
+    return await this.friendService.acceptRequest(user.id, requestId);
   }
 
   @Post('request/:requestId/reject')
@@ -143,7 +143,7 @@ export class FriendController {
     @CurrentUser() user: CurrentUserDto,
     @Param('requestId') requestId: string,
   ) {
-    return this.friendService.rejectRequest(user.id, requestId);
+    return await this.friendService.rejectRequest(user.id, requestId);
   }
 
   @Post('request/:requestId/cancel')
@@ -182,7 +182,7 @@ export class FriendController {
     @CurrentUser() user: CurrentUserDto,
     @Param('requestId') requestId: string,
   ) {
-    return this.friendService.cancelRequest(user.id, requestId);
+    return await this.friendService.cancelRequest(user.id, requestId);
   }
 
   @Get()
@@ -220,7 +220,7 @@ export class FriendController {
     @CurrentUser() user: CurrentUserDto,
     @Query() query: GetFriendsQueryDto,
   ) {
-    return this.friendService.getFriends(user.id, query);
+    return await this.friendService.getFriends(user.id, query);
   }
 
   @Get('requests/pending')
@@ -260,7 +260,7 @@ export class FriendController {
     @CurrentUser() user: CurrentUserDto,
     @Query() query: GetPendingRequestsQueryDto,
   ) {
-    return this.friendService.getPendingRequests(user.id, query);
+    return await this.friendService.getPendingRequests(user.id, query);
   }
 
   @Delete(':friendId')
@@ -291,7 +291,7 @@ export class FriendController {
   async removeFriend(
     @CurrentUser() user: CurrentUserDto,
     @Param('friendId') friendId: string,
-  ) {
-    return this.friendService.removeFriend(user.id, friendId);
+  ): Promise<{ success: boolean; message: string }> {
+    return await this.friendService.removeFriend(user.id, friendId);
   }
 }
