@@ -8,8 +8,8 @@
 export * from './types';
 
 // Export prompt templates
-export { default as examplePrompt1, examplePrompt1 } from './templates/example-prompt-1.template';
-export { default as examplePrompt2, examplePrompt2 } from './templates/example-prompt-2.template';
+export { default as examplePrompt1 } from './templates/example-prompt-1.template';
+export { default as examplePrompt2 } from './templates/example-prompt-2.template';
 
 // You can add more exports here as you create new prompt templates
 // Example:

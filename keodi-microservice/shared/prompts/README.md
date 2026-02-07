@@ -19,7 +19,7 @@ shared/prompts/
 
 ### 1. Vị trí lưu trữ
 Prompt templates được lưu trong `keodi-microservice/shared/prompts/` vì:
-- ✅ Có thể tái sử dụng across nhiều microservices
+- ✅ Có thể tái sử dụng cho nhiều microservices
 - ✅ Dễ dàng maintain và update
 - ✅ Tuân theo clean code principles
 - ✅ Tách biệt concerns rõ ràng
