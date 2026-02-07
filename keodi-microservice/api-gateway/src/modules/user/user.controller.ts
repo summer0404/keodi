@@ -1,36 +1,45 @@
 import {
-  Body,
-  Controller,
-  FileTypeValidator,
-  HttpStatus,
-  Param,
-  ParseFilePipe,
-  Patch,
-  UploadedFile,
-  UseInterceptors
+    Body,
+    Controller,
+    FileTypeValidator,
+    Get,
+    HttpStatus,
+    Param,
+    ParseFilePipe,
+    Patch,
+    UploadedFile,
+    UseInterceptors
 } from '@nestjs/common';
-import { UserService } from './user.service';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-  ApiOperation,
-} from '@nestjs/swagger';
-import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
-import {
-  CurrentUserDto,
-  UpdateUsernameDto,
-  UpdateUserProfileDto
-} from 'src/common/dtos/user.dto';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { CurrentAccessToken } from 'src/common/decorators/current-access-token.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+    ApiBearerAuth,
+    ApiBody,
+    ApiConsumes,
+    ApiOkResponse,
+    ApiOperation,
+} from '@nestjs/swagger';
+import { CurrentAccessToken } from 'src/common/decorators/current-access-token.decorator';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { CategoryOnboardingDto } from 'src/common/dtos/category.dto';
+import {
+    CurrentUserDto,
+    UpdateUsernameDto,
+    UpdateUserProfileDto
+} from 'src/common/dtos/user.dto';
+import { UserService } from './user.service';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) { }
+
+  @SkipAuth()
+  @Get('all')
+  @ApiOperation({ description: 'Get all users (for testing purposes)' })
+  @ApiOkResponse({ description: 'Return list of all users with their IDs' })
+  async getAll() {
+    return await this.userService.getAll();
+  }
 
   @SkipAuth() // Skip authentication for testing purposes - remove in production
   @Patch(':userId/unverify')

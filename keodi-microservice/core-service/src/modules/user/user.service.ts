@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { UpdateUserProfileDto } from 'src/common/dtos/user.dto';
-import { ImageService } from 'src/modules/image/image.service';
 import { PrismaService } from 'src/database/prisma.service';
+import { ImageService } from 'src/modules/image/image.service';
 
 @Injectable()
 export class UserService {
@@ -10,6 +10,26 @@ export class UserService {
         private readonly prismaService: PrismaService,
         private readonly imageService: ImageService
     ) { }
+
+    async getAll() {
+        try {
+            return await this.prismaService.user.findMany({
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    phoneNumber: true,
+                    pictureUrl: true,
+                },
+            });
+        } catch (error) {
+            console.error(error);
+            throw new RpcException({
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message ?? error,
+            });
+        }
+    }
 
     async create(
         userId: string,

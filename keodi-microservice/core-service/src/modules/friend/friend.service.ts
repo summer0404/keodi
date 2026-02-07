@@ -16,6 +16,17 @@ export class FriendService {
       });
     }
 
+    // Check if receiver exists
+    const receiver = await this.prismaService.user.findUnique({
+      where: { id: receiverId },
+    });
+    if (!receiver) {
+      throw new RpcException({
+        status: HttpStatus.NOT_FOUND,
+        message: 'User not found',
+      });
+    }
+
     //Check if already friends
     const existingFriendship = await this.prismaService.friendship.findUnique({
       where: { userId_friendId: { userId: senderId, friendId: receiverId } },
@@ -47,6 +58,17 @@ export class FriendService {
     }
 
     try {
+      // Delete any old rejected/accepted requests to allow resending
+      await this.prismaService.friendRequest.deleteMany({
+        where: {
+          senderId,
+          receiverId,
+          status: {
+            in: [FriendRequestStatus.REJECTED, FriendRequestStatus.ACCEPTED],
+          },
+        },
+      });
+
       return await this.prismaService.friendRequest.create({
         data: { senderId, receiverId },
       });

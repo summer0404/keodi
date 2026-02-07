@@ -27,6 +27,10 @@ export class UserService {
         return await firstValueFrom(this.client.send('user.update-profile', { userId, data }))
     }
 
+    async getAll() {
+        return await firstValueFrom(this.client.send('user.get-all', {}))
+    }
+
     async onBoarding(userId: string, categoryIds: string[]) {
         return await firstValueFrom(this.client.send('user.onboarding', { userId, categoryIds }))
     }
