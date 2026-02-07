@@ -41,6 +41,16 @@ export class KafkaService implements OnModuleInit {
     //category topic
     this.kafkaClient.subscribeToResponseOf('category.get-list-onboarding');
 
+    //friend topic
+    this.kafkaClient.subscribeToResponseOf('friend.send-request');
+    this.kafkaClient.subscribeToResponseOf('friend.accept-request');
+    this.kafkaClient.subscribeToResponseOf('friend.reject-request');
+    this.kafkaClient.subscribeToResponseOf('friend.cancel-request');
+    this.kafkaClient.subscribeToResponseOf('friend.remove-friend');
+    this.kafkaClient.subscribeToResponseOf('friend.get-friends');
+    this.kafkaClient.subscribeToResponseOf('friend.get-pending-requests');
+    this.kafkaClient.subscribeToResponseOf('friend.get-sent-requests');
+
     await this.kafkaClient.connect();
   }
 

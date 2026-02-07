@@ -12,6 +12,7 @@ import { PlaceModule } from './modules/place/place.module';
 import { RedisModule } from './providers/redis/redis.module';
 import { CategoryModule } from './modules/category/category.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
+import { FriendModule } from './modules/friend/friend.module';
 
 @Module({
   controllers: [
@@ -36,6 +37,7 @@ import { FavoriteModule } from './modules/favorite/favorite.module';
     PlaceModule,
     FavoriteModule,
     CategoryModule,
+    FriendModule,
     RedisModule,
   ],
 })
