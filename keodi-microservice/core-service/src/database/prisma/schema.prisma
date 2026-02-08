@@ -51,6 +51,11 @@ model User {
   places         Place[]
   favorites      Favorite[]
 
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
+  friendships      Friendship[]    @relation("UserFriendships")
+  friendsOf        Friendship[]    @relation("FriendFriendships")
+
   @@map("users")
 }
 
@@ -264,4 +269,37 @@ model Favorite {
 
   @@id([userId, placeId])
   @@map("favorites")
+}
+
+model FriendRequest {
+  id          String @id @default(cuid())
+  senderId    String @map("sender_id")
+  receiverId  String @map("receiver_id")
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  sender      User   @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User   @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@map("friend_requests")
+}
+
+model Friendship {
+  userId  String @map("user_id")
+  friendId String @map("friend_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User   @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend  User   @relation("FriendFriendships", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@id([userId, friendId])
+  @@map("friendships")
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
