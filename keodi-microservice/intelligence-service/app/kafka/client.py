@@ -10,20 +10,25 @@ _consumer: Optional[AIOKafkaConsumer] = None
 
 config = KafkaConfig()
 
-async def get_kafka_producer(self,config: Optional[KafkaConfig]) -> AIOKafkaProducer:
+async def get_kafka_producer() -> AIOKafkaProducer:
     global _producer
     if _producer is None:
+        config = KafkaConfig()
         _producer = AIOKafkaProducer(
-            **(self.config.get_producer_config())
+            **config.get_producer_config(),
+            value_serializer=lambda v: v.encode('utf-8') if v else None
         )
         await _producer.start()
     return _producer
 
-async def get_kafka_consumer(self,config: Optional[KafkaConfig]) -> AIOKafkaConsumer:
+async def get_kafka_consumer(topics: list[str]) -> AIOKafkaConsumer:
     global _consumer
     if _consumer is None:
+        config = KafkaConfig()
         _consumer = AIOKafkaConsumer(
-            **(self.config.get_consumer_config())
+            *topics,
+            **config.get_consumer_config(),
+            value_deserializer=lambda v: v.decode('utf-8') if v else None
         )
         await _consumer.start()
     return _consumer

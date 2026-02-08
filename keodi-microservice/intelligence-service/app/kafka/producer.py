@@ -1,5 +1,6 @@
 from app.kafka.config import KafkaConfig
 from app.kafka.client import get_kafka_producer
+from typing import Optional
 
 class KafkaProducer:
     def __init__(self):
@@ -23,3 +24,12 @@ class KafkaProducer:
     ):
         key = correlation_id.encode("utf-8")
         return await self.send_message(topic, payload, key=key)
+    
+
+__kafka_producer: Optional[KafkaProducer] = None
+
+def get_producer () -> KafkaProducer:
+    global __kafka_producer
+    if __kafka_producer is None:
+        __kafka_producer = KafkaProducer()
+    return __kafka_producer
