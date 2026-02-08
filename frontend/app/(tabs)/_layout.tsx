@@ -1,9 +1,21 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Home, Search, Users, Heart, Settings } from 'lucide-react-native';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
-function TabIcon({ focused, Icon }: { focused: boolean; Icon: any }) {
+function TabIcon({
+  focused,
+  Icon,
+}: {
+  focused: boolean;
+  Icon: React.ComponentType<{
+    size?: number;
+    color?: string;
+    strokeWidth?: number;
+  }>;
+}) {
   const defaultColor = useThemeColor({}, 'tabIconDefault');
   const selectedColor = useThemeColor({}, 'tabIconSelected');
 
@@ -22,14 +34,12 @@ function TabIcon({ focused, Icon }: { focused: boolean; Icon: any }) {
 export default function TabsLayout() {
   return (
     <Tabs
+      safeAreaInsets={{ bottom: 0 }}
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
 
         tabBarStyle: {
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
           position: 'absolute',
           bottom: 36,
           left: 16,
@@ -37,6 +47,8 @@ export default function TabsLayout() {
           height: 64,
           borderRadius: 32,
           backgroundColor: 'white',
+          paddingBottom: 0,
+          paddingTop: 0,
 
           // shadow iOS
           shadowColor: '#000',
@@ -47,6 +59,32 @@ export default function TabsLayout() {
           // shadow Android
           elevation: 10,
         },
+
+        tabBarItemStyle: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+          paddingVertical: 0,
+        },
+        tabBarIconStyle: {
+          marginTop: 0,
+          marginBottom: 0,
+        },
+        tabBarButton: (props: BottomTabBarButtonProps) => (
+          <Pressable
+            {...(props as any)}
+            style={[
+              props.style,
+              {
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingVertical: 0,
+              },
+            ]}
+          />
+        ),
       }}
     >
       <Tabs.Screen

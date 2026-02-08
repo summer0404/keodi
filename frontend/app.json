@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "keodi",
     "slug": "keodi",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -31,7 +31,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/logo.png",
-          "imageWidth": 100,
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {

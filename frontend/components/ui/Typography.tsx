@@ -2,31 +2,14 @@ import { Text, type TextProps, type TextStyle } from 'react-native';
 import clsx from 'clsx';
 import React from 'react';
 
-// Định nghĩa các biến thể theo yêu cầu của bạn
 export type TypographyVariant = 'caption' | 'caption-sm' | 'h3' | 'h4' | 'h5';
 
 export interface TypographyProps extends TextProps {
-  /**
-   * Biến thể kiểu chữ
-   * @default "caption"
-   */
   variant?: TypographyVariant;
-  /**
-   * Màu chữ (có thể dùng class tailwind text-color hoặc mã hex qua style)
-   */
   className?: string;
   children: React.ReactNode;
 }
 
-/**
- * Typography Component cho React Native (NativeWind)
- * * Specs:
- * - Caption: Poppins Regular, 14pt
- * - Caption-sm: Poppins Regular, 12pt
- * - h3: Montserrat SemiBold, 36pt, Letter Spacing: -5%
- * - h4: Montserrat SemiBold, 24pt, Letter Spacing: -5%
- * - h5: Poppins SemiBold, 16pt
- */
 const Typography = ({
   variant = 'caption',
   className,
@@ -63,7 +46,7 @@ const Typography = ({
   return (
     <Text
       className={clsx(
-        'text-black dark:text-white', // Màu mặc định (có thể override)
+        'text-black dark:text-white',
         getVariantClasses(),
         className
       )}

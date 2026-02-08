@@ -71,7 +71,6 @@ export const Select: React.FC<SelectProps> = ({
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        {/* Overlay - nền đen mờ */}
         <TouchableWithoutFeedback onPress={() => setOpen(false)}>
           <View className="flex-1">
             {/* Dropdown Container - positioned based on trigger */}
@@ -93,7 +92,7 @@ export const Select: React.FC<SelectProps> = ({
                   <FlatList
                     data={options}
                     keyExtractor={(item) => item.value.toString()}
-                    scrollEnabled={false} // disable scroll nếu options ít
+                    scrollEnabled={false} // disable scroll if options short
                     renderItem={({ item }) => {
                       const isSelected = item.value === value;
 
