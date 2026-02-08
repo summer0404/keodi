@@ -6,7 +6,7 @@ import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
 export class FriendService {
-  constructor(private readonly prismaService: PrismaService) { }
+  constructor(private readonly prismaService: PrismaService) {}
 
   async sendRequest(senderId: string, receiverId: string) {
     // Can't send invite to yourself
@@ -111,13 +111,13 @@ export class FriendService {
     }
 
     try {
-      return await this.prismaService.$transaction(async (tx) => {
-        await tx.friendRequest.update({
+      return await this.prismaService.$transaction(async (prisma) => {
+        await prisma.friendRequest.update({
           where: { id: requestId },
           data: { status: FriendRequestStatus.ACCEPTED },
         });
 
-        await tx.friendship.createMany({
+        await prisma.friendship.createMany({
           data: [
             { userId: request.senderId, friendId: request.receiverId },
             { userId: request.receiverId, friendId: request.senderId },

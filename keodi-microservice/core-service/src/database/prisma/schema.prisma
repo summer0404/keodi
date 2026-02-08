@@ -287,7 +287,6 @@ model FriendRequest {
 }
 
 model Friendship {
-  id    String @id @default(cuid())
   userId  String @map("user_id")
   friendId String @map("friend_id")
   createdAt DateTime @default(now()) @map("created_at")
@@ -295,7 +294,7 @@ model Friendship {
   user    User   @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
   friend  User   @relation("FriendFriendships", fields: [friendId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, friendId])
+  @@id([userId, friendId])
   @@map("friendships")
 }
 
