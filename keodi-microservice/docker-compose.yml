@@ -84,6 +84,16 @@ services:
       interval: 5s
       retries: 10
 
+  intelligence-service:
+    build: ./intelligence-service
+    container_name: intelligence-service
+    ports:
+      - "3004:3004"
+    env_file:
+      - ./intelligence-service/.env.local
+    depends_on:
+      - kafka
+
   core-service:
     build: ./core-service
     container_name: core-service
