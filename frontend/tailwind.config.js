@@ -1,9 +1,20 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./app/**/*.{js,jsx,ts,tsx}", "./src/**/*.{js,jsx,ts,tsx}"],
-  presets: [require("nativewind/preset")],
+  content: [
+    './app/**/*.{js,jsx,ts,tsx}',
+    './components/**/*.{js,jsx,ts,tsx}',
+    './src/**/*.{js,jsx,ts,tsx}',
+  ],
+  presets: [require('nativewind/preset')],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'poppins-reg': ['Poppins-Regular'],
+        'poppins-semibold': ['Poppins-SemiBold'],
+        'montserrat-semibold': ['Montserrat-SemiBold'],
+        'montserrat-reg': ['Montserrat-Regular'],
+      },
+    },
   },
   plugins: [],
 };
