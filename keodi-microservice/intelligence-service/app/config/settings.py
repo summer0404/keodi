@@ -16,10 +16,6 @@ class Settings(BaseSettings):
 
     # ========== Kafka ==========
     kafka_bootstrap_servers: str
-    kafka_group_id: str
-    kafka_client_id: str
-    kafka_request_topics: str
-    kafka_reply_topic: str
 
     @property
     def kafka_topics_list(self) -> List[str]:

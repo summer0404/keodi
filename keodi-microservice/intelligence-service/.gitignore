@@ -2,7 +2,7 @@
 # SECRETS & ENVIRONMENT (CRITICAL!)
 # ========================================
 .env
-.env.*
+.env.local
 *.pem
 *.key
 *.crt

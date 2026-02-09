@@ -1,8 +1,8 @@
 from typing import Callable, Optional
 from app.kafka.config import KafkaConfig
-from aiokafka import AIOKafkaConsumer
 from app.kafka.client import get_kafka_consumer
 from app.kafka.router import MessageRouter
+from aiokafka import AIOKafkaConsumer
 import json
 
 class KafkaConsumerService:

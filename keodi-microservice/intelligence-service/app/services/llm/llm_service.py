@@ -17,10 +17,16 @@ class LLMService:
         self.providers: Dict[str, BaseLLMProvider] = {}
 
         self.prompts = Prompts()
-        self.attribute_repository = AttributeRepository()
-        self.category_repository = CategoryRepository()
+
+        self.attribute_repository: Optional[AttributeRepository] = None
+        self.category_repository: Optional[CategoryRepository] = None
 
         self._init_providers()
+
+    async def start(self):
+        self.attribute_repository = await AttributeRepository.start()
+        self.category_repository = await CategoryRepository.start()
+        return self
 
     def _init_providers(self):
         if self.mode == "groq":
@@ -33,7 +39,7 @@ class LLMService:
 
         if not self.providers:
             raise ValueError(f"No LLM provider available for mode: {self.mode}")
-
+        
     async def extract_user_intent(
         self,
         search: str,
@@ -78,16 +84,14 @@ class LLMService:
         review: str,
         **kwargs
     ) -> str:
-        # Determine which provider to use
         provider = self.providers.get(self.mode)
 
         if not provider:
             raise ValueError(f"Provider not available: {self.mode}")
 
-        # Generate with retry logic
         max_retries = settings.llm_max_retries
         last_error = None
-
+        
         attributes = await self.attribute_repository.get_all_attributes()
 
         prompt = self.prompts.SENTIMENT_ANALYSIS.format(
@@ -114,8 +118,8 @@ class LLMService:
 # Singleton instance
 _llm_service: Optional[LLMService] = None
 
-def get_llm_service() -> LLMService:
+async def get_llm_service() -> LLMService:
     global _llm_service
     if _llm_service is None:
-        _llm_service = LLMService()
+        _llm_service = await LLMService().start()
     return _llm_service

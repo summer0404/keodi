@@ -1,7 +1,7 @@
 
 
 from typing import Optional
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from app.kafka.config import KafkaConfig
 
 
@@ -32,3 +32,12 @@ async def get_kafka_consumer(topics: list[str]) -> AIOKafkaConsumer:
         )
         await _consumer.start()
     return _consumer
+
+async def close_kafka_connections():
+    global _producer, _consumer
+    if _producer is not None:
+        await _producer.stop()
+        _producer = None
+    if _consumer is not None:
+        await _consumer.stop()
+        _consumer = None

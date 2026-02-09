@@ -1,41 +1,39 @@
 # FastAPI Framework
 fastapi==0.115.0
-uvicorn[standard]==0.32.0     # ASGI server
-pydantic==2.10.0              # Data validation
-pydantic-settings==2.6.0      # Env config management
+uvicorn[standard]==0.32.0
+pydantic==2.10.0
+pydantic-settings==2.6.0
 
 # Kafka
-aiokafka==0.11.0              # Async Kafka client
-kafka-python==2.0.2           # Fallback sync client
+aiokafka==0.11.0
+kafka-python==2.0.2
 
 # Database
-prisma==0.15.0
-prisma-client-py==0.15.0
+prisma==0.11.0
 
-# Redis Cache
+# Redis
 redis==5.2.0
-hiredis==3.0.0                # C parser cho Redis
+hiredis==3.0.0
 
-# ML/AI Libraries
+# ML/AI
 numpy==1.26.4
 pandas==2.2.3
-scikit-learn==1.6.0           # ML algorithms
-sentence-transformers==3.3.1  # Text embeddings
-faiss-cpu==1.9.0.post1        # Vector similarity search
+scikit-learn==1.6.0
+sentence-transformers==3.3.1
+faiss-cpu==1.9.0.post1
 
 # Background Tasks
-celery==5.4.0                 # Task queue
-redis==5.2.0                  # Celery broker
+celery==5.4.0
 
 # Utilities
-python-dotenv==1.0.1          # Load .env files
-httpx==0.28.1                 # HTTP client (for API calls)
+python-dotenv==1.0.1
+httpx==0.27.2
 
 # LLM Providers
-groq==0.13.0                  # Groq API (Gemma/Llama models) - Free tier
-modal==0.65.0                 # Modal.com serverless GPU
-ollama==0.4.4                 # Ollama local deployment (optional)
+groq==0.13.0
+modal==0.65.0
+ollama==0.4.4
 
-# LightGBM for LTR
-lightgbm==4.5.0               # Learning to Rank
-joblib==1.4.2                 # Model serialization
+# LTR
+lightgbm==4.5.0
+joblib==1.4.2
