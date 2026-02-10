@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import { GroupSession } from '@prisma/client';
 import { randomBytes } from 'crypto';
@@ -8,15 +9,21 @@ import { PrismaService } from 'src/database/prisma.service';
 @Injectable()
 export class GroupSessionService {
   private static readonly SHARE_CODE_LENGTH = 6;
-  private static readonly SHARE_CODE_CHARS =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   private generateShareCode(
     length: number = GroupSessionService.SHARE_CODE_LENGTH,
   ): string {
-    const chars = GroupSessionService.SHARE_CODE_CHARS;
+    const chars = this.configService.get<string>('SHARE_CODE_CHARS');
+    if (!chars) {
+      throw new Error(
+        'SHARE_CODE_CHARS is not configured in environment variables',
+      );
+    }
     let result = '';
     const bytes = randomBytes(length);
 

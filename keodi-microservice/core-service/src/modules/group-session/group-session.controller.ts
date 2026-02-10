@@ -6,7 +6,7 @@ import { GroupSessionService } from './group-session.service';
 export class GroupSessionController {
   constructor(private readonly groupSessionService: GroupSessionService) {}
 
-  @MessagePattern('group-session.create-group-session')
+  @MessagePattern('group-session.create')
   async createGroupSession(@Payload() data: { userId: string }) {
     return this.groupSessionService.createGroupSession(data.userId);
   }

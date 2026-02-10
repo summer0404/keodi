@@ -1,5 +1,11 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiUnauthorizedResponse,
+  ApiInternalServerErrorResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { GroupSessionResponseDto } from 'src/common/dtos/group-session.dto';
 
 export const ApiCreateGroupSession = () => {
@@ -9,44 +15,15 @@ export const ApiCreateGroupSession = () => {
       description:
         'Creates a new group study session for the authenticated user. The user will be automatically added as the creator and initial participant of the session.',
     }),
-    ApiResponse({
-      status: 201,
+    ApiCreatedResponse({
       description: 'Group session created successfully',
       type: GroupSessionResponseDto,
     }),
-    ApiResponse({
-      status: 401,
+    ApiUnauthorizedResponse({
       description: 'Unauthorized - Invalid or missing authentication token',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: {
-            type: 'number',
-            example: 401,
-          },
-          message: {
-            type: 'string',
-            example: 'Unauthorized',
-          },
-        },
-      },
     }),
-    ApiResponse({
-      status: 500,
+    ApiInternalServerErrorResponse({
       description: 'Internal server error',
-      schema: {
-        type: 'object',
-        properties: {
-          statusCode: {
-            type: 'number',
-            example: 500,
-          },
-          message: {
-            type: 'string',
-            example: 'Internal server error',
-          },
-        },
-      },
     }),
   );
 };

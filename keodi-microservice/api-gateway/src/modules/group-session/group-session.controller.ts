@@ -20,6 +20,6 @@ export class GroupSessionController {
   async createGroupSession(
     @CurrentUser() user: CurrentUserDto,
   ): Promise<GroupSessionResponseDto> {
-    return await this.groupSessionService.createGroupSession(user.id);
+    return await this.groupSessionService.create(user.id);
   }
 }

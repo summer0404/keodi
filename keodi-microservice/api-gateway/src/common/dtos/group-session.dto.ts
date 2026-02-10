@@ -28,7 +28,7 @@ export class GroupSessionResponseDto {
 
   @ApiProperty({
     description: 'Current status of the session',
-    example: 'ACTIVE',
+    example: SessionStatus.ACTIVE,
     enum: SessionStatus,
   })
   status: SessionStatus;

@@ -7,9 +7,7 @@ import { GroupSessionResponseDto } from 'src/common/dtos/group-session.dto';
 export class GroupSessionService {
   constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
 
-  async createGroupSession(userId: string): Promise<GroupSessionResponseDto> {
-    return firstValueFrom(
-      this.client.send('group-session.create-group-session', { userId }),
-    );
+  async create(userId: string): Promise<GroupSessionResponseDto> {
+    return firstValueFrom(this.client.send('group-session.create', { userId }));
   }
 }
