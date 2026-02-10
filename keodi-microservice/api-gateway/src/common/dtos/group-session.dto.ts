@@ -1,12 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { SessionStatus } from '../enums/group-session.enum';
 
-// export class CreateGroupSessionRequestDto {}
-
-// export class CreateGroupSessionDto {
-//   userId: string;
-// }
-
 export class GroupSessionResponseDto {
   @ApiProperty({
     description: 'Unique session identifier',
