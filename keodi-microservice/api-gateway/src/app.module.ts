@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConvertToHttpExceptionFilter } from './common/filters/rpc-to-http-exception.filter';
@@ -13,13 +11,10 @@ import { RedisModule } from './providers/redis/redis.module';
 import { CategoryModule } from './modules/category/category.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { FriendModule } from './modules/friend/friend.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
-  controllers: [
-    AppController
-  ],
   providers: [
-    AppService,
     {
       provide: APP_FILTER,
       useClass: ConvertToHttpExceptionFilter
@@ -39,6 +34,7 @@ import { FriendModule } from './modules/friend/friend.module';
     CategoryModule,
     FriendModule,
     RedisModule,
+    ReviewModule
   ],
 })
 export class AppModule { }

@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FriendService } from './friend.service';
-import { FriendSortBy, SortOrder } from 'src/common/enums/sort.enum';
+import { UserCommonPaginationDto } from 'src/common/dtos/user.dto';
 
 @Controller('friend')
 export class FriendController {
@@ -23,43 +23,14 @@ export class FriendController {
   }
 
   @MessagePattern('friend.get-friends')
-  async getFriends(
-    @Payload()
-    data: {
-      userId: string;
-      page: number;
-      limit: number;
-      sortBy: FriendSortBy;
-      sortOrder: SortOrder;
-    },
-  ) {
-    return this.friendService.getFriends(
-      data.userId,
-      data.page,
-      data.limit,
-      data.sortBy,
-      data.sortOrder,
-    );
+  async getFriends(@Payload() data: UserCommonPaginationDto) {
+    return this.friendService.getFriends(data);
   }
 
   @MessagePattern('friend.get-pending-requests')
   async getPendingRequests(
-    @Payload()
-    data: {
-      userId: string;
-      page: number;
-      limit: number;
-      sortBy: FriendSortBy;
-      sortOrder: SortOrder;
-    },
-  ) {
-    return this.friendService.getPendingRequests(
-      data.userId,
-      data.page,
-      data.limit,
-      data.sortBy,
-      data.sortOrder,
-    );
+    @Payload() data: UserCommonPaginationDto) {
+    return this.friendService.getPendingRequests(data);
   }
 
   @MessagePattern('friend.remove-friend')

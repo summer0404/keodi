@@ -5,6 +5,7 @@ import { GeoConstants } from 'src/common/constants/place.constant';
 import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from '../image/image.service';
+import { NearMeDto } from 'src/common/dtos/place.dto';
 
 export interface PlaceWithDistance extends Place {
     distance: number;
@@ -18,19 +19,13 @@ export class PlaceService {
         private readonly imageService: ImageService
     ) { }
 
-    async findNearby(
-        latitude: number,
-        longitude: number,
-        radiusKm: number,
-        page: number,
-        limit: number,
-        sortBy: SortBy,
-        sortOrder: SortOrder,
-        userId: string
-    ) {
+    async findNearby(nearMeDto: NearMeDto) {
         try {
-            const latDelta = radiusKm / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
-            const lngDelta = radiusKm / (GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE * Math.cos((latitude * Math.PI) / GeoConstants.DEGREES_IN_HALF_CIRCLE));
+
+            const { latitude, longitude, radius, page, limit, sortBy, sortOrder, userId } = nearMeDto;
+
+            const latDelta = radius / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
+            const lngDelta = radius / (GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE * Math.cos((latitude * Math.PI) / GeoConstants.DEGREES_IN_HALF_CIRCLE));
 
             const offset = (page - 1) * limit;
 
@@ -72,7 +67,7 @@ export class PlaceService {
                     WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                         AND p.longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
                 ) AS places_with_distance
-                WHERE distance <= ${radiusKm}
+                WHERE distance <= ${radius}
                 ${Prisma.raw(orderByClause)}
                 LIMIT ${limit}
                 OFFSET ${offset}
@@ -117,7 +112,7 @@ export class PlaceService {
                     WHERE latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                         AND longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
                 ) as places_with_distance
-                WHERE distance <= ${radiusKm}
+                WHERE distance <= ${radius}
             `;
 
             const total = Number(totalResult[0].count);

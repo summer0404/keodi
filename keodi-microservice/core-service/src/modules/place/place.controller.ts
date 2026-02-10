@@ -3,34 +3,15 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PlaceService } from './place.service';
-
-interface NearMePayload {
-  latitude: number;
-  longitude: number;
-  radius: number;
-  page: number;
-  limit: number;
-  sortBy: SortBy;
-  sortOrder: SortOrder;
-  userId: string;
-}
+import { NearMeDto } from 'src/common/dtos/place.dto';
 
 @Controller('place')
 export class PlaceController {
     constructor(private readonly placeService: PlaceService) { }
 
     @MessagePattern('place.near-me')
-    async getNearbyPlaces(@Payload() data: NearMePayload) {
-        return await this.placeService.findNearby(
-            data.latitude,
-            data.longitude,
-            data.radius,
-            data.page,
-            data.limit,
-            data.sortBy,
-            data.sortOrder,
-            data.userId
-        );
+    async getNearbyPlaces(@Payload() data: NearMeDto) {
+        return await this.placeService.findNearby(data);
     }
 
     @MessagePattern('place.get-by-id')

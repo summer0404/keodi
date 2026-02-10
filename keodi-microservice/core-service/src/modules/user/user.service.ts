@@ -31,20 +31,10 @@ export class UserService {
         }
     }
 
-    async create(
-        userId: string,
-        firstName?: string,
-        lastName?: string,
-        picture?: string
-    ) {
+    async create(userId: string) {
         try {
             await this.prismaService.user.create({
-                data: {
-                    id: userId,
-                    lastName: lastName ? lastName : null,
-                    firstName: firstName ? firstName : null,
-                    pictureUrl: picture ? picture : null
-                }
+                data: { id: userId }
             })
         } catch (error) {
             console.error(error)
@@ -73,7 +63,7 @@ export class UserService {
 
             const image = await this.imageService.updateUserProfilePicture(
                 existingUser.id,
-                file, 
+                file,
                 type
             );
 
@@ -174,11 +164,11 @@ export class UserService {
     async onBoarding(
         userId: string,
         categoryIds: string[],
-    ){
+    ) {
         try {
             const existingUser = await this.prismaService.user.findUnique({ where: { id: userId } })
 
-            if(!existingUser) throw new RpcException({
+            if (!existingUser) throw new RpcException({
                 status: HttpStatus.BAD_REQUEST,
                 message: 'User not found'
             })
