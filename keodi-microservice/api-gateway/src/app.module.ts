@@ -13,6 +13,7 @@ import { RedisModule } from './providers/redis/redis.module';
 import { CategoryModule } from './modules/category/category.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { FriendModule } from './modules/friend/friend.module';
+import { GroupSessionModule } from './modules/group-session/group-session.module';
 
 @Module({
   controllers: [
@@ -38,6 +39,7 @@ import { FriendModule } from './modules/friend/friend.module';
     FavoriteModule,
     CategoryModule,
     FriendModule,
+    GroupSessionModule,
     RedisModule,
   ],
 })

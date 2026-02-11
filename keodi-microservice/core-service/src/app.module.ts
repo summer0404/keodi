@@ -10,6 +10,7 @@ import { ImageModule } from './modules/image/image.module';
 import { PlaceModule } from './modules/place/place.module';
 import { ReviewModule } from './modules/review/review.module';
 import { UserModule } from './modules/user/user.module';
+import { GroupSessionModule } from './modules/group-session/group-session.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserModule } from './modules/user/user.module';
     CategoryModule,
     FavoriteModule,
     FriendModule,
+    GroupSessionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
