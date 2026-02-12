@@ -1,8 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString } from "class-validator/types/decorator/typechecker/IsString";
-import { IsNotEmpty } from "class-validator/types/decorator/common/IsNotEmpty";
+import { IsString, IsNotEmpty, IsNumber, IsOptional } from "class-validator";
 import { Type } from "class-transformer";
-import { IsNumber, IsOptional } from "class-validator";
 
 export class CreateReviewDto {
     @ApiProperty({
