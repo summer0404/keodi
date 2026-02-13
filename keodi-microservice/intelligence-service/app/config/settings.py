@@ -1,9 +1,17 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 from typing import List
+from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(
+        protected_namespaces=(),
+        env_file=".env",
+        case_sensitive=False,
+        extra="allow"
+    )
+    
     # ========== Application ==========
     app_name: str
     app_version: str
@@ -108,12 +116,6 @@ class Settings(BaseSettings):
     cache_ttl_llm: int
     cache_ttl_embeddings: int
     cache_ttl_features: int
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        # Allow extra fields for future expansion
-        extra = "allow"
 
 
 @lru_cache()

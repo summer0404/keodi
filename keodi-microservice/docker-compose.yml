@@ -80,9 +80,11 @@ services:
     depends_on:
       - zookeeper
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--list"]
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
       interval: 5s
+      timeout: 10s
       retries: 10
+      start_period: 10s
 
   core-service:
     build: ./core-service
@@ -92,9 +94,21 @@ services:
     env_file:
       - ./core-service/.env.local
     depends_on:
-      - kafka
-      # - core-postgres
+      kafka:
+        condition: service_healthy
+      # core-postgres:
 
+  intelligence-service:
+    build: ./intelligence-service
+    container_name: intelligence-service
+    ports:
+      - "3004:3004"
+    env_file:
+      - ./intelligence-service/.env.local
+    depends_on:
+      kafka:
+        condition: service_healthy
+      # core-postgres:
   notification-service:
     build: ./notification-service
     container_name: notification-service
@@ -103,7 +117,8 @@ services:
     env_file:
       - ./notification-service/.env.local
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
       
   auth-service:
     build: ./auth-service
@@ -113,9 +128,11 @@ services:
     env_file:
       - ./auth-service/.env.local
     depends_on:
-      - kafka
-      # - auth-postgres
-      - notification-service
+      kafka:
+        condition: service_healthy
+      notification-service:
+        condition: service_started
+      # auth-postgres:
 
   api-gateway:
     build: ./api-gateway
@@ -125,8 +142,10 @@ services:
     env_file:
       - ./api-gateway/.env.local
     depends_on:
-      - kafka
-      - auth-service
+      kafka:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
 
 # volumes:
   # auth_postgres_data:

@@ -52,9 +52,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf('friend.get-pending-requests');
     this.kafkaClient.subscribeToResponseOf('friend.get-sent-requests');
 
-    // category topic
-    this.kafkaClient.subscribeToResponseOf('category.create');
-    
+    // attribute topic
+    this.kafkaClient.subscribeToResponseOf('attribute.create');
+
     // review topic
     this.kafkaClient.subscribeToResponseOf('review.create');
 

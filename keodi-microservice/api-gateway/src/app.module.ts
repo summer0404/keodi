@@ -12,6 +12,7 @@ import { CategoryModule } from './modules/category/category.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { ReviewModule } from './modules/review/review.module';
+import { AttributeModule } from './modules/attribute/attribute.module';
 
 @Module({
   providers: [
@@ -34,7 +35,8 @@ import { ReviewModule } from './modules/review/review.module';
     CategoryModule,
     FriendModule,
     RedisModule,
-    ReviewModule
+    ReviewModule,
+    AttributeModule
   ],
 })
 export class AppModule { }
