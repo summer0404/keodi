@@ -9,6 +9,7 @@ import { PlaceModule } from './modules/place/place.module';
 import { ReviewModule } from './modules/review/review.module';
 import { UserModule } from './modules/user/user.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
+import { GroupSessionModule } from './modules/group-session/group-session.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AttributeModule } from './modules/attribute/attribute.module';
     FavoriteModule,
     FriendModule,
     AttributeModule
+    GroupSessionModule,
   ],
   controllers: [],
   providers: [],

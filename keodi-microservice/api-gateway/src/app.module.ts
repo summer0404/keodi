@@ -13,6 +13,7 @@ import { FavoriteModule } from './modules/favorite/favorite.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { ReviewModule } from './modules/review/review.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
+import { GroupSessionModule } from './modules/group-session/group-session.module';
 
 @Module({
   providers: [
@@ -34,6 +35,7 @@ import { AttributeModule } from './modules/attribute/attribute.module';
     FavoriteModule,
     CategoryModule,
     FriendModule,
+    GroupSessionModule,
     RedisModule,
     ReviewModule,
     AttributeModule

@@ -57,6 +57,9 @@ export class KafkaService implements OnModuleInit {
 
     // review topic
     this.kafkaClient.subscribeToResponseOf('review.create');
+    
+    //group session topic
+    this.kafkaClient.subscribeToResponseOf('group-session.create');
 
     await this.kafkaClient.connect();
   }
