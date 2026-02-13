@@ -22,7 +22,7 @@ import { GroupSessionModule } from './modules/group-session/group-session.module
     CategoryModule,
     FavoriteModule,
     FriendModule,
-    AttributeModule
+    AttributeModule,
     GroupSessionModule,
   ],
   controllers: [],

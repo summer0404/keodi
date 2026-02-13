@@ -10,7 +10,7 @@ export class AttributeService {
     async create(createAttributeDto: CreateAttributeDto) {
         try {
             await this.prismaService.attribute.createMany({
-                data: createAttributeDto.name.map((name) => ({ name })),
+                data: createAttributeDto.name.map((name) => ({ name: name.toUpperCase() })),
                 skipDuplicates: true,
             });
 

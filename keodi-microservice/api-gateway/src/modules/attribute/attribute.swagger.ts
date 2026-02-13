@@ -14,16 +14,9 @@ export function ApiCreateAttributes() {
         ApiCreatedResponse({
             description: 'Attributes created successfully',
             schema: {
-                example: [
-                    {
-                        id: 'cm5g8h9j0k1l2m3n4o5p',
-                        name: 'ALCOHOL_VARIETY',
-                    },
-                    {
-                        id: 'cm5a1b2c3d4e5f6g7h8i',
-                        name: 'HAPPY_HOUR_VALUE',
-                    }
-                ],
+                example: {
+                    message: 'Attributes created successfully',
+                },
             },
         }),
         ApiBadRequestResponse({
