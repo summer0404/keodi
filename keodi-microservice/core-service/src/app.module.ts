@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
 import { CategoryModule } from './modules/category/category.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
@@ -10,6 +8,7 @@ import { ImageModule } from './modules/image/image.module';
 import { PlaceModule } from './modules/place/place.module';
 import { ReviewModule } from './modules/review/review.module';
 import { UserModule } from './modules/user/user.module';
+import { AttributeModule } from './modules/attribute/attribute.module';
 import { GroupSessionModule } from './modules/group-session/group-session.module';
 
 @Module({
@@ -23,9 +22,10 @@ import { GroupSessionModule } from './modules/group-session/group-session.module
     CategoryModule,
     FavoriteModule,
     FriendModule,
+    AttributeModule,
     GroupSessionModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

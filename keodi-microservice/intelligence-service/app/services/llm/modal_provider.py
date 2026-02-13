@@ -41,6 +41,8 @@ class ModalProvider(BaseLLMProvider):
                 )
                 response.raise_for_status()
                 result = response.json()
-                return result.get("result") or result.get("text")
+                raw_content = result.get("result") or result.get("text")
+                cleaned_content = self.remove_think_steps(raw_content)
+                return cleaned_content
         except httpx.HTTPError as e:
             raise Exception(f"Modal API error: {str(e)}")

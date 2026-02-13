@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 import json
 from app.config.settings import get_settings
 from app.prompts.prompt import Prompts
@@ -58,11 +58,15 @@ class LLMService:
         attributes = await self.attribute_repository.get_all_attributes()
         categories = await self.category_repository.get_all_categories()
 
+        attributes_list = [attr.name for attr in attributes] if attributes else []
+        categories_list = [cat.name for cat in categories] if categories else []
+
         prompt = self.prompts.EXTRACT_USER_INTENT.format(
             search=search,
-            attributes=json.dumps(attributes),
-            categories=json.dumps(categories)
+            attributes=json.dumps(attributes_list),
+            categories=json.dumps(categories_list)
         )
+        
 
         for attempt in range(max_retries):
             try:
@@ -94,9 +98,11 @@ class LLMService:
         
         attributes = await self.attribute_repository.get_all_attributes()
 
+        attributes_list = [attr.name for attr in attributes] if attributes else []
+
         prompt = self.prompts.SENTIMENT_ANALYSIS.format(
             review=review,
-            attributes=json.dumps(attributes)
+            attributes=json.dumps(attributes_list)
         )
 
         for attempt in range(max_retries):

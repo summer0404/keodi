@@ -9,6 +9,15 @@ class GroqProvider(BaseLLMProvider):
         try:
             from groq import AsyncGroq
             self.client = AsyncGroq(api_key=settings.groq_api_key)
+
+            # Script for my company PC :))))
+            # import httpx
+            # http_client = httpx.AsyncClient(verify=False)
+            # self.client = AsyncGroq(
+            #     api_key=settings.groq_api_key,
+            #     http_client=http_client
+            # )
+
             self.model = settings.groq_model
         except ImportError:
             raise ImportError("Please install groq: pip install groq")
@@ -29,6 +38,12 @@ class GroqProvider(BaseLLMProvider):
                 max_tokens=max_tokens,
                 **kwargs
             )
-            return response.choices[0].message.content
+            raw_content = response.choices[0].message.content
+
+            cleaned_content = self.remove_think_steps(raw_content)
+            return cleaned_content
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"Groq API Error Details:\n{error_details}")
             raise Exception(f"Groq API error: {str(e)}")

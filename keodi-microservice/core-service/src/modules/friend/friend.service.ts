@@ -1,7 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
-import { FriendSortBy, SortOrder } from 'src/common/enums/sort.enum';
+import { UserCommonPaginationDto } from 'src/common/dtos/user.dto';
+import { FriendSortBy } from 'src/common/enums/sort.enum';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
@@ -222,16 +223,11 @@ export class FriendService {
     }
   }
 
-  async getFriends(
-    userId: string,
-    page: number,
-    limit: number,
-    sortBy: FriendSortBy = FriendSortBy.CREATED_AT,
-    sortOrder: SortOrder = SortOrder.DESC,
-  ) {
+  async getFriends(friendPaginationDto: UserCommonPaginationDto) {
+    const { userId, page, limit, sortBy, sortOrder } = friendPaginationDto;
+
     try {
       const offset = (page - 1) * limit;
-
       // Build orderBy based on sortBy parameter
       let orderBy: any;
       if (sortBy === FriendSortBy.NAME) {
@@ -281,13 +277,9 @@ export class FriendService {
     }
   }
 
-  async getPendingRequests(
-    userId: string,
-    page: number,
-    limit: number,
-    sortBy: FriendSortBy = FriendSortBy.CREATED_AT,
-    sortOrder: SortOrder = SortOrder.DESC,
-  ) {
+  async getPendingRequests(friendPaginationDto: UserCommonPaginationDto) {
+    const { userId, page, limit, sortBy, sortOrder } = friendPaginationDto;
+
     try {
       const offset = (page - 1) * limit;
 

@@ -6,8 +6,8 @@ export enum SortBy {
 }
 
 export enum FriendSortBy {
-  NAME = 'name',
-  CREATED_AT = 'createdAt',
+  NAME = SortBy.NAME,
+  CREATED_AT = SortBy.CREATED_AT,
 }
 
 export enum SortOrder {

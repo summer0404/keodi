@@ -1,6 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
+import { UserCommonPaginationDto } from "src/common/dtos/user.dto";
 import { SortBy, SortOrder } from "src/common/enums/sort.enum";
 import { PrismaService } from "src/database/prisma.service";
 
@@ -75,14 +76,12 @@ export class FavoriteService {
         }
     }
 
-    async getUserFavorites(
-        userId: string,
-        page: number,
-        limit: number,
-        sortBy: SortBy = SortBy.CREATED_AT, sortOrder: SortOrder = SortOrder.DESC) {
+    async getUserFavorites(userCommonPaginationDto: UserCommonPaginationDto) {
+        const { userId, page, limit, sortBy, sortOrder } = userCommonPaginationDto;
+
         try {
             const offset = (page - 1) * limit;
-            const order = sortOrder.toLowerCase() as 'asc' | 'desc';
+            const order = sortOrder.toLowerCase() as SortOrder;
 
             const orderByMap = {
                 [SortBy.NAME]: { place: { name: order } },
