@@ -53,6 +53,15 @@ export class JoinGroupSessionDto {
     required: false,
   })
   nickname?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description: 'Guest ID for returning guests (stored in localStorage)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
 }
 
 export class InviteFriendToSessionDto {
@@ -145,7 +154,14 @@ export class JoinGroupSessionResponseDto {
   memberCount: number;
 
   @ApiProperty({
-    description: 'The member who just joined (or existing member if already joined)',
+    description: 'All members in the session',
+    type: [GroupSessionMemberDto],
+  })
+  members: GroupSessionMemberDto[];
+
+  @ApiProperty({
+    description:
+      'The member who just joined (or existing member if already joined)',
     type: GroupSessionMemberDto,
   })
   member: GroupSessionMemberDto;

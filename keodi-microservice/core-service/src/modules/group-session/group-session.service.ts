@@ -107,8 +107,13 @@ export class GroupSessionService {
     return session;
   }
 
-  async join(data: { shareCode: string; userId?: string; nickname?: string }) {
-    const { shareCode, userId, nickname } = data;
+  async join(data: {
+    shareCode: string;
+    userId?: string;
+    nickname?: string;
+    guestId?: string; // returning guest sends this
+  }) {
+    const { shareCode, userId, nickname, guestId: existingGuestId } = data;
 
     const session = await this.prismaService.groupSession.findUnique({
       where: { shareCode },
@@ -170,8 +175,19 @@ export class GroupSessionService {
       }
     }
 
-    if (userId) {
-      const existingMember = session.members.find((m) => m.userId === userId);
+    // Guest must provide a nickname
+    if (!userId && !existingGuestId && !nickname) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Nickname is required for guest users',
+      });
+    }
+
+    // Check if returning guest
+    if (!userId && existingGuestId) {
+      const existingMember = session.members.find(
+        (m) => m.guestId === existingGuestId,
+      );
       if (existingMember) {
         return {
           sessionId: session.sessionId,
@@ -187,7 +203,7 @@ export class GroupSessionService {
       }
     }
 
-    const guestId = userId ? undefined : createId();
+    const guestId = userId ? undefined : existingGuestId || createId();
 
     const member = await this.prismaService.groupSessionMember.create({
       data: {
@@ -216,6 +232,7 @@ export class GroupSessionService {
       createdAt: session.createdAt,
       status: session.status,
       memberCount: session.members.length + 1,
+      members: [...session.members, member],
       member: member,
       alreadyJoined: false,
     };

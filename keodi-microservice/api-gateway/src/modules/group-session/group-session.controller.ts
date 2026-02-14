@@ -52,6 +52,7 @@ export class GroupSessionController {
       dto.shareCode,
       user?.id, // undefined if guest
       dto.nickname,
+      dto.guestId, // returning guest
     );
   }
 

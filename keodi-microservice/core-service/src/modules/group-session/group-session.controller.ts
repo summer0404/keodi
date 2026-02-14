@@ -13,7 +13,13 @@ export class GroupSessionController {
 
   @MessagePattern('group-session.join')
   async join(
-    @Payload() data: { shareCode: string; userId?: string; nickname?: string },
+    @Payload()
+    data: {
+      shareCode: string;
+      userId?: string;
+      nickname?: string;
+      guestId?: string;
+    },
   ) {
     return this.groupSessionService.join(data);
   }

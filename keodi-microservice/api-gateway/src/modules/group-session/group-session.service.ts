@@ -18,9 +18,21 @@ export class GroupSessionService {
     shareCode: string,
     userId?: string,
     nickname?: string,
+    guestId?: string,
   ): Promise<JoinGroupSessionResponseDto> {
+    const payload: {
+      shareCode: string;
+      userId?: string;
+      nickname?: string;
+      guestId?: string;
+    } = { shareCode };
+
+    if (userId) payload.userId = userId;
+    if (nickname) payload.nickname = nickname;
+    if (guestId) payload.guestId = guestId;
+
     return firstValueFrom(
-      this.client.send('group-session.join', { shareCode, userId, nickname }),
+      this.client.send('group-session.join', payload),
     );
   }
 
