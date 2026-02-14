@@ -3,11 +3,12 @@ import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
 import { UserCommonPaginationDto } from 'src/common/dtos/user.dto';
 import { FriendSortBy } from 'src/common/enums/sort.enum';
+import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
 export class FriendService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async sendRequest(senderId: string, receiverId: string) {
     // Can't send invite to yourself
@@ -75,12 +76,7 @@ export class FriendService {
         data: { senderId, receiverId },
       });
     } catch (error) {
-      if (error instanceof RpcException) throw error;
-      console.error(error);
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      return handleServiceErrorCatching(error)
     }
   }
 
@@ -128,12 +124,7 @@ export class FriendService {
         return { success: true, message: 'Friend request accepted' };
       });
     } catch (error) {
-      if (error instanceof RpcException) throw error;
-      console.error(error);
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      return handleServiceErrorCatching(error)
     }
   }
 
@@ -171,12 +162,7 @@ export class FriendService {
 
       return { success: true, message: 'Friend request rejected' };
     } catch (error) {
-      if (error instanceof RpcException) throw error;
-      console.error(error);
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      return handleServiceErrorCatching(error)
     }
   }
 
@@ -214,12 +200,7 @@ export class FriendService {
 
       return { success: true, message: 'Friend request cancelled' };
     } catch (error) {
-      if (error instanceof RpcException) throw error;
-      console.error(error);
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      return handleServiceErrorCatching(error)
     }
   }
 
@@ -268,12 +249,7 @@ export class FriendService {
         limit,
       };
     } catch (error) {
-      if (error instanceof RpcException) throw error;
-      console.error(error);
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      return handleServiceErrorCatching(error)
     }
   }
 
@@ -327,12 +303,7 @@ export class FriendService {
         limit,
       };
     } catch (error) {
-      if (error instanceof RpcException) throw error;
-      console.error(error);
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      return handleServiceErrorCatching(error)
     }
   }
 
@@ -360,12 +331,7 @@ export class FriendService {
 
       return { success: true, message: 'Friend removed successfully' };
     } catch (error) {
-      if (error instanceof RpcException) throw error;
-      console.error(error);
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      return handleServiceErrorCatching(error)
     }
   }
 }

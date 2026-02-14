@@ -1,8 +1,8 @@
-/* eslint-disable prettier/prettier */
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { UserCommonPaginationDto } from "src/common/dtos/user.dto";
 import { SortBy, SortOrder } from "src/common/enums/sort.enum";
+import { handleServiceErrorCatching } from "src/common/helpers/error.helper";
 import { PrismaService } from "src/database/prisma.service";
 
 @Injectable()
@@ -40,11 +40,7 @@ export class FavoriteService {
             });
 
         } catch (error) {
-            if (error instanceof RpcException) throw error;
-            throw new RpcException({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message
-            });
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -68,11 +64,7 @@ export class FavoriteService {
                 },
             });
         } catch (error) {
-            if (error instanceof RpcException) throw error;
-            throw new RpcException({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message,
-            });
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -114,10 +106,7 @@ export class FavoriteService {
                 limit
             };
         } catch (error) {
-            throw new RpcException({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message,
-            });
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -131,10 +120,7 @@ export class FavoriteService {
 
             return { isFavorite: !!favorite };
         } catch (error) {
-            throw new RpcException({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message,
-            });
+            return handleServiceErrorCatching(error)
         }
     }
 }

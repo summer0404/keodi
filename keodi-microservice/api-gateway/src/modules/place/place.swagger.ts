@@ -1,0 +1,75 @@
+import { applyDecorators } from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { NearMePlacesResponseDto } from 'src/common/dtos/place.dto';
+
+export function ApiNearMePlace() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get nearby places',
+      description: 'Get a list of places near the user location',
+    }),
+    ApiOkResponse({
+      description: 'List of nearby places retrieved successfully',
+      type: [NearMePlacesResponseDto]
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiBadRequestResponse({
+      description: 'Invalid request parameters',
+    }),
+    ApiNotFoundResponse({
+      description: 'No places found near the specified location',
+    }),
+  );
+}
+
+export function ApiSearchPlace() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Search places',
+      description: 'Search for places based on a query string',
+    }),
+    ApiOkResponse({
+      description: 'List of places matching the search query retrieved successfully',
+      type: [NearMePlacesResponseDto]
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiBadRequestResponse({
+      description: 'Invalid request parameters',
+    }),
+    ApiNotFoundResponse({
+      description: 'No places found matching the search query',
+    }),
+  );
+}
+
+export function ApiGetPlaceById() {
+  return applyDecorators(
+    ApiOperation({
+        summary: 'Get place by ID',
+        description: 'Retrieve detailed information about a place using its unique ID',
+    }),
+    ApiOkResponse({
+        description: 'Place details retrieved successfully',
+        type: NearMePlacesResponseDto,
+    }),
+    ApiUnauthorizedResponse({
+        description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiNotFoundResponse({
+        description: 'Place not found with the specified ID',
+    }),
+    ApiBadRequestResponse({
+        description: 'Invalid place ID format',
+    }),
+  );
+}

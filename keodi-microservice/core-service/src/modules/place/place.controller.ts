@@ -3,7 +3,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PlaceService } from './place.service';
-import { NearMeDto } from 'src/common/dtos/place.dto';
+import { NearMeDto, SearchDto } from 'src/common/dtos/place.dto';
 
 @Controller('place')
 export class PlaceController {
@@ -12,6 +12,11 @@ export class PlaceController {
     @MessagePattern('place.near-me')
     async getNearbyPlaces(@Payload() data: NearMeDto) {
         return await this.placeService.findNearby(data);
+    }
+
+    @MessagePattern('place.search')
+    async search(@Payload() data: SearchDto) {
+        return await this.placeService.search(data);
     }
 
     @MessagePattern('place.get-by-id')

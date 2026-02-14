@@ -2,6 +2,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
 import { CreateReviewDto } from 'src/common/dtos/review.dto';
+import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
@@ -55,14 +56,7 @@ export class ReviewService {
 
             return { message: 'Review created successfully' };
         } catch (error) {
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            console.error(error);
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error,
-            });
+            return handleServiceErrorCatching(error)
         }
     }
 }

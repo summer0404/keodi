@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { UpdateUserProfileDto } from 'src/common/dtos/user.dto';
+import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 
@@ -23,11 +24,7 @@ export class UserService {
                 },
             });
         } catch (error) {
-            console.error(error);
-            throw new RpcException({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error,
-            });
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -37,14 +34,7 @@ export class UserService {
                 data: { id: userId }
             })
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -81,14 +71,7 @@ export class UserService {
             return { message: "Profile picture updated successfully" }
 
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -107,14 +90,7 @@ export class UserService {
                 pictureUrl
             }
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -150,14 +126,7 @@ export class UserService {
             })
             return { message: "Profile updated successfully" }
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -183,14 +152,7 @@ export class UserService {
 
             return { message: "Onboarding completed successfully" }
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 }
