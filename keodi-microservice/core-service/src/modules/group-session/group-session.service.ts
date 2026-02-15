@@ -264,7 +264,7 @@ export class GroupSessionService {
         message: 'You are not a member of this session',
       });
     }
-
+    //Check if the person is really friend
     const friendship = await this.prismaService.friendship.findUnique({
       where: { userId_friendId: { userId: inviterId, friendId } },
     });
