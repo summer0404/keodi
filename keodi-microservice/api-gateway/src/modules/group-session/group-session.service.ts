@@ -3,6 +3,7 @@ import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import {
   GroupSessionResponseDto,
+  JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
 } from 'src/common/dtos/group-session.dto';
 
@@ -15,24 +16,14 @@ export class GroupSessionService {
   }
 
   async join(
-    shareCode: string,
+    joinGroupSessionDto: JoinGroupSessionDto,
     userId?: string,
-    nickname?: string,
-    guestId?: string,
   ): Promise<JoinGroupSessionResponseDto> {
-    const payload: {
-      shareCode: string;
-      userId?: string;
-      nickname?: string;
-      guestId?: string;
-    } = { shareCode };
-
-    if (userId) payload.userId = userId;
-    if (nickname) payload.nickname = nickname;
-    if (guestId) payload.guestId = guestId;
-
     return firstValueFrom(
-      this.client.send('group-session.join', payload),
+      this.client.send('group-session.join', {
+        ...joinGroupSessionDto,
+        userId,
+      }),
     );
   }
 
@@ -47,8 +38,8 @@ export class GroupSessionService {
   }
 
   async close(sessionId: string, userId: string) {
-  return firstValueFrom(
-    this.client.send('group-session.close', { sessionId, userId }),
-  );
-}
+    return firstValueFrom(
+      this.client.send('group-session.close', { sessionId, userId }),
+    );
+  }
 }

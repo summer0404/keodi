@@ -27,11 +27,11 @@ import {
 
 @Controller('group-sessions')
 @GroupSessionApiTags()
+@ApiBearerAuth('access-token')
 export class GroupSessionController {
   constructor(private readonly groupSessionService: GroupSessionService) {}
 
   @Post()
-  @ApiBearerAuth('access-token')
   @ApiCreateGroupSession()
   async createGroupSession(
     @CurrentUser() user: CurrentUserDto,
@@ -42,39 +42,31 @@ export class GroupSessionController {
   @Post('join')
   @HttpCode(HttpStatus.OK)
   @OptionalAuth() // allows both auth and guest
-  @ApiBearerAuth('access-token')
   @ApiJoinGroupSession()
   async joinGroupSession(
     @CurrentUser() user: CurrentUserDto | undefined,
-    @Body() dto: JoinGroupSessionDto,
+    @Body() joinGroupSessionDto: JoinGroupSessionDto,
   ): Promise<JoinGroupSessionResponseDto> {
-    return await this.groupSessionService.join(
-      dto.shareCode,
-      user?.id, // undefined if guest
-      dto.nickname,
-      dto.guestId, // returning guest
-    );
+    return await this.groupSessionService.join(joinGroupSessionDto, user?.id);
   }
 
   @Post(':sessionId/invite')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('access-token') // auth required for invite
   @ApiInviteFriendToSession()
   async inviteFriend(
     @CurrentUser() user: CurrentUserDto,
     @Param('sessionId') sessionId: string,
-    @Body() dto: InviteFriendToSessionDto,
+    @Body() inviteFriendToSessionDto: InviteFriendToSessionDto,
   ) {
     return await this.groupSessionService.inviteFriend(
       sessionId,
       user.id,
-      dto.friendId,
+      inviteFriendToSessionDto.friendId,
     );
   }
 
   @Post(':sessionId/close')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('access-token')
   @ApiCloseGroupSession()
   async closeGroupSession(
     @CurrentUser() user: CurrentUserDto,
