@@ -6,8 +6,10 @@ import i18n from '../i18n';
 interface SettingState {
   language: string;
   theme: 'light' | 'dark' | 'system';
+  hasSeenOnboarding: boolean;
   setLanguage: (lang: string) => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  setHasSeenOnboarding: (state: boolean) => void;
   _hasHydrated: boolean; // State check AsyncStorage loaded
   setHasHydrated: (state: boolean) => void;
 }
@@ -17,16 +19,18 @@ export const useSettingStore = create<SettingState>()(
     (set) => ({
       language: 'vi',
       theme: 'system',
+      hasSeenOnboarding: false,
       _hasHydrated: false,
       setLanguage: (lang: string) => {
         i18n.changeLanguage(lang);
         set({ language: lang });
       },
       setTheme: (theme) => set({ theme }),
+      setHasSeenOnboarding: (state) => set({ hasSeenOnboarding: state }),
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
-      name: 'setting-app', 
+      name: 'setting-app',
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

@@ -1,5 +1,51 @@
 {
   "hello": "Hello",
   "welcome": "Welcome to the app",
-  "selectDate": "Select Date"
+  "selectDate": "Select Date",
+  "onboarding": {
+    "slide1": {
+      "title": "Discover What Matters",
+      "description": "Find the best places around you — from cafés to hidden gems — all in one app."
+    },
+    "slide2": {
+      "title": "Explore Nearby Spots",
+      "description": "Swipe through curated places and discover something new every day."
+    },
+    "slide3": {
+      "title": "Save and Share Favorites",
+      "description": "Keep places you love and share them quickly with your friends."
+    },
+    "button": {
+      "continue": "Continue",
+      "getStarted": "Get started"
+    },
+    "categories": {
+      "title": "Let's select your interests",
+      "subtitle": "Please select three or more to proceed"
+    }
+  },
+  "categories": {
+    "diningOut": "Dining Out",
+    "movies": "Movies",
+    "travel": "Travel",
+    "photography": "Photography",
+    "music": "Music",
+    "fitnessGym": "Fitness/Gym",
+    "fishing": "Fishing",
+    "stayIn": "Stay-in",
+    "spaBeauty": "Spa/Beauty",
+    "walk": "Walk",
+    "esports": "Esports",
+    "meetingFriends": "Meeting friends",
+    "cafe": "Cafe",
+    "dating": "Dating",
+    "study": "Study",
+    "volunteering": "Volunteering",
+    "sports": "Sports",
+    "art": "Art",
+    "shopping": "Shopping",
+    "boardGame": "Board game",
+    "nightlife": "Nightlife",
+    "gaming": "Gaming"
+  }
 }

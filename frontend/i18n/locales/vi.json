@@ -1,5 +1,51 @@
 {
   "hello": "Xin chào",
   "welcome": "Chào mừng bạn đến với ứng dụng",
-  "selectDate": "Chọn ngày"
+  "selectDate": "Chọn ngày",
+  "onboarding": {
+    "slide1": {
+      "title": "Chạm Là Thấy, Đi Là Mê",
+      "description": "Từ quán quen đến những \"vibe\" mới lạ, mọi tọa độ ăn chơi đều nằm gọn trong tay bạn."
+    },
+    "slide2": {
+      "title": "Khám phá địa điểm gần bạn",
+      "description": "Vuốt để săn tìm những điểm đến độc đáo mỗi ngày. Đừng bỏ lỡ những điều thú vị ngay sát bên!"
+    },
+    "slide3": {
+      "title": "Lưu tọa độ, kết nối anh em",
+      "description": "Lưu lại chốn yêu thích và \"share\" ngay cho hội bạn. Lên kèo cực dễ, đi chơi cực vui!"
+    },
+    "button": {
+      "continue": "Tiếp tục",
+      "getStarted": "Bắt đầu"
+    },
+    "categories": {
+      "title": "Chọn sở thích của bạn",
+      "subtitle": "Vui lòng chọn ít nhất ba mục để tiếp tục"
+    }
+  },
+  "categories": {
+    "diningOut": "Ăn uống",
+    "movies": "Xem phim",
+    "travel": "Du lịch",
+    "photography": "Nhiếp ảnh",
+    "music": "Âm nhạc",
+    "fitnessGym": "Thể dục/Gym",
+    "fishing": "Câu cá",
+    "stayIn": "Nơi ở",
+    "spaBeauty": "Spa/Beauty",
+    "walk": "Đi bộ",
+    "esports": "Esports",
+    "meetingFriends": "Gặp gỡ bạn bè",
+    "cafe": "Cafe",
+    "dating": "Hẹn hò",
+    "study": "Học tập",
+    "volunteering": "Tình nguyện",
+    "sports": "Thể thao",
+    "art": "Nghệ thuật",
+    "shopping": "Mua sắm",
+    "boardGame": "Board game",
+    "nightlife": "Cuộc sống về đêm",
+    "gaming": "Chơi game"
+  }
 }

@@ -11,6 +11,7 @@ interface ButtonProps extends PressableProps {
   variant?: Variant;
   size?: Size;
   rounded?: Rounded;
+  className?: string;
   children: React.ReactNode;
 }
 
@@ -55,26 +56,27 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'default',
   rounded = 'md',
   children,
+  className,
+  disabled,
   ...props
 }) => {
-  const buttonClassName = [
+  const baseClass = [
     'justify-center',
     'items-center',
     'flex-row',
     buttonVariantClasses[variant],
     sizeClasses[size],
     roundedClasses[rounded],
-    'active:opacity-90',
+    disabled ? 'opacity-50' : '',
   ].join(' ');
 
-  const textClassName = ['font-medium', 'text-sm', textVariantClasses[variant]].join(' ');
+  const buttonClassName = [baseClass, className].filter(Boolean).join(' ');
+
+  const textClassName = [textVariantClasses[variant]].join(' ');
 
   return (
-    <Pressable className={buttonClassName} {...props}>
-      <Typography
-        variant="h5"
-        className={textVariantClasses[variant]}
-      >
+    <Pressable className={buttonClassName} disabled={disabled} {...props}>
+      <Typography variant="h5" className={textClassName}>
         {children}
       </Typography>
     </Pressable>
