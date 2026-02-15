@@ -43,19 +43,20 @@ model User {
   dateOfBirth DateTime? @map("date_of_birth")
   pictureUrl  String?   @map("picture_url")
 
-  userImages     UserImage[]
-  userAttributes UserAttribute[]
-  userActions    UserAction[]
-  reviews        Review[]
-  userCategories UserCategory[]
-  places         Place[]
-  favorites      Favorite[]
+  userImages          UserImage[]
+  userAttributes      UserAttribute[]
+  userActions         UserAction[]
+  reviews             Review[]
+  userCategories      UserCategory[]
+  places              Place[]
+  favorites           Favorite[]
+  sessionMemberships  GroupSessionMember[]
 
-  sentRequests     FriendRequest[] @relation("SentRequests")
-  receivedRequests FriendRequest[] @relation("ReceivedRequests")
-  friendships      Friendship[]    @relation("UserFriendships")
-  friendsOf        Friendship[]    @relation("FriendFriendships")
-  groupSessions   GroupSession[]    @relation("CreatedSessions")
+  sentRequests      FriendRequest[] @relation("SentRequests")
+  receivedRequests  FriendRequest[] @relation("ReceivedRequests")
+  friendships       Friendship[]    @relation("UserFriendships")
+  friendsOf         Friendship[]    @relation("FriendFriendships")
+  groupSessions     GroupSession[]    @relation("CreatedSessions")
 
   @@map("users")
 }
@@ -314,10 +315,29 @@ model GroupSession {
 
   creator       User                  @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
 
+  members   GroupSessionMember[]
+  
   @@map("group_sessions")
 }
 
 enum GroupSessionStatus {
   ACTIVE
   CLOSED
+}
+
+model GroupSessionMember {
+  id          String     @id @default(cuid())
+  sessionId   String     @map("session_id")
+  userId      String?    @map("user_id") //null for guest
+  guestId     String?    @map("guest_id") 
+  nickname    String?    @db.VarChar(50)   //nickname for guest
+  joinedAt    DateTime   @default(now()) @map("joined_at")
+
+  session     GroupSession  @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@unique([sessionId, guestId])
+
+  @@map("group_session_members")
 }
