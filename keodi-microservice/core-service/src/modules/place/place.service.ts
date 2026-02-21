@@ -1,6 +1,6 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
-import { Place, Prisma } from '@prisma/client';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ClientKafka, RpcException } from '@nestjs/microservices';
+import { Prisma } from '@prisma/client';
 import { GeoConstants } from 'src/common/constants/place.constant';
 import { FriendSortBy, SortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PrismaService } from 'src/database/prisma.service';
@@ -8,23 +8,21 @@ import { ImageService } from '../image/image.service';
 import { NearMeDto, SearchDto } from 'src/common/dtos/place.dto';
 import { SearchMode } from 'src/common/enums/search.enum';
 import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
-
-export interface PlaceWithDistance extends Place {
-    distance: number;
-    isFavorite: boolean;
-}
+import { firstValueFrom } from 'rxjs';
+import { PlaceWithDistance } from 'src/common/interfaces/place.interface';
 
 @Injectable()
 export class PlaceService {
     constructor(
         private readonly prismaService: PrismaService,
-        private readonly imageService: ImageService
+        private readonly imageService: ImageService,
+        @Inject('KAFKA_SERVICE') private readonly clientKafka: ClientKafka
     ) { }
 
     private calculateGeoDeltas(latitude: number, radius: number) {
         const latDelta = radius / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
-        const lngDelta = radius / (GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE * Math.cos((latitude * Math.PI) / GeoConstants.DEGREES_IN_HALF_CIRCLE));
-        return { latDelta, lngDelta };
+        const longDelta = radius / (GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE * Math.cos((latitude * Math.PI) / GeoConstants.DEGREES_IN_HALF_CIRCLE));
+        return { latDelta, longDelta };
     }
 
     private buildPaginationParams(page: number, limit: number, sortBy: SortBy | FriendSortBy, sortOrder: SortOrder) {
@@ -64,6 +62,25 @@ export class PlaceService {
         `;
     }
 
+    private buildCategoryCondition(categories?: string[]) {
+        if (!categories || categories.length === 0) {
+            return Prisma.empty;
+        }
+        
+        const categoryConditions = categories.map(category => 
+            Prisma.sql`UPPER(c.name) = UPPER(${category})`
+        );
+        
+        return Prisma.sql`
+            AND p.id IN (
+                SELECT pc.place_id
+                FROM place_categories pc
+                JOIN categories c ON pc.category_id = c.id
+                WHERE ${Prisma.join(categoryConditions, ' OR ')}
+            )
+        `;
+    }
+
     private async enrichPlacesWithFavoriteAndImage(rawPlaces: any[], userId: string): Promise<PlaceWithDistance[]> {
         return await Promise.all(
             rawPlaces.map(async (place) => {
@@ -92,14 +109,16 @@ export class PlaceService {
         latitude: number,
         longitude: number,
         latDelta: number,
-        lngDelta: number,
+        longDelta: number,
         radius: number,
         orderByClause: string,
         limit: number,
         offset: number,
-        searchPattern?: string
+        searchPattern?: string,
+        categories?: string[]
     ): Promise<any[]> {
         const searchCondition = this.buildSearchCondition(searchPattern);
+        const categoryCondition = this.buildCategoryCondition(categories);
 
         return await this.prismaService.$queryRaw<any[]>`
             SELECT * FROM (
@@ -134,8 +153,9 @@ export class PlaceService {
                     ) AS distance
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
-                    AND p.longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
+                    AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
                     ${searchCondition}
+                    ${categoryCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
             ${Prisma.raw(orderByClause)}
@@ -148,11 +168,13 @@ export class PlaceService {
         latitude: number,
         longitude: number,
         latDelta: number,
-        lngDelta: number,
+        longDelta: number,
         radius: number,
-        searchPattern?: string
+        searchPattern?: string,
+        categories?: string[]
     ): Promise<number> {
         const searchCondition = this.buildSearchConditionForCount(searchPattern);
+        const categoryCondition = this.buildCategoryCondition(categories);
 
         const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(*) as count
@@ -161,16 +183,17 @@ export class PlaceService {
                     (
                         ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(
                             cos(radians(${latitude})) 
-                            * cos(radians(latitude)) 
-                            * cos(radians(longitude) - radians(${longitude})) 
+                            * cos(radians(p.latitude)) 
+                            * cos(radians(p.longitude) - radians(${longitude})) 
                             + sin(radians(${latitude})) 
-                            * sin(radians(latitude))
+                            * sin(radians(p.latitude))
                         )
                     ) AS distance
-                FROM places
-                WHERE latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
-                    AND longitude BETWEEN ${longitude - lngDelta} AND ${longitude + lngDelta}
+                FROM places p
+                WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
+                    AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
                     ${searchCondition}
+                    ${categoryCondition}
             ) as places_with_distance
             WHERE distance <= ${radius}
         `;
@@ -190,7 +213,7 @@ export class PlaceService {
             userId 
         } = nearMeDto;
 
-        const { latDelta, lngDelta } = this.calculateGeoDeltas(latitude, radius);
+        const { latDelta, longDelta } = this.calculateGeoDeltas(latitude, radius);
 
         const { offset, orderByClause } = this.buildPaginationParams(page, limit, sortBy, sortOrder);
 
@@ -199,7 +222,7 @@ export class PlaceService {
                 latitude,
                 longitude,
                 latDelta,
-                lngDelta,
+                longDelta,
                 radius,
                 orderByClause,
                 limit,
@@ -208,7 +231,7 @@ export class PlaceService {
 
             const places = await this.enrichPlacesWithFavoriteAndImage(rawPlaces, userId);
 
-            const total = await this.countPlacesInRadius(latitude, longitude, latDelta, lngDelta, radius);
+            const total = await this.countPlacesInRadius(latitude, longitude, latDelta, longDelta, radius);
             const totalPages = Math.ceil(total / limit);
 
             return {
@@ -238,7 +261,7 @@ export class PlaceService {
         } = searchDto;
 
 
-        const { latDelta, lngDelta } = this.calculateGeoDeltas(latitude, radius);
+        const { latDelta, longDelta } = this.calculateGeoDeltas(latitude, radius);
 
         const { offset, orderByClause } = this.buildPaginationParams(page, limit, sortBy, sortOrder);
 
@@ -250,7 +273,7 @@ export class PlaceService {
                     latitude,
                     longitude,
                     latDelta,
-                    lngDelta,
+                    longDelta,
                     radius,
                     orderByClause,
                     limit,
@@ -264,7 +287,7 @@ export class PlaceService {
                     latitude,
                     longitude,
                     latDelta,
-                    lngDelta,
+                    longDelta,
                     radius,
                     searchPattern
                 );
@@ -278,7 +301,43 @@ export class PlaceService {
                     limit,
                 };
             } else if ( mode === SearchMode.CONTEXTUAL) {
-                // TODO: Implement contextual search
+                const extractedIntent = await firstValueFrom(
+                    this.clientKafka.send('intelligence.extract-user-intent', { search })
+                );
+
+                const rawPlaces = await this.queryPlacesInRadiusWithDistance(
+                    latitude,
+                    longitude,
+                    latDelta,
+                    longDelta,
+                    radius,
+                    orderByClause,
+                    limit,
+                    offset,
+                    undefined,
+                    extractedIntent.categories
+                );
+
+                const places = await this.enrichPlacesWithFavoriteAndImage(rawPlaces, userId);
+
+                const total = await this.countPlacesInRadius(
+                    latitude,
+                    longitude,
+                    latDelta,
+                    longDelta,
+                    radius,
+                    undefined,
+                    extractedIntent.categories
+                );
+                const totalPages = Math.ceil(total / limit);
+
+                return {
+                    places,
+                    total,
+                    page,
+                    totalPages,
+                    limit,
+                };
             }
         } catch (error) {
             return handleServiceErrorCatching(error)

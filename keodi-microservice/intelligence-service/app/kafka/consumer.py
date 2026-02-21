@@ -24,23 +24,32 @@ class KafkaConsumerService:
                 if not self.running:
                     break
 
-                await self._process_message(msg.topic, msg.value)
+                await self._process_message(msg)
 
         except Exception as e:
             raise RuntimeError(f"Error in Kafka consumer: {e}") from e
         finally:
             await self.stop()
 
-    async def _process_message(self, topic: str, value):
+    async def _process_message(self, msg):
         try:
+            value = msg.value
             if isinstance(value, bytes):
                 value = value.decode("utf-8")
-
             data = json.loads(value)
 
-            await self.router.route(topic, data)
+            headers = {}
+            if msg.headers:
+                for key, value in msg.headers:
+                    if isinstance(key, bytes):
+                        key = key.decode("utf-8")
+                    if isinstance(value, bytes):
+                        value = value.decode("utf-8")
+                    headers[key] = value
+
+            await self.router.route(msg.topic, data, headers)
         except Exception as e:
-            raise RuntimeError(f"Error routing message from topic {topic}: {e}") from e
+            raise RuntimeError(f"Error routing message from topic {msg.topic}: {e}") from e
         
     async def stop(self):
         self.running = False

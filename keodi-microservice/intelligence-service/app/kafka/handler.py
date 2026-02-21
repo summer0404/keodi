@@ -24,12 +24,12 @@ class Handlers:
 
     async def extract_user_intent(self, message: dict, headers: dict):
         search = message.get("search", "")
-        correlation_id = headers.get("correlation_id", "")
+        kafka_correlationId = headers.get("kafka_correlationId", "")
         intent = await self.llm_service.extract_user_intent(search=search)
-        return self.producer.send_response(
+        return await self.producer.send_response(
             topic=Topics.EXTRACT_USER_INTENT_REPLY,
-            correlation_id=correlation_id,
-            payload=intent.encode("utf-8"),
+            kafka_correlationId=kafka_correlationId,
+            payload=intent,
         )
     
     async def sentiment_analysis(self, message: dict, headers: dict):
