@@ -63,6 +63,9 @@ export class ResetPasswordResponseDto {
 export class RegisterOkResponseDto {
     @ApiProperty({ example: "User created successfully"})
     message: string
+    
+    @ApiProperty({ example: "abcdXYZ123"})
+    userId: string
 }
 
 export class UnverifiedAccountResponse{
