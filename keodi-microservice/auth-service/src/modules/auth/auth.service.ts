@@ -36,7 +36,7 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly verifyUrlService: VerifyUrlService,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   private generateAccessAndRefreshToken(user: UserDto) {
     const payload = {
@@ -106,7 +106,7 @@ export class AuthService {
       this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL);
       this.userService.createUserInfomation(newUser.id);
 
-      return { message: 'User created successfully' };
+      return { message: 'User created successfully', userId: newUser.id };
     } catch (error) {
       console.error(error);
       if (error instanceof RpcException) {
@@ -194,18 +194,18 @@ export class AuthService {
         });
 
         this.userService.createUserInfomation(
-          googleUser!.id,
+          googleUser.id,
           user.firstName,
           user.lastName,
           user.picture,
         );
       }
 
-      const tokens = this.generateAccessAndRefreshToken(googleUser!);
+      const tokens = this.generateAccessAndRefreshToken(googleUser);
 
       await this.prismaService.user.update({
         where: {
-          id: googleUser!.id,
+          id: googleUser.id,
         },
         data: {
           refreshToken: await bcrypt.hash(
