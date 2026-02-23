@@ -47,6 +47,7 @@ export class AuthService {
 
       return {
         accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
       };
     } catch (error) {
       throw error;
@@ -175,6 +176,9 @@ export class AuthService {
       sameSite: 'none',
       maxAge: cookieMaxAge,
     });
-    return { accessToken: response.accessToken };
+    return {
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+    };
   }
 }

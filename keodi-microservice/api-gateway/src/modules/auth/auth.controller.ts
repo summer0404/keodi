@@ -31,6 +31,7 @@ import {
   ForgotPasswordOTPResponseDto,
   LoginDto,
   MeResponseDto,
+  RefreshDto,
   RegisterDto,
   RegisterOkResponseDto,
   ResetPasswordDto,
@@ -236,8 +237,9 @@ export class AuthController {
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @Body() body: RefreshDto,
   ) {
-    const refreshToken = req.cookies['refreshToken'];
+    const refreshToken = req.cookies?.['refreshToken'] ?? body.refreshToken;
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
     return await this.authService.refresh(res, refreshToken);
   }
