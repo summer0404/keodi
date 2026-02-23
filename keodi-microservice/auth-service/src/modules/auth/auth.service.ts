@@ -38,7 +38,7 @@ export class AuthService {
     private readonly userService: UserService,
   ) {}
 
-  private generateAccessAndRefreshToken(user: UserDto) {
+  private generateAccessAndRefreshToken(user: UserDto, rememberMe = false) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -47,7 +47,9 @@ export class AuthService {
 
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: '10m' }),
-      refreshToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
+      refreshToken: this.jwtService.sign(payload, {
+        expiresIn: rememberMe ? '365d' : '7d',
+      }),
     };
   }
 
@@ -145,7 +147,10 @@ export class AuthService {
           },
         });
 
-      const tokens = this.generateAccessAndRefreshToken(existingUser);
+      const tokens = this.generateAccessAndRefreshToken(
+        existingUser,
+        data.rememberMe,
+      );
 
       await this.prismaService.user.update({
         where: {
