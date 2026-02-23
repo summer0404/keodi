@@ -10,24 +10,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import {
-  AuthResponseDto,
-  ForgotPasswordOTPDto,
-  ForgotPasswordOTPResponseDto,
-  LoginDto,
-  MeResponseDto,
-  RegisterDto,
-  RegisterOkResponseDto,
-  ResetPasswordDto,
-  ResetPasswordOTPDto,
-  ResetPasswordOTPResponseDto,
-  ResetPasswordResponseDto,
-  UnverifiedAccountResponse,
-  ValidateForgotPasswordOTPResponseDto,
-  ValidateOTPDto,
-  ValidateResetPasswordOTPResponseDto,
-} from 'src/common/dtos/auth.dto';
+import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -39,12 +22,30 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Response } from 'express';
-import { AuthGuard } from '@nestjs/passport';
-import { OtpPurpose } from 'src/common/enums/otp.enum';
-import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
+import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
+import {
+  AuthResponseDto,
+  ForgotPasswordOTPDto,
+  ForgotPasswordOTPResponseDto,
+  LoginDto,
+  MeResponseDto,
+  RefreshDto,
+  RegisterDto,
+  RegisterOkResponseDto,
+  ResetPasswordDto,
+  ResetPasswordOTPDto,
+  ResetPasswordOTPResponseDto,
+  ResetPasswordResponseDto,
+  UnverifiedAccountResponse,
+  ValidateForgotPasswordOTPResponseDto,
+  ValidateOTPDto,
+  ValidateResetPasswordOTPResponseDto,
+} from 'src/common/dtos/auth.dto';
 import { CurrentUserDto } from 'src/common/dtos/user.dto';
+import { OtpPurpose } from 'src/common/enums/otp.enum';
+import { AuthService } from './auth.service';
 
 @ApiTags('auth')
 @ApiBadRequestResponse({ description: 'Invalid input data' })
@@ -216,5 +217,30 @@ export class AuthController {
   })
   async me(@CurrentUser() user: CurrentUserDto) {
     return await this.authService.me(user);
+  }
+
+  @SkipAuth()
+  @Post('refresh')
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description:
+      'Uses the refresh token stored in the httpOnly cookie to issue a new access token. Call this endpoint when the access token expires (401 response).',
+  })
+  @ApiOkResponse({
+    description: 'Returns a new access token',
+    type: AuthResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'No refresh token provided or refresh token is invalid/expired',
+  })
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: RefreshDto,
+  ) {
+    const refreshToken = req.cookies?.['refreshToken'] ?? body.refreshToken;
+    if (!refreshToken) throw new UnauthorizedException('No refresh token');
+    return await this.authService.refresh(res, refreshToken);
   }
 }

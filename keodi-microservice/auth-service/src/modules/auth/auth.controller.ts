@@ -75,4 +75,9 @@ export class AuthController {
       VerifyUrlPurpose.VERIFY_EMAIL,
     );
   }
+
+  @MessagePattern('auth.refresh')
+  async refresh(@Payload() data: { refreshToken: string }) {
+    return await this.authService.refresh(data.refreshToken);
+  }
 }
