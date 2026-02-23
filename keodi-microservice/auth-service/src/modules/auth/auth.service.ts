@@ -38,7 +38,11 @@ export class AuthService {
     private readonly userService: UserService,
   ) {}
 
-  private generateAccessAndRefreshToken(user: UserDto, rememberMe = false) {
+  private generateAccessAndRefreshToken(
+    user: UserDto,
+    rememberMe = false,
+    refreshExpiresIn?: string,
+  ) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -48,7 +52,7 @@ export class AuthService {
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: '10m' }),
       refreshToken: this.jwtService.sign(payload, {
-        expiresIn: rememberMe ? '365d' : '7d',
+        expiresIn: refreshExpiresIn ?? (rememberMe ? '365d' : '7d'),
       }),
     };
   }
@@ -462,6 +466,55 @@ export class AuthService {
       throw new RpcException({
         status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
         message: error.message ?? error,
+      });
+    }
+  }
+
+  async refresh(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken);
+
+      const user = await this.prismaService.user.findUnique({
+        where: { id: payload.sub },
+      });
+      if (!user)
+        throw new RpcException({
+          status: HttpStatus.UNAUTHORIZED,
+          message: 'User not found',
+        });
+
+      const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
+      if (!isValid)
+        throw new RpcException({
+          status: HttpStatus.UNAUTHORIZED,
+          message: 'Invalid refresh token',
+        });
+
+      const remainingSeconds = payload.exp - Math.floor(Date.now() / 1000);
+      const tokens = this.generateAccessAndRefreshToken(
+        user,
+        false,
+        `${remainingSeconds}s`,
+      );
+
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken: await bcrypt.hash(
+            tokens.refreshToken,
+            Number(process.env.SALT_ROUNDS),
+          ),
+        },
+      });
+      return tokens;
+    } catch (error) {
+      console.error(error);
+      if (error instanceof RpcException) {
+        throw error;
+      }
+      throw new RpcException({
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Invalid or expired refresh token',
       });
     }
   }

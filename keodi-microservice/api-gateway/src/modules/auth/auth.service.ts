@@ -158,4 +158,23 @@ export class AuthService {
       throw error;
     }
   }
+
+  async refresh(res: Response, refreshToken: string) {
+    const response = await firstValueFrom(
+      this.client.send('auth.refresh', { refreshToken }),
+    );
+
+    const newTokenPayload = JSON.parse(
+      Buffer.from(response.refreshToken.split('.')[1], 'base64').toString(),
+    );
+    const cookieMaxAge = newTokenPayload.exp * 1000 - Date.now();
+
+    res.cookie('refreshToken', response.refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: cookieMaxAge,
+    });
+    return { accessToken: response.accessToken };
+  }
 }

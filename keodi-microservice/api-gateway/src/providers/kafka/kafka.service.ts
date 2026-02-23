@@ -19,6 +19,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf('auth.verify-email');
     this.kafkaClient.subscribeToResponseOf('auth.external-resend-verify-email');
     this.kafkaClient.subscribeToResponseOf('auth.resend-verify-email');
+    this.kafkaClient.subscribeToResponseOf('auth.refresh');
 
     //user topic
     this.kafkaClient.subscribeToResponseOf('user.get-all');
