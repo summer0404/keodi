@@ -41,6 +41,7 @@ export class SearchDto extends NearMeQueryDto {
 
     @ApiProperty({ 
         description: 'Search mode', 
+        enum: SearchMode,
         example: SearchMode.KEYWORD, 
         required: false, 
         default: SearchMode.KEYWORD 
