@@ -1,5 +1,5 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
+import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
@@ -14,14 +14,7 @@ export class CategoryService {
                 },
             })
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 }

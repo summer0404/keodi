@@ -10,7 +10,7 @@ class KafkaProducer:
 
     async def _ensure_producer(self):
         if self._producer is None:
-            self._producer = await get_kafka_producer(self.config)
+            self._producer = await get_kafka_producer()
 
     async def send_message(self, topic: str, value: bytes, key: bytes = None):
         await self._ensure_producer()
@@ -20,13 +20,14 @@ class KafkaProducer:
     async def send_response(
         self,
         topic: str,
-        correlation_id: str,
-        payload: bytes,
+        kafka_correlationId: str,
+        payload: str,
     ):
+        await self._ensure_producer()
         return await self._producer.send(
             topic, 
-            value=payload, 
-            headers={"correlation_id": correlation_id}
+            value=payload,  
+            headers=[("kafka_correlationId", kafka_correlationId.encode("utf-8"))]
         )
     
 

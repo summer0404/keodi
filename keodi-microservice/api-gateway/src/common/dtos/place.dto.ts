@@ -1,9 +1,10 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNumber, IsOptional, Max, Min } from "class-validator";
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, Max, Min } from "class-validator";
 import { PlaceConstants } from "../constants/place.constant";
 import { PaginationQueryDto, PaginationResponseDto } from "./pagination.dto";
+import { SearchMode } from "../enums/search.enum";
 
 export class NearMeQueryDto extends PaginationQueryDto {
     @ApiProperty({description: 'User latitude', example: 10.76407 })
@@ -27,6 +28,27 @@ export class NearMeQueryDto extends PaginationQueryDto {
     @Min(0.1)
     @Max(100)
     radius?: number = PlaceConstants.DEFAULT_RADIUS;
+}
+
+export class SearchDto extends NearMeQueryDto {
+    @ApiProperty({ 
+        description: 'Search keyword', 
+        example: 'coffee', 
+        required: true 
+    })
+    @IsNotEmpty()
+    search: string;
+
+    @ApiProperty({ 
+        description: 'Search mode', 
+        enum: SearchMode,
+        example: SearchMode.KEYWORD, 
+        required: false, 
+        default: SearchMode.KEYWORD 
+    }) 
+    @IsOptional()
+    @IsEnum(SearchMode)
+    mode?: SearchMode = SearchMode.KEYWORD;
 }
 
 export class PlaceDistanceDto {

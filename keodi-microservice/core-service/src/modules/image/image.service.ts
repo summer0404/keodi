@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { UserImageType } from '@prisma/client';
 import { ImageConstants } from 'src/common/constants/image.constant';
+import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { S3Service } from 'src/providers/s3/s3.service';
 
@@ -50,14 +51,7 @@ export class ImageService {
 
             return await this.s3Service.generateImageViewPresignedUrl(key);
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -102,14 +96,7 @@ export class ImageService {
                 });
             }
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            return handleServiceErrorCatching(error)
         }
     }
 }
