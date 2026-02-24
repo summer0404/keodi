@@ -86,17 +86,6 @@ export class AuthResponseDto {
   refreshToken: string;
 }
 
-export class RefreshDto {
-  @ApiProperty({
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...',
-    description: 'Refresh token (for mobile)',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  refreshToken?: string;
-}
-
 export class ResetPasswordResponseDto {
   @ApiProperty({
     example: 'Password reset successfully',
