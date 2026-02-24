@@ -67,7 +67,6 @@ export class AuthService {
 
       return {
         accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
       };
     } catch (error) {
       throw error;
@@ -91,7 +90,6 @@ export class AuthService {
 
       return {
         accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
       };
     } catch (error) {
       throw error;
@@ -222,7 +220,6 @@ export class AuthService {
     });
     return {
       accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
     };
   }
 }

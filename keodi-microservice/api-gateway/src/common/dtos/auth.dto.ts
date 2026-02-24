@@ -78,12 +78,6 @@ export class AuthResponseDto {
     description: 'JWT - access token',
   })
   accessToken: string;
-
-  @ApiProperty({
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...',
-    description: 'JWT - refresh token (for mobile)',
-  })
-  refreshToken: string;
 }
 
 export class ResetPasswordResponseDto {
