@@ -38,7 +38,7 @@ import { GroupSessionModule } from './modules/group-session/group-session.module
     GroupSessionModule,
     RedisModule,
     ReviewModule,
-    AttributeModule
+    AttributeModule,
   ],
 })
 export class AppModule { }

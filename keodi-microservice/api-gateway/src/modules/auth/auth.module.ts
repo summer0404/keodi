@@ -5,11 +5,13 @@ import { GoogleStrategy } from './google.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { RedisModule } from 'src/providers/redis/redis.module';
+import { GoogleModule } from 'src/providers/google/google.module';
 
 @Module({
   imports: [
     PassportModule,
-    RedisModule
+    RedisModule,
+    GoogleModule
   ],
   controllers: [AuthController],
   providers: [

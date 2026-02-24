@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import * as bcrypt from 'bcrypt';
 import {
@@ -49,11 +49,12 @@ export class AuthService {
       username: user.username,
     };
 
+    
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: '10m' }),
       refreshToken: this.jwtService.sign(payload, {
         expiresIn: refreshExpiresIn ?? (rememberMe ? '365d' : '7d'),
-      }),
+      } as JwtSignOptions),
     };
   }
 
@@ -181,10 +182,10 @@ export class AuthService {
     }
   }
 
-  async googleCallback(user: any) {
+  async googleLogin(user: any) {
     try {
       let googleUser: UserDto | null = await this.prismaService.user.findUnique(
-        { where: { username: user.email } },
+        { where: { email: user.email } },
       );
 
       if (!googleUser) {

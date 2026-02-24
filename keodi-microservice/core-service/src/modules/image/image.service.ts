@@ -19,27 +19,6 @@ export class ImageService {
                 message: `Invalid file type. Only ${ImageConstants.ALLOWED_MIME_TYPES.join(', ')} are allowed`
             });
         }
-
-
-        // const magicNumbers = {
-        //     'image/jpeg': [0xFF, 0xD8, 0xFF],
-        //     'image/jpg': [0xFF, 0xD8, 0xFF],
-        //     'image/png': [0x89, 0x50, 0x4E, 0x47],
-        //     'image/webp': [0x52, 0x49, 0x46, 0x46] 
-        // };
-
-        // const magic = magicNumbers[mimetype];
-        // if (magic) {
-        //     const header = Array.from(buffer.slice(0, magic.length));
-        //     const isValid = magic.every((byte, index) => header[index] === byte);
-
-        //     if (!isValid) {
-        //         throw new RpcException({
-        //             status: HttpStatus.BAD_REQUEST,
-        //             message: 'File content does not match declared type'
-        //         });
-        //     }
-        // }
     }
 
     async getImageViewUrl(key: string): Promise<string> {

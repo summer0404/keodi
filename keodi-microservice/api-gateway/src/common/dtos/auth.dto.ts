@@ -175,3 +175,14 @@ export class MeResponseDto {
   })
   phoneNumber: string | null;
 }
+
+
+export class GoogleLoginMobileDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...',
+    description: 'Google access token from client',
+  })
+  @IsNotEmpty()
+  @IsString()
+  token: string;
+}

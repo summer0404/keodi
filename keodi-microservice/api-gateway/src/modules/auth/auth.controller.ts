@@ -29,6 +29,7 @@ import {
   AuthResponseDto,
   ForgotPasswordOTPDto,
   ForgotPasswordOTPResponseDto,
+  GoogleLoginMobileDto,
   LoginDto,
   MeResponseDto,
   RefreshDto,
@@ -103,6 +104,21 @@ export class AuthController {
       });
 
     return await this.authService.googleCallback(res, req.user);
+  }
+
+  @SkipAuth()
+  @Post('google/mobile')
+  @ApiOperation({ summary: 'Login with Google for mobile' })
+  @ApiOkResponse({
+    description: 'Login successful',
+    type: AuthResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Invalid Google token' })
+  async googleLoginMobile(
+    @Res({ passthrough: true }) res: Response,
+    @Body() googleLoginMobileDto: GoogleLoginMobileDto,
+  ) {
+    return await this.authService.googleLoginMobile(res, googleLoginMobileDto.token);
   }
 
   @SkipAuth()
