@@ -25,28 +25,37 @@ class PlaceRepository(BaseRepository):
                 if not attribute:
                     continue
                 
-                new_score = self._calculate_score(attribute.score, score, attribute.review_count)
-                
-                await self.db.placeattribute.upsert(
+                place_attribute = await self.db.placeattribute.find_first(
                     where={
-                        "placeId_attributeId": {
-                            "placeId": place_id,
-                            "attributeId": attribute.id
-                        }
-                    },
-                    data={
-                        "create": {
-                            "placeId": place_id,
-                            "attributeId": attribute.id,
-                            "score": new_score,
-                            "review_count": 1
-                        },
-                        "update": {
-                            "score": new_score,
-                            "review_count": attribute.review_count + 1
-                        }
+                        "placeId": place_id,
+                        "attributeId": attribute.id
                     }
                 )
+                
+                if place_attribute:
+                    new_score = self._calculate_score(place_attribute.score, score, place_attribute.reviewCount)
+                    
+                    await self.db.placeattribute.update(
+                        where={
+                            "placeId_attributeId": {
+                                "placeId": place_id,
+                                "attributeId": attribute.id
+                            }
+                        },
+                        data={
+                            "score": new_score,
+                            "reviewCount": place_attribute.reviewCount + 1
+                        }
+                    )
+                else:
+                    await self.db.placeattribute.create(
+                        data={
+                            "placeId": place_id,
+                            "attributeId": attribute.id,
+                            "score": score,
+                            "reviewCount": 1
+                        }
+                    )
             
             return {"message": "Attributes updated successfully"}
         except json.JSONDecodeError as e:
