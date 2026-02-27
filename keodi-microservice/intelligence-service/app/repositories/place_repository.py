@@ -3,6 +3,12 @@ import json
 from typing import Union
 
 class PlaceRepository(BaseRepository):
+    SMOOTHING_FACTOR = 5
+
+    def _calculate_score(self, current_score: float, new_score: float, review_count: int) -> float:
+        learning_rate = 1 / (self.SMOOTHING_FACTOR + review_count + 1)
+        return current_score + learning_rate * (new_score - current_score)
+
     async def update_attributes(self, place_id: str, sentiment_attributes: Union[dict, str]):
         try:
             if isinstance(sentiment_attributes, str):
@@ -19,6 +25,8 @@ class PlaceRepository(BaseRepository):
                 if not attribute:
                     continue
                 
+                new_score = self._calculate_score(attribute.score, score, attribute.review_count)
+                
                 await self.db.placeattribute.upsert(
                     where={
                         "placeId_attributeId": {
@@ -30,10 +38,12 @@ class PlaceRepository(BaseRepository):
                         "create": {
                             "placeId": place_id,
                             "attributeId": attribute.id,
-                            "score": score
+                            "score": new_score,
+                            "review_count": 1
                         },
                         "update": {
-                            "score": score
+                            "score": new_score,
+                            "review_count": attribute.review_count + 1
                         }
                     }
                 )
