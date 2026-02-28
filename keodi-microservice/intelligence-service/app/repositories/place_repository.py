@@ -48,12 +48,15 @@ class PlaceRepository(BaseRepository):
                         }
                     )
                 else:
+                    review_count = 0
+                    new_score = self._calculate_score(0, score, review_count)
+
                     await self.db.placeattribute.create(
                         data={
                             "placeId": place_id,
                             "attributeId": attribute.id,
-                            "score": score,
-                            "reviewCount": 1
+                            "score": new_score,
+                            "reviewCount": review_count + 1
                         }
                     )
             
