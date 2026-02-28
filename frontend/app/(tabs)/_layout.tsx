@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Home, Search, Users, Heart, Settings } from 'lucide-react-native';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabIcon({
   focused,
@@ -32,6 +33,8 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       safeAreaInsets={{ bottom: 0 }}
@@ -41,7 +44,7 @@ export default function TabsLayout() {
 
         tabBarStyle: {
           position: 'absolute',
-          bottom: 36,
+          bottom: insets.bottom + 16, 
           left: 16,
           right: 16,
           height: 64,

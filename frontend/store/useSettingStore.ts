@@ -7,9 +7,11 @@ interface SettingState {
   language: string;
   theme: 'light' | 'dark' | 'system';
   hasSeenOnboarding: boolean;
+  hasCompletedCategoryOnboarding: boolean;
   setLanguage: (lang: string) => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setHasSeenOnboarding: (state: boolean) => void;
+  setHasCompletedCategoryOnboarding: (state: boolean) => void;
   _hasHydrated: boolean; // State check AsyncStorage loaded
   setHasHydrated: (state: boolean) => void;
 }
@@ -20,6 +22,7 @@ export const useSettingStore = create<SettingState>()(
       language: 'vi',
       theme: 'system',
       hasSeenOnboarding: false,
+      hasCompletedCategoryOnboarding: false,
       _hasHydrated: false,
       setLanguage: (lang: string) => {
         i18n.changeLanguage(lang);
@@ -27,6 +30,7 @@ export const useSettingStore = create<SettingState>()(
       },
       setTheme: (theme) => set({ theme }),
       setHasSeenOnboarding: (state) => set({ hasSeenOnboarding: state }),
+      setHasCompletedCategoryOnboarding: (state) => set({ hasCompletedCategoryOnboarding: state }),
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {

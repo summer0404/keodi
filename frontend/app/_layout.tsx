@@ -10,6 +10,8 @@ import { useEffect } from 'react';
 
 import { useSettingStore } from '@/store/useSettingStore';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppQueryProvider } from '@/providers/query-provider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,15 +35,20 @@ export default function RootLayout() {
   if (!fontsLoaded || !_hasHydrated) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {/* Debug onboard: cmt line hasSeenOnboarding and uncmt (onboarding) */}
-      {/* <Stack initialRouteName={hasSeenOnboarding ? '(tabs)' : '(onboarding)'}> */}
-      <Stack initialRouteName="(onboarding)">
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AppQueryProvider>
+      <SafeAreaProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {/* Debug onboard: cmt line hasSeenOnboarding and uncmt (onboarding) */}
+          <Stack initialRouteName={hasSeenOnboarding ? '(auth)' : '(onboarding)'}>
+          {/* <Stack initialRouteName="(onboarding)"> */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </AppQueryProvider>
   );
 }

@@ -9,6 +9,9 @@ interface ThreadsDatePickerProps {
   onClose: () => void;
   onDateChange: (date: Date) => void;
   initialDate?: Date;
+  minYear?: number;
+  maxYear?: number;
+  name?: string;
 }
 
 const MONTH_NAMES_EN = [
@@ -52,6 +55,9 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
   onClose,
   onDateChange,
   initialDate = new Date(),
+  minYear,
+  maxYear,
+  name,
 }) => {
   const { language } = useSettingStore();
   const [selectedYear, setSelectedYear] = useState(initialDate.getFullYear());
@@ -61,10 +67,12 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
   // Data generation
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
+    const startYear = minYear !== undefined ? minYear : currentYear - 5;
+    const endYear = maxYear !== undefined ? maxYear : currentYear + 5;
     const arr = [];
-    for (let i = currentYear - 5; i <= currentYear + 5; i++) arr.push(i);
+    for (let i = startYear; i <= endYear; i++) arr.push(i);
     return arr;
-  }, []);
+  }, [minYear, maxYear]);
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
 
   const days = useMemo(() => {
@@ -103,7 +111,7 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
 
           {/* Title */}
           <View className="items-center mb-6">
-            <Text className="text-lg font-bold text-black">Before day:</Text>
+            <Text className="text-lg font-bold text-black">{name}</Text>
           </View>
 
           {/* --- Date --- */}

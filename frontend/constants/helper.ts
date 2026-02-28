@@ -1,3 +1,21 @@
+export const sanitizeUsername = (text: string) => {
+  return text
+    .toLowerCase()
+    .normalize('NFD') // Decompose combined characters
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/đ/g, 'd') // Handle khusus Vietnamese 'đ'
+    .replace(/\s+/g, '') // Remove spaces
+    .replace(/[^a-z0-9._]/g, ''); // Keep only alphanumeric, dots and underscores
+};
+
+export const extractWaitSeconds = (message?: string) => {
+  if (!message) return null;
+  const matched = message.match(/wait\s+(\d+)\s+seconds/i);
+  if (!matched) return null;
+  const seconds = Number(matched[1]);
+  return Number.isNaN(seconds) ? null : seconds;
+};
+
 export interface Category {
   id: string;
   titleKey: string;
@@ -28,3 +46,23 @@ export const CATEGORIES: Category[] = [
   { id: 'nightlife', titleKey: 'categories.nightlife', icon: '🍺' },
   { id: 'gaming', titleKey: 'categories.gaming', icon: '🕹️' },
 ];
+
+export const CATEGORY_ICON_MAP: Record<string, string> = {
+  'Tourist attraction': '✈️',
+  'Park': '🌳',
+  'Coffee shop': '☕️',
+  'Cafe': '☕️',
+  'Restaurant': '🍽️',
+  'Bar': '🍺',
+  'Museum': '🏛️',
+  'Movie theater': '🎬',
+  'Shopping mall': '🛍️',
+  'Gym': '💪',
+  'Hotel': '🏠',
+  'Beauty salon': '💄',
+  "Barbecue restaurant": "🍴"
+};
+
+export function getCategoryIcon(name: string): string {
+  return CATEGORY_ICON_MAP[name] ?? '❓';
+}
