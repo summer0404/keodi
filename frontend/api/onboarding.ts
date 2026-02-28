@@ -5,10 +5,11 @@ import type {
   SubmitOnboardingCategoriesRequest,
   SubmitOnboardingCategoriesResponse,
 } from '../types/api';
+import { API_ENDPOINTS } from '@/constants/api';
 
 export const onboardingService = {
   getCategories: async (): Promise<OnboardingCategory[]> => {
-    const response = await apiClient.get<OnboardingCategory[]>('/api/v1/categories/onboarding');
+    const response = await apiClient.get<OnboardingCategory[]>(API_ENDPOINTS.ONBOARDING_CATEGORIES);
     return response.data;
   },
   submitCategories: async (
@@ -16,7 +17,7 @@ export const onboardingService = {
   ): Promise<SubmitOnboardingCategoriesResponse> => {
     const accessToken = useAuthStore.getState().accessToken;
     const response = await apiClient.patch<SubmitOnboardingCategoriesResponse>(
-      '/api/v1/users/onboarding',
+      API_ENDPOINTS.SUBMIT_ONBOARDING,
       payload,
       {
         headers: {

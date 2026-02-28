@@ -12,19 +12,20 @@ import type {
   ValidateForgotPasswordOtpRequest,
   ValidateForgotPasswordOtpResponse,
 } from '../types/api';
+import { API_ENDPOINTS } from '@/constants/api';
 
 export const authService = {
   register: async (payload: RegisterRequest): Promise<RegisterResponse> => {
-    const response = await apiClient.post<RegisterResponse>('/api/v1/auth/register', payload);
+    const response = await apiClient.post<RegisterResponse>(API_ENDPOINTS.REGISTER, payload);
     return response.data;
   },
   login: async (payload: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>('/api/v1/auth/login', payload);
+    const response = await apiClient.post<LoginResponse>(API_ENDPOINTS.LOGIN, payload);
     return response.data;
   },
   resendVerifyEmail: async (userId: string): Promise<ResendVerifyEmailResponse> => {
     const response = await apiClient.get<ResendVerifyEmailResponse>(
-      `/api/v1/auth/resend-verify-email/${userId}`
+      `${API_ENDPOINTS.RESEND_VERIFY_EMAIL}/${userId}`
     );
     return response.data;
   },
@@ -32,7 +33,7 @@ export const authService = {
     payload: ForgotPasswordOtpRequest
   ): Promise<ForgotPasswordOtpResponse> => {
     const response = await apiClient.post<ForgotPasswordOtpResponse>(
-      '/api/v1/auth/forgot-password-otp',
+      API_ENDPOINTS.FORGOT_PASSWORD_OTP,
       payload
     );
     return response.data;
@@ -41,7 +42,7 @@ export const authService = {
     payload: ValidateForgotPasswordOtpRequest
   ): Promise<ValidateForgotPasswordOtpResponse> => {
     const response = await apiClient.post<ValidateForgotPasswordOtpResponse>(
-      '/api/v1/auth/validate-forgot-password-otp',
+      API_ENDPOINTS.VALIDATE_FORGOT_PASSWORD_OTP,
       payload
     );
     return response.data;
@@ -51,7 +52,7 @@ export const authService = {
     resetToken: string
   ): Promise<ResetPasswordResponse> => {
     const response = await apiClient.post<ResetPasswordResponse>(
-      '/api/v1/auth/reset-password',
+      API_ENDPOINTS.RESET_PASSWORD,
       payload,
       {
         headers: {
