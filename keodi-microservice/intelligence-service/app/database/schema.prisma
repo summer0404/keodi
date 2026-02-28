@@ -234,15 +234,16 @@ model UserAction {
 }
 
 model Review {
-  id               String  @id @default(cuid())
-  placeId          String  @map("place_id")
-  userId           String? @map("user_id")
-  fromGoogle       Boolean @default(false) @map("from_google")
-  reviewerName     String  @map("reviewer_name")
-  reviewerPicture  String? @map("reviewer_picture")
-  rating           Int
-  text             String?
-  originalLanguage String? @map("original_language")
+  id                String  @id @default(cuid())
+  placeId           String  @map("place_id")
+  userId            String? @map("user_id")
+  fromGoogle        Boolean @default(false) @map("from_google")
+  reviewerName      String  @map("reviewer_name")
+  reviewerPicture   String? @map("reviewer_picture")
+  rating            Int
+  text              String?
+  originalLanguage  String? @map("original_language")
+  sentimentAnalyzed Boolean @default(false) @map("sentiment_analyzed")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -256,13 +257,13 @@ model Review {
 }
 
 model Favorite {
-  userId String @map("user_id")
+  userId  String @map("user_id")
   placeId String @map("place_id")
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation (fields: [userId], references: [id], onDelete: Cascade)
-  place Place @relation (fields: [placeId], references: [id], onDelete:Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
   @@id([userId, placeId])
   @@map("favorites")

@@ -6,6 +6,7 @@ import { ImageModule } from '../image/image.module';
 @Module({
   controllers: [PlaceController],
   providers: [PlaceService],
+  exports: [PlaceService],
   imports: [ImageModule],
 })
 export class PlaceModule {}
