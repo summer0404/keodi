@@ -66,11 +66,11 @@ export class PlaceService {
         if (!categories || categories.length === 0) {
             return Prisma.empty;
         }
-        
-        const categoryConditions = categories.map(category => 
+
+        const categoryConditions = categories.map(category =>
             Prisma.sql`UPPER(c.name) = UPPER(${category})`
         );
-        
+
         return Prisma.sql`
             AND p.id IN (
                 SELECT pc.place_id
@@ -202,15 +202,15 @@ export class PlaceService {
     }
 
     async findNearby(nearMeDto: NearMeDto) {
-        const { 
-            latitude, 
-            longitude, 
-            radius, 
-            page, 
-            limit, 
-            sortBy, 
-            sortOrder, 
-            userId 
+        const {
+            latitude,
+            longitude,
+            radius,
+            page,
+            limit,
+            sortBy,
+            sortOrder,
+            userId
         } = nearMeDto;
 
         const { latDelta, longDelta } = this.calculateGeoDeltas(latitude, radius);
@@ -268,7 +268,7 @@ export class PlaceService {
         try {
             if (mode === SearchMode.KEYWORD) {
                 const searchPattern = `%${search}%`;
-                
+
                 const rawPlaces = await this.queryPlacesInRadiusWithDistance(
                     latitude,
                     longitude,
@@ -300,7 +300,7 @@ export class PlaceService {
                     totalPages,
                     limit,
                 };
-            } else if ( mode === SearchMode.CONTEXTUAL) {
+            } else if (mode === SearchMode.CONTEXTUAL) {
                 const extractedIntent = await firstValueFrom(
                     this.clientKafka.send('intelligence.extract-user-intent', { search })
                 );
@@ -370,6 +370,22 @@ export class PlaceService {
                     ? await this.imageService.getImageViewUrl(place.featureImageUrl)
                     : null,
             };
+        } catch (error) {
+            return handleServiceErrorCatching(error)
+        }
+    }
+
+    async updatePlaceRating(placeId: string, prisma?: Prisma.TransactionClient) {
+        try {
+            await (prisma || this.prismaService).$executeRaw`
+                UPDATE places 
+                SET rating = COALESCE((
+                    SELECT AVG(rating) 
+                    FROM reviews 
+                    WHERE place_id = ${placeId}
+                ), 0)
+                WHERE id = ${placeId}
+            `;
         } catch (error) {
             return handleServiceErrorCatching(error)
         }

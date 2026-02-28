@@ -4,11 +4,13 @@ import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
 import { CreateReviewDto } from 'src/common/dtos/review.dto';
 import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
+import { PlaceService } from '../place/place.service';
 
 @Injectable()
 export class ReviewService {
     constructor(
         private readonly prismaService: PrismaService,
+        private readonly placeService: PlaceService,
         @Inject('KAFKA_SERVICE') private readonly client: ClientKafka
     ) { }
 
@@ -38,21 +40,33 @@ export class ReviewService {
                 });
             }
 
-            this.client.emit('intelligence.sentiment-analysis', {
-                text,
-                placeId,
+            
+
+            const reviewId = await this.prismaService.$transaction(async (prisma) => {
+                const review = await prisma.review.create({
+                    data: {
+                        userId,
+                        reviewerName: existingUser.lastName + ' ' + existingUser.firstName,
+                        reviewerPicture: existingUser.pictureUrl,
+                        placeId,
+                        rating,
+                        text,
+                        sentimentAnalyzed: text ? false : true,
+                    },
+                });
+
+                await this.placeService.updatePlaceRating(placeId, prisma);
+
+                return review.id;
             });
 
-            await this.prismaService.review.create({
-                data: {
-                    userId,
-                    reviewerName: existingUser.lastName + ' ' + existingUser.firstName,
-                    reviewerPicture: existingUser.pictureUrl,
-                    placeId,
-                    rating,
+            if (text) {
+                this.client.emit('intelligence.sentiment-analysis', {
                     text,
-                },
-            });
+                    placeId,
+                    reviewId
+                });
+            }
 
             return { message: 'Review created successfully' };
         } catch (error) {
