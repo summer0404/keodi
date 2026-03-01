@@ -10,16 +10,26 @@ class Prompts(BasePromptTemplate):
     2. Attributes: {attributes}
 
     [RULES]
-    1. Map user intent ONLY to the allowed definitions above.
-    2. Output strictly in JSON format: {{"categories": [], "attributes": []}}
-    3. Context Inference:
-    - "làm việc/học bài" → implies ["WIFI", "QUIET"]
-    - "sống ảo/check-in" → implies ["DECOR"]
-    4. No explanation, thinking or additional text.
+    1. Map user intent to categories and attributes from ALLOWED DEFINITIONS above.
+    2. Extract specific keywords (dish names, product names, place names) that are NOT in categories/attributes.
+    3. Output strictly in JSON format: {{"categories": [], "attributes": [], "keywords": ""}}
+    4. Context Inference:
+    - "làm việc/học bài" → implies attributes: ["WIFI", "QUIET"]
+    - "sống ảo/check-in" → implies attributes: ["DECOR"]
+    5. Keywords extraction:
+    - Extract specific items: dish names, drinks, products, brand names
+    - If no specific item mentioned, keywords should be empty string ""
+    6. No explanation, thinking or additional text.
 
-    [EXAMPLE]
+    [EXAMPLES]
     Input: "Tìm quán nước nào yên tĩnh"
-    Output: {{"categories": ["COFFEE"], "attributes": ["QUIET", "WIFI"]}}
+    Output: {{"categories": ["COFFEE"], "attributes": ["QUIET"], "keywords": ""}}
+
+    Input: "Quán phở ngon gần đây có wifi"
+    Output: {{"categories": ["RESTAURANT", "VIETNAMESE_RESTAURANT", "BISTRO"], "attributes": ["WIFI"], "keywords": "phở"}}
+
+    Input: "Chỗ nào bán trà sữa Tiger Sugar"
+    Output: {{"categories": ["COFFEE", "DESSERT"], "attributes": [], "keywords": "trà sữa Tiger Sugar"}}
 
     [INPUT]
     Input: {search}

@@ -81,6 +81,26 @@ export class PlaceService {
         `;
     }
 
+    private buildHasAttributeSelect(attributes?: string[]) {
+        if (!attributes || attributes.length === 0) {
+            return Prisma.sql`0 AS has_attributes`;
+        }
+
+        const attributeConditions = attributes.map(attr =>
+            Prisma.sql`a.name = ${attr}`
+        );
+
+        return Prisma.sql`
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM place_attributes pa
+                JOIN attributes a ON pa.attribute_id = a.id
+                WHERE pa.place_id = p.id
+                    AND (${Prisma.join(attributeConditions, ' OR ')})
+            ) THEN 1 ELSE 0 END AS has_attributes
+        `;
+    }
+
     private async enrichPlacesWithFavoriteAndImage(rawPlaces: any[], userId: string): Promise<PlaceWithDistance[]> {
         return await Promise.all(
             rawPlaces.map(async (place) => {
@@ -115,10 +135,16 @@ export class PlaceService {
         limit: number,
         offset: number,
         searchPattern?: string,
-        categories?: string[]
+        categories?: string[],
+        attributes?: string[]
     ): Promise<any[]> {
         const searchCondition = this.buildSearchCondition(searchPattern);
         const categoryCondition = this.buildCategoryCondition(categories);
+        const hasAttributeSelect = this.buildHasAttributeSelect(attributes);
+
+        const finalOrderBy = attributes && attributes.length > 0
+            ? Prisma.raw('ORDER BY has_attributes DESC, distance ASC')
+            : Prisma.raw(orderByClause);
 
         return await this.prismaService.$queryRaw<any[]>`
             SELECT * FROM (
@@ -150,7 +176,8 @@ export class PlaceService {
                             + sin(radians(${latitude})) 
                             * sin(radians(p.latitude))
                         )
-                    ) AS distance
+                    ) AS distance,
+                    ${hasAttributeSelect}
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
@@ -158,7 +185,7 @@ export class PlaceService {
                     ${categoryCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
-            ${Prisma.raw(orderByClause)}
+            ${finalOrderBy}
             LIMIT ${limit}
             OFFSET ${offset}
         `;
@@ -305,6 +332,11 @@ export class PlaceService {
                     this.clientKafka.send('intelligence.extract-user-intent', { search })
                 );
 
+                const keywordPattern = extractedIntent.keywords ? `%${extractedIntent.keywords}%` : undefined;
+
+                // Ưu tiên keyword hơn là categories
+                const categoriesToUse = extractedIntent.keywords ? undefined : extractedIntent.categories;
+
                 const rawPlaces = await this.queryPlacesInRadiusWithDistance(
                     latitude,
                     longitude,
@@ -314,8 +346,9 @@ export class PlaceService {
                     orderByClause,
                     limit,
                     offset,
-                    undefined,
-                    extractedIntent.categories
+                    keywordPattern,
+                    categoriesToUse,
+                    extractedIntent.attributes
                 );
 
                 const places = await this.enrichPlacesWithFavoriteAndImage(rawPlaces, userId);
@@ -326,8 +359,8 @@ export class PlaceService {
                     latDelta,
                     longDelta,
                     radius,
-                    undefined,
-                    extractedIntent.categories
+                    keywordPattern,
+                    categoriesToUse
                 );
                 const totalPages = Math.ceil(total / limit);
 
