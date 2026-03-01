@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import * as bcrypt from 'bcrypt';
+import type { StringValue } from 'ms';
 import {
   LoginDto,
   RegisterDto,
@@ -41,7 +42,7 @@ export class AuthService {
   private generateAccessAndRefreshToken(
     user: UserDto,
     rememberMe = false,
-    refreshExpiresIn?: string,
+    refreshExpiresIn?: StringValue,
   ) {
     const payload = {
       sub: user.id,
@@ -494,7 +495,7 @@ export class AuthService {
       const tokens = this.generateAccessAndRefreshToken(
         user,
         false,
-        `${remainingSeconds}s`,
+        `${remainingSeconds}s` as StringValue,
       );
 
       await this.prismaService.user.update({
