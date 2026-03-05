@@ -8,6 +8,8 @@ export class KafkaService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    this.kafkaClient.subscribeToResponseOf('intelligence.extract-user-intent');
+
     await this.kafkaClient.connect();
   }
 

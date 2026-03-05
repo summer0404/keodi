@@ -43,19 +43,20 @@ model User {
   dateOfBirth DateTime? @map("date_of_birth")
   pictureUrl  String?   @map("picture_url")
 
-  userImages     UserImage[]
-  userAttributes UserAttribute[]
-  userActions    UserAction[]
-  reviews        Review[]
-  userCategories UserCategory[]
-  places         Place[]
-  favorites      Favorite[]
+  userImages         UserImage[]
+  userAttributes     UserAttribute[]
+  userActions        UserAction[]
+  reviews            Review[]
+  userCategories     UserCategory[]
+  places             Place[]
+  favorites          Favorite[]
+  sessionMemberships GroupSessionMember[]
 
   sentRequests     FriendRequest[] @relation("SentRequests")
   receivedRequests FriendRequest[] @relation("ReceivedRequests")
   friendships      Friendship[]    @relation("UserFriendships")
   friendsOf        Friendship[]    @relation("FriendFriendships")
-  groupSessions   GroupSession[]    @relation("CreatedSessions")
+  groupSessions    GroupSession[]  @relation("CreatedSessions")
 
   @@map("users")
 }
@@ -192,6 +193,7 @@ model PlaceAttribute {
   placeId     String @map("place_id")
   attributeId String @map("attribute_id")
   score       Float  @default(0)
+  reviewCount Int    @default(0) @map("review_count")
 
   place     Place     @relation(fields: [placeId], references: [id], onDelete: Cascade)
   attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
@@ -238,15 +240,16 @@ model UserAction {
 }
 
 model Review {
-  id               String  @id @default(cuid())
-  placeId          String  @map("place_id")
-  userId           String? @map("user_id")
-  fromGoogle       Boolean @default(false) @map("from_google")
-  reviewerName     String  @map("reviewer_name")
-  reviewerPicture  String? @map("reviewer_picture")
-  rating           Int
-  text             String?
-  originalLanguage String? @map("original_language")
+  id                String  @id @default(cuid())
+  placeId           String  @map("place_id")
+  userId            String? @map("user_id")
+  fromGoogle        Boolean @default(false) @map("from_google")
+  reviewerName      String  @map("reviewer_name")
+  reviewerPicture   String? @map("reviewer_picture")
+  rating            Int
+  text              String?
+  originalLanguage  String? @map("original_language")
+  sentimentAnalyzed Boolean @default(false) @map("sentiment_analyzed")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -260,40 +263,40 @@ model Review {
 }
 
 model Favorite {
-  userId String @map("user_id")
+  userId  String @map("user_id")
   placeId String @map("place_id")
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation (fields: [userId], references: [id], onDelete: Cascade)
-  place Place @relation (fields: [placeId], references: [id], onDelete:Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
   @@id([userId, placeId])
   @@map("favorites")
 }
 
 model FriendRequest {
-  id          String @id @default(cuid())
-  senderId    String @map("sender_id")
-  receiverId  String @map("receiver_id")
-  status      FriendRequestStatus @default(PENDING)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String              @id @default(cuid())
+  senderId   String              @map("sender_id")
+  receiverId String              @map("receiver_id")
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
 
-  sender      User   @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver    User   @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender   User @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
   @@map("friend_requests")
 }
 
 model Friendship {
-  userId  String @map("user_id")
-  friendId String @map("friend_id")
+  userId    String   @map("user_id")
+  friendId  String   @map("friend_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user    User   @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
-  friend  User   @relation("FriendFriendships", fields: [friendId], references: [id], onDelete: Cascade)
+  user   User @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendFriendships", fields: [friendId], references: [id], onDelete: Cascade)
 
   @@id([userId, friendId])
   @@map("friendships")
@@ -306,13 +309,15 @@ enum FriendRequestStatus {
 }
 
 model GroupSession {
-  sessionId     String                @id @default(cuid())         @map("session_id")
-  createdBy     String                @map("created_by")
-  shareCode     String                @unique                       @map("share_code")
-  createdAt     DateTime              @default(now())               @map("created_at")
-  status        GroupSessionStatus    @default(ACTIVE)
+  sessionId String             @id @default(cuid()) @map("session_id")
+  createdBy String             @map("created_by")
+  shareCode String             @unique @map("share_code")
+  createdAt DateTime           @default(now()) @map("created_at")
+  status    GroupSessionStatus @default(ACTIVE)
 
-  creator       User                  @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
+  creator User @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  members GroupSessionMember[]
 
   @@map("group_sessions")
 }
@@ -320,4 +325,20 @@ model GroupSession {
 enum GroupSessionStatus {
   ACTIVE
   CLOSED
+}
+
+model GroupSessionMember {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  userId    String?  @map("user_id") //null for guest
+  guestId   String?  @map("guest_id")
+  nickname  String?  @db.VarChar(50) //nickname for guest
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  session GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  user    User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@unique([sessionId, guestId])
+  @@map("group_session_members")
 }

@@ -81,7 +81,8 @@
     "passwordResetSuccess": "Đặt lại mật khẩu thành công",
     "cancel": "Hủy",
     "resendEmail": "Gửi lại email xác minh",
-    "resetPassword": "Đặt lại mật khẩu"
+    "resetPassword": "Đặt lại mật khẩu",
+    "logOut": "Đăng xuất"
   },
   "errors": {
     "usernameRequired": "Bạn phải nhập tên người dùng",

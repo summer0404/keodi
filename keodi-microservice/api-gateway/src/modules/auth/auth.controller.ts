@@ -8,26 +8,9 @@ import {
   Req,
   Res,
   UnauthorizedException,
-  UseGuards
+  UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import {
-  AuthResponseDto,
-  ForgotPasswordOTPDto,
-  ForgotPasswordOTPResponseDto,
-  LoginDto,
-  MeResponseDto,
-  RegisterDto,
-  RegisterOkResponseDto,
-  ResetPasswordDto,
-  ResetPasswordOTPDto,
-  ResetPasswordOTPResponseDto,
-  ResetPasswordResponseDto,
-  UnverifiedAccountResponse,
-  ValidateForgotPasswordOTPResponseDto,
-  ValidateOTPDto,
-  ValidateResetPasswordOTPResponseDto
-} from 'src/common/dtos/auth.dto';
+import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -37,29 +20,49 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
-  ApiUnauthorizedResponse
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Response } from 'express';
-import { AuthGuard } from '@nestjs/passport';
-import { OtpPurpose } from 'src/common/enums/otp.enum';
-import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
+import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
+import {
+  AuthResponseDto,
+  ForgotPasswordOTPDto,
+  ForgotPasswordOTPResponseDto,
+  LoginDto,
+  MeResponseDto,
+  RefreshDto,
+  RegisterDto,
+  RegisterOkResponseDto,
+  ResetPasswordDto,
+  ResetPasswordOTPDto,
+  ResetPasswordOTPResponseDto,
+  ResetPasswordResponseDto,
+  UnverifiedAccountResponse,
+  ValidateForgotPasswordOTPResponseDto,
+  ValidateOTPDto,
+  ValidateResetPasswordOTPResponseDto,
+} from 'src/common/dtos/auth.dto';
 import { CurrentUserDto } from 'src/common/dtos/user.dto';
-
+import { OtpPurpose } from 'src/common/enums/otp.enum';
+import { AuthService } from './auth.service';
 
 @ApiTags('auth')
 @ApiBadRequestResponse({ description: 'Invalid input data' })
 @ApiInternalServerErrorResponse({ description: 'Internal server error' })
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @SkipAuth()
   @Post('register')
   @ApiOperation({ summary: 'User registration' })
-  @ApiOkResponse({ description: 'Registration successful', type: RegisterOkResponseDto })
+  @ApiOkResponse({
+    description: 'Registration successful',
+    type: RegisterOkResponseDto,
+  })
   async register(@Body() body: RegisterDto) {
-    return await this.authService.register(body)
+    return await this.authService.register(body);
   }
 
   @SkipAuth()
@@ -69,10 +72,13 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid login credentials' })
   @ApiForbiddenResponse({
     description: 'Returns message notify that user email is not verified',
-    type: UnverifiedAccountResponse
+    type: UnverifiedAccountResponse,
   })
-  async login(@Res({ passthrough: true }) res: Response, @Body() body: LoginDto) {
-    return await this.authService.login(res, body)
+  async login(
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: LoginDto,
+  ) {
+    return await this.authService.login(res, body);
   }
 
   @SkipAuth()
@@ -80,78 +86,93 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with Google' })
   @ApiResponse({ description: 'Redirect to Google account selection page' })
   @UseGuards(AuthGuard('google'))
-  async googleLogin() { }
+  async googleLogin() {}
 
   @SkipAuth()
   @Get('google/callback')
   @ApiOperation({ summary: 'Google callback for backend' })
-  @ApiResponse({ description: 'Redirect to frontend login result page (/auth-google)' })
+  @ApiResponse({
+    description: 'Redirect to frontend login result page (/auth-google)',
+  })
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Res() res: Response, @Req() req: any) {
-    if (!req.user) throw new UnauthorizedException({
-      status: HttpStatus.UNAUTHORIZED,
-      message: "Google login failed!"
-    })
+    if (!req.user)
+      throw new UnauthorizedException({
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Google login failed!',
+      });
 
-    return await this.authService.googleCallback(res, req.user)
+    return await this.authService.googleCallback(res, req.user);
   }
 
   @SkipAuth()
   @Post('forgot-password-otp')
-  @ApiOperation({ summary: 'Send OTP email for password reset. OTP is valid in 3 minutes' })
+  @ApiOperation({
+    summary: 'Send OTP email for password reset. OTP is valid in 3 minutes',
+  })
   @ApiOkResponse({
-    description: 'Sends an email containing an OTP to verify the user. The frontend should navigate the user to the OTP input page.',
-    type: ForgotPasswordOTPResponseDto
+    description:
+      'Sends an email containing an OTP to verify the user. The frontend should navigate the user to the OTP input page.',
+    type: ForgotPasswordOTPResponseDto,
   })
   async forgotPasswordOTP(@Body() body: ForgotPasswordOTPDto) {
-    return await this.authService.forgotPasswordOTP(body)
+    return await this.authService.forgotPasswordOTP(body);
   }
 
   @ApiBearerAuth('access-token')
   @Post('reset-password-otp')
-  @ApiOperation({ summary: 'Send OTP email for password reset. OTP is valid in 5 minutes' })
+  @ApiOperation({
+    summary: 'Send OTP email for password reset. OTP is valid in 5 minutes',
+  })
   @ApiOkResponse({
-    description: 'Sends an email containing an OTP to verify the user. The frontend should navigate the user to the OTP input page.',
-    type: ResetPasswordOTPResponseDto
+    description:
+      'Sends an email containing an OTP to verify the user. The frontend should navigate the user to the OTP input page.',
+    type: ResetPasswordOTPResponseDto,
   })
   async resetPasswordOTP(@Body() body: ResetPasswordOTPDto) {
-    return await this.authService.resetPasswordOTP(body)
+    return await this.authService.resetPasswordOTP(body);
   }
 
   @SkipAuth()
   @Post('validate-forgot-password-otp')
-  @ApiOperation({ summary: 'Validate OTP sent to user by email to reset password. ' })
+  @ApiOperation({
+    summary: 'Validate OTP sent to user by email to reset password. ',
+  })
   @ApiOkResponse({
-    description: 'Sends an reset token, frontend should set Authorization header with this token to reset password',
-    type: ValidateForgotPasswordOTPResponseDto
+    description:
+      'Sends an reset token, frontend should set Authorization header with this token to reset password',
+    type: ValidateForgotPasswordOTPResponseDto,
   })
   async validateForgotPasswordOtp(@Body() body: ValidateOTPDto) {
-    return await this.authService.validateOtp(body, OtpPurpose.FORGOT_PASSWORD)
+    return await this.authService.validateOtp(body, OtpPurpose.FORGOT_PASSWORD);
   }
 
   @SkipAuth()
   @Post('validate-reset-password-otp')
-  @ApiOperation({ summary: 'Validate OTP sent to user by email to reset password. ' })
+  @ApiOperation({
+    summary: 'Validate OTP sent to user by email to reset password. ',
+  })
   @ApiOkResponse({
-    description: 'Sends an reset token, frontend should set Authorization header with this token to reset password',
-    type: ValidateResetPasswordOTPResponseDto
+    description:
+      'Sends an reset token, frontend should set Authorization header with this token to reset password',
+    type: ValidateResetPasswordOTPResponseDto,
   })
   async validateResetPasswordOtp(@Body() body: ValidateOTPDto) {
-    return await this.authService.validateOtp(body, OtpPurpose.RESET_PASSWORD)
+    return await this.authService.validateOtp(body, OtpPurpose.RESET_PASSWORD);
   }
-
 
   @ApiBearerAuth('access-token')
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password' })
   @ApiOkResponse({
-    description: 'Sends a object containing message inform that change password successfully',
-    type: ResetPasswordResponseDto
+    description:
+      'Sends a object containing message inform that change password successfully',
+    type: ResetPasswordResponseDto,
   })
   async resetPassword(@Req() req: any, @Body() body: ResetPasswordDto) {
     return await this.authService.resetPassword({
       newPassword: body.newPassword,
-      userId: req.user?.id
+      userId: req.user?.id,
     });
   }
 
@@ -159,7 +180,8 @@ export class AuthController {
   @Get('verify-email/:token')
   @ApiOperation({ summary: 'Verify Email' })
   @ApiResponse({
-    description: 'Returns an HTML page notifying successful or failed email verification'
+    description:
+      'Returns an HTML page notifying successful or failed email verification',
   })
   async verifyEmail(@Param('token') token: string) {
     return await this.authService.verifyEmail(token);
@@ -169,20 +191,21 @@ export class AuthController {
   @Get('external-resend-verify-email/:userId')
   @ApiOperation({ summary: 'Resend verify email - use by email' })
   @ApiResponse({
-    description: 'Returns an HTML page notifying successful or failed email resend',
+    description:
+      'Returns an HTML page notifying successful or failed email resend',
   })
   async externalResendVerifyEmail(@Param('userId') userId: string) {
-    return await this.authService.externalResendVerifyEmail(userId)
+    return await this.authService.externalResendVerifyEmail(userId);
   }
 
   @SkipAuth()
   @Get('resend-verify-email/:userId')
   @ApiOperation({ summary: 'Resend verify email' })
   @ApiOkResponse({
-    description: 'Returns message notify that successfully resend email'
+    description: 'Returns message notify that successfully resend email',
   })
   async resendVerifyEmail(@Param('userId') userId: string) {
-    return await this.authService.resendVerifyEmail(userId)
+    return await this.authService.resendVerifyEmail(userId);
   }
 
   @Get('me')
@@ -190,9 +213,34 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user info' })
   @ApiOkResponse({
     description: 'Returns current user info',
-    type: MeResponseDto
+    type: MeResponseDto,
   })
   async me(@CurrentUser() user: CurrentUserDto) {
-    return await this.authService.me(user)
+    return await this.authService.me(user);
+  }
+
+  @SkipAuth()
+  @Post('refresh')
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description:
+      'Uses the refresh token stored in the httpOnly cookie to issue a new access token. Call this endpoint when the access token expires (401 response).',
+  })
+  @ApiOkResponse({
+    description: 'Returns a new access token',
+    type: AuthResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'No refresh token provided or refresh token is invalid/expired',
+  })
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: RefreshDto,
+  ) {
+    const refreshToken = req.cookies?.['refreshToken'] ?? body.refreshToken;
+    if (!refreshToken) throw new UnauthorizedException('No refresh token');
+    return await this.authService.refresh(res, refreshToken);
   }
 }

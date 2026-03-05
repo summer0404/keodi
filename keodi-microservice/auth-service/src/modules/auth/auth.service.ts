@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import * as bcrypt from 'bcrypt';
+import type { StringValue } from 'ms';
 import {
   LoginDto,
   RegisterDto,
@@ -36,9 +37,13 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly verifyUrlService: VerifyUrlService,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
-  private generateAccessAndRefreshToken(user: UserDto) {
+  private generateAccessAndRefreshToken(
+    user: UserDto,
+    rememberMe = false,
+    refreshExpiresIn?: StringValue,
+  ) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -47,7 +52,9 @@ export class AuthService {
 
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: '10m' }),
-      refreshToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
+      refreshToken: this.jwtService.sign(payload, {
+        expiresIn: refreshExpiresIn ?? (rememberMe ? '365d' : '7d'),
+      }),
     };
   }
 
@@ -106,7 +113,7 @@ export class AuthService {
       this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL);
       this.userService.createUserInfomation(newUser.id);
 
-      return { message: 'User created successfully' };
+      return { message: 'User created successfully', userId: newUser.id };
     } catch (error) {
       console.error(error);
       if (error instanceof RpcException) {
@@ -145,7 +152,10 @@ export class AuthService {
           },
         });
 
-      const tokens = this.generateAccessAndRefreshToken(existingUser);
+      const tokens = this.generateAccessAndRefreshToken(
+        existingUser,
+        data.rememberMe,
+      );
 
       await this.prismaService.user.update({
         where: {
@@ -194,18 +204,18 @@ export class AuthService {
         });
 
         this.userService.createUserInfomation(
-          googleUser!.id,
+          googleUser.id,
           user.firstName,
           user.lastName,
           user.picture,
         );
       }
 
-      const tokens = this.generateAccessAndRefreshToken(googleUser!);
+      const tokens = this.generateAccessAndRefreshToken(googleUser);
 
       await this.prismaService.user.update({
         where: {
-          id: googleUser!.id,
+          id: googleUser.id,
         },
         data: {
           refreshToken: await bcrypt.hash(
@@ -457,6 +467,55 @@ export class AuthService {
       throw new RpcException({
         status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
         message: error.message ?? error,
+      });
+    }
+  }
+
+  async refresh(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken);
+
+      const user = await this.prismaService.user.findUnique({
+        where: { id: payload.sub },
+      });
+      if (!user)
+        throw new RpcException({
+          status: HttpStatus.UNAUTHORIZED,
+          message: 'User not found',
+        });
+
+      const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
+      if (!isValid)
+        throw new RpcException({
+          status: HttpStatus.UNAUTHORIZED,
+          message: 'Invalid refresh token',
+        });
+
+      const remainingSeconds = payload.exp - Math.floor(Date.now() / 1000);
+      const tokens = this.generateAccessAndRefreshToken(
+        user,
+        false,
+        `${remainingSeconds}s` as StringValue,
+      );
+
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken: await bcrypt.hash(
+            tokens.refreshToken,
+            Number(process.env.SALT_ROUNDS),
+          ),
+        },
+      });
+      return tokens;
+    } catch (error) {
+      console.error(error);
+      if (error instanceof RpcException) {
+        throw error;
+      }
+      throw new RpcException({
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Invalid or expired refresh token',
       });
     }
   }

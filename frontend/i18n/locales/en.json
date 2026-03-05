@@ -81,7 +81,8 @@
     "passwordResetSuccess": "Password reset successfully",
     "cancel": "Cancel",
     "resendEmail": "Resend verification email",
-    "resetPassword": "Reset password"
+    "resetPassword": "Reset password",
+    "logOut": "Log Out"
   },
   "errors": {
     "usernameRequired": "Username is required",

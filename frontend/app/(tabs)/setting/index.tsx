@@ -3,14 +3,23 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ThreadsDatePicker } from '@/components/ui/DatePicker';
 import { useState } from 'react';
-
+import { Button } from '@/components/ui/Button';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useRouter } from 'expo-router';
 
 export default function SearchResult() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const { clearTokens } = useAuthStore();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState(''); 
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const handleLogout = async () => {
+    await clearTokens();
+    router.replace('/(auth)/login');
+  };
 
   const handleDateConfirm = (date: Date) => {
     const day = date.getDate().toString().padStart(2, '0');
@@ -31,7 +40,7 @@ export default function SearchResult() {
     }
     setDateOfBirth(formatted);
   };
-  
+
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 96 }} className="px-4">
       {/* list content */}
@@ -88,6 +97,12 @@ export default function SearchResult() {
         maxYear={new Date().getFullYear()}
         name={t('auth.dateOfBirth')}
       /> */}
+
+      <View className="mt-8">
+        <Button onPress={handleLogout} variant="destructive">
+          {t('auth.logOut')}
+        </Button>
+      </View>
     </ScrollView>
   );
 }

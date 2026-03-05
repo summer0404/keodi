@@ -19,6 +19,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf('auth.verify-email');
     this.kafkaClient.subscribeToResponseOf('auth.external-resend-verify-email');
     this.kafkaClient.subscribeToResponseOf('auth.resend-verify-email');
+    this.kafkaClient.subscribeToResponseOf('auth.refresh');
 
     //user topic
     this.kafkaClient.subscribeToResponseOf('user.get-all');
@@ -32,6 +33,7 @@ export class KafkaService implements OnModuleInit {
     //place topic
     this.kafkaClient.subscribeToResponseOf('place.get-by-id');
     this.kafkaClient.subscribeToResponseOf('place.near-me');
+    this.kafkaClient.subscribeToResponseOf('place.search');
 
     //favorite topic
     this.kafkaClient.subscribeToResponseOf('favorite.add');
@@ -57,9 +59,12 @@ export class KafkaService implements OnModuleInit {
 
     // review topic
     this.kafkaClient.subscribeToResponseOf('review.create');
-    
+
     //group session topic
     this.kafkaClient.subscribeToResponseOf('group-session.create');
+    this.kafkaClient.subscribeToResponseOf('group-session.join');
+    this.kafkaClient.subscribeToResponseOf('group-session.invite-friend');
+    this.kafkaClient.subscribeToResponseOf('group-session.close');
 
     await this.kafkaClient.connect();
   }
