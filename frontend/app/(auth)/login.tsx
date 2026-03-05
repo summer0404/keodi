@@ -1,0 +1,262 @@
+import { Button } from '@/components/ui/Button';
+import Typography from '@/components/ui/Typography';
+import { Eye, EyeClosed } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, Pressable, Switch, TextInput, View, Linking } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Palette } from '@/constants/theme';
+import { Image } from 'expo-image';
+import axios from 'axios';
+import { useMutation } from '@tanstack/react-query';
+import { authService } from '@/api/auth';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useSettingStore } from '@/store/useSettingStore';
+import { sanitizeUsername, extractWaitSeconds } from '@/constants/helper';
+
+export default function LoginScreen() {
+  const router = useRouter();
+  const [rememberMe, setRememberMe] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [credentialError, setCredentialError] = useState('');
+  const { t } = useTranslation();
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const hasCompletedCategoryOnboarding = useSettingStore(
+    (state) => state.hasCompletedCategoryOnboarding
+  );
+
+  const loginMutation = useMutation({
+    mutationFn: authService.login,
+  });
+
+  const resendVerifyMutation = useMutation({
+    mutationFn: authService.resendVerifyEmail,
+  });
+
+  const validate = () => {
+    let isValid = true;
+    const normalizedUsername = username.trim();
+
+    setUsernameError('');
+    setPasswordError('');
+    setCredentialError('');
+
+    if (!normalizedUsername) {
+      setUsernameError(t('errors.usernameRequired'));
+      isValid = false;
+    }
+
+    if (!password) {
+      setPasswordError(t('errors.passwordRequired'));
+      isValid = false;
+    } else if (password.length < 8) {
+      setPasswordError(t('errors.passwordMin'));
+      isValid = false;
+    } else if (
+      !/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]).+$/.test(password)
+    ) {
+      setPasswordError(t('errors.passwordComplex'));
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  const handleLogin = async () => {
+    if (!validate()) {
+      return;
+    }
+
+    try {
+      const result = await loginMutation.mutateAsync({
+        username: username.trim(),
+        password,
+      });
+
+      setAccessToken(result.accessToken);
+      if (hasCompletedCategoryOnboarding) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/(onboarding)/categories');
+      }
+    } catch (error) {
+      if (!axios.isAxiosError(error)) {
+        Alert.alert('Login failed', 'Please try again.');
+        return;
+      }
+
+      const status = error.response?.status;
+
+      if (status === 401) {
+        setCredentialError(t('errors.invalidCredentials'));
+        return;
+      }
+
+      if (status === 429) {
+        setCredentialError(t('errors.tooManyRequests'));
+        return;
+      }
+
+      if (status === 403) {
+        const responseData = error.response?.data as { data?: { userId?: string } } | undefined;
+        const userId = responseData?.data?.userId;
+
+        if (!userId) {
+          Alert.alert('Login failed', 'Unable to resend verification email.');
+          return;
+        }
+
+        try {
+          await resendVerifyMutation.mutateAsync(userId);
+          router.replace('/check-email');
+        } catch (resendError) {
+          if (axios.isAxiosError(resendError)) {
+            const resendStatus = resendError.response?.status;
+            const resendMessage = (resendError.response?.data as { message?: string })?.message;
+
+            if (resendStatus === 429) {
+              const seconds = extractWaitSeconds(resendMessage);
+              if (seconds !== null) {
+                setCredentialError(t('errors.resendTooManyRequests', { seconds }));
+                return;
+              }
+            }
+
+            Alert.alert('Login failed', resendMessage ?? 'Unable to resend verification email.');
+            return;
+          }
+
+          Alert.alert('Login failed', 'Unable to resend verification email2.');
+        }
+        return;
+      }
+
+      const message =
+        (error.response?.data as { message?: string })?.message ??
+        'Login failed. Please try again.';
+      Alert.alert('Login failed', message);
+    }
+  };
+
+  return (
+    <View className="mt-6">
+      <View className="gap-4">
+        <View>
+          <Typography className="text-black/60 mb-2">{t('auth.username')}</Typography>
+          <TextInput
+            value={username}
+            onChangeText={(value) => {
+              const sanitized = sanitizeUsername(value);
+              setUsername(sanitized);
+              if (usernameError) {
+                setUsernameError('');
+              }
+            }}
+            autoCapitalize="none"
+            className="rounded-xl border border-black/10 bg-white px-4 py-3 text-black"
+            placeholder={t('auth.username')}
+          />
+          {!!usernameError && (
+            <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+              {usernameError}
+            </Typography>
+          )}
+        </View>
+
+        <View>
+          <Typography className="text-black/60 mb-2">{t('auth.password')}</Typography>
+          <View className="rounded-xl border border-black/10 bg-white px-4 flex-row items-center justify-between">
+            <TextInput
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                if (passwordError) {
+                  setPasswordError('');
+                }
+                if (credentialError) {
+                  setCredentialError('');
+                }
+              }}
+              secureTextEntry={!showPassword}
+              className="flex-1 text-black py-3 px-0"
+              placeholder={t('auth.password')}
+            />
+            <Pressable onPress={() => setShowPassword((prev) => !prev)}>
+              {showPassword ? (
+                <EyeClosed size={18} color={Palette.grey} />
+              ) : (
+                <Eye size={18} color={Palette.grey} />
+              )}
+            </Pressable>
+          </View>
+          {!!passwordError && (
+            <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+              {passwordError}
+            </Typography>
+          )}
+          {!!credentialError && (
+            <View className="mt-2">
+              <Typography className="text-red-500 text-[11px] ml-1 leading-4">
+                {credentialError}
+              </Typography>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View className="mt-4 flex-row items-center justify-between">
+        <Pressable
+          className="flex-row items-center gap-2"
+          onPress={() => setRememberMe((prev) => !prev)}
+        >
+          <Switch value={rememberMe} onValueChange={setRememberMe} />
+          <Typography className="text-black/60">{t('auth.rememberMe')}</Typography>
+        </Pressable>
+
+        <Button variant="ghost" onPress={() => router.push('/forgot-password')}>
+          <Typography className="text-gray-600">{t('auth.forgotPassword')}</Typography>
+        </Button>
+      </View>
+
+      <Button
+        size="lg"
+        rounded="lg"
+        className="w-full mt-6"
+        onPress={handleLogin}
+        disabled={loginMutation.isPending || resendVerifyMutation.isPending}
+      >
+        {loginMutation.isPending || resendVerifyMutation.isPending ? 'Loading...' : t('auth.login')}
+      </Button>
+
+      <View className="flex-row items-center mt-7">
+        <View className="h-[1px] bg-black/10 flex-1" />
+        <Typography className="mx-3 text-black/50">{t('auth.or')}</Typography>
+        <View className="h-[1px] bg-black/10 flex-1" />
+      </View>
+
+      <View className="h-[24px]" />
+
+      <Pressable
+        className="w-full h-[52px] items-center justify-center p-1"
+        onPress={() => {
+          // Redirect to backend Google OAuth endpoint (OLD FLOW)
+          // The backend will handle the redirect to Google's consent screen then redirect back to the frontend callback URL
+          const googleAuthUrl = `${process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000'}/api/v1/auth/google`;
+          Linking.openURL(googleAuthUrl).catch((err) => {
+            Alert.alert('Error', 'Could not open Google login.');
+          });
+        }}
+      >
+        <Image
+          source={require('@/assets/images/google_button.svg')}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="contain"
+        />
+      </Pressable>
+    </View>
+  );
+}

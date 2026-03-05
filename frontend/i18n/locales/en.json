@@ -1,5 +1,113 @@
 {
   "hello": "Hello",
   "welcome": "Welcome to the app",
-  "selectDate": "Select Date"
+  "selectDate": "Select Date",
+  "onboarding": {
+    "slide1": {
+      "title": "Discover What Matters",
+      "description": "Find the best places around you — from cafés to hidden gems — all in one app."
+    },
+    "slide2": {
+      "title": "Explore Nearby Spots",
+      "description": "Swipe through curated places and discover something new every day."
+    },
+    "slide3": {
+      "title": "Save and Share Favorites",
+      "description": "Keep places you love and share them quickly with your friends."
+    },
+    "button": {
+      "continue": "Continue",
+      "getStarted": "Get started"
+    },
+    "categories": {
+      "title": "Let's select your interests",
+      "subtitle": "Please select three or more to proceed"
+    }
+  },
+  "categories": {
+    "retry": "Retry",
+    "diningOut": "Dining Out",
+    "movies": "Movies",
+    "travel": "Travel",
+    "photography": "Photography",
+    "music": "Music",
+    "fitnessGym": "Fitness/Gym",
+    "fishing": "Fishing",
+    "stayIn": "Stay-in",
+    "spaBeauty": "Spa/Beauty",
+    "walk": "Walk",
+    "esports": "Esports",
+    "meetingFriends": "Meeting friends",
+    "cafe": "Cafe",
+    "dating": "Dating",
+    "study": "Study",
+    "volunteering": "Volunteering",
+    "sports": "Sports",
+    "art": "Art",
+    "shopping": "Shopping",
+    "boardGame": "Board game",
+    "nightlife": "Nightlife",
+    "gaming": "Gaming"
+  },
+  "auth": {
+    "title": "Get Started now!",
+    "description": "Create an account or log in to explore about our app",
+    "login": "Login",
+    "signUp": "Sign Up",
+    "signingUp": "Signing up...",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "usernamePlaceholder": "Example: johndoe",
+    "usernameExample": "No spaces, uppercase letters, or accents. 'John Doe' becomes 'johndoe'",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "forgotPasswordDescription": "Enter your email to reset password",
+    "newPasswordTitle": "Set new password",
+    "newPasswordDescription": "Enter a new password for your account",
+    "enterOtp": "Enter OTP",
+    "enterOtpDescription": "Please enter the 6-digit OTP sent to your email",
+    "otpPlaceholder": "Enter 6-digit OTP",
+    "verifyOtp": "Verify OTP",
+    "setPassword": "Set Password",
+    "confirmPassword": "Confirm Password",
+    "or": "Or",
+    "checkYourEmail": "Check your email",
+    "verificationEmail": "We’ve sent you a verification link. Please open your email to confirm your account",
+    "backToLogin": "Back to login",
+    "sendResetLink": "Send OTP",
+    "otpSent": "OTP has been sent to your email",
+    "otpVerified": "OTP verified successfully",
+    "passwordResetSuccess": "Password reset successfully",
+    "cancel": "Cancel",
+    "resendEmail": "Resend verification email",
+    "resetPassword": "Reset password"
+  },
+  "errors": {
+    "usernameRequired": "Username is required",
+    "usernameInvalid": "Username can only contain lowercase letters, numbers, dots, and underscores",
+    "usernameMax": "Username must be 20 characters or fewer",
+    "usernameMin": "Username must be at least 3 characters",
+    "usernameExists": "Username already exists",
+    "usernameNotAllNumbers": "Username cannot be only numbers",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Please enter a valid email",
+    "passwordRequired": "Password is required",
+    "passwordMin": "Password must be at least 8 characters",
+    "passwordComplex": "Password must include at least one uppercase letter, one number and one special character.",
+    "confirmPasswordRequired": "Please confirm your password",
+    "passwordMatch": "Passwords must match",
+    "invalidCredentials": "Your username or password was incorrect",
+    "resendTooManyRequests": "Please wait {{seconds}} seconds before resending verification email",
+    "otpTooManyRequests": "Please wait {{seconds}} seconds before requesting a new OTP",
+    "tooManyRequests": "You have made too many attempts. Please try again later",
+    "otpRequired": "OTP is required",
+    "otpInvalidMin": "OTP must be 6 digits",
+    "unexpectedError": "Unexpected error. Please try again",
+    "otpInvalid": "Invalid OTP. Please try again",
+    "resetTokenMissing": "Reset session is missing. Please request OTP again",
+    "resetTokenExpired": "Reset session expired. Please request OTP again",
+    "emailExists": "Email already exists",
+    "loadCategories": "Unable to load categories. Please try again later"
+  }
 }

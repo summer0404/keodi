@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import { useSettingStore } from '@/store/useSettingStore';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export default function HomeScreen() {
   const [date, setDate] = useState(new Date());
   const [range, setRange] = useState('5');
   const { language, setLanguage } = useSettingStore();
+  const router = useRouter();
 
   const options = [
     { label: '2 km', value: '2' },
@@ -50,6 +52,8 @@ export default function HomeScreen() {
 
       <Button onPress={() => setLanguage('en')}>Switch to English</Button>
 
+      <Button onPress={() => router.replace('/login')}>Go to Login</Button>
+
       <Modal
         visible={modalVisible}
         transparent
@@ -79,7 +83,6 @@ export default function HomeScreen() {
         onClose={() => setShowPicker(false)}
         onDateChange={(newDate) => {
           setDate(newDate);
-          console.log('User picked:', newDate);
         }}
       />
     </View>
