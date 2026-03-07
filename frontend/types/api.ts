@@ -11,10 +11,21 @@ export interface RegisterResponse {
 export interface LoginRequest {
   username: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface LoginResponse {
   accessToken: string;
+  refreshToken: string;
+}
+
+export interface RefreshRequest {
+  refreshToken: string;
+}
+
+export interface RefreshResponse {
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface ResendVerifyEmailResponse {

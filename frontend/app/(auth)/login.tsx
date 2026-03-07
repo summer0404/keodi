@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
-import { Eye, EyeClosed } from 'lucide-react-native';
+import { Eye, EyeClosed, CheckSquare, Square } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Pressable, Switch, TextInput, View, Linking } from 'react-native';
+import { Alert, Pressable, TextInput, View, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
 import { Image } from 'expo-image';
@@ -13,6 +13,7 @@ import { authService } from '@/api/auth';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingStore } from '@/store/useSettingStore';
 import { sanitizeUsername, extractWaitSeconds } from '@/constants/helper';
+import type { LoginRequest } from '@/types/api';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState('');
   const [credentialError, setCredentialError] = useState('');
   const { t } = useTranslation();
-  const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  const setTokens = useAuthStore((state) => state.setTokens);
   const hasCompletedCategoryOnboarding = useSettingStore(
     (state) => state.hasCompletedCategoryOnboarding
   );
@@ -75,9 +76,10 @@ export default function LoginScreen() {
       const result = await loginMutation.mutateAsync({
         username: username.trim(),
         password,
-      });
+        rememberMe,
+      } satisfies LoginRequest);
 
-      setAccessToken(result.accessToken);
+      await setTokens(result.accessToken, rememberMe ? result.refreshToken : '');
       if (hasCompletedCategoryOnboarding) {
         router.replace('/(tabs)');
       } else {
@@ -213,7 +215,11 @@ export default function LoginScreen() {
           className="flex-row items-center gap-2"
           onPress={() => setRememberMe((prev) => !prev)}
         >
-          <Switch value={rememberMe} onValueChange={setRememberMe} />
+          {rememberMe ? (
+            <CheckSquare size={18} color={Palette.grey} />
+          ) : (
+            <Square size={18} color={Palette.grey} />
+          )}
           <Typography className="text-black/60">{t('auth.rememberMe')}</Typography>
         </Pressable>
 
