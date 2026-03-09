@@ -3,7 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsEnum, IsNumber, IsOptional, Max, Min } from "class-validator";
 import { PaginationConstants } from "../constants/pagination.constants";
-import { SortBy, SortOrder } from "../enums/sort.enum";
+import { SortOrder } from "../enums/sort.enum";
 
 export class PaginationQueryDto {
     @ApiProperty({ description: 'Page number', example: 1, default: PaginationConstants.DEFAULT_PAGE, required: false })
@@ -20,11 +20,6 @@ export class PaginationQueryDto {
     @Min(1)
     @Max(100)
     limit?: number = PaginationConstants.DEFAULT_LIMIT;
-
-    @ApiProperty({ description: 'Sort by field', enum: SortBy, default: SortBy.DISTANCE, required: false })
-    @IsOptional()
-    @IsEnum(SortBy)
-    sortBy?: SortBy = SortBy.DISTANCE;
 
     @ApiProperty({ description: 'Sort order', enum: SortOrder, default: SortOrder.ASC, required: false })
     @IsOptional()

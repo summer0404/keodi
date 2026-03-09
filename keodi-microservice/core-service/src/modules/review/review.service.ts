@@ -1,7 +1,7 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
-import { CreateReviewDto } from 'src/common/dtos/review.dto';
+import { CreateReviewDto, GetReviewsDto } from 'src/common/dtos/review.dto';
 import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { PlaceService } from '../place/place.service';
@@ -69,6 +69,51 @@ export class ReviewService {
             }
 
             return { message: 'Review created successfully' };
+        } catch (error) {
+            return handleServiceErrorCatching(error)
+        }
+    }
+
+    async getByPlaceId(getReviewsDto: GetReviewsDto) {
+        const { 
+            placeId,
+            limit,
+            page,
+            sortBy, 
+            sortOrder 
+        } = getReviewsDto;
+
+        try {
+            const existingPlace = await this.prismaService.place.findUnique({
+                where: { id: placeId },
+            });
+
+            if (!existingPlace) {
+                throw new RpcException({
+                    status: HttpStatus.NOT_FOUND,
+                    message: 'Place not found',
+                });
+            }
+
+            const reviews = await this.prismaService.review.findMany({
+                where: { placeId },
+                take: limit,
+                skip: (page - 1) * limit,
+                orderBy: {
+                    [sortBy]: sortOrder,
+                },
+            });
+
+            const total = await this.prismaService.review.count({
+                where: { placeId },
+            });
+
+            return {
+                reviews,
+                total,
+                page,
+                limit,
+            };
         } catch (error) {
             return handleServiceErrorCatching(error)
         }

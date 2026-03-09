@@ -1,8 +1,7 @@
 import { Controller } from "@nestjs/common";
 import { FavoriteService } from "./favorite.service";
 import { MessagePattern, Payload } from "@nestjs/microservices";
-import { SortBy, SortOrder } from "src/common/enums/sort.enum";
-import { UserCommonPaginationDto } from "src/common/dtos/user.dto";
+import { FavoritePlacesPaginationDto } from "src/common/dtos/user.dto";
 
 @Controller()
 export class FavoriteController {
@@ -19,7 +18,7 @@ export class FavoriteController {
     }
 
     @MessagePattern('favorite.get-list')
-    async getUserFavorites(@Payload() data: UserCommonPaginationDto) {
+    async getUserFavorites(@Payload() data: FavoritePlacesPaginationDto) {
         return await this.favoriteService.getUserFavorites(data);
     }
 

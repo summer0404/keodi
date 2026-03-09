@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsNumber, IsOptional, Max, Min } from "class-validator";
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, Max, Min } from "class-validator";
+import { PaginationQueryDto } from "./pagination.dto";
+import { SortBy } from "../enums/sort.enum";
 
 export class CreateReviewDto {
     @IsNotEmpty()
@@ -15,4 +17,12 @@ export class CreateReviewDto {
 
     @IsOptional()
     text?: string;
+}
+
+export class GetReviewsDto extends PaginationQueryDto {
+    @IsNotEmpty()
+    placeId: string;
+
+    @IsEnum(SortBy)
+    sortBy: SortBy = SortBy.CREATED_AT;
 }

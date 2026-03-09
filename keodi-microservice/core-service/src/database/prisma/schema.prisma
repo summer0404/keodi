@@ -217,6 +217,7 @@ model UserAttribute {
   userId      String @map("user_id")
   attributeId String @map("attribute_id")
   score       Float  @default(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
@@ -230,7 +231,6 @@ model UserAction {
   userId    String         @map("user_id")
   placeId   String         @map("place_id")
   action    UserActionType
-  score     Float
   createdAt DateTime       @default(now()) @map("created_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

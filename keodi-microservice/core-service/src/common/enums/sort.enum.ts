@@ -1,12 +1,16 @@
 export enum SortBy {
-  DISTANCE = 'distance',
-  RATING = 'rating',
-  NAME = 'name',
   CREATED_AT = 'createdAt',
 }
 
+export enum PlaceSortBy {
+  DISTANCE = 'distance',
+  RATING = 'rating',
+  NAME = 'name',
+  CREATED_AT = SortBy.CREATED_AT,
+}
+
 export enum FriendSortBy {
-  NAME = SortBy.NAME,
+  NAME = 'name',
   CREATED_AT = SortBy.CREATED_AT,
 }
 

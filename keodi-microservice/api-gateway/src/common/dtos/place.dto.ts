@@ -5,23 +5,29 @@ import { IsEnum, IsNotEmpty, IsNumber, IsOptional, Max, Min } from "class-valida
 import { PlaceConstants } from "../constants/place.constant";
 import { PaginationQueryDto, PaginationResponseDto } from "./pagination.dto";
 import { SearchMode } from "../enums/search.enum";
+import { PlaceSortBy } from "../enums/sort.enum";
 
 export class NearMeQueryDto extends PaginationQueryDto {
-    @ApiProperty({description: 'User latitude', example: 10.76407 })
-    @Type (() => Number)
+    @ApiProperty({ description: 'Sort by field', enum: PlaceSortBy, default: PlaceSortBy.DISTANCE, required: false })
+    @IsOptional()
+    @IsEnum(PlaceSortBy)
+    sortBy: PlaceSortBy = PlaceSortBy.DISTANCE;
+
+    @ApiProperty({ description: 'User latitude', example: 10.76407 })
+    @Type(() => Number)
     @IsNumber()
     @Min(-90)
     @Max(90)
     latitude: number;
 
-    @ApiProperty({description: 'User longitude', example: 106.67838})
+    @ApiProperty({ description: 'User longitude', example: 106.67838 })
     @Type(() => Number)
     @IsNumber()
     @Min(-180)
     @Max(180)
     longitude: number;
 
-    @ApiProperty({description: 'Search radius in kilometers', example: 5, default: PlaceConstants.DEFAULT_RADIUS, required: false})
+    @ApiProperty({ description: 'Search radius in kilometers', example: 5, default: PlaceConstants.DEFAULT_RADIUS, required: false })
     @Type(() => Number)
     @IsNumber()
     @IsOptional()
@@ -31,21 +37,21 @@ export class NearMeQueryDto extends PaginationQueryDto {
 }
 
 export class SearchDto extends NearMeQueryDto {
-    @ApiProperty({ 
-        description: 'Search keyword', 
-        example: 'coffee', 
-        required: true 
+    @ApiProperty({
+        description: 'Search keyword',
+        example: 'coffee',
+        required: true
     })
     @IsNotEmpty()
     search: string;
 
-    @ApiProperty({ 
-        description: 'Search mode', 
+    @ApiProperty({
+        description: 'Search mode',
         enum: SearchMode,
-        example: SearchMode.KEYWORD, 
-        required: false, 
-        default: SearchMode.KEYWORD 
-    }) 
+        example: SearchMode.KEYWORD,
+        required: false,
+        default: SearchMode.KEYWORD
+    })
     @IsOptional()
     @IsEnum(SearchMode)
     mode?: SearchMode = SearchMode.KEYWORD;

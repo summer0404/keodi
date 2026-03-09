@@ -2,7 +2,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ClientKafka, RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
 import { GeoConstants } from 'src/common/constants/place.constant';
-import { FriendSortBy, SortBy, SortOrder } from 'src/common/enums/sort.enum';
+import { PlaceSortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from '../image/image.service';
 import { NearMeDto, SearchDto } from 'src/common/dtos/place.dto';
@@ -25,7 +25,7 @@ export class PlaceService {
         return { latDelta, longDelta };
     }
 
-    private buildPaginationParams(page: number, limit: number, sortBy: SortBy | FriendSortBy, sortOrder: SortOrder) {
+    private buildPaginationParams(page: number, limit: number, sortBy: PlaceSortBy, sortOrder: SortOrder) {
         const offset = (page - 1) * limit;
         const order = sortOrder.toUpperCase();
         const orderByClause = `ORDER BY ${sortBy} ${order}`;
