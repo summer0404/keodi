@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
-import { UserCommonPaginationDto } from "src/common/dtos/user.dto";
-import { SortBy, SortOrder } from "src/common/enums/sort.enum";
+import { FavoritePlacesPaginationDto, UserCommonPaginationDto } from "src/common/dtos/user.dto";
+import { PlaceSortBy, SortBy, SortOrder } from "src/common/enums/sort.enum";
 import { handleServiceErrorCatching } from "src/common/helpers/error.helper";
 import { PrismaService } from "src/database/prisma.service";
 
@@ -68,17 +68,17 @@ export class FavoriteService {
         }
     }
 
-    async getUserFavorites(userCommonPaginationDto: UserCommonPaginationDto) {
-        const { userId, page, limit, sortBy, sortOrder } = userCommonPaginationDto;
+    async getUserFavorites(favoritePlacesPaginationDto: FavoritePlacesPaginationDto) {
+        const { userId, page, limit, sortBy, sortOrder } = favoritePlacesPaginationDto;
 
         try {
             const offset = (page - 1) * limit;
             const order = sortOrder.toLowerCase() as SortOrder;
 
             const orderByMap = {
-                [SortBy.NAME]: { place: { name: order } },
-                [SortBy.RATING]: { place: { rating: order } },
-                [SortBy.CREATED_AT]: { createdAt: order },
+                [PlaceSortBy.NAME]: { place: { name: order } },
+                [PlaceSortBy.RATING]: { place: { rating: order } },
+                [PlaceSortBy.CREATED_AT]: { createdAt: order },
             };
 
             const orderBy = orderByMap[sortBy] || { createdAt: order };

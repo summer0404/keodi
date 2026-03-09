@@ -1,19 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
-import { SortBy, SortOrder } from '../enums/sort.enum';
+import { PlaceSortBy, SortOrder } from '../enums/sort.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 import { PlaceDistanceDto } from './place.dto';
 
 export class GetFavoritesQueryDto extends PaginationQueryDto {
   @ApiProperty({
     description: 'Sort by field',
-    enum: SortBy,
-    default: SortBy.CREATED_AT,
+    enum: PlaceSortBy,
+    default: PlaceSortBy.CREATED_AT,
     required: false,
   })
   @IsOptional()
-  @IsEnum(SortBy)
-  sortBy?: SortBy = SortBy.CREATED_AT;
+  @IsEnum(PlaceSortBy)
+  sortBy?: PlaceSortBy = PlaceSortBy.CREATED_AT;
 
   @ApiProperty({
     description: 'Sort order',

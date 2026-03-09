@@ -7,6 +7,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { NearMePlacesResponseDto } from 'src/common/dtos/place.dto';
+import { ReviewResponseDto } from 'src/common/dtos/review.dto';
 
 export function ApiNearMePlace() {
   return applyDecorators(
@@ -61,6 +62,28 @@ export function ApiGetPlaceById() {
     ApiOkResponse({
         description: 'Place details retrieved successfully',
         type: NearMePlacesResponseDto,
+    }),
+    ApiUnauthorizedResponse({
+        description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiNotFoundResponse({
+        description: 'Place not found with the specified ID',
+    }),
+    ApiBadRequestResponse({
+        description: 'Invalid place ID format',
+    }),
+  );
+}
+
+export function ApiGetPlaceReviews() {
+  return applyDecorators(
+    ApiOperation({
+        summary: 'Get reviews for a place',
+        description: 'Retrieve a list of reviews for a specific place using its unique ID',
+    }),
+    ApiOkResponse({
+        description: 'List of reviews retrieved successfully',
+        type: [ReviewResponseDto],
     }),
     ApiUnauthorizedResponse({
         description: 'Unauthorized - Invalid or missing authentication token',

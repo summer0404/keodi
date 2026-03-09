@@ -1,5 +1,6 @@
-import { IsDate, IsNotEmpty, IsOptional, MaxLength, MinLength } from "class-validator";
+import { IsDate, IsEnum, IsNotEmpty, IsOptional, MaxLength, MinLength } from "class-validator";
 import { PaginationQueryDto } from "./pagination.dto";
+import { FriendSortBy, PlaceSortBy } from "../enums/sort.enum";
 
 export class CreateUserProfileDto {
     @IsNotEmpty()
@@ -38,5 +39,16 @@ export class UserCommonPaginationDto extends PaginationQueryDto  {
     @IsNotEmpty()
     userId: string;
 }
+
+export class FriendPaginationDto extends UserCommonPaginationDto {
+    @IsEnum(FriendSortBy)
+    sortBy: FriendSortBy = FriendSortBy.NAME;
+}
+
+export class FavoritePlacesPaginationDto extends UserCommonPaginationDto {
+    @IsEnum(PlaceSortBy)
+    sortBy: PlaceSortBy = PlaceSortBy.DISTANCE;
+}
+
 
 

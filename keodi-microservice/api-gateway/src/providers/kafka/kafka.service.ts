@@ -59,6 +59,7 @@ export class KafkaService implements OnModuleInit {
 
     // review topic
     this.kafkaClient.subscribeToResponseOf('review.create');
+    this.kafkaClient.subscribeToResponseOf('review.get_by_place_id')
 
     //group session topic
     this.kafkaClient.subscribeToResponseOf('group-session.create');

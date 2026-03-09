@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
-import { UserCommonPaginationDto } from 'src/common/dtos/user.dto';
+import { FriendPaginationDto, UserCommonPaginationDto } from 'src/common/dtos/user.dto';
 import { FriendSortBy } from 'src/common/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
@@ -204,7 +204,7 @@ export class FriendService {
     }
   }
 
-  async getFriends(friendPaginationDto: UserCommonPaginationDto) {
+  async getFriends(friendPaginationDto: FriendPaginationDto) {
     const { userId, page, limit, sortBy, sortOrder } = friendPaginationDto;
 
     try {
@@ -253,7 +253,7 @@ export class FriendService {
     }
   }
 
-  async getPendingRequests(friendPaginationDto: UserCommonPaginationDto) {
+  async getPendingRequests(friendPaginationDto: FriendPaginationDto) {
     const { userId, page, limit, sortBy, sortOrder } = friendPaginationDto;
 
     try {

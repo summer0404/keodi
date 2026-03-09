@@ -1,0 +1,16 @@
+SMOOTHING_FACTOR = 5
+TIME_DECAY = 0.05
+
+UPDATE_USER_ATTRIBUTE_SCORE_THRESHOLD = 0.3
+
+ACTION_WEIGHTS = {
+    "CLICK": 0.1,
+    "READ_REVIEWS": 0.2,
+    "FAVORITE": 0.5,
+    "GET_DIRECTION": 0.3,
+    "RATE_1": -1.0,
+    "RATE_2": -0.5,
+    "RATE_3": 0.0,
+    "RATE_4": 0.5,
+    "RATE_5": 1.0,
+}
