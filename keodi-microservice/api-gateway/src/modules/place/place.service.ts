@@ -45,13 +45,13 @@ export class PlaceService {
         return await firstValueFrom(this.client.send('place.get-by-id', { id, userId }));
     }
 
-    async getReviewsById (getReviewsDto: GetReviewsDto, userId: string) {
+    async getReviewsById (getReviewsDto: GetReviewsDto, placeId: string, userId: string) {
         this.client.emit('intelligence.user-action', {
             userId,
-            placeId: getReviewsDto.placeId,
+            placeId,
             action: UserAction.READ_REVIEWS,
         });
 
-        return await this.reviewService.getByPlaceId(getReviewsDto);
+        return await this.reviewService.getByPlaceId(getReviewsDto, placeId);
     }
 }

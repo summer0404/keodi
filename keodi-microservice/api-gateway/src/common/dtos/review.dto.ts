@@ -40,15 +40,6 @@ export class CreateReviewDto {
 
 export class GetReviewsDto extends PaginationQueryDto {
     @ApiProperty({
-        description: 'ID of the place for which to retrieve reviews',
-        example: 'plc1234567890abcdef',
-        required: true,
-    })
-    @IsNotEmpty()
-    @IsString()
-    placeId: string;
-
-    @ApiProperty({
         description: 'Field to sort reviews by',
         enum: SortBy,
         example: SortBy.CREATED_AT,

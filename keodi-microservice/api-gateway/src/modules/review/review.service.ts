@@ -21,9 +21,9 @@ export class ReviewService {
         );
     }
 
-    async getByPlaceId(getReviewsDto: GetReviewsDto) {
+    async getByPlaceId(getReviewsDto: GetReviewsDto, placeId: string) {
         return await firstValueFrom(
-            this.client.send('review.get_by_place_id', getReviewsDto)
+            this.client.send('review.get_by_place_id', { ...getReviewsDto, placeId })
         );
     }
 }

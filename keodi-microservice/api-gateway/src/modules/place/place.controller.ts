@@ -17,7 +17,7 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/common/dtos/user.dto';
-import { ApiGetPlaceById, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiGetPlaceById, ApiGetPlaceReviews, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
 import { GetReviewsDto } from 'src/common/dtos/review.dto';
 
 @ApiTags('Places')
@@ -53,10 +53,12 @@ export class PlaceController {
   }
 
   @Get(':id/reviews')
+  @ApiGetPlaceReviews()
   async getReviewsById(
     @CurrentUser() user: CurrentUserDto,
     @Query() query: GetReviewsDto, 
+    @Param('id') id: string
   ) {
-    return await this.placeService.getReviewsById(query, user.id);
+    return await this.placeService.getReviewsById(query, id, user.id);
   }
 }
