@@ -1,4 +1,4 @@
-import { Inject, Injectable, Res } from '@nestjs/common';
+import { Inject, Injectable, Res, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientKafka } from '@nestjs/microservices';
 import { Response } from 'express';
@@ -12,13 +12,33 @@ import {
   ValidateOTPDto,
 } from 'src/common/dtos/auth.dto';
 import { CurrentUserDto } from 'src/common/dtos/user.dto';
+import { GoogleService } from 'src/providers/google/google.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject('KAFKA_SERVICE') private client: ClientKafka,
     private readonly configService: ConfigService,
-  ) {}
+    private readonly googleService: GoogleService
+  ) { }
+
+  private async verifyGoogleIdToken(token: string) {
+    try {
+      const payload = await this.googleService.verifyIdToken(token);
+      if (!payload) {
+        throw new UnauthorizedException('Invalid Google token');
+      }
+
+      return {
+        email: payload.email,
+        firstName: payload.given_name,
+        lastName: payload.family_name,
+        picture: payload.picture
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+  }
 
   async register(body: RegisterDto) {
     try {
@@ -47,7 +67,29 @@ export class AuthService {
 
       return {
         accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async googleLoginMobile(@Res({ passthrough: true }) res: Response, token: string) {
+    try {
+      const userInfo = await this.verifyGoogleIdToken(token);
+
+      const response = await firstValueFrom(
+        this.client.send('auth.google', userInfo),
+      );
+
+      res.cookie('refreshToken', response.refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return {
+        accessToken: response.accessToken,
       };
     } catch (error) {
       throw error;
@@ -178,7 +220,6 @@ export class AuthService {
     });
     return {
       accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
     };
   }
 }

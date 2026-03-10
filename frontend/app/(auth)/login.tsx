@@ -2,8 +2,8 @@ import { Button } from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import { Eye, EyeClosed, CheckSquare, Square } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, Pressable, TextInput, View, Linking } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Alert, Pressable, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
 import { Image } from 'expo-image';
@@ -14,6 +14,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingStore } from '@/store/useSettingStore';
 import { sanitizeUsername, extractWaitSeconds } from '@/constants/helper';
 import type { LoginRequest } from '@/types/api';
+import {
+  GoogleSignin,
+  isCancelledResponse,
+  isSuccessResponse,
+} from '@react-native-google-signin/google-signin';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,9 +35,59 @@ export default function LoginScreen() {
     (state) => state.hasCompletedCategoryOnboarding
   );
 
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+      offlineAccess: false,
+    });
+  }, []);
+
   const loginMutation = useMutation({
     mutationFn: authService.login,
   });
+
+  const googleLoginMutation = useMutation({
+    mutationFn: authService.googleLoginMobile,
+  });
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const signInResponse = await GoogleSignin.signIn();
+
+      if (isCancelledResponse(signInResponse)) {
+        return;
+      }
+
+      if (!isSuccessResponse(signInResponse)) {
+        Alert.alert('Google login failed', 'Google sign-in did not complete successfully.');
+        return;
+      }
+
+      if (!signInResponse.data.idToken) {
+        Alert.alert('Google login failed', 'Could not get ID token from Google.');
+        return;
+      }
+
+      const result = await googleLoginMutation.mutateAsync(signInResponse.data.idToken);
+      await setTokens(result.accessToken, '');
+
+      if (hasCompletedCategoryOnboarding) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/(onboarding)/categories');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message =
+          (error.response?.data as { message?: string })?.message ?? 'Google login failed';
+        Alert.alert('Google login failed', message);
+      } else {
+        Alert.alert('Google login failed', 'Please try again.');
+      }
+    }
+  };
 
   const resendVerifyMutation = useMutation({
     mutationFn: authService.resendVerifyEmail,
@@ -114,7 +169,6 @@ export default function LoginScreen() {
 
         try {
           await resendVerifyMutation.mutateAsync(userId);
-          router.replace('/check-email');
         } catch (resendError) {
           if (axios.isAxiosError(resendError)) {
             const resendStatus = resendError.response?.status;
@@ -133,8 +187,9 @@ export default function LoginScreen() {
           }
 
           Alert.alert('Login failed', 'Unable to resend verification email2.');
+          return;
         }
-        return;
+        router.replace('/check-email');
       }
 
       const message =
@@ -248,14 +303,8 @@ export default function LoginScreen() {
 
       <Pressable
         className="w-full h-[52px] items-center justify-center p-1"
-        onPress={() => {
-          // Redirect to backend Google OAuth endpoint (OLD FLOW)
-          // The backend will handle the redirect to Google's consent screen then redirect back to the frontend callback URL
-          const googleAuthUrl = `${process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000'}/api/v1/auth/google`;
-          Linking.openURL(googleAuthUrl).catch((err) => {
-            Alert.alert('Error', 'Could not open Google login.');
-          });
-        }}
+        onPress={handleGoogleSignIn}
+        disabled={googleLoginMutation.isPending}
       >
         <Image
           source={require('@/assets/images/google_button.svg')}

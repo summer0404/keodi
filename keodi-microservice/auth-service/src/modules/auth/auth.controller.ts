@@ -25,8 +25,8 @@ export class AuthController {
   }
 
   @MessagePattern('auth.google')
-  async googleCallback(@Payload() data: any) {
-    return await this.authService.googleCallback(data);
+  async googleLogin(@Payload() data: any) {
+    return await this.authService.googleLogin(data);
   }
 
   @MessagePattern('auth.forgot-password-otp')

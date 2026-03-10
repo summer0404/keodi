@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'expo-router';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export default function SearchResult() {
   const { t } = useTranslation();
@@ -17,6 +18,11 @@ export default function SearchResult() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleLogout = async () => {
+    try {
+      await GoogleSignin.signOut();
+    } catch (error) {
+      console.log('Google SignOut error', error);
+    }
     await clearTokens();
     router.replace('/(auth)/login');
   };
