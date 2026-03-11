@@ -2,9 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import {
-  GroupSessionResponseDto,
-  JoinGroupSessionDto,
-  JoinGroupSessionResponseDto,
+    GroupSessionResponseDto,
+    JoinGroupSessionDto,
+    JoinGroupSessionResponseDto,
 } from 'src/common/dtos/group-session.dto';
 
 @Injectable()
@@ -40,6 +40,57 @@ export class GroupSessionService {
   async close(sessionId: string, userId: string) {
     return firstValueFrom(
       this.client.send('group-session.close', { sessionId, userId }),
+    );
+  }
+
+  async castVote(
+    sessionId: string,
+    placeId: string,
+    userId?: string,
+    guestId?: string,
+  ) {
+    return firstValueFrom(
+      this.client.send('group-session.cast-vote', {
+        sessionId,
+        placeId,
+        userId,
+        guestId,
+      }),
+    );
+  }
+
+  async finalizeMemberVote(
+    sessionId: string,
+    userId?: string,
+    guestId?: string,
+  ) {
+    return firstValueFrom(
+      this.client.send('group-session.finalize-member-vote', {
+        sessionId,
+        userId,
+        guestId,
+      }),
+    );
+  }
+
+  async finalizeSessionVote(sessionId: string, userId: string) {
+    return firstValueFrom(
+      this.client.send('group-session.finalize-session-vote', {
+        sessionId,
+        userId,
+      }),
+    );
+  }
+
+  async getVotes(sessionId: string) {
+    return firstValueFrom(
+      this.client.send('group-session.get-votes', { sessionId }),
+    );
+  }
+
+  async getSession(sessionId: string) {
+    return firstValueFrom(
+      this.client.send('group-session.get-session', { sessionId }),
     );
   }
 }

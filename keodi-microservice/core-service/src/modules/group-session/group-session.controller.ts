@@ -37,4 +37,60 @@ export class GroupSessionController {
   ) {
     return await this.groupSessionService.close(data);
   }
+
+  @MessagePattern('group-session.cast-vote')
+  async castVote(
+    @Payload()
+    data: {
+      sessionId: string;
+      placeId: string;
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.groupSessionService.castVote(data);
+  }
+
+  @MessagePattern('group-session.finalize-member-vote')
+  async finalizeMemberVote(
+    @Payload()
+    data: {
+      sessionId: string;
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.groupSessionService.finalizeMemberVote(data);
+  }
+
+  @MessagePattern('group-session.finalize-session-vote')
+  async finalizeSessionVote(
+    @Payload()
+    data: {
+      sessionId: string;
+      userId: string; //TODO: check if needed
+    },
+  ) {
+    return await this.groupSessionService.finalizeSessionVote(data);
+  }
+
+  @MessagePattern('group-session.get-votes')
+  async getVotes(
+    @Payload()
+    data: {
+      sessionId: string;
+    },
+  ) {
+    return await this.groupSessionService.getVotes(data.sessionId);
+  }
+
+  @MessagePattern('group-session.get-session')
+  async getSession(
+    @Payload()
+    data: {
+      sessionId: string;
+    },
+  ) {
+    return await this.groupSessionService.getSession(data.sessionId);
+  }
 }
