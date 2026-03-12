@@ -8,8 +8,9 @@ import {
   type GroupSession,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { GroupSessionMessages } from 'src/common/constants/group-session.constant';
 import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
-import { buildVoteResults } from 'src/common/helpers/group-session.helper';
+import { GroupSessionHelper } from 'src/common/helpers/group-session.helper';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class GroupSessionService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
+    private readonly groupSessionHelper: GroupSessionHelper,
   ) {}
 
   private generateShareCode(
@@ -52,7 +54,7 @@ export class GroupSessionService {
     if (existingActiveMembership) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
-        message: 'SESSION_ALREADY_ACTIVE',
+        message: GroupSessionMessages.SESSION_ALREADY_ACTIVE,
       });
     }
   }
@@ -109,7 +111,7 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'SHARE_CODE_GENERATION_FAILED',
+          message: GroupSessionMessages.SHARE_CODE_GENERATION_FAILED,
         });
       }
 
@@ -157,14 +159,14 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
       if (session.status !== GroupSessionStatus.ACTIVE) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'SESSION_NOT_ACTIVE',
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
         });
       }
 
@@ -182,7 +184,7 @@ export class GroupSessionService {
         if (existingActiveMembership) {
           throw new RpcException({
             status: HttpStatus.CONFLICT,
-            message: 'SESSION_ALREADY_ACTIVE',
+            message: GroupSessionMessages.SESSION_ALREADY_ACTIVE,
           });
         }
 
@@ -190,14 +192,8 @@ export class GroupSessionService {
         const existingMember = session.members.find((m) => m.userId === userId);
         if (existingMember) {
           return {
-            sessionId: session.sessionId,
-            shareCode: session.shareCode,
-            createdBy: session.createdBy,
-            creator: session.creator,
-            createdAt: session.createdAt,
-            status: session.status,
+            ...session,
             memberCount: session.members.length,
-            members: session.members,
             member: existingMember,
             alreadyJoined: true,
           };
@@ -208,7 +204,7 @@ export class GroupSessionService {
       if (!userId && !existingGuestId && !nickname) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'NICKNAME_REQUIRED',
+          message: GroupSessionMessages.NICKNAME_REQUIRED,
         });
       }
 
@@ -219,14 +215,8 @@ export class GroupSessionService {
         );
         if (existingMember) {
           return {
-            sessionId: session.sessionId,
-            shareCode: session.shareCode,
-            createdBy: session.createdBy,
-            creator: session.creator,
-            createdAt: session.createdAt,
-            status: session.status,
+            ...session,
             memberCount: session.members.length,
-            members: session.members,
             member: existingMember,
             alreadyJoined: true,
           };
@@ -287,14 +277,14 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
       if (session.status !== GroupSessionStatus.ACTIVE) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'SESSION_NOT_ACTIVE',
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
         });
       }
 
@@ -302,7 +292,7 @@ export class GroupSessionService {
       if (!isMember) {
         throw new RpcException({
           status: HttpStatus.FORBIDDEN,
-          message: 'NOT_A_MEMBER',
+          message: GroupSessionMessages.NOT_A_MEMBER,
         });
       }
 
@@ -312,7 +302,7 @@ export class GroupSessionService {
       if (!friendship) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'INVITE_FRIENDS_ONLY',
+          message: GroupSessionMessages.INVITE_FRIENDS_ONLY,
         });
       }
 
@@ -320,7 +310,7 @@ export class GroupSessionService {
       if (alreadyJoined) {
         throw new RpcException({
           status: HttpStatus.CONFLICT,
-          message: 'ALREADY_A_MEMBER',
+          message: GroupSessionMessages.ALREADY_A_MEMBER,
         });
       }
 
@@ -346,21 +336,21 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
       if (session.createdBy !== userId) {
         throw new RpcException({
           status: HttpStatus.FORBIDDEN,
-          message: 'NOT_SESSION_CREATOR',
+          message: GroupSessionMessages.NOT_SESSION_CREATOR,
         });
       }
 
       if (session.status === GroupSessionStatus.CLOSED) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'SESSION_ALREADY_CLOSED',
+          message: GroupSessionMessages.SESSION_ALREADY_CLOSED,
         });
       }
 
@@ -389,21 +379,21 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
       if (session.status !== GroupSessionStatus.ACTIVE) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'SESSION_NOT_ACTIVE',
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
         });
       }
 
       if (session.voteStatus === VoteStatus.FINALIZED) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'VOTE_ALREADY_FINALIZED',
+          message: GroupSessionMessages.VOTE_ALREADY_FINALIZED,
         });
       }
 
@@ -415,7 +405,7 @@ export class GroupSessionService {
       if (!member) {
         throw new RpcException({
           status: HttpStatus.FORBIDDEN,
-          message: 'NOT_A_MEMBER',
+          message: GroupSessionMessages.NOT_A_MEMBER,
         });
       }
 
@@ -427,7 +417,7 @@ export class GroupSessionService {
         if (currentVote?.isFinalized) {
           throw new RpcException({
             status: HttpStatus.BAD_REQUEST,
-            message: 'VOTE_ALREADY_FINALIZED',
+            message: GroupSessionMessages.VOTE_ALREADY_FINALIZED,
           });
         }
 
@@ -473,7 +463,7 @@ export class GroupSessionService {
       ) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'PLACE_NOT_FOUND',
+          message: GroupSessionMessages.PLACE_NOT_FOUND,
         });
       }
       handleServiceErrorCatching(error);
@@ -496,21 +486,21 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
       if (session.status !== GroupSessionStatus.ACTIVE) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'SESSION_NOT_ACTIVE',
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
         });
       }
 
       if (session.voteStatus === VoteStatus.FINALIZED) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'VOTE_ALREADY_FINALIZED',
+          message: GroupSessionMessages.VOTE_ALREADY_FINALIZED,
         });
       }
 
@@ -522,7 +512,7 @@ export class GroupSessionService {
       if (!member) {
         throw new RpcException({
           status: HttpStatus.FORBIDDEN,
-          message: 'NOT_A_MEMBER',
+          message: GroupSessionMessages.NOT_A_MEMBER,
         });
       }
 
@@ -533,14 +523,14 @@ export class GroupSessionService {
       if (!existingVote) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'VOTE_REQUIRED_BEFORE_FINALIZE',
+          message: GroupSessionMessages.VOTE_REQUIRED_BEFORE_FINALIZE,
         });
       }
 
       if (existingVote.isFinalized) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'VOTE_ALREADY_FINALIZED',
+          message: GroupSessionMessages.VOTE_ALREADY_FINALIZED,
         });
       }
 
@@ -585,7 +575,8 @@ export class GroupSessionService {
             },
           },
         });
-        const autoVoteResults = buildVoteResults(allVotes);
+        const autoVoteResults =
+          this.groupSessionHelper.buildVoteResults(allVotes);
         const winningPlaceId = autoVoteResults[0]?.place?.id ?? null;
 
         await this.prismaService.groupSession.updateMany({
@@ -651,32 +642,34 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
       if (session.createdBy !== userId) {
         throw new RpcException({
           status: HttpStatus.FORBIDDEN,
-          message: 'NOT_SESSION_CREATOR',
+          message: GroupSessionMessages.NOT_SESSION_CREATOR,
         });
       }
 
       if (session.status !== GroupSessionStatus.ACTIVE) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'SESSION_NOT_ACTIVE',
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
         });
       }
 
       if (session.voteStatus === VoteStatus.FINALIZED) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'VOTE_ALREADY_FINALIZED',
+          message: GroupSessionMessages.VOTE_ALREADY_FINALIZED,
         });
       }
 
-      const voteResults = buildVoteResults(session.votes);
+      const voteResults = this.groupSessionHelper.buildVoteResults(
+        session.votes,
+      );
       const winningPlaceId = voteResults[0]?.place?.id ?? null;
 
       await this.prismaService.$transaction([
@@ -747,7 +740,7 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
@@ -813,11 +806,13 @@ export class GroupSessionService {
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'SESSION_NOT_FOUND',
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
         });
       }
 
-      const voteResults = buildVoteResults(session.votes);
+      const voteResults = this.groupSessionHelper.buildVoteResults(
+        session.votes,
+      );
 
       return {
         sessionId,

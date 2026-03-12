@@ -12,14 +12,14 @@ export class GroupSessionService {
   constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
 
   async create(userId: string): Promise<GroupSessionResponseDto> {
-    return firstValueFrom(this.client.send('group-session.create', { userId }));
+    return await firstValueFrom(this.client.send('group-session.create', { userId }));
   }
 
   async join(
     joinGroupSessionDto: JoinGroupSessionDto,
     userId?: string,
   ): Promise<JoinGroupSessionResponseDto> {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.join', {
         ...joinGroupSessionDto,
         userId,
@@ -28,7 +28,7 @@ export class GroupSessionService {
   }
 
   async inviteFriend(sessionId: string, inviterId: string, friendId: string) {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.invite-friend', {
         sessionId,
         inviterId,
@@ -38,7 +38,7 @@ export class GroupSessionService {
   }
 
   async close(sessionId: string, userId: string) {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.close', { sessionId, userId }),
     );
   }
@@ -49,7 +49,7 @@ export class GroupSessionService {
     userId?: string,
     guestId?: string,
   ) {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.cast-vote', {
         sessionId,
         placeId,
@@ -64,7 +64,7 @@ export class GroupSessionService {
     userId?: string,
     guestId?: string,
   ) {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.finalize-member-vote', {
         sessionId,
         userId,
@@ -74,7 +74,7 @@ export class GroupSessionService {
   }
 
   async finalizeSessionVote(sessionId: string, userId: string) {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.finalize-session-vote', {
         sessionId,
         userId,
@@ -83,13 +83,13 @@ export class GroupSessionService {
   }
 
   async getVotes(sessionId: string) {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.get-votes', { sessionId }),
     );
   }
 
   async getSession(sessionId: string) {
-    return firstValueFrom(
+    return await firstValueFrom(
       this.client.send('group-session.get-session', { sessionId }),
     );
   }
