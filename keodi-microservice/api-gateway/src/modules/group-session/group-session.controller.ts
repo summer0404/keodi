@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
@@ -10,6 +11,8 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
 import {
+  CastVoteDto,
+  FinalizeMemberVoteDto,
   GroupSessionResponseDto,
   InviteFriendToSessionDto,
   JoinGroupSessionDto,
@@ -18,8 +21,13 @@ import {
 import { CurrentUserDto } from 'src/common/dtos/user.dto';
 import { GroupSessionService } from './group-session.service';
 import {
+  ApiCastVote,
   ApiCloseGroupSession,
   ApiCreateGroupSession,
+  ApiFinalizeMemberVote,
+  ApiFinalizeSessionVote,
+  ApiGetSession,
+  ApiGetVotes,
   ApiInviteFriendToSession,
   ApiJoinGroupSession,
   GroupSessionApiTags,
@@ -73,5 +81,64 @@ export class GroupSessionController {
     @Param('sessionId') sessionId: string,
   ): Promise<GroupSessionResponseDto> {
     return await this.groupSessionService.close(sessionId, user.id);
+  }
+
+  @Post(':sessionId/vote')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiCastVote()
+  async castVote(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() castVoteDto: CastVoteDto,
+  ) {
+    return await this.groupSessionService.castVote(
+      sessionId,
+      castVoteDto.placeId,
+      user?.id,
+      castVoteDto.guestId,
+    );
+  }
+
+  @Post(':sessionId/vote/finalize-member')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiFinalizeMemberVote()
+  async finalizeMemberVote(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() finalizeMemberVoteDto: FinalizeMemberVoteDto,
+  ) {
+    return await this.groupSessionService.finalizeMemberVote(
+      sessionId,
+      user?.id,
+      finalizeMemberVoteDto.guestId,
+    );
+  }
+
+  @Post(':sessionId/vote/finalize-session')
+  @HttpCode(HttpStatus.OK)
+  @ApiFinalizeSessionVote()
+  async finalizeSessionVote(
+    @CurrentUser() user: CurrentUserDto,
+    @Param('sessionId') sessionId: string,
+  ) {
+    return await this.groupSessionService.finalizeSessionVote(
+      sessionId,
+      user.id,
+    );
+  }
+
+  @Get(':sessionId')
+  @OptionalAuth()
+  @ApiGetSession()
+  async getSession(@Param('sessionId') sessionId: string) {
+    return await this.groupSessionService.getSession(sessionId);
+  }
+
+  @Get(':sessionId/votes')
+  @ApiGetVotes()
+  async getVotes(@Param('sessionId') sessionId: string) {
+    return await this.groupSessionService.getVotes(sessionId);
   }
 }

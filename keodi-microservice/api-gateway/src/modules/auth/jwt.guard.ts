@@ -31,8 +31,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       [context.getHandler(), context.getClass()],
     );
 
-    // If optional auth and no user but no error, return null (allow unauthenticated access)
-    if (isOptionalAuth && !user && !err) {
+    // If optional auth and no user, no error, and no token failure info → truly no token (allow anonymous)
+    // A present but expired/invalid token must still return 401
+    if (isOptionalAuth && !user && !err && !info) {
       return null as TUser;
     }
 

@@ -1,15 +1,15 @@
 import { applyDecorators } from '@nestjs/common';
 import {
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiUnauthorizedResponse,
-  ApiInternalServerErrorResponse,
-  ApiTags,
-  ApiForbiddenResponse,
-  ApiOkResponse,
-  ApiConflictResponse,
-  ApiNotFoundResponse,
   ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiInternalServerErrorResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
   GroupSessionResponseDto,
@@ -83,6 +83,76 @@ export const ApiCloseGroupSession = () => {
     }),
     ApiNotFoundResponse({ description: 'Session not found' }),
     ApiBadRequestResponse({ description: 'Session is already closed' }),
+  );
+};
+
+export const ApiCastVote = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Cast a vote for a place',
+      description:
+        'Cast or update a vote for a place in a group session. A member can change their vote until it is finalized.',
+    }),
+    ApiOkResponse({ description: 'Vote cast successfully' }),
+    ApiNotFoundResponse({ description: 'Session or place not found' }),
+    ApiBadRequestResponse({
+      description: 'Session not active or vote already finalized',
+    }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+  );
+};
+
+export const ApiFinalizeMemberVote = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Finalize your vote',
+      description:
+        'Lock in your vote so it can no longer be changed. If all members have finalized, the session vote is auto-finalized.',
+    }),
+    ApiOkResponse({ description: 'Vote finalized successfully' }),
+    ApiBadRequestResponse({
+      description: 'No vote cast yet or vote already finalized',
+    }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+  );
+};
+
+export const ApiFinalizeSessionVote = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Finalize session voting',
+      description:
+        'Force-finalize all votes in the session. Only the session creator can perform this action.',
+    }),
+    ApiOkResponse({ description: 'Session vote finalized successfully' }),
+    ApiForbiddenResponse({ description: 'Only the creator can finalize' }),
+    ApiBadRequestResponse({
+      description: 'Session not active or voting already finalized',
+    }),
+  );
+};
+
+export const ApiGetVotes = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get session votes',
+      description:
+        'Retrieve all votes and aggregated results for a group session.',
+    }),
+    ApiOkResponse({ description: 'Votes retrieved successfully' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
+};
+
+export const ApiGetSession = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get session details',
+      description:
+        'Retrieve the full state of a group session including members, status, vote status, winning place, and finalization time.',
+    }),
+    ApiOkResponse({ description: 'Session retrieved successfully' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
   );
 };
 

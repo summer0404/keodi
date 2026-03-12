@@ -1,5 +1,4 @@
 import { ApiProperty, PickType } from '@nestjs/swagger';
-import { CreateUserDto } from './user.dto';
 import {
   IsBoolean,
   IsNotEmpty,
@@ -9,6 +8,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { CreateUserDto } from './user.dto';
 
 export class RegisterDto extends CreateUserDto {}
 
@@ -61,7 +61,7 @@ export class ResetPasswordDto {
     message: 'Password must contain at least one uppercase letter',
   })
   @Matches(/.*\d.*/, { message: 'Password must contain at least one number' })
-  @Matches(/.*[@$!%*?&^+].*/, {
+  @Matches(/.*[@$!%*?&^+#].*/, {
     message: 'Password must contain at least one special character',
   })
   @ApiProperty({

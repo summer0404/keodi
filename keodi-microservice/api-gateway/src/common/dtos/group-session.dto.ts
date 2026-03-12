@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SessionStatus } from '../enums/group-session.enum';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { SessionStatus } from '../enums/group-session.enum';
 
 export class GroupSessionResponseDto {
   @ApiProperty({
@@ -174,3 +174,35 @@ export class JoinGroupSessionResponseDto {
 }
 
 export class CloseGroupSessionResponseDto extends GroupSessionResponseDto {}
+
+export class CastVoteDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the voter (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    description: 'ID of the place being voted for',
+    example: 'cm5x1y2z3a4b5c6d7e8f',
+  })
+  placeId: string;
+}
+
+export class FinalizeMemberVoteDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the voter (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+}

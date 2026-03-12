@@ -31,7 +31,7 @@ export class CreateUserDto {
     @MinLength(8, { message: 'Password must be at least 8 characters long' })
     @Matches(/.*[A-Z].*/, { message: 'Password must contain at least one uppercase letter' })
     @Matches(/.*\d.*/, { message: 'Password must contain at least one number' })
-    @Matches(/.*[@$!%*?&^+].*/, { message: 'Password must contain at least one special character' })
+    @Matches(/.*[@$!%*?&^+#].*/, { message: 'Password must contain at least one special character' })
     @ApiProperty({
         example: 'Abc123!@#',
         description: 'Password (minimum 8 characters, must include at least 1 uppercase letter, 1 number, and 1 special character)'
