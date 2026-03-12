@@ -2,7 +2,11 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import { createId } from '@paralleldrive/cuid2';
-import { GroupSession, GroupSessionStatus, VoteStatus } from '@prisma/client';
+import {
+  GroupSessionStatus,
+  VoteStatus,
+  type GroupSession,
+} from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
 import { buildVoteResults } from 'src/common/helpers/group-session.helper';
@@ -43,7 +47,6 @@ export class GroupSessionService {
           userId,
           session: { status: GroupSessionStatus.ACTIVE },
         },
-        include: { session: true },
       });
 
     if (existingActiveMembership) {
@@ -87,13 +90,13 @@ export class GroupSessionService {
 
           break;
         } catch (error) {
-          attempts++;
           if (
             error &&
             typeof error === 'object' &&
             'code' in error &&
             (error as { code?: string }).code === 'P2002'
           ) {
+            attempts++;
             if (attempts >= maxAttempts) {
               break;
             }
@@ -174,7 +177,6 @@ export class GroupSessionService {
               session: { status: GroupSessionStatus.ACTIVE },
               sessionId: { not: session.sessionId },
             },
-            include: { session: true },
           });
 
         if (existingActiveMembership) {
@@ -195,6 +197,7 @@ export class GroupSessionService {
             createdAt: session.createdAt,
             status: session.status,
             memberCount: session.members.length,
+            members: session.members,
             member: existingMember,
             alreadyJoined: true,
           };
@@ -223,6 +226,7 @@ export class GroupSessionService {
             createdAt: session.createdAt,
             status: session.status,
             memberCount: session.members.length,
+            members: session.members,
             member: existingMember,
             alreadyJoined: true,
           };
@@ -280,10 +284,17 @@ export class GroupSessionService {
         include: { members: true },
       });
 
-      if (!session || session.status !== GroupSessionStatus.ACTIVE) {
+      if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
           message: 'SESSION_NOT_FOUND',
+        });
+      }
+
+      if (session.status !== GroupSessionStatus.ACTIVE) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'SESSION_NOT_ACTIVE',
         });
       }
 
@@ -408,61 +419,63 @@ export class GroupSessionService {
         });
       }
 
-      const existingVote = await this.prismaService.sessionVote.findUnique({
-        where: { memberId: member.id },
-      });
-
-      if (existingVote?.isFinalized) {
-        throw new RpcException({
-          status: HttpStatus.BAD_REQUEST,
-          message: 'VOTE_ALREADY_FINALIZED',
+      const vote = await this.prismaService.$transaction(async (prisma) => {
+        const currentVote = await prisma.sessionVote.findUnique({
+          where: { memberId: member.id },
         });
-      }
 
-      const place = await this.prismaService.place.findUnique({
-        where: { id: placeId },
+        if (currentVote?.isFinalized) {
+          throw new RpcException({
+            status: HttpStatus.BAD_REQUEST,
+            message: 'VOTE_ALREADY_FINALIZED',
+          });
+        }
+
+        return prisma.sessionVote.upsert({
+          where: { memberId: member.id },
+          create: {
+            sessionId,
+            memberId: member.id,
+            placeId,
+          },
+          update: {
+            placeId,
+          },
+          include: {
+            place: {
+              select: {
+                id: true,
+                name: true,
+                featureImageUrl: true,
+                rating: true,
+                fullAddress: true,
+              },
+            },
+            member: {
+              select: {
+                id: true,
+                userId: true,
+                guestId: true,
+                nickname: true,
+              },
+            },
+          },
+        });
       });
 
-      if (!place) {
+      return vote;
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as { code?: string }).code === 'P2003'
+      ) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
           message: 'PLACE_NOT_FOUND',
         });
       }
-
-      const vote = await this.prismaService.sessionVote.upsert({
-        where: { memberId: member.id },
-        create: {
-          sessionId,
-          memberId: member.id,
-          placeId,
-        },
-        update: {
-          placeId,
-        },
-        include: {
-          place: {
-            select: {
-              id: true,
-              name: true,
-              featureImageUrl: true,
-              rating: true,
-              fullAddress: true,
-            },
-          },
-          member: {
-            select: {
-              id: true,
-              userId: true,
-              guestId: true,
-              nickname: true,
-            },
-          },
-        },
-      });
-
-      return vote;
-    } catch (error) {
       handleServiceErrorCatching(error);
     }
   }
@@ -575,8 +588,8 @@ export class GroupSessionService {
         const autoVoteResults = buildVoteResults(allVotes);
         const winningPlaceId = autoVoteResults[0]?.place?.id ?? null;
 
-        await this.prismaService.groupSession.update({
-          where: { sessionId },
+        await this.prismaService.groupSession.updateMany({
+          where: { sessionId, voteStatus: VoteStatus.OPEN },
           data: {
             voteStatus: VoteStatus.FINALIZED,
             finalizedAt: new Date(),
@@ -620,6 +633,14 @@ export class GroupSessionService {
                   userId: true,
                   guestId: true,
                   nickname: true,
+                  user: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      pictureUrl: true,
+                    },
+                  },
                 },
               },
             },
@@ -660,7 +681,7 @@ export class GroupSessionService {
 
       await this.prismaService.$transaction([
         this.prismaService.sessionVote.updateMany({
-          where: { sessionId },
+          where: { sessionId, isFinalized: false },
           data: { isFinalized: true },
         }),
         this.prismaService.groupSession.update({
