@@ -14,7 +14,7 @@ import {
 import {
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
-} from 'src/common/dtos/group-session.dto';
+} from 'src/shared/dtos/group-session.dto';
 
 export const ApiCreateGroupSession = () => {
   return applyDecorators(

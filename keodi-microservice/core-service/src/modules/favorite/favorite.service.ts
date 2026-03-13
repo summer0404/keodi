@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
-import { FavoritePlacesPaginationDto, UserCommonPaginationDto } from "src/common/dtos/user.dto";
-import { PlaceSortBy, SortBy, SortOrder } from "src/common/enums/sort.enum";
-import { handleServiceErrorCatching } from "src/common/helpers/error.helper";
+import { FavoritePlacesPaginationDto, UserCommonPaginationDto } from "src/shared/dtos/user.dto";
+import { PlaceSortBy, SortBy, SortOrder } from "src/shared/enums/sort.enum";
+import { handleServiceErrorCatching } from "src/shared/helpers/error.helper";
 import { PrismaService } from "src/database/prisma.service";
 
 @Injectable()

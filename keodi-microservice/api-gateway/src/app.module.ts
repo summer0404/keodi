@@ -5,7 +5,7 @@ import { ConvertToHttpExceptionFilter } from './common/filters/rpc-to-http-excep
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './modules/user/user.module';
 import { KafkaModule } from './providers/kafka/kafka.module';
-import { JwtAuthGuard } from './modules/auth/jwt.guard';
+import { JwtAuthGuard } from './common/guards/jwt.guard';
 import { PlaceModule } from './modules/place/place.module';
 import { RedisModule } from './providers/redis/redis.module';
 import { CategoryModule } from './modules/category/category.module';

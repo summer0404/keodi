@@ -1,7 +1,7 @@
 import { Controller } from "@nestjs/common";
 import { FavoriteService } from "./favorite.service";
 import { MessagePattern, Payload } from "@nestjs/microservices";
-import { FavoritePlacesPaginationDto } from "src/common/dtos/user.dto";
+import { FavoritePlacesPaginationDto } from "src/shared/dtos/user.dto";
 
 @Controller()
 export class FavoriteController {

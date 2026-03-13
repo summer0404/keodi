@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
-import { ratingActionMap } from 'src/common/constants/review.constant';
-import { CreateReviewDto, GetReviewsDto } from 'src/common/dtos/review.dto';
+import { ratingActionMap } from 'src/shared/constants/review.constant';
+import { CreateReviewDto, GetReviewsDto } from 'src/shared/dtos/review.dto';
 
 
 @Injectable()

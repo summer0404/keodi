@@ -17,8 +17,8 @@ import {
   InviteFriendToSessionDto,
   JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
-} from 'src/common/dtos/group-session.dto';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
+} from 'src/shared/dtos/group-session.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { GroupSessionService } from './group-session.service';
 import {
   ApiCastVote,

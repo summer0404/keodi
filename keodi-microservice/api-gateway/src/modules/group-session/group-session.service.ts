@@ -5,7 +5,7 @@ import {
     GroupSessionResponseDto,
     JoinGroupSessionDto,
     JoinGroupSessionResponseDto,
-} from 'src/common/dtos/group-session.dto';
+} from 'src/shared/dtos/group-session.dto';
 
 @Injectable()
 export class GroupSessionService {

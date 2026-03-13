@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()

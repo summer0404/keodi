@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { ReviewService } from './review.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { CreateReviewDto, GetReviewsDto } from 'src/common/dtos/review.dto';
+import { CreateReviewDto, GetReviewsDto } from 'src/shared/dtos/review.dto';
 
 @Controller()
 export class ReviewController {

@@ -10,8 +10,8 @@ import {
   ResetPasswordDto,
   ResetPasswordOTPDto,
   ValidateOTPDto,
-} from 'src/common/dtos/auth.dto';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
+} from 'src/shared/dtos/auth.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 
 @Injectable()
 export class AuthService {

@@ -2,10 +2,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/common/dtos/place.dto';
-import { GetReviewsDto } from 'src/common/dtos/review.dto';
+import { NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/shared/dtos/place.dto';
+import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { ReviewService } from '../review/review.service';
-import { UserAction } from 'src/common/enums/user.enum';
+import { UserAction } from 'src/shared/enums/user.enum';
 
 @Injectable()
 export class PlaceService {

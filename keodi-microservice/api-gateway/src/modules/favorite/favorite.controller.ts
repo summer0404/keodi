@@ -8,16 +8,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { PaginationConstants } from 'src/common/constants/pagination.constants';
+import { PaginationConstants } from 'src/shared/constants/pagination.constants';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import {
   FavoriteResponseDto,
   FavoritesListResponseDto,
   GetFavoritesQueryDto,
   IsFavoriteResponseDto,
-} from 'src/common/dtos/favorite.dto';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
-import { JwtAuthGuard } from '../auth/jwt.guard';
+} from 'src/shared/dtos/favorite.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { FavoriteService } from './favorite.service';
 
 @Controller('favorites')

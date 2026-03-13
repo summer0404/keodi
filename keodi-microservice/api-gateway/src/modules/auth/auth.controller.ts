@@ -42,9 +42,9 @@ import {
   ValidateForgotPasswordOTPResponseDto,
   ValidateOTPDto,
   ValidateResetPasswordOTPResponseDto,
-} from 'src/common/dtos/auth.dto';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
-import { OtpPurpose } from 'src/common/enums/otp.enum';
+} from 'src/shared/dtos/auth.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
+import { OtpPurpose } from 'src/shared/enums/otp.enum';
 import { AuthService } from './auth.service';
 
 @ApiTags('auth')

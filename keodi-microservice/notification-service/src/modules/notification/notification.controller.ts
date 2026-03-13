@@ -1,9 +1,9 @@
 import { Controller } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { SendOTPMailDto, SendVerifyURLDto } from 'src/common/dtos/email.dto';
-import { OtpPurpose } from 'src/common/enums/otp.enum';
-import { VerifyUrlPurpose } from 'src/common/enums/verifyUrl.enum';
+import { SendOTPMailDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
+import { OtpPurpose } from 'src/shared/enums/otp.enum';
+import { VerifyUrlPurpose } from 'src/shared/enums/verifyUrl.enum';
 
 @Controller()
 export class NotificationController {

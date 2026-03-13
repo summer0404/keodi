@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
-import { UpdateUserProfileDto } from 'src/common/dtos/user.dto';
+import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
 
 @Controller()

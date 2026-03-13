@@ -7,23 +7,23 @@ import {
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
-} from 'src/common/dtos/auth.dto';
-import { ValidateOTPDto } from 'src/common/dtos/otp.dto';
-import { UserDto } from 'src/common/dtos/user.dto';
-import { VerifyUrlPurpose } from 'src/common/enums/verifyUrl.enum';
+} from 'src/shared/dtos/auth.dto';
+import { ValidateOTPDto } from 'src/shared/dtos/otp.dto';
+import { UserDto } from 'src/shared/dtos/user.dto';
+import { VerifyUrlPurpose } from 'src/shared/enums/verifyUrl.enum';
 import {
   resendFailedTemplate,
   resendSuccessTemplate,
   resendTooSoonTemplate,
-} from 'src/common/templates/resend-verify-email-response.template';
+} from 'src/shared/templates/resend-verify-email-response.template';
 import {
   alreadyVerifiedTemplate,
   emailNotRegisteredTemplate,
   failVerifyAccountTemplate,
   successVerifyAccountTemplate,
-} from 'src/common/templates/verify-email-response.template';
-import { timeLimitResend } from 'src/common/utils/time-limit-resend';
-import { getTTLForPurpose } from 'src/common/utils/ttl-redis.helper';
+} from 'src/shared/templates/verify-email-response.template';
+import { timeLimitResend } from 'src/shared/utils/time-limit-resend';
+import { getTTLForPurpose } from 'src/shared/utils/ttl-redis.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { UserService } from 'src/modules/user/user.service';
 import { OtpService } from './otp.service';

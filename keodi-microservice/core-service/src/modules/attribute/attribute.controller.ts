@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { AttributeService } from './attribute.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { CreateAttributeDto } from 'src/common/dtos/attribute.dto';
+import { CreateAttributeDto } from 'src/shared/dtos/attribute.dto';
 
 @Controller()
 export class AttributeController {

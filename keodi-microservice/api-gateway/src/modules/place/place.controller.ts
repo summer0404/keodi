@@ -13,12 +13,12 @@ import {
   NearMePlacesResponseDto,
   NearMeQueryDto,
   SearchDto
-} from 'src/common/dtos/place.dto';
+} from 'src/shared/dtos/place.dto';
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { ApiGetPlaceById, ApiGetPlaceReviews, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
-import { GetReviewsDto } from 'src/common/dtos/review.dto';
+import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 
 @ApiTags('Places')
 @Controller('places')

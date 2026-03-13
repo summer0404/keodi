@@ -1,9 +1,9 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import * as SibApiV3Sdk from "@getbrevo/brevo"
 import { RpcException } from "@nestjs/microservices";
-import { SendOTPMailDto, SendVerifyURLDto } from "src/common/dtos/email.dto";
-import forgotPasswordTemplate from "src/common/templates/forgot-password.template";
-import verifyAccountTemplate from "src/common/templates/verify-account.template";
+import { SendOTPMailDto, SendVerifyURLDto } from "src/shared/dtos/email.dto";
+import forgotPasswordTemplate from "src/shared/templates/forgot-password.template";
+import verifyAccountTemplate from "src/shared/templates/verify-account.template";
 
 @Injectable()
 export class EmailService {

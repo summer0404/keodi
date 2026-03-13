@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { PaginationConstants } from 'src/common/constants/pagination.constants';
+import { PaginationConstants } from 'src/shared/constants/pagination.constants';
 import {
   GetFriendsQueryDto,
   GetPendingRequestsQueryDto,
-} from 'src/common/dtos/friend.dto';
-import { FriendSortBy, SortOrder } from 'src/common/enums/sort.enum';
+} from 'src/shared/dtos/friend.dto';
+import { FriendSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 
 @Injectable()
 export class FriendService {
