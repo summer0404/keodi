@@ -5,10 +5,10 @@ import {
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
-} from 'src/common/dtos/auth.dto';
-import { ValidateOTPDto } from 'src/common/dtos/otp.dto';
-import { OtpPurpose } from 'src/common/enums/otp.enum';
-import { VerifyUrlPurpose } from 'src/common/enums/verifyUrl.enum';
+} from 'src/shared/dtos/auth.dto';
+import { ValidateOTPDto } from 'src/shared/dtos/otp.dto';
+import { OtpPurpose } from 'src/shared/enums/otp.enum';
+import { VerifyUrlPurpose } from 'src/shared/enums/verifyUrl.enum';
 
 @Controller()
 export class AuthController {

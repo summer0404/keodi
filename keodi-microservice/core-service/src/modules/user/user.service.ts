@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { UpdateUserProfileDto } from 'src/common/dtos/user.dto';
-import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
+import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
 import { firstValueFrom } from 'rxjs';
-import { CreateAttributeDto } from 'src/common/dtos/attribute.dto';
+import { CreateAttributeDto } from 'src/shared/dtos/attribute.dto';
 
 @Injectable()
 export class AttributeService {

@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FriendService } from './friend.service';
-import { FriendPaginationDto, UserCommonPaginationDto } from 'src/common/dtos/user.dto';
+import { FriendPaginationDto, UserCommonPaginationDto } from 'src/shared/dtos/user.dto';
 
 @Controller('friend')
 export class FriendController {

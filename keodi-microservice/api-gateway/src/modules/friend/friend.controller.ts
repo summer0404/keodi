@@ -15,8 +15,8 @@ import {
   GetFriendsQueryDto,
   GetPendingRequestsQueryDto,
   SendFriendRequestDto,
-} from 'src/common/dtos/friend.dto';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
+} from 'src/shared/dtos/friend.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { FriendService } from './friend.service';
 import {
   ApiAcceptFriendRequest,

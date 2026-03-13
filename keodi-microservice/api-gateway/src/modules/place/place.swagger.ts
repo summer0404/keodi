@@ -6,8 +6,8 @@ import {
   ApiOperation,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { NearMePlacesResponseDto } from 'src/common/dtos/place.dto';
-import { ReviewResponseDto } from 'src/common/dtos/review.dto';
+import { NearMePlacesResponseDto } from 'src/shared/dtos/place.dto';
+import { ReviewResponseDto } from 'src/shared/dtos/review.dto';
 
 export function ApiNearMePlace() {
   return applyDecorators(

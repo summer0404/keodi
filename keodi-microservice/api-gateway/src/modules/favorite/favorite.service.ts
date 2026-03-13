@@ -5,9 +5,9 @@ import {
   FavoriteResponseDto,
   FavoritesListResponseDto,
   IsFavoriteResponseDto,
-} from 'src/common/dtos/favorite.dto';
-import { PlaceSortBy, SortBy, SortOrder } from 'src/common/enums/sort.enum';
-import { UserAction } from 'src/common/enums/user.enum';
+} from 'src/shared/dtos/favorite.dto';
+import { PlaceSortBy, SortBy, SortOrder } from 'src/shared/enums/sort.enum';
+import { UserAction } from 'src/shared/enums/user.enum';
 
 @Injectable()
 export class FavoriteService {

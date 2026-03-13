@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ClientKafka } from "@nestjs/microservices";
 import * as bcrypt from "bcrypt"
-import { VerifyUrlPurpose } from "src/common/enums/verifyUrl.enum";
-import { VerifyUrlDto } from "src/common/dtos/verifyUrl.dto";
-import { getTTLForPurpose } from "src/common/utils/ttl-redis.helper";
+import { VerifyUrlPurpose } from "src/shared/enums/verifyUrl.enum";
+import { VerifyUrlDto } from "src/shared/dtos/verifyUrl.dto";
+import { getTTLForPurpose } from "src/shared/utils/ttl-redis.helper";
 import { RedisService } from "src/providers/redis/redis.service";
 
 @Injectable()

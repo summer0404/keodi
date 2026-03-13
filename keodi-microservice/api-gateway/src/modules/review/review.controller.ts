@@ -1,10 +1,10 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ReviewService } from './review.service';
-import { CreateReviewDto } from 'src/common/dtos/review.dto';
+import { CreateReviewDto } from 'src/shared/dtos/review.dto';
 import { ApiCreateReview } from './review.swagger';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 
 @ApiTags('Reviews')
 @Controller('reviews')

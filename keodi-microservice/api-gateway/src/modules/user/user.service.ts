@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { UpdateUserProfileDto } from 'src/common/dtos/user.dto';
+import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 
 @Injectable()
 export class UserService {

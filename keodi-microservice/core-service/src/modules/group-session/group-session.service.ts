@@ -8,9 +8,9 @@ import {
   type GroupSession,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
-import { GroupSessionMessages } from 'src/common/constants/group-session.constant';
-import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
-import { GroupSessionHelper } from 'src/common/helpers/group-session.helper';
+import { GroupSessionMessages } from 'src/shared/constants/group-session.constant';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()

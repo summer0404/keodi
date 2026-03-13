@@ -21,12 +21,12 @@ import {
 import { CurrentAccessToken } from 'src/common/decorators/current-access-token.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
-import { CategoryOnboardingDto } from 'src/common/dtos/category.dto';
+import { CategoryOnboardingDto } from 'src/shared/dtos/category.dto';
 import {
   CurrentUserDto,
   UpdateUsernameDto,
   UpdateUserProfileDto,
-} from 'src/common/dtos/user.dto';
+} from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
 
 @Controller('users')

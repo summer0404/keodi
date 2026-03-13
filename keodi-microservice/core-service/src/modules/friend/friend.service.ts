@@ -1,9 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
-import { FriendPaginationDto, UserCommonPaginationDto } from 'src/common/dtos/user.dto';
-import { FriendSortBy } from 'src/common/enums/sort.enum';
-import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
+import { FriendPaginationDto, UserCommonPaginationDto } from 'src/shared/dtos/user.dto';
+import { FriendSortBy } from 'src/shared/enums/sort.enum';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()

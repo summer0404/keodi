@@ -1,5 +1,5 @@
-import { OtpPurpose } from "src/common/enums/otp.enum"
-import { VerifyUrlPurpose } from "src/common/enums/verifyUrl.enum"
+import { OtpPurpose } from "src/shared/enums/otp.enum"
+import { VerifyUrlPurpose } from "src/shared/enums/verifyUrl.enum"
 
 export const getTTLForPurpose = (purpose: string): number => {
     switch (purpose) {

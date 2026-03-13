@@ -1,8 +1,8 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
-import { CreateReviewDto, GetReviewsDto } from 'src/common/dtos/review.dto';
-import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
+import { CreateReviewDto, GetReviewsDto } from 'src/shared/dtos/review.dto';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { PlaceService } from '../place/place.service';
 
