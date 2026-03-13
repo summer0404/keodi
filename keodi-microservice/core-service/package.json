@@ -33,11 +33,13 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/microservices": "^11.1.10",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^6.1.1",
     "@paralleldrive/cuid2": "^3.3.0",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "class-validator": "^0.14.3",
     "dotenv": "^17.2.3",
+    "ioredis": "^5.10.0",
     "kafkajs": "^2.2.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

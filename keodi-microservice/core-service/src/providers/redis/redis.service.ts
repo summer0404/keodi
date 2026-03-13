@@ -21,7 +21,7 @@ export class RedisService {
         return await this.redis.exists(key) === 1
     }
 
-    async zrevrange(key: string, start: number, stop: number): Promise<string[]> {
-        return this.redis.zrevrange(key, start, stop)
+    async zadd(key: string, coreMember: (string | number)[]): Promise<void> {
+        await this.redis.zadd(key, ...coreMember)
     }
 }
