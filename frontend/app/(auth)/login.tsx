@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import { Eye, EyeClosed, CheckSquare, Square } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Alert, Pressable, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
@@ -34,14 +34,6 @@ export default function LoginScreen() {
   const hasCompletedCategoryOnboarding = useSettingStore(
     (state) => state.hasCompletedCategoryOnboarding
   );
-
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-      offlineAccess: false,
-    });
-  }, []);
 
   const loginMutation = useMutation({
     mutationFn: authService.login,
@@ -189,7 +181,10 @@ export default function LoginScreen() {
           Alert.alert('Login failed', 'Unable to resend verification email2.');
           return;
         }
-        router.replace('/check-email');
+        router.replace({
+          pathname: '/check-email',
+          params: { userId },
+        });
       }
 
       const message =
@@ -239,6 +234,8 @@ export default function LoginScreen() {
                 }
               }}
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
               className="flex-1 text-black py-3 px-0"
               placeholder={t('auth.password')}
             />

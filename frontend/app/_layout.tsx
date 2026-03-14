@@ -13,8 +13,10 @@ import { useSettingStore } from '@/store/useSettingStore';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppQueryProvider } from '@/providers/query-provider';
+import { configureGoogleSignIn } from '@/api/google-signin';
 
 SplashScreen.preventAutoHideAsync();
+configureGoogleSignIn();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

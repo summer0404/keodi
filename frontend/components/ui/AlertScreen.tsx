@@ -12,6 +12,8 @@ interface AlertScreenProps {
   primaryButtonAction: () => void;
   secondaryButtonText?: string;
   secondaryButtonAction?: () => void;
+  secondaryButtonMessage?: string;
+  secondaryButtonMessageType?: 'error' | 'success';
 }
 
 const defaultImage = require('@/assets/images/verifyEmail.png');
@@ -24,6 +26,8 @@ export default function AlertScreen({
   primaryButtonAction,
   secondaryButtonText,
   secondaryButtonAction,
+  secondaryButtonMessage,
+  secondaryButtonMessageType,
 }: AlertScreenProps) {
   const { t } = useTranslation();
 
@@ -47,13 +51,25 @@ export default function AlertScreen({
       </Button>
 
       {secondaryButtonText && secondaryButtonAction && (
-        <Button
-          variant="ghost"
-          className="mt-6 items-center"
-          onPress={() => secondaryButtonAction?.()}
-        >
-          <Typography className="text-gray-600">{t(secondaryButtonText)}</Typography>
-        </Button>
+        <>
+          <Button
+            variant="ghost"
+            className="mt-6 items-center"
+            onPress={() => secondaryButtonAction?.()}
+          >
+            <Typography className="text-gray-600">{t(secondaryButtonText)}</Typography>
+          </Button>
+          {secondaryButtonMessage && (
+            <Typography
+              className={
+                (secondaryButtonMessageType === 'success' ? 'text-green-500 ' : 'text-red-500 ') +
+                'text-[11px] mt-2 ml-1 leading-4'
+              }
+            >
+              {secondaryButtonMessage}
+            </Typography>
+          )}
+        </>
       )}
     </View>
   );
