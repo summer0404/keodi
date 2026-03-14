@@ -13,7 +13,6 @@ export class SearchService {
     async getTrending() {
         try {
             const redisTrendingSearches = await this.redisService.zrevrange('search:trending', 0, 5);
-
             if (redisTrendingSearches && redisTrendingSearches.length > 0) {
                 return redisTrendingSearches;
             }
@@ -23,6 +22,9 @@ export class SearchService {
             extractedTerm: string;
             score: number
         }[] = await firstValueFrom(this.clientKafka.send('search.trending', {}));
+        console.log('Received trending searches from Kafka:');
+
+        this.clientKafka.emit('search.update-trending-for-redis', { trendingSearches });
 
         return trendingSearches
             .sort((a, b) => b.score - a.score)

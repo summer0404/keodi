@@ -145,7 +145,8 @@ export class UserService {
             await this.prismaService.userCategory.createMany({
                 data: categoryIds.map(categoryId => ({
                     userId: existingUser.id,
-                    categoryId
+                    categoryId,
+                    isOnboardSelected: true
                 })),
                 skipDuplicates: true
             })

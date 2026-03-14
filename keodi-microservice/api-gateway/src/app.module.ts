@@ -14,6 +14,7 @@ import { FriendModule } from './modules/friend/friend.module';
 import { ReviewModule } from './modules/review/review.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
 import { GroupSessionModule } from './modules/group-session/group-session.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   providers: [
@@ -38,7 +39,8 @@ import { GroupSessionModule } from './modules/group-session/group-session.module
     GroupSessionModule,
     RedisModule,
     ReviewModule,
-    AttributeModule
+    AttributeModule,
+    SearchModule
   ],
 })
 export class AppModule { }

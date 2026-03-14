@@ -3,6 +3,7 @@ import { CreateSearchDto, SearchTrendingScoreDto } from 'src/shared/dtos/search.
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { MAX_RECENT_SEARCHES_PER_USER, SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
 
 @Injectable()
 export class SearchService {
@@ -12,7 +13,8 @@ export class SearchService {
     ){}
     async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
         try {
-            return await this.redisService.zadd('search:trending', trendingSearches.flatMap(search => [search.score, search.extractedTerm]));
+            await this.redisService.zadd('search:trending', trendingSearches.flatMap(search => [search.score, search.extractedTerm]));
+            await this.redisService.expire('search:trending', SEARCH_TRENDING_TTL_SECONDS);
         } catch (error) {
             return handleServiceErrorCatching(error)
         }
@@ -75,6 +77,36 @@ export class SearchService {
                 ORDER BY score DESC
                 LIMIT 50;
              `;
+        } catch (error) {
+            return handleServiceErrorCatching(error)
+        }
+    }
+
+    async clearOldHistory() {
+        try {
+            return await this.prismaService.$executeRaw`
+                DELETE FROM searches
+                WHERE id IN (
+                    SELECT id
+                    FROM (
+                        SELECT 
+                            id,
+                            user_id,
+                            created_at,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY user_id
+                                ORDER BY created_at DESC
+                            ) as row_number
+                        FROM searches
+                    ) as temp_table
+                    WHERE 
+                        created_at < NOW() - INTERVAL '30 day'
+                        AND (
+                            row_number > ${MAX_RECENT_SEARCHES_PER_USER}
+                            OR user_id IS NULL
+                        )
+                )
+            `
         } catch (error) {
             return handleServiceErrorCatching(error)
         }

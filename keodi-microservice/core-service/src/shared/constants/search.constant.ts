@@ -1,0 +1,2 @@
+export const MAX_RECENT_SEARCHES_PER_USER = 3
+export const SEARCH_TRENDING_TTL_SECONDS = 5 * 60

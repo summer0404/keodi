@@ -58,6 +58,7 @@ model User {
   friendships      Friendship[]    @relation("UserFriendships")
   friendsOf        Friendship[]    @relation("FriendFriendships")
   groupSessions    GroupSession[]  @relation("CreatedSessions")
+  searches         Search[]
 
   @@map("users")
 }
@@ -206,8 +207,10 @@ model PlaceAttribute {
 }
 
 model UserCategory {
-  userId     String @map("user_id")
-  categoryId String @map("category_id")
+  userId            String   @map("user_id")
+  categoryId        String   @map("category_id")
+  isOnboardSelected Boolean  @default(false) @map("is_onboard_selected")
+  lastInteractedAt  DateTime @default(now()) @updatedAt @map("last_interacted_at")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -381,4 +384,5 @@ model Search {
   createdAt     DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("searches")
 }

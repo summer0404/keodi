@@ -24,4 +24,8 @@ export class RedisService {
     async zadd(key: string, coreMember: (string | number)[]): Promise<void> {
         await this.redis.zadd(key, ...coreMember)
     }
+
+    async expire(key: string, seconds: number): Promise<void> {
+        await this.redis.expire(key, seconds)
+    }
 }
