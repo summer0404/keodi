@@ -22,7 +22,6 @@ export class SearchService {
             extractedTerm: string;
             score: number
         }[] = await firstValueFrom(this.clientKafka.send('search.trending', {}));
-        console.log('Received trending searches from Kafka:');
 
         this.clientKafka.emit('search.update-trending-for-redis', { trendingSearches });
 
