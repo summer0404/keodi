@@ -13,6 +13,8 @@ from app.repositories.review_repository import ReviewRepository
 from app.repositories.user_attribute_repository import UserAttributeRepository
 from app.repositories.user_action_repository import UserActionRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.user_category_repository import UserCategoryRepository
+from app.repositories.place_category_repository import PlaceCategoryRepository
 from app.common.constant import SMOOTHING_FACTOR, TIME_DECAY, UPDATE_USER_ATTRIBUTE_SCORE_THRESHOLD, ACTION_WEIGHTS
 from app.common.helper import clip
 
@@ -27,6 +29,8 @@ class Handlers:
     user_attribute_repository: Optional[UserAttributeRepository] = None
     user_action_repository: Optional[UserActionRepository] = None
     user_repository: Optional[UserRepository] = None
+    user_category_repository: Optional[UserCategoryRepository] = None
+    place_category_repository: Optional[PlaceCategoryRepository] = None
 
 
     def __init__(self):
@@ -42,6 +46,8 @@ class Handlers:
         self.user_attribute_repository = await UserAttributeRepository.start()
         self.user_action_repository = await UserActionRepository.start()
         self.user_repository = await UserRepository.start()
+        self.user_category_repository = await UserCategoryRepository.start()
+        self.place_category_repository = await PlaceCategoryRepository.start()
         return self
 
     def calculate_delta_time(self, last_updated) -> float:
@@ -140,6 +146,7 @@ class Handlers:
 
             await self.user_action_repository.create_user_action(user_id, place_id, action)
 
+            # Update attribute
             place_attributes = await self.place_attribute_repository.get_place_attiributes_by_place_id_and_threshold(place_id, UPDATE_USER_ATTRIBUTE_SCORE_THRESHOLD)
 
             for place_attribute in place_attributes:
@@ -148,6 +155,10 @@ class Handlers:
 
                 await self.user_attribute_repository.update_user_attribute(user_id, place_attribute.attributeId, new_score)
 
+            # Update category
+            place_categories = await self.place_category_repository.get_place_categories_by_place_id(place_id)
+            for place_category in place_categories:
+                await self.user_category_repository.update_user_category(user_id, place_category.categoryId)
         except Exception as e:
             raise Exception(f"Failed to process user action: {str(e)}")
 

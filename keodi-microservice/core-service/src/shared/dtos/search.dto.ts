@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional } from "class-validator";
+import { IsNotEmpty, IsNumber, IsOptional } from "class-validator";
 
 export class CreateSearchDto {
     @IsNotEmpty()
@@ -6,4 +6,14 @@ export class CreateSearchDto {
 
     @IsOptional()
     userId?: string;
+}
+
+
+export class SearchTrendingScoreDto {
+    @IsNotEmpty()
+    extractedTerm: string;
+    
+    @IsNotEmpty()
+    @IsNumber()
+    score: number;
 }

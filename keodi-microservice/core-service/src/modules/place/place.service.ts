@@ -332,13 +332,14 @@ export class PlaceService {
                     this.clientKafka.send('intelligence.extract-user-intent', { search })
                 );
 
-                this.clientKafka.emit('search.create', {
-                    userId,
-                    extractedTerm: search,
-                });
-
                 const keywordPattern = extractedIntent.keywords ? `%${extractedIntent.keywords}%` : undefined;
 
+                if(keywordPattern) {
+                    this.clientKafka.emit('search.create', {
+                        userId,
+                        extractedTerm: extractedIntent.keywords,
+                    });
+                }
                 // Ưu tiên keyword hơn là categories
                 const categoriesToUse = extractedIntent.keywords ? undefined : extractedIntent.categories;
 
