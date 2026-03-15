@@ -2,7 +2,7 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { AttributeService } from './attribute.service';
 import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { CreateAttributeDto } from 'src/common/dtos/attribute.dto';
+import { CreateAttributeDto } from 'src/shared/dtos/attribute.dto';
 import { ApiCreateAttributes } from './attribute.swagger';
 
 @ApiBearerAuth('access-token')

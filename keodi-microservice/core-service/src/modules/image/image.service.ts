@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { UserImageType } from '@prisma/client';
-import { ImageConstants } from 'src/common/constants/image.constant';
-import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
+import { ImageConstants } from 'src/shared/constants/image.constant';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { S3Service } from 'src/providers/s3/s3.service';
 

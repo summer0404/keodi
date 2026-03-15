@@ -5,7 +5,7 @@ import { ConvertToHttpExceptionFilter } from './common/filters/rpc-to-http-excep
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './modules/user/user.module';
 import { KafkaModule } from './providers/kafka/kafka.module';
-import { JwtAuthGuard } from './modules/auth/jwt.guard';
+import { JwtAuthGuard } from './common/guards/jwt.guard';
 import { PlaceModule } from './modules/place/place.module';
 import { RedisModule } from './providers/redis/redis.module';
 import { CategoryModule } from './modules/category/category.module';
@@ -14,6 +14,7 @@ import { FriendModule } from './modules/friend/friend.module';
 import { ReviewModule } from './modules/review/review.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
 import { GroupSessionModule } from './modules/group-session/group-session.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   providers: [
@@ -39,6 +40,7 @@ import { GroupSessionModule } from './modules/group-session/group-session.module
     RedisModule,
     ReviewModule,
     AttributeModule,
+    SearchModule
   ],
 })
 export class AppModule { }

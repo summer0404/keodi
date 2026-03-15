@@ -13,11 +13,12 @@ import {
   NearMePlacesResponseDto,
   NearMeQueryDto,
   SearchDto
-} from 'src/common/dtos/place.dto';
+} from 'src/shared/dtos/place.dto';
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
-import { ApiGetPlaceById, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
+import { ApiGetPlaceById, ApiGetPlaceReviews, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 
 @ApiTags('Places')
 @Controller('places')
@@ -37,15 +38,27 @@ export class PlaceController {
   @ApiSearchPlace()
   async search(
     @CurrentUser() user: CurrentUserDto, 
-    @Query() query: SearchDto) {
+    @Query() query: SearchDto
+  ) {
     return await this.placeService.search(query, user.id);
   }
 
   @Get(':id')
   @ApiGetPlaceById()
-  async getPlaceById(
+  async getById(
     @CurrentUser() user: CurrentUserDto, 
-    @Param('id') id: string) {
-    return await this.placeService.getPlaceById(id, user.id);
+    @Param('id') id: string
+  ) {
+    return await this.placeService.getById(id, user.id);
+  }
+
+  @Get(':id/reviews')
+  @ApiGetPlaceReviews()
+  async getReviewsById(
+    @CurrentUser() user: CurrentUserDto,
+    @Query() query: GetReviewsDto, 
+    @Param('id') id: string
+  ) {
+    return await this.placeService.getReviewsById(query, id, user.id);
   }
 }

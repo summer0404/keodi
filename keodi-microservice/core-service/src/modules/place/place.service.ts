@@ -1,15 +1,15 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ClientKafka, RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
-import { GeoConstants } from 'src/common/constants/place.constant';
-import { FriendSortBy, SortBy, SortOrder } from 'src/common/enums/sort.enum';
+import { GeoConstants } from 'src/shared/constants/place.constant';
+import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from '../image/image.service';
-import { NearMeDto, SearchDto } from 'src/common/dtos/place.dto';
-import { SearchMode } from 'src/common/enums/search.enum';
-import { handleServiceErrorCatching } from 'src/common/helpers/error.helper';
+import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
+import { SearchMode } from 'src/shared/enums/search.enum';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { firstValueFrom } from 'rxjs';
-import { PlaceWithDistance } from 'src/common/interfaces/place.interface';
+import { PlaceWithDistance } from 'src/shared/interfaces/place.interface';
 
 @Injectable()
 export class PlaceService {
@@ -25,7 +25,7 @@ export class PlaceService {
         return { latDelta, longDelta };
     }
 
-    private buildPaginationParams(page: number, limit: number, sortBy: SortBy | FriendSortBy, sortOrder: SortOrder) {
+    private buildPaginationParams(page: number, limit: number, sortBy: PlaceSortBy, sortOrder: SortOrder) {
         const offset = (page - 1) * limit;
         const order = sortOrder.toUpperCase();
         const orderByClause = `ORDER BY ${sortBy} ${order}`;
@@ -334,6 +334,12 @@ export class PlaceService {
 
                 const keywordPattern = extractedIntent.keywords ? `%${extractedIntent.keywords}%` : undefined;
 
+                if(keywordPattern) {
+                    this.clientKafka.emit('search.create', {
+                        userId,
+                        extractedTerm: extractedIntent.keywords,
+                    });
+                }
                 // Ưu tiên keyword hơn là categories
                 const categoriesToUse = extractedIntent.keywords ? undefined : extractedIntent.categories;
 

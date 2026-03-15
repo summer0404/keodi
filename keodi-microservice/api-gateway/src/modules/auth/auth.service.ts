@@ -10,17 +10,16 @@ import {
   ResetPasswordDto,
   ResetPasswordOTPDto,
   ValidateOTPDto,
-} from 'src/common/dtos/auth.dto';
-import { CurrentUserDto } from 'src/common/dtos/user.dto';
-import { GoogleService } from 'src/providers/google/google.service';
+} from 'src/shared/dtos/auth.dto';
+import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject('KAFKA_SERVICE') private client: ClientKafka,
     private readonly configService: ConfigService,
-    private readonly googleService: GoogleService
-  ) { }
+    private readonly googleService: GoogleService,
+  ) {}
 
   private async verifyGoogleIdToken(token: string) {
     try {
@@ -33,7 +32,7 @@ export class AuthService {
         email: payload.email,
         firstName: payload.given_name,
         lastName: payload.family_name,
-        picture: payload.picture
+        picture: payload.picture,
       };
     } catch (error) {
       throw new UnauthorizedException('Invalid Google token');
@@ -73,7 +72,10 @@ export class AuthService {
     }
   }
 
-  async googleLoginMobile(@Res({ passthrough: true }) res: Response, token: string) {
+  async googleLoginMobile(
+    @Res({ passthrough: true }) res: Response,
+    token: string,
+  ) {
     try {
       const userInfo = await this.verifyGoogleIdToken(token);
 

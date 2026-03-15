@@ -1,9 +1,8 @@
 /* eslint-disable prettier/prettier */
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
 import { PlaceService } from './place.service';
-import { NearMeDto, SearchDto } from 'src/common/dtos/place.dto';
+import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
 
 @Controller('place')
 export class PlaceController {

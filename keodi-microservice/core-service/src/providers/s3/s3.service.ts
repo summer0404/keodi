@@ -2,7 +2,7 @@ import { GetObjectCommand, GetObjectCommandInput, PutObjectCommand, PutObjectCom
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { ImageConstants } from "src/common/constants/image.constant";
+import { ImageConstants } from "src/shared/constants/image.constant";
 
 @Injectable()
 export class S3Service {

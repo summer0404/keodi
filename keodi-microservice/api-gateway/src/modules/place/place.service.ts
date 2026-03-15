@@ -2,25 +2,22 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { PaginationConstants } from 'src/common/constants/pagination.constants';
-import { PlaceConstants } from 'src/common/constants/place.constant';
-import { NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/common/dtos/place.dto';
-import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
+import { NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/shared/dtos/place.dto';
+import { GetReviewsDto } from 'src/shared/dtos/review.dto';
+import { ReviewService } from '../review/review.service';
+import { UserAction } from 'src/shared/enums/user.enum';
 
 @Injectable()
 export class PlaceService {
-    constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) { }
+    constructor(
+        private readonly reviewService: ReviewService,
+        @Inject('KAFKA_SERVICE') private readonly client: ClientKafka
+    ) { }
 
     async getNearbyPlaces(query: NearMeQueryDto, userId: string): Promise<NearMePlacesResponseDto> {
         return await firstValueFrom(
             this.client.send('place.near-me', {
-                latitude: query.latitude,
-                longitude: query.longitude,
-                radius: query.radius || PlaceConstants.DEFAULT_RADIUS,
-                page: query.page || PaginationConstants.DEFAULT_PAGE,
-                limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
-                sortBy: query.sortBy || SortBy.DISTANCE,
-                sortOrder: query.sortOrder || SortOrder.ASC,
+                ...query,
                 userId,
             })
         );
@@ -38,7 +35,23 @@ export class PlaceService {
         );
     }
 
-    async getPlaceById(id: string, userId: string): Promise<PlaceDistanceDto> {
+    async getById(id: string, userId: string): Promise<PlaceDistanceDto> {
+        this.client.emit('intelligence.user-action', {
+            userId,
+            placeId: id,
+            action: UserAction.CLICK,
+        });
+
         return await firstValueFrom(this.client.send('place.get-by-id', { id, userId }));
+    }
+
+    async getReviewsById (getReviewsDto: GetReviewsDto, placeId: string, userId: string) {
+        this.client.emit('intelligence.user-action', {
+            userId,
+            placeId,
+            action: UserAction.READ_REVIEWS,
+        });
+
+        return await this.reviewService.getByPlaceId(getReviewsDto, placeId);
     }
 }

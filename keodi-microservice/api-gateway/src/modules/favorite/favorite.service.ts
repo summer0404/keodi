@@ -5,8 +5,9 @@ import {
   FavoriteResponseDto,
   FavoritesListResponseDto,
   IsFavoriteResponseDto,
-} from 'src/common/dtos/favorite.dto';
-import { SortBy, SortOrder } from 'src/common/enums/sort.enum';
+} from 'src/shared/dtos/favorite.dto';
+import { PlaceSortBy, SortBy, SortOrder } from 'src/shared/enums/sort.enum';
+import { UserAction } from 'src/shared/enums/user.enum';
 
 @Injectable()
 export class FavoriteService {
@@ -16,6 +17,12 @@ export class FavoriteService {
     userId: string,
     placeId: string,
   ): Promise<FavoriteResponseDto> {
+    this.client.emit('intelligence.user-action', {
+      userId,
+      placeId,
+      action: UserAction.FAVORITE,
+    });
+
     return await firstValueFrom(
       this.client.send('favorite.add', { userId, placeId }),
     );
@@ -34,7 +41,7 @@ export class FavoriteService {
     userId: string,
     page: number,
     limit: number,
-    sortBy?: SortBy,
+    sortBy?: PlaceSortBy,
     sortOrder?: SortOrder,
   ): Promise<FavoritesListResponseDto> {
     return await firstValueFrom(

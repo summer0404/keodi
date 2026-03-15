@@ -21,4 +21,8 @@ export class RedisService {
     async has(key: string): Promise<boolean> {
         return await this.redis.exists(key) === 1
     }
+
+    async zrevrange(key: string, start: number, stop: number): Promise<string[]> {
+        return this.redis.zrevrange(key, start, stop)
+    }
 }

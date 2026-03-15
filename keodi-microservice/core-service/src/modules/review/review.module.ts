@@ -7,9 +7,10 @@ import { PlaceModule } from '../place/place.module';
 @Module({
   imports: [
     KafkaModule,
-    PlaceModule
+    PlaceModule,
   ],
   controllers: [ReviewController],
   providers: [ReviewService],
+  exports: [ReviewService]
 })
 export class ReviewModule {}

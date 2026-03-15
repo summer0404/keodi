@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { getEmailSubject } from 'src/common/utils/email.helper';
-import { SendOTPMailDto, SendVerifyURLDto } from 'src/common/dtos/email.dto';
+import { getEmailSubject } from 'src/shared/utils/email.helper';
+import { SendOTPMailDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
 import { EmailService } from 'src/providers/email/email.service';
 
 @Injectable()

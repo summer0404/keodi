@@ -51,6 +51,7 @@ model User {
   places             Place[]
   favorites          Favorite[]
   sessionMemberships GroupSessionMember[]
+  searches           Search[]
 
   sentRequests     FriendRequest[] @relation("SentRequests")
   receivedRequests FriendRequest[] @relation("ReceivedRequests")
@@ -132,14 +133,16 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  placeAttributes PlaceAttribute[]
-  userActions     UserAction[]
-  reviews         Review[]
-  placeImages     PlaceImage[]
-  openingHours    OpeningHour[]
-  placeCategories PlaceCategory[]
-  owner           User?            @relation(fields: [ownerId], references: [id])
-  favorites       Favorite[]
+  placeAttributes  PlaceAttribute[]
+  userActions      UserAction[]
+  reviews          Review[]
+  placeImages      PlaceImage[]
+  openingHours     OpeningHour[]
+  placeCategories  PlaceCategory[]
+  owner            User?            @relation(fields: [ownerId], references: [id])
+  favorites        Favorite[]
+  sessionVotes     SessionVote[]
+  wonGroupSessions GroupSession[]   @relation("SessionWinningPlace")
 
   @@index([latitude, longitude])
   @@map("places")
@@ -203,8 +206,10 @@ model PlaceAttribute {
 }
 
 model UserCategory {
-  userId     String @map("user_id")
-  categoryId String @map("category_id")
+  userId            String   @map("user_id")
+  categoryId        String   @map("category_id")
+  isOnboardSelected Boolean  @default(false) @map("is_onboard_selected")
+  lastInteractedAt  DateTime @default(now()) @updatedAt @map("last_interacted_at")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -214,9 +219,10 @@ model UserCategory {
 }
 
 model UserAttribute {
-  userId      String @map("user_id")
-  attributeId String @map("attribute_id")
-  score       Float  @default(0)
+  userId      String   @map("user_id")
+  attributeId String   @map("attribute_id")
+  score       Float    @default(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   attribute Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
@@ -230,7 +236,6 @@ model UserAction {
   userId    String         @map("user_id")
   placeId   String         @map("place_id")
   action    UserActionType
-  score     Float
   createdAt DateTime       @default(now()) @map("created_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -308,16 +313,42 @@ enum FriendRequestStatus {
   REJECTED
 }
 
-model GroupSession {
-  sessionId String             @id @default(cuid()) @map("session_id")
-  createdBy String             @map("created_by")
-  shareCode String             @unique @map("share_code")
-  createdAt DateTime           @default(now()) @map("created_at")
-  status    GroupSessionStatus @default(ACTIVE)
+enum VoteStatus {
+  OPEN
+  FINALIZED
+}
 
-  creator User @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
+model SessionVote {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  memberId    String   @unique @map("member_id")
+  placeId     String   @map("place_id")
+  isFinalized Boolean  @default(false) @map("is_finalized")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  session GroupSession       @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  member  GroupSessionMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  place   Place              @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("session_votes")
+}
+
+model GroupSession {
+  sessionId      String             @id @default(cuid()) @map("session_id")
+  createdBy      String             @map("created_by")
+  shareCode      String             @unique @map("share_code")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  status         GroupSessionStatus @default(ACTIVE)
+  voteStatus     VoteStatus         @default(OPEN) @map("vote_status")
+  finalizedAt    DateTime?          @map("finalized_at")
+  winningPlaceId String?            @map("winning_place_id")
+
+  creator      User   @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
+  winningPlace Place? @relation("SessionWinningPlace", fields: [winningPlaceId], references: [id], onDelete: SetNull)
 
   members GroupSessionMember[]
+  votes   SessionVote[]
 
   @@map("group_sessions")
 }
@@ -338,7 +369,20 @@ model GroupSessionMember {
   session GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
   user    User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  vote SessionVote?
+
   @@unique([sessionId, userId])
   @@unique([sessionId, guestId])
   @@map("group_session_members")
+}
+
+model Search {
+  id            String   @id @default(cuid())
+  userId        String?  @map("user_id")
+  extractedTerm String   @map("extracted_term")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("searches")
 }

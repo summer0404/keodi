@@ -10,10 +10,13 @@ import { ReviewModule } from './modules/review/review.module';
 import { UserModule } from './modules/user/user.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
 import { GroupSessionModule } from './modules/group-session/group-session.module';
+import { SearchModule } from './modules/search/search.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PlaceModule,
     PrismaModule,
     UserModule,
@@ -24,6 +27,7 @@ import { GroupSessionModule } from './modules/group-session/group-session.module
     FriendModule,
     AttributeModule,
     GroupSessionModule,
+    SearchModule,
   ],
   controllers: [],
   providers: [],
