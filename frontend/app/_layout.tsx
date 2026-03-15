@@ -1,6 +1,5 @@
 import '../global.css';
 import i18n from '@/i18n';
-import i18n from '@/i18n';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -14,10 +13,10 @@ import { useSettingStore } from '@/store/useSettingStore';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppQueryProvider } from '@/providers/query-provider';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppQueryProvider } from '@/providers/query-provider';
+import { configureGoogleSignIn } from '@/api/google-signin';
 
 SplashScreen.preventAutoHideAsync();
+configureGoogleSignIn();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

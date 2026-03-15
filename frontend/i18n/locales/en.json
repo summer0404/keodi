@@ -82,7 +82,8 @@
     "cancel": "Cancel",
     "resendEmail": "Resend verification email",
     "resetPassword": "Reset password",
-    "logOut": "Log Out"
+    "logOut": "Log Out",
+    "resendSuccess": "Verification email has been resent. Please check your email inbox"
   },
   "errors": {
     "usernameRequired": "Username is required",

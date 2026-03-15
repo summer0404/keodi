@@ -23,6 +23,13 @@ export const authService = {
     const response = await apiClient.post<LoginResponse>(API_ENDPOINTS.LOGIN, payload);
     return response.data;
   },
+  googleLoginMobile: async (token: string): Promise<{ accessToken: string }> => {
+    const response = await apiClient.post<{ accessToken: string }>(
+      API_ENDPOINTS.GOOGLE_LOGIN_MOBILE,
+      { token }
+    );
+    return response.data;
+  },
   resendVerifyEmail: async (userId: string): Promise<ResendVerifyEmailResponse> => {
     const response = await apiClient.get<ResendVerifyEmailResponse>(
       `${API_ENDPOINTS.RESEND_VERIFY_EMAIL}/${userId}`

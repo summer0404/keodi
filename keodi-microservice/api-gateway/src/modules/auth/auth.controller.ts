@@ -29,9 +29,9 @@ import {
   AuthResponseDto,
   ForgotPasswordOTPDto,
   ForgotPasswordOTPResponseDto,
+  GoogleLoginMobileDto,
   LoginDto,
   MeResponseDto,
-  RefreshDto,
   RegisterDto,
   RegisterOkResponseDto,
   ResetPasswordDto,
@@ -52,7 +52,7 @@ import { AuthService } from './auth.service';
 @ApiInternalServerErrorResponse({ description: 'Internal server error' })
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @SkipAuth()
   @Post('register')
@@ -86,7 +86,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with Google' })
   @ApiResponse({ description: 'Redirect to Google account selection page' })
   @UseGuards(AuthGuard('google'))
-  async googleLogin() {}
+  async googleLogin() { }
 
   @SkipAuth()
   @Get('google/callback')
@@ -103,6 +103,21 @@ export class AuthController {
       });
 
     return await this.authService.googleCallback(res, req.user);
+  }
+
+  @SkipAuth()
+  @Post('google/mobile')
+  @ApiOperation({ summary: 'Login with Google for mobile' })
+  @ApiOkResponse({
+    description: 'Login successful',
+    type: AuthResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Invalid Google token' })
+  async googleLoginMobile(
+    @Res({ passthrough: true }) res: Response,
+    @Body() googleLoginMobileDto: GoogleLoginMobileDto,
+  ) {
+    return await this.authService.googleLoginMobile(res, googleLoginMobileDto.token);
   }
 
   @SkipAuth()
@@ -237,9 +252,8 @@ export class AuthController {
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-    @Body() body: RefreshDto,
   ) {
-    const refreshToken = req.cookies?.['refreshToken'] ?? body.refreshToken;
+    const refreshToken = req.cookies?.['refreshToken'];
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
     return await this.authService.refresh(res, refreshToken);
   }

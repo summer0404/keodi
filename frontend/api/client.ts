@@ -20,6 +20,28 @@ const resolveApiBaseUrl = () => {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+const AUTH_BYPASS_REFRESH_ENDPOINTS = [
+  API_ENDPOINTS.LOGIN,
+  API_ENDPOINTS.REFRESH,
+  API_ENDPOINTS.REGISTER,
+  API_ENDPOINTS.FORGOT_PASSWORD_OTP,
+  API_ENDPOINTS.VALIDATE_FORGOT_PASSWORD_OTP,
+  API_ENDPOINTS.RESET_PASSWORD,
+  API_ENDPOINTS.GOOGLE_LOGIN_MOBILE,
+] as const;
+
+const isRefreshBypassedRequest = (url?: string) => {
+  if (!url) {
+    return false;
+  }
+
+  return (
+    AUTH_BYPASS_REFRESH_ENDPOINTS.some((endpoint) => url === endpoint || url.endsWith(endpoint)) ||
+    url.startsWith(API_ENDPOINTS.RESEND_VERIFY_EMAIL) ||
+    url.includes(`${API_ENDPOINTS.RESEND_VERIFY_EMAIL}/`)
+  );
+};
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -68,8 +90,7 @@ apiClient.interceptors.response.use(
     if (
       error.response?.status !== 401 ||
       originalRequest._retry ||
-      originalRequest.url === API_ENDPOINTS.LOGIN ||
-      originalRequest.url === API_ENDPOINTS.REFRESH
+      isRefreshBypassedRequest(originalRequest.url)
     ) {
       return Promise.reject(error);
     }

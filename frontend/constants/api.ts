@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
   VALIDATE_FORGOT_PASSWORD_OTP: `${API_BASE_PATHS.AUTH}/validate-forgot-password-otp`,
   RESET_PASSWORD: `${API_BASE_PATHS.AUTH}/reset-password`,
   REFRESH: `${API_BASE_PATHS.AUTH}/refresh`,
+  GOOGLE_LOGIN_MOBILE: `${API_BASE_PATHS.AUTH}/google/mobile`,
   ONBOARDING_CATEGORIES: `${API_BASE_PATHS.CATEGORIES}/onboarding`,
   SUBMIT_ONBOARDING: `${API_BASE_PATHS.USERS}/onboarding`,
 } as const;
