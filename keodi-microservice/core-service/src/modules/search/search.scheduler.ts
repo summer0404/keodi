@@ -6,7 +6,7 @@ import { SearchService } from "./search.service";
 export class SearchScheduler {
     constructor(private readonly searchService: SearchService,) {}
 
-    @Cron('*/5 * * * *')
+    @Cron('*/5 * * * *', { disabled: true })
     async updateTrendingSearchesForRedis() {
         const trendingSearches = await this.searchService.getTrending(); 
         await this.searchService.updateTrendingForRedis(trendingSearches);
