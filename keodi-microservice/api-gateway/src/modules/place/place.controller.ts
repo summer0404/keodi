@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,6 +20,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { ApiGetPlaceById, ApiGetPlaceReviews, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
+import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @ApiTags('Places')
 @Controller('places')
@@ -60,5 +62,11 @@ export class PlaceController {
     @Param('id') id: string
   ) {
     return await this.placeService.getReviewsById(query, id, user.id);
+  }
+
+  @UseInterceptors(CacheInterceptor)
+  @Get('trending')
+  async getTrending() {
+    return await this.placeService.getTrending();
   }
 }
