@@ -72,7 +72,7 @@
     "setPassword": "Đặt mật khẩu",
     "confirmPassword": "Xác nhận mật khẩu",
     "or": "Hoặc",
-    "checkYourEmail": "Kiểm tra email của bạn",
+    "checkYourEmail": "Kiểm tra email của bạn nhé!",
     "verificationEmail": "Chúng tôi đã gửi cho bạn một liên kết xác minh. Vui lòng mở email của bạn để xác nhận tài khoản",
     "backToLogin": "Quay lại đăng nhập",
     "sendResetLink": "Gửi mã OTP",
@@ -82,7 +82,8 @@
     "cancel": "Hủy",
     "resendEmail": "Gửi lại email xác minh",
     "resetPassword": "Đặt lại mật khẩu",
-    "logOut": "Đăng xuất"
+    "logOut": "Đăng xuất",
+    "resendSuccess": "Email xác minh đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn"
   },
   "errors": {
     "usernameRequired": "Bạn phải nhập tên người dùng",

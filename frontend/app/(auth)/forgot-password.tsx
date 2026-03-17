@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -27,7 +28,9 @@ export default function ForgotPasswordScreen() {
   const [emailError, setEmailError] = useState('');
   const [requestError, setRequestError] = useState('');
   const [otpError, setOtpError] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const otpInputRefs = useRef<Array<TextInput | null>>([]);
 
   const forgotPasswordMutation = useMutation({
@@ -43,16 +46,34 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    const timer = setTimeout(() => {
-      otpInputRefs.current[0]?.focus();
-    }, 120);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    return () => clearTimeout(timer);
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+      setKeyboardHeight(0);
+    };
   }, [isOtpModalVisible]);
 
   const handleCloseOtpModal = () => {
     setIsOtpModalVisible(false);
     setOtpError('');
+    setKeyboardHeight(0);
+  };
+
+  const handleOtpModalShow = () => {
+    setTimeout(() => {
+      otpInputRefs.current[0]?.focus();
+    }, 150);
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -272,7 +293,7 @@ export default function ForgotPasswordScreen() {
       </Button>
 
       <Pressable className="mt-6 items-center" onPress={() => router.replace('/login')}>
-        <Typography className="text-[#3B82F6]">{t('auth.backToLogin')}</Typography>
+        <Typography className="text-gray-500">{t('auth.backToLogin')}</Typography>
       </Pressable>
 
       <Modal
@@ -280,16 +301,21 @@ export default function ForgotPasswordScreen() {
         transparent
         animationType="fade"
         onRequestClose={handleCloseOtpModal}
+        onShow={handleOtpModalShow}
+        statusBarTranslucent
+        navigationBarTranslucent
       >
-        <KeyboardAvoidingView
-          className="flex-1 justify-end bg-black/50"
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+        <View className="flex-1 justify-end bg-black/50">
           <TouchableWithoutFeedback onPress={handleCloseOtpModal}>
             <View className="absolute inset-0" />
           </TouchableWithoutFeedback>
 
-          <View className="bg-white w-full rounded-t-[24px] px-4 pb-8 pt-3">
+          <View
+            className="bg-white w-full rounded-t-[24px] px-4 pt-3"
+            style={{
+              paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : Math.max(insets.bottom, 16),
+            }}
+          >
             <View className="items-center mb-3">
               <View className="w-10 h-1 bg-gray-300 rounded-full" />
             </View>
@@ -344,7 +370,7 @@ export default function ForgotPasswordScreen() {
               {t('auth.cancel')}
             </Button>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </View>
   );

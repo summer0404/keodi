@@ -87,8 +87,11 @@ export default function RegisterScreen() {
         password: values.password,
       },
       {
-        onSuccess: () => {
-          router.replace('/check-email');
+        onSuccess: (result) => {
+          router.replace({
+            pathname: '/check-email',
+            params: result.userId ? { userId: result.userId } : undefined,
+          });
         },
         onError: (error) => {
           if (axios.isAxiosError(error)) {
@@ -122,12 +125,10 @@ export default function RegisterScreen() {
               }
             }
 
-            router.replace('/check-email');
             Alert.alert('Register failed', message);
 
             return;
           }
-          router.replace('/check-email');
           Alert.alert('Register failed', 'Please try again.');
         },
       }
@@ -201,6 +202,8 @@ export default function RegisterScreen() {
                   onChangeText={field.onChange}
                   onBlur={field.onBlur}
                   secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   className="flex-1 text-black px-0"
                   placeholder={t('auth.password')}
                 />
@@ -233,6 +236,8 @@ export default function RegisterScreen() {
                   onChangeText={field.onChange}
                   onBlur={field.onBlur}
                   secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   className="flex-1 text-black px-0"
                   placeholder={t('auth.confirmPassword')}
                 />
