@@ -40,7 +40,7 @@ export class RecommendationService {
                 FROM places p
                 LEFT JOIN user_actions ua
                     ON ua.place_id = p.id
-                    AND ua.created_at > NOW() - INTERVAL '7 days'
+                    -- AND ua.created_at > NOW() - INTERVAL '7 days'
                 WHERE
                     p.name ILIKE '%' || ${term} || '%'
                 GROUP BY p.id
@@ -110,7 +110,7 @@ export class RecommendationService {
             COUNT(*) AS actions
           FROM user_actions ua
           CROSS JOIN constants c
-          WHERE ua.created_at > c.current_time - INTERVAL '24 hours'
+          -- WHERE ua.created_at > c.current_time - INTERVAL '48 hours'
           GROUP BY ua.place_id
         )
         SELECT

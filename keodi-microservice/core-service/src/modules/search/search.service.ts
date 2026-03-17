@@ -64,11 +64,9 @@ export class SearchService {
                             END
                         ) as decay_score
                     FROM searches
-                    WHERE
-                        created_at > NOW() - INTERVAL '24 hour'
+                    -- WHERE created_at > NOW() - INTERVAL '24 hour'
                     GROUP BY extracted_term
-                    -- HAVING
-                    --    COUNT(*) > 0
+                    -- HAVING COUNT(*) > 0
                 )
                 SELECT
                     extracted_term as "extractedTerm",

@@ -18,7 +18,7 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiGetPlaceById, ApiGetPlaceReviews, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 
@@ -66,6 +66,7 @@ export class PlaceController {
 
   @UseInterceptors(CacheInterceptor)
   @Get('trending')
+  @ApiGetTrendingPlaces()
   async getTrending() {
     return await this.placeService.getTrending();
   }

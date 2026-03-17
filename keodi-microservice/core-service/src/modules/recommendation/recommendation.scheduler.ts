@@ -10,7 +10,7 @@ export class RecommendationScheduler {
         private readonly searchService: SearchService
     ) { }
 
-    @Cron('*/5 * * * *')
+    @Cron('*/5 * * * *', { disabled: true})
     async updateTrendingForRedis() {
         const trendingSearches = await this.searchService.getTrending();
         await this.searchService.updateTrendingForRedis(trendingSearches);
