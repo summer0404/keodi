@@ -1,7 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { FcmService } from 'src/providers/fcm/fcm.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { PresenceService } from 'src/providers/presence/presence.service';
 import {
   NotificationPreferredChannel,
@@ -13,16 +13,17 @@ import { DispatchNotificationEvent } from './notification.dispatch.controller';
 @Injectable()
 export class NotificationDispatcherService {
   constructor(
-    @Inject('KAFKA_CLIENT') private readonly kafka: ClientKafka,
+    private readonly kafkaService: KafkaService,
     private readonly fcmService: FcmService,
     private readonly presenceService: PresenceService,
   ) {}
 
   async dispatch(evt: DispatchNotificationEvent): Promise<void> {
+    const kafka = this.kafkaService.getClient();
     const channel = evt.preferredChannel ?? NotificationPreferredChannel.BOTH;
 
     //persist pending
-    this.kafka.emit(NotificationTopics.PersistInbox, {
+    kafka.emit(NotificationTopics.PersistInbox, {
       ...evt,
       channel,
       status: NotificationStatus.PENDING,
@@ -37,7 +38,7 @@ export class NotificationDispatcherService {
       (channel === NotificationPreferredChannel.WEBSOCKET ||
         channel === NotificationPreferredChannel.BOTH)
     ) {
-      this.kafka.emit(NotificationTopics.RealtimePush, {
+      kafka.emit(NotificationTopics.RealtimePush, {
         userId: evt.userId,
         event: evt,
       });
@@ -50,7 +51,7 @@ export class NotificationDispatcherService {
     ) {
       try {
         const tokensRes = await firstValueFrom(
-          this.kafka.send(NotificationTopics.GetActiveTokens, {
+          kafka.send(NotificationTopics.GetActiveTokens, {
             userId: evt.userId,
           }),
         );
@@ -65,7 +66,7 @@ export class NotificationDispatcherService {
 
           //Deactive invalid tokens
           for (const token of invalidTokens) {
-            this.kafka.emit(NotificationTopics.DeactivateToken, {
+            kafka.emit(NotificationTopics.DeactivateToken, {
               userId: evt.userId,
               token,
             });
@@ -77,7 +78,7 @@ export class NotificationDispatcherService {
       }
     }
     if (delivered) {
-      this.kafka.emit(NotificationTopics.PersistInbox, {
+      kafka.emit(NotificationTopics.PersistInbox, {
         ...evt,
         channel,
         status: NotificationStatus.SENT,

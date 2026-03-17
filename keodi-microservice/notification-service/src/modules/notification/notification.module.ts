@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EmailModule } from 'src/providers/email/email.module';
 import { FcmService } from 'src/providers/fcm/fcm.service';
+import { KafkaModule } from 'src/providers/kafka/kafka.module';
 import { PresenceService } from 'src/providers/presence/presence.service';
 import { RedisModule } from 'src/providers/redis/redis.module';
 import { NotificationController } from './notification.controller';
@@ -18,25 +17,6 @@ import { NotificationService } from './notification.service';
     FcmService,
     PresenceService,
   ],
-  imports: [
-    EmailModule,
-    RedisModule,
-    ClientsModule.registerAsync([
-      {
-        name: 'KAFKA_CLIENT',
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (config: ConfigService) => ({
-          transport: Transport.KAFKA,
-          options: {
-            client: {
-              clientId: 'notification-producer',
-              brokers: (config.get<string>('KAFKA_BROKER') || '').split(','),
-            },
-          },
-        }),
-      },
-    ]),
-  ],
+  imports: [EmailModule, RedisModule, KafkaModule],
 })
 export class NotificationModule {}
