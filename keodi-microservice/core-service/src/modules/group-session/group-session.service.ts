@@ -8,10 +8,16 @@ import {
   type GroupSession,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { PrismaService } from 'src/database/prisma.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { GroupSessionMessages } from 'src/shared/constants/group-session.constant';
+import {
+  NotificationPreferredChannel,
+  NotificationTopics,
+  NotificationType,
+} from 'src/shared/constants/notification-topic.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
-import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
 export class GroupSessionService {
@@ -21,6 +27,7 @@ export class GroupSessionService {
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     private readonly groupSessionHelper: GroupSessionHelper,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   private generateShareCode(
@@ -313,6 +320,26 @@ export class GroupSessionService {
           message: GroupSessionMessages.ALREADY_A_MEMBER,
         });
       }
+
+      // Fetch inviter name for notification body
+      const inviter = await this.prismaService.user.findUnique({
+        where: { id: inviterId },
+        select: { firstName: true, lastName: true },
+      });
+      const inviterName =
+        [inviter?.firstName, inviter?.lastName].filter(Boolean).join(' ') ||
+        'Someone';
+
+      this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
+        eventId: createId(),
+        userId: friendId,
+        type: NotificationType.GROUP_INVITE,
+        title: 'Group Session Invite',
+        body: `${inviterName} invited you to join a group session. Use code: ${session.shareCode}`,
+        data: { sessionId, shareCode: session.shareCode, inviterId },
+        preferredChannel: NotificationPreferredChannel.BOTH,
+        createdAt: new Date().toISOString(),
+      });
 
       return {
         sessionId,

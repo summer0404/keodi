@@ -22,5 +22,30 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  userDeviceTokens UserDeviceToken[]
+
   @@map("users")
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+}
+
+model UserDeviceToken {
+  id         String         @id @default(cuid())
+  userId     String         @map("user_id")
+  token      String         @unique
+  platform   DevicePlatform
+  deviceId   String?        @map("device_id")
+  appVersion String?        @map("app_version")
+  isActive   Boolean        @default(true) @map("is_active")
+  lastSeenAt DateTime       @default(now()) @map("last_seen_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([lastSeenAt])
+  @@map("user_device_tokens")
 }

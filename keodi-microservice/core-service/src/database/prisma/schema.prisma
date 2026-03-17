@@ -52,6 +52,7 @@ model User {
   favorites          Favorite[]
   sessionMemberships GroupSessionMember[]
   searches           Search[]
+  notifications      Notification[]
 
   sentRequests     FriendRequest[] @relation("SentRequests")
   receivedRequests FriendRequest[] @relation("ReceivedRequests")
@@ -385,4 +386,49 @@ model Search {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("searches")
+}
+
+enum NotificationType {
+  GROUP_INVITE
+  GROUP_VOTE_REMINDER
+  GROUP_VOTE_FINALIZED
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  SYSTEM
+}
+
+enum NotificationChannel {
+  WEBSOCKET
+  FCM
+  BOTH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String              @map("user_id")
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?
+  deepLink    String?             @map("deep_link")
+  channel     NotificationChannel @default(BOTH)
+  status      NotificationStatus  @default(PENDING)
+  eventId     String?             @unique @map("event_id")
+  isRead      Boolean             @default(false) @map("is_read")
+  deliveredAt DateTime?           @map("delivered_at")
+  readAt      DateTime            @map("read_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@index([createdAt])
+  @@map("notifications")
 }

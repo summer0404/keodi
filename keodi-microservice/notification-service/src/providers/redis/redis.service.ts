@@ -1,28 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
-export class RedisService {
+export class RedisService implements OnModuleDestroy {
   private readonly redis: Redis;
 
   constructor() {
     this.redis = new Redis({
       host: process.env.REDIS_HOST,
       port: Number(process.env.REDIS_PORT),
-      password: process.env.REDIS_PASSWORD,
+      password: process.env.REDIS_PASSWORD || undefined,
     });
   }
 
   async get(key: string): Promise<string | null> {
     return this.redis.get(key);
-  }
-
-  async has(key: string): Promise<boolean> {
-    return (await this.redis.exists(key)) === 1;
-  }
-
-  async zrevrange(key: string, start: number, stop: number): Promise<string[]> {
-    return this.redis.zrevrange(key, start, stop);
   }
 
   async set(key: string, value: string): Promise<void> {
@@ -32,6 +24,11 @@ export class RedisService {
   async del(key: string): Promise<void> {
     await this.redis.del(key);
   }
+
+  async has(key: string): Promise<boolean> {
+    return (await this.redis.exists(key)) === 1;
+  }
+
   async onModuleDestroy() {
     await this.redis.quit();
   }
