@@ -30,6 +30,25 @@ export class GroupSessionService {
     private readonly kafkaService: KafkaService,
   ) {}
 
+  private async notifySessionMembers(
+    sessionId: string,
+    eventType: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    const members = await this.prismaService.groupSessionMember.findMany({
+      where: { sessionId },
+      select: { userId: true },
+    });
+    const kafka = this.kafkaService.getClient();
+    for (const member of members) {
+      if (!member.userId) continue;
+      kafka.emit(NotificationTopics.RealtimePush, {
+        userId: member.userId,
+        event: { type: eventType, ...payload },
+      });
+    }
+  }
+
   private generateShareCode(
     length: number = GroupSessionService.SHARE_CODE_LENGTH,
   ): string {
@@ -480,6 +499,17 @@ export class GroupSessionService {
         });
       });
 
+      // Notify all session members about the new/updated vote in real time
+      void this.notifySessionMembers(sessionId, 'vote.cast', {
+        sessionId,
+        vote: {
+          memberId: vote.member.id,
+          userId: vote.member.userId,
+          nickname: vote.member.nickname,
+          place: vote.place,
+        },
+      });
+
       return vote;
     } catch (error) {
       if (
@@ -617,6 +647,37 @@ export class GroupSessionService {
         voteAutoFinalized = true;
       }
 
+      // Notify all members: someone locked in their vote
+      void this.notifySessionMembers(sessionId, 'vote.member_finalized', {
+        sessionId,
+        memberId: member.id,
+        finalizedVotes,
+        totalMembers,
+        voteAutoFinalized,
+      });
+
+      // If auto-finalized, also send a push notification to all authenticated members
+      if (voteAutoFinalized) {
+        const members = await this.prismaService.groupSessionMember.findMany({
+          where: { sessionId, userId: { not: null } },
+          select: { userId: true },
+        });
+        const kafka = this.kafkaService.getClient();
+        for (const m of members) {
+          if (!m.userId) continue;
+          kafka.emit(NotificationTopics.Dispatch, {
+            eventId: createId(),
+            userId: m.userId,
+            type: NotificationType.GROUP_VOTE_FINALIZED,
+            title: 'Vote Finalized!',
+            body: 'All members have voted. Check out the results!',
+            data: { sessionId },
+            preferredChannel: NotificationPreferredChannel.BOTH,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+
       return {
         vote: updatedVote,
         voteAutoFinalized,
@@ -713,6 +774,22 @@ export class GroupSessionService {
           },
         }),
       ]);
+
+      // Notify all authenticated members with push notification
+      const kafka = this.kafkaService.getClient();
+      for (const m of session.members) {
+        if (!m.userId) continue;
+        kafka.emit(NotificationTopics.Dispatch, {
+          eventId: createId(),
+          userId: m.userId,
+          type: NotificationType.GROUP_VOTE_FINALIZED,
+          title: 'Vote Finalized!',
+          body: 'The session host has finalized the vote. Check out the results!',
+          data: { sessionId, winningPlaceId },
+          preferredChannel: NotificationPreferredChannel.BOTH,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
       return {
         sessionId,

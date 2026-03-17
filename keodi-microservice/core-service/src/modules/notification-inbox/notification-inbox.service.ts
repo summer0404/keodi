@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
@@ -14,14 +15,14 @@ export class NotificationInboxService {
         type: payload.type,
         title: payload.title,
         body: payload.body,
-        data: payload.data,
+        data: payload.data ?? Prisma.JsonNull,
         deepLink: payload.deepLink,
         channel: payload.channel,
         status: payload.status,
         deliveredAt: payload.deliveredAt
           ? new Date(payload.deliveredAt)
           : null,
-      },
+      } as Prisma.NotificationUncheckedCreateInput,
       update: {
         status: payload.status,
         channel: payload.channel,

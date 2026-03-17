@@ -6,7 +6,6 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import Redis from 'ioredis';
 import * as jwt from 'jsonwebtoken';
 import { Server, Socket } from 'socket.io';
 import { RedisService } from 'src/providers/redis/redis.service';
@@ -68,7 +67,7 @@ export class NotificationGateway
     this.logger.log(`Client ${client.id} disconnected.`);
   }
 
-  async pushToUser(userId: string, event: any) {
+  pushToUser(userId: string, event: any) {
     this.server.to('user:' + userId).emit('notification.received', event);
   }
 }
