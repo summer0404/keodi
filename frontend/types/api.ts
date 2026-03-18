@@ -58,6 +58,62 @@ export interface ResetPasswordResponse {
   message?: string;
 }
 
+export interface AuthMeResponse {
+  id: string;
+  username: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  pictureUrl: string | null;
+  dateOfBirth: string | null;
+  phoneNumber: string | null;
+}
+
+export type PlaceSortBy = 'distance' | 'rating' | 'name';
+
+export interface GetNearbyPlacesRequest {
+  page: number;
+  limit: number;
+  sortBy: PlaceSortBy;
+  sortOrder?: 'asc' | 'desc';
+  latitude: number;
+  longitude: number;
+  radius: number;
+}
+
+export interface PlaceItem {
+  id: string;
+  fromGoogle: boolean;
+  name: string;
+  description: string | null;
+  rating: number;
+  googleMapLink: string | null;
+  website: string | null;
+  phoneNumber: string | null;
+  featureImageUrl: string | null;
+  ownerId: string | null;
+  latitude: number;
+  longitude: number;
+  fullAddress: string | null;
+  ward: string | null;
+  street: string | null;
+  city: string | null;
+  countryCode: string | null;
+  createdAt: string;
+  updatedAt: string;
+  distance: number;
+  has_attributes: number;
+  isFavorite: boolean;
+}
+
+export interface GetNearbyPlacesResponse {
+  places: PlaceItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
 export interface OnboardingCategory {
   id: string;
   name: string;

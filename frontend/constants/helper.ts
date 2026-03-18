@@ -16,6 +16,9 @@ export const extractWaitSeconds = (message?: string) => {
   return Number.isNaN(seconds) ? null : seconds;
 };
 
+export const PLACES_DEFAULT_PAGE = 1;
+export const PLACES_DEFAULT_LIMIT = 10;
+
 export interface Category {
   id: string;
   titleKey: string;
@@ -49,18 +52,18 @@ export const CATEGORIES: Category[] = [
 
 export const CATEGORY_ICON_MAP: Record<string, string> = {
   'Tourist attraction': '✈️',
-  'Park': '🌳',
+  Park: '🌳',
   'Coffee shop': '☕️',
-  'Cafe': '☕️',
-  'Restaurant': '🍽️',
-  'Bar': '🍺',
-  'Museum': '🏛️',
+  Cafe: '☕️',
+  Restaurant: '🍽️',
+  Bar: '🍺',
+  Museum: '🏛️',
   'Movie theater': '🎬',
   'Shopping mall': '🛍️',
-  'Gym': '💪',
-  'Hotel': '🏠',
+  Gym: '💪',
+  Hotel: '🏠',
   'Beauty salon': '💄',
-  "Barbecue restaurant": "🍴"
+  'Barbecue restaurant': '🍴',
 };
 
 export function getCategoryIcon(name: string): string {
