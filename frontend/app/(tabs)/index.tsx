@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { MapPin } from 'lucide-react-native';
+import { MapPin, MoveDiagonal, ArrowUpDown } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import PlaceCard from '@/components/ui/PlaceCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,67 +10,19 @@ import { authService } from '@/api/auth';
 import { placesService } from '@/api/places';
 import { Select } from '@/components/ui/Select';
 import type { PlaceItem, PlaceSortBy } from '@/types/api';
-import { PLACES_DEFAULT_LIMIT, PLACES_DEFAULT_PAGE } from '@/constants/helper';
+import {
+  PLACES_DEFAULT_LIMIT,
+  PLACES_DEFAULT_PAGE,
+  normalizeDistrictLabel,
+  normalizeCityLabel,
+  buildSortOrder,
+} from '@/constants/helper';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
 import AlertScreen from '@/components/ui/AlertScreen';
 
 const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
 const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
-
-const toAsciiLower = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'd')
-    .toLowerCase();
-
-const normalizeDistrictLabel = (districtValue: string, cityValue: string) => {
-  const district = districtValue.trim();
-  if (!district) return '';
-
-  const normalized = toAsciiLower(district);
-  const inHcmc = ['ho chi minh city', 'ho chi minh', 'hcmc', 'tphcm', 'tp hcm'].includes(
-    toAsciiLower(cityValue).replace(/[.]/g, '')
-  );
-
-  const districtNumberMatch = district.match(/(district|quan|quận)\s*0*([0-9]+)/i);
-  if (districtNumberMatch?.[2]) {
-    return `Quận ${Number(districtNumberMatch[2])}`;
-  }
-
-  if (/^(ward|phuong|phường)\s/i.test(district)) {
-    return district;
-  }
-
-  if (/^(huyen|huyện)\s/i.test(normalized)) {
-    return district.replace(/^(huyen|huyện)\s*/i, 'Huyện ');
-  }
-
-  if (/^(tp|thanh pho|thành phố)\s/i.test(normalized)) {
-    return district;
-  }
-
-  return inHcmc ? `Quận ${district}` : district;
-};
-
-const normalizeCityLabel = (cityValue: string) => {
-  const normalized = toAsciiLower(cityValue).replace(/[.]/g, '').trim();
-  const hcmAliases = new Set([
-    'ho chi minh city',
-    'ho chi minh',
-    'thanh pho ho chi minh',
-    'tp ho chi minh',
-    'tphcm',
-    'tp hcm',
-    'hcmc',
-  ]);
-
-  return hcmAliases.has(normalized) ? 'TPHCM' : cityValue;
-};
-
-const buildSortOrder = (value: PlaceSortBy) => (value === 'rating' ? 'desc' : 'asc');
 
 const appendUniquePlaces = (prev: PlaceItem[], next: PlaceItem[]) => {
   const existingIds = new Set(prev.map((item) => item.id));
@@ -392,7 +344,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View className="mt-4 flex-row gap-3">
+        <View className="mt-4 flex-row gap-3 items-center">
+          <ArrowUpDown size={18} color={Palette.black} strokeWidth={2} />
           <Select
             value={sortBy}
             onChange={(value) => {
@@ -402,6 +355,7 @@ export default function HomeScreen() {
             className="flex-[1.2]"
           />
 
+          <MoveDiagonal size={18} color={Palette.black} strokeWidth={2} />
           <Select
             value={radius}
             onChange={(value) => {

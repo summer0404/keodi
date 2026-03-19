@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 import { Image, type ImageProps } from 'expo-image';
-import {
-  Clock3,
-  Heart,
-  MapPin,
-  MoveDiagonal,
-  Star,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { Clock3, Heart, MapPin, MoveDiagonal, Star, type LucideIcon } from 'lucide-react-native';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Card } from './Card';
 import Typography from './Typography';
 import { Palette } from '@/constants/theme';
+import { getLocalizedLocation } from '@/constants/helper';
 
 type PlaceCardTag = {
   label: string;
@@ -42,112 +36,6 @@ type PlaceCardProps = {
 };
 
 const iconSize = 16;
-
-const toAsciiLower = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'd')
-    .toLowerCase();
-
-const cleanNumber = (value: string) => {
-  const numeric = value.match(/^0*([0-9]+)$/);
-  if (!numeric) return value;
-  return String(Number(numeric[1]));
-};
-
-const splitWardParts = (value: string) => {
-  const rawParts = value
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (rawParts.length <= 1) {
-    const compact = value.trim().replace(/\s+/g, ' ');
-    const districtIndex = compact.search(/\b(district|quan|quận)\b/i);
-
-    if (districtIndex > 0) {
-      return {
-        wardPart: compact.slice(0, districtIndex).trim(),
-        districtPart: compact.slice(districtIndex).trim(),
-      };
-    }
-
-    return {
-      wardPart: compact,
-      districtPart: '',
-    };
-  }
-
-  return {
-    wardPart: rawParts[0],
-    districtPart: rawParts.slice(1).join(', '),
-  };
-};
-
-const getLocalizedLocation = (
-  wardInput: string | null | undefined,
-  cityInput: string | null | undefined,
-  language: string,
-  t: (key: string) => string
-) => {
-  const wardValue = wardInput?.trim() ?? '';
-  const cityValue = cityInput?.trim() ?? '';
-
-  let formattedWard = '';
-
-  if (wardValue) {
-    const { wardPart, districtPart } = splitWardParts(wardValue);
-    const wardLabel = t('address.ward');
-    const districtLabel = t('address.district');
-
-    const normalizeWardName = (part: string) =>
-      part.replace(/^\s*(ward|phuong|phường)\s*/i, '').trim();
-
-    const normalizeDistrictName = (part: string) =>
-      part.replace(/^\s*(district|quan|quận)\s*/i, '').trim();
-
-    const rawWardName = normalizeWardName(wardPart);
-    const rawDistrictName = normalizeDistrictName(districtPart);
-    const districtLooksValid = !!districtPart && /\b(district|quan|quận)\b/i.test(districtPart);
-
-    if (!rawWardName && rawDistrictName && !districtLooksValid) {
-      formattedWard = `${wardLabel} ${rawDistrictName}`;
-    } else {
-      const wardName = rawWardName || rawDistrictName;
-      const districtName = districtLooksValid ? cleanNumber(rawDistrictName) : '';
-      const wardSegment = wardName ? `${wardLabel} ${cleanNumber(wardName)}` : '';
-      const districtSegment = districtName ? `${districtLabel} ${districtName}` : '';
-      formattedWard = [wardSegment, districtSegment].filter(Boolean).join(', ');
-    }
-  }
-
-  let formattedCity = '';
-
-  if (cityValue) {
-    const normalizedCity = toAsciiLower(cityValue).replace(/[.]/g, '').trim();
-    const hcmcAliases = new Set([
-      'ho chi minh city',
-      'ho chi minh',
-      'thanh pho ho chi minh',
-      'tp ho chi minh',
-      'tphcm',
-      'tp hcm',
-      'hcmc',
-    ]);
-
-    formattedCity = hcmcAliases.has(normalizedCity) ? t('address.hcmc') : cityValue;
-  }
-
-  if (language.startsWith('vi') && formattedWard) {
-    formattedWard = formattedWard
-      .replace(/\bDistrict\b/gi, t('address.district'))
-      .replace(/\bWard\b/gi, t('address.ward'));
-  }
-
-  return [formattedWard, formattedCity].filter(Boolean).join(', ');
-};
 
 export default function PlaceCard({
   imageSource,

@@ -122,12 +122,12 @@
     "retry": "Retry",
     "noPlaces": "Oops! No places found",
     "subNoPlaces": "It seems like there are no places. Please try again!",
-    "sortByDistance": "Sort by: Distance",
-    "sortByRating": "Sort by: Rating",
-    "sortByName": "Sort by: Name",
-    "radius2km": "Radius: 2 km",
-    "radius5km": "Radius: 5 km",
-    "radius15km": "Radius: 15 km",
-    "radius15kmPlus": "Radius: > 15 km"
+    "sortByDistance": "Distance",
+    "sortByRating": "Rating",
+    "sortByName": "Name",
+    "radius2km": "2 km",
+    "radius5km": "5 km",
+    "radius15km": "15 km",
+    "radius15kmPlus": "> 15 km"
   }
 }

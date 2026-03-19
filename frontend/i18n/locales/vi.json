@@ -122,12 +122,12 @@
     "retry": "Thử lại",
     "noPlaces": "Ui! Không tìm thấy địa điểm nào",
     "subNoPlaces": "Có vẻ như không có địa điểm nào phù hợp. Hãy thử lại nhé!",
-    "sortByDistance": "Sắp xếp theo: Khoảng cách",
-    "sortByRating": "Sắp xếp theo: Đánh giá",
-    "sortByName": "Sắp xếp theo: Tên",
-    "radius2km": "Bán kính: 2 km",
-    "radius5km": "Bán kính: 5 km",
-    "radius15km": "Bán kính: 15 km",
-    "radius15kmPlus": "Bán kính: > 15 km"
+    "sortByDistance": "Khoảng cách",
+    "sortByRating": "Đánh giá",
+    "sortByName": "Tên",
+    "radius2km": "2 km",
+    "radius5km": "5 km",
+    "radius15km": "15 km",
+    "radius15kmPlus": "> 15 km"
   }
 }
