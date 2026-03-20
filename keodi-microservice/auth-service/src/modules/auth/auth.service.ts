@@ -3,6 +3,8 @@ import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import * as bcrypt from 'bcrypt';
 import type { StringValue } from 'ms';
+import { PrismaService } from 'src/database/prisma.service';
+import { UserService } from 'src/modules/user/user.service';
 import {
   LoginDto,
   RegisterDto,
@@ -24,8 +26,6 @@ import {
 } from 'src/shared/templates/verify-email-response.template';
 import { timeLimitResend } from 'src/shared/utils/time-limit-resend';
 import { getTTLForPurpose } from 'src/shared/utils/ttl-redis.helper';
-import { PrismaService } from 'src/database/prisma.service';
-import { UserService } from 'src/modules/user/user.service';
 import { OtpService } from './otp.service';
 import { VerifyUrlService } from './verifyUrl.service';
 
@@ -50,7 +50,6 @@ export class AuthService {
       username: user.username,
     };
 
-    
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: '10m' }),
       refreshToken: this.jwtService.sign(payload, {
@@ -129,13 +128,23 @@ export class AuthService {
 
   async login(data: LoginDto) {
     try {
-      const existingUser = await this.prismaService.user.findUnique({
-        where: { username: data.username },
+      const loginIdentifier = data.username?.trim();
+
+      if (!loginIdentifier)
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Username or email is required',
+        });
+
+      const existingUser = await this.prismaService.user.findFirst({
+        where: {
+          OR: [{ username: loginIdentifier }, { email: loginIdentifier }],
+        },
       });
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.UNAUTHORIZED,
-          message: 'Invalid username',
+          message: 'Invalid username or email',
         });
 
       if (!(await bcrypt.compare(data.password, existingUser.password)))
