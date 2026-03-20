@@ -128,6 +128,18 @@
     "radius2km": "2 km",
     "radius5km": "5 km",
     "radius15km": "15 km",
-    "radius15kmPlus": "> 15 km"
+    "radius15kmPlus": "> 15 km",
+    "loadingLocation": "Đang lấy vị trí của bạn...",
+    "locationDisabled": "Vị trí chưa được bật"
+  },
+  "library": {
+    "title": "Thư viện",
+    "loadingFavorites": "Đang tải danh sách yêu thích...",
+    "favorite": "Yêu thích",
+    "history": "Lịch sử",
+    "yourFavoritePlaces": "Địa điểm yêu thích của bạn",
+    "noFavorites": "Chưa có địa điểm yêu thích nào",
+    "noFavoritesDescription": "Nhấn vào biểu tượng trái tim trên trang chủ để lưu các địa điểm yêu thích của bạn.",
+    "goToHome": "Đi đến trang chủ"
   }
 }

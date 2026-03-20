@@ -20,6 +20,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
 import AlertScreen from '@/components/ui/AlertScreen';
+import { favoriteService } from '@/api/favorite';
+import axios from 'axios';
 
 const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
 const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
@@ -31,6 +33,9 @@ const appendUniquePlaces = (prev: PlaceItem[], next: PlaceItem[]) => {
   if (filteredNext.length === 0) return prev;
   return [...prev, ...filteredNext];
 };
+
+const updateFavoriteInPlaces = (places: PlaceItem[], placeId: string, isFavorite: boolean) =>
+  places.map((place) => (place.id === placeId ? { ...place, isFavorite } : place));
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -263,23 +268,48 @@ export default function HomeScreen() {
 
   // Render item separated out to avoid inline closure that gets recreated every render
   const renderItem = useCallback(
-    ({ item }: { item: PlaceItem }) => (
-      <PlaceCard
-        className=""
-        style={{ width: cardWidth, elevation: 0 }}
-        imageSource={item.featureImageUrl ? { uri: item.featureImageUrl } : DEFAULT_PLACE_IMAGE}
-        title={item.name}
-        rating={item.rating <= 0 ? 'N/A' : item.rating.toFixed(1)}
-        distanceLabel={`${item.distance < 1 ? item.distance.toFixed(2) : item.distance.toFixed(1)} km`}
-        fullAddress={item.fullAddress}
-        street={item.street}
-        ward={item.ward}
-        city={item.city}
-        openingHours="Opening hours updating"
-        description={item.description?.trim()}
-        statusLabel="Open"
-      />
-    ),
+    ({ item }: { item: PlaceItem }) => {
+      const handleFavoriteChange = async (nextIsFavorite: boolean) => {
+        try {
+          if (nextIsFavorite) {
+            await favoriteService.addFavorite(item.id);
+          } else {
+            await favoriteService.removeFavorite(item.id);
+          }
+
+          setNearbyPlaces((prev) => updateFavoriteInPlaces(prev, item.id, nextIsFavorite));
+          return true;
+        } catch (error) {
+          // If place is already in favorites, keep the heart in favorited state.
+          if (nextIsFavorite && axios.isAxiosError(error) && error.response?.status === 409) {
+            setNearbyPlaces((prev) => updateFavoriteInPlaces(prev, item.id, true));
+            return true;
+          }
+
+          return false;
+        }
+      };
+
+      return (
+        <PlaceCard
+          className=""
+          style={{ width: cardWidth, elevation: 0 }}
+          imageSource={item.featureImageUrl ? { uri: item.featureImageUrl } : DEFAULT_PLACE_IMAGE}
+          title={item.name}
+          rating={item.rating <= 0 ? 'N/A' : item.rating.toFixed(1)}
+          distanceLabel={`${item.distance < 1 ? item.distance.toFixed(2) : item.distance.toFixed(1)} km`}
+          fullAddress={item.fullAddress}
+          street={item.street}
+          ward={item.ward}
+          city={item.city}
+          openingHours="Opening hours updating"
+          description={item.description?.trim()}
+          statusLabel="Open"
+          defaultFavorite={!!item.isFavorite}
+          onFavoriteChange={handleFavoriteChange}
+        />
+      );
+    },
     [cardWidth]
   );
 
