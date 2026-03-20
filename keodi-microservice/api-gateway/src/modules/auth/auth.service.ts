@@ -50,13 +50,8 @@ export class AuthService {
 
   async login(@Res({ passthrough: true }) res: Response, body: LoginDto) {
     try {
-      const normalizedLoginBody = {
-        ...body,
-        username: body.identifier ?? body.username,
-      };
-
       const response = await firstValueFrom(
-        this.client.send('auth.login', normalizedLoginBody),
+        this.client.send('auth.login', body),
       );
 
       const cookieMaxAge = body.rememberMe

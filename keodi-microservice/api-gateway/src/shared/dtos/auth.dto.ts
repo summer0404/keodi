@@ -7,7 +7,6 @@ import {
   Matches,
   MaxLength,
   MinLength,
-  ValidateIf,
 } from 'class-validator';
 import { CreateUserDto } from './user.dto';
 
@@ -17,28 +16,13 @@ export class LoginDto extends PickType(RegisterDto, ['password'] as const) {
   @ApiProperty({
     example: '_Abc123.example',
     description: 'Username or email used for login',
-    required: false,
   })
-  @ValidateIf((o: LoginDto) => !o.identifier)
   @IsNotEmpty({ message: 'USERNAME_OR_EMAIL_REQUIRED' })
   @IsString({ message: 'USERNAME_OR_EMAIL_MUST_BE_STRING' })
   @Matches(/^(?:(?!\d+$)[A-Za-z0-9._]{3,20}|[^\s@]+@[^\s@]+\.[^\s@]+)$/, {
     message: 'INVALID_USERNAME_OR_EMAIL_FORMAT',
   })
-  username?: string;
-
-  @ApiProperty({
-    example: '_Abc123.example',
-    description: 'Username or email used for login',
-    required: false,
-  })
-  @ValidateIf((o: LoginDto) => !o.username)
-  @IsNotEmpty({ message: 'USERNAME_OR_EMAIL_REQUIRED' })
-  @IsString({ message: 'USERNAME_OR_EMAIL_MUST_BE_STRING' })
-  @Matches(/^(?:(?!\d+$)[A-Za-z0-9._]{3,20}|[^\s@]+@[^\s@]+\.[^\s@]+)$/, {
-    message: 'INVALID_USERNAME_OR_EMAIL_FORMAT',
-  })
-  identifier?: string;
+  identifier: string;
 
   @ApiProperty({ default: false })
   @IsOptional()

@@ -128,10 +128,7 @@ export class AuthService {
 
   async login(data: LoginDto) {
     try {
-      const rawIdentifier = (data.identifier ?? data.username) as
-        | string
-        | undefined;
-      const loginIdentifier = rawIdentifier?.trim();
+      const loginIdentifier = data.identifier.trim();
 
       if (!loginIdentifier)
         throw new RpcException({
