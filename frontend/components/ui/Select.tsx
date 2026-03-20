@@ -37,7 +37,9 @@ export const Select: React.FC<SelectProps> = ({
   const [triggerLayout, setTriggerLayout] = useState<LayoutRectangle | null>(null);
   const triggerRef = useRef<View>(null);
 
-  const selected = options.find((o) => String(o.value) === String(value));
+  const isSameValue = (a: string | number, b: string | number) => String(a) === String(b);
+
+  const selected = options.find((o) => isSameValue(o.value, value));
 
   const handleOpen = () => {
     triggerRef.current?.measure((x, y, width, height, pageX, pageY) => {
@@ -95,7 +97,7 @@ export const Select: React.FC<SelectProps> = ({
                     keyExtractor={(item) => item.value.toString()}
                     scrollEnabled={false} // disable scroll if options short
                     renderItem={({ item }) => {
-                      const isSelected = item.value === value;
+                      const isSelected = isSameValue(item.value, value);
 
                       return (
                         <Pressable

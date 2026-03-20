@@ -17,11 +17,13 @@ export const cardShadow = {
 };
 
 export const Card = ({ className, ...props }: CardProps) => {
+  const { style, ...restProps } = props;
+
   return (
     <View
+      {...restProps}
       className={clsx('rounded-3xl bg-white', className)}
-      style={[cardShadow, props.style]}
-      {...props}
+      style={[cardShadow, style]}
     />
   );
 };
