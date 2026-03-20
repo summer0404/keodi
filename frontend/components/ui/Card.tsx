@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, ViewProps } from 'react-native';
+import { StyleProp, View, ViewProps, ViewStyle } from 'react-native';
 import clsx from 'clsx';
 import Typography from './Typography';
 
 type CardProps = ViewProps & {
   className?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 export const cardShadow = {
@@ -16,11 +17,13 @@ export const cardShadow = {
 };
 
 export const Card = ({ className, ...props }: CardProps) => {
+  const { style, ...restProps } = props;
+
   return (
     <View
+      {...restProps}
       className={clsx('rounded-3xl bg-white', className)}
-      style={cardShadow}
-      {...props}
+      style={[cardShadow, style]}
     />
   );
 };

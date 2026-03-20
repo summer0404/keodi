@@ -43,7 +43,7 @@ export default function AlertScreen({
       </Typography>
 
       {description && (
-        <Typography className="text-black/60 text-center mt-2 mb-8">{t(description)}</Typography>
+        <Typography className="text-black/60 text-center mt-2">{t(description)}</Typography>
       )}
 
       <Button className="w-full mt-6" onPress={() => primaryButtonAction()}>

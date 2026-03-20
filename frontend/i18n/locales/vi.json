@@ -1,6 +1,9 @@
 {
-  "hello": "Xin chào",
-  "welcome": "Chào mừng bạn đến với ứng dụng",
+  "address": {
+    "ward": "Phường",
+    "district": "Quận",
+    "hcmc": "TPHCM"
+  },
   "selectDate": "Chọn ngày",
   "onboarding": {
     "slide1": {
@@ -111,5 +114,20 @@
     "resetTokenExpired": "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu OTP lại",
     "emailExists": "Email đã tồn tại",
     "loadCategories": "Không thể tải danh mục. Vui lòng thử lại sau"
+  },
+  "home": {
+    "greeting": "Hi @{{username}},",
+    "subGreeting": "Bạn muốn đi đâu nào?",
+    "loadingPlaces": "Đang tải địa điểm ...",
+    "retry": "Thử lại",
+    "noPlaces": "Ui! Không tìm thấy địa điểm nào",
+    "subNoPlaces": "Có vẻ như không có địa điểm nào phù hợp. Hãy thử lại nhé!",
+    "sortByDistance": "Khoảng cách",
+    "sortByRating": "Đánh giá",
+    "sortByName": "Tên",
+    "radius2km": "2 km",
+    "radius5km": "5 km",
+    "radius15km": "15 km",
+    "radius15kmPlus": "> 15 km"
   }
 }

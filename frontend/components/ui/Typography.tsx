@@ -1,4 +1,4 @@
-import { Text, type TextProps, type TextStyle } from 'react-native';
+import { Text, type TextProps } from 'react-native';
 import clsx from 'clsx';
 import React from 'react';
 
@@ -21,8 +21,8 @@ const Typography = ({
   const getVariantClasses = () => {
     switch (variant) {
       case 'h3':
-        // Montserrat SemiBold, 36pt, Spacing -5%
-        return 'font-montserrat-semibold text-[36px] tracking-[-0.05em]';
+        // Montserrat SemiBold, 32pt, Spacing -5%
+        return 'font-montserrat-semibold text-[32px] tracking-[-0.05em]';
 
       case 'h4':
         // Montserrat SemiBold, 24pt, Spacing -5%

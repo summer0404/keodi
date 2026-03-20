@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, PressableProps } from 'react-native';
+import { Pressable, PressableProps } from 'react-native';
 import { Palette } from '@/constants/theme';
 import Typography from './Typography';
 
