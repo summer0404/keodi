@@ -128,12 +128,15 @@ export class AuthService {
 
   async login(data: LoginDto) {
     try {
-      const loginIdentifier = data.username?.trim();
+      const rawIdentifier = (data.identifier ?? data.username) as
+        | string
+        | undefined;
+      const loginIdentifier = rawIdentifier?.trim();
 
       if (!loginIdentifier)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'Username or email is required',
+          message: 'USERNAME_OR_EMAIL_REQUIRED',
         });
 
       const existingUser = await this.prismaService.user.findFirst({
@@ -144,19 +147,19 @@ export class AuthService {
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.UNAUTHORIZED,
-          message: 'Invalid username or email',
+          message: 'INVALID_USERNAME_OR_EMAIL',
         });
 
       if (!(await bcrypt.compare(data.password, existingUser.password)))
         throw new RpcException({
           status: HttpStatus.UNAUTHORIZED,
-          message: 'Invalid password',
+          message: 'INVALID_PASSWORD',
         });
 
       if (!existingUser.isVerified)
         throw new RpcException({
           status: HttpStatus.FORBIDDEN,
-          message: 'Email has not been verified',
+          message: 'EMAIL_NOT_VERIFIED',
           data: {
             userId: existingUser.id,
           },
