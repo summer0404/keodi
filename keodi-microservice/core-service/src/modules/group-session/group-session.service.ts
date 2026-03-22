@@ -3,18 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import { createId } from '@paralleldrive/cuid2';
 import {
-  GroupSessionStatus,
-  VoteStatus,
-  type GroupSession,
+    GroupSessionStatus,
+    VoteStatus,
+    type GroupSession,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { GroupSessionMessages } from 'src/shared/constants/group-session.constant';
 import {
-  NotificationPreferredChannel,
-  NotificationTopics,
-  NotificationType,
+    NotificationPreferredChannel,
+    NotificationTopics,
+    NotificationType,
 } from 'src/shared/constants/notification-topic.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';

@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { FcmService } from 'src/providers/fcm/fcm.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { PresenceService } from 'src/providers/presence/presence.service';
+import { RedisService } from 'src/providers/redis/redis.service';
 import {
   NotificationPreferredChannel,
   NotificationStatus,
   NotificationTopics,
 } from 'src/shared/constants/notification.constant';
+import { PresenceHelper } from 'src/shared/helpers/presence.helper';
 import { DispatchNotificationEvent } from './notification.dispatch.controller';
 
 @Injectable()
@@ -15,7 +16,7 @@ export class NotificationDispatcherService {
   constructor(
     private readonly kafkaService: KafkaService,
     private readonly fcmService: FcmService,
-    private readonly presenceService: PresenceService,
+    private readonly redisService: RedisService,
   ) {}
 
   async dispatch(evt: DispatchNotificationEvent): Promise<void> {
@@ -29,7 +30,10 @@ export class NotificationDispatcherService {
       status: NotificationStatus.PENDING,
     });
 
-    const isOnline = await this.presenceService.isOnline(evt.userId);
+    const isOnline = await PresenceHelper.isOnline(
+      this.redisService,
+      evt.userId,
+    );
     let delivered = false;
 
     //For online users: Websocket

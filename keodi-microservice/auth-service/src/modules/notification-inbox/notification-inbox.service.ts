@@ -7,7 +7,7 @@ export class NotificationInboxService {
   constructor(private readonly prisma: PrismaService) {}
 
   async upsertByEventId(payload: any) {
-    return this.prisma.notification.upsert({
+    return await this.prisma.notification.upsert({
       where: { eventId: payload.eventId },
       create: {
         eventId: payload.eventId,
@@ -19,16 +19,12 @@ export class NotificationInboxService {
         deepLink: payload.deepLink,
         channel: payload.channel,
         status: payload.status,
-        deliveredAt: payload.deliveredAt
-          ? new Date(payload.deliveredAt)
-          : null,
+        deliveredAt: payload.deliveredAt ? new Date(payload.deliveredAt) : null,
       } as Prisma.NotificationUncheckedCreateInput,
       update: {
         status: payload.status,
         channel: payload.channel,
-        deliveredAt: payload.deliveredAt
-          ? new Date(payload.deliveredAt)
-          : null,
+        deliveredAt: payload.deliveredAt ? new Date(payload.deliveredAt) : null,
       },
     });
   }

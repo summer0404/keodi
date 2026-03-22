@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { NotificationTopics } from 'src/shared/constants/notification-topic.constant';
+import { NotificationTopics } from 'src/shared/constants/notification.constant';
 import { NotificationInboxService } from './notification-inbox.service';
 
 @Controller()
