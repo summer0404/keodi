@@ -7,6 +7,7 @@ import { RecommendationScheduler } from './recommendation.scheduler';
 import { PlaceModule } from '../place/place.module';
 import { RecommendationHelper } from './recommendation.helper';
 import { ImageService } from '../image/image.service';
+import { ImageModule } from '../image/image.module';
 
 @Module({
   controllers: [RecommendationController],
@@ -18,7 +19,7 @@ import { ImageService } from '../image/image.service';
   imports: [
     RedisModule, 
     SearchModule,
-    ImageService
+    ImageModule
   ],
 })
 export class RecommendationModule {}

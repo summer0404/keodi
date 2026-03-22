@@ -12,6 +12,7 @@ import { AttributeModule } from './modules/attribute/attribute.module';
 import { GroupSessionModule } from './modules/group-session/group-session.module';
 import { SearchModule } from './modules/search/search.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RecommendationModule } from './modules/recommendation/recommendation.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AttributeModule,
     GroupSessionModule,
     SearchModule,
+    RecommendationModule
   ],
   controllers: [],
   providers: [],

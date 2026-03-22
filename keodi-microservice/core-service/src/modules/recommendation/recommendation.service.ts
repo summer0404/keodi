@@ -3,7 +3,7 @@ import { RedisService } from 'src/providers/redis/redis.service';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PLACES_PER_SEARCH_TERM, RecommendationRedisKeys, TIME_DECAY } from 'src/shared/constants/recommendation.constant';
 import { RecommendationHelper } from './recommendation.helper';
-import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
+// import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from '../image/image.service';
 import { UserActionType } from '@prisma/client';
@@ -79,7 +79,10 @@ export class RecommendationService {
         JSON.stringify(places),
       );
 
-      await this.redisService.expire(RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS, SEARCH_TRENDING_TTL_SECONDS);
+      // await this.redisService.expire(
+      //   RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS, 
+      //   SEARCH_TRENDING_TTL_SECONDS
+      // );
 
     } catch (error) {
       return handleServiceErrorCatching(error);
@@ -90,13 +93,13 @@ export class RecommendationService {
     try {
       const places = await this.prismaService.$queryRaw<any[]>`
         WITH constants AS (
-          SELECT NOW() AS current_time, ${TIME_DECAY} AS decay_rate
+          SELECT NOW() AS current_time, ${TIME_DECAY}::float AS decay_rate
         ),
         action_scores AS (
           SELECT
             ua.place_id,
             SUM(
-              (CASE ua.action
+              (CASE ua.action::text
                 WHEN ${UserActionType.CLICK} THEN 0.1
                 WHEN ${UserActionType.READ_REVIEWS} THEN 0.2
                 WHEN ${UserActionType.FAVORITE} THEN 0.5
@@ -104,9 +107,9 @@ export class RecommendationService {
                 WHEN ${UserActionType.RATE_5} THEN 1.0
                 ELSE 0
               END)
-              * EXP(-c.decay_rate * EXTRACT(EPOCH FROM c.current_time - ua.created_at) / 3600)
+              * EXP(-c.decay_rate * (EXTRACT(EPOCH FROM c.current_time - ua.created_at) / 3600)::float)
             ) AS weighted_score,
-            COUNT(DISTINCT ua.user_id) AS unique_users,
+            COUNT(DISTINCT ua.user_id)::float AS unique_users,
             COUNT(*) AS actions
           FROM user_actions ua
           CROSS JOIN constants c
@@ -128,13 +131,16 @@ export class RecommendationService {
           a.actions,
           (a.weighted_score * LN(a.unique_users + 1)) AS final_score
         FROM action_scores a
-        JOIN places p ON p.id = a.place_id
+        JOIN places p ON p.id = a.place_id 
         ORDER BY final_score DESC
-        LIMIT 20`
+        LIMIT 10
+      `;
 
       const enrichedPlaces = await Promise.all(
         places.map(async (place) => ({
           ...place,
+          actions: Number(place.actions),
+          final_score: Number(place.final_score),
           featureImageUrl: place.featureImageUrl
             ? await this.imageService.getImageViewUrl(place.featureImageUrl)
             : null,
@@ -144,6 +150,7 @@ export class RecommendationService {
       return enrichedPlaces;
     }
     catch (error) {
+      console.error('SQL Error in getTopPlacesFromUserActions:', error);
       return handleServiceErrorCatching(error);
     }
   }
@@ -156,7 +163,10 @@ export class RecommendationService {
         JSON.stringify(places),
       );
 
-      await this.redisService.expire(RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS, SEARCH_TRENDING_TTL_SECONDS);
+      // await this.redisService.expire(
+      //   RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS, 
+      //   SEARCH_TRENDING_TTL_SECONDS
+      // );
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -196,10 +206,15 @@ export class RecommendationService {
       console.error('Error fetching trending places from database:', error);
     }
 
-    const trendingPlaces = this.recommendationHelper.deduplicatePlaces([...cachedPlacesFromSearchTerms, ...cachedPlacesFromActions]);
+    const trendingPlaces = this.recommendationHelper.deduplicatePlaces([
+      ...cachedPlacesFromSearchTerms, 
+      ...cachedPlacesFromActions
+    ]);
 
     // TODO: Ranking recommedation for more personalized result
+    // For now, we just shuffle the places to make it more dynamic
+    const shuffledTrendingPlaces = this.recommendationHelper.shufflePlaces(trendingPlaces);
 
-    return trendingPlaces;
+    return shuffledTrendingPlaces;
   }
 }

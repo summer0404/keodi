@@ -26,12 +26,12 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 @Controller('places')
 @ApiBearerAuth('access-token')
 export class PlaceController {
-  constructor(private readonly placeService: PlaceService) {}
+  constructor(private readonly placeService: PlaceService) { }
 
   @Get('near-me')
   @ApiNearMePlace()
   async getNearbyPlaces(
-    @CurrentUser() user: CurrentUserDto, 
+    @CurrentUser() user: CurrentUserDto,
     @Query() query: NearMeQueryDto): Promise<NearMePlacesResponseDto> {
     return await this.placeService.getNearbyPlaces(query, user.id);
   }
@@ -39,16 +39,23 @@ export class PlaceController {
   @Get('search')
   @ApiSearchPlace()
   async search(
-    @CurrentUser() user: CurrentUserDto, 
+    @CurrentUser() user: CurrentUserDto,
     @Query() query: SearchDto
   ) {
     return await this.placeService.search(query, user.id);
   }
 
+  @UseInterceptors(CacheInterceptor)
+  @Get('trending')
+  @ApiGetTrendingPlaces()
+  async getTrending() {
+    return await this.placeService.getTrending();
+  }
+  
   @Get(':id')
   @ApiGetPlaceById()
   async getById(
-    @CurrentUser() user: CurrentUserDto, 
+    @CurrentUser() user: CurrentUserDto,
     @Param('id') id: string
   ) {
     return await this.placeService.getById(id, user.id);
@@ -58,16 +65,9 @@ export class PlaceController {
   @ApiGetPlaceReviews()
   async getReviewsById(
     @CurrentUser() user: CurrentUserDto,
-    @Query() query: GetReviewsDto, 
+    @Query() query: GetReviewsDto,
     @Param('id') id: string
   ) {
     return await this.placeService.getReviewsById(query, id, user.id);
-  }
-
-  @UseInterceptors(CacheInterceptor)
-  @Get('trending')
-  @ApiGetTrendingPlaces()
-  async getTrending() {
-    return await this.placeService.getTrending();
   }
 }
