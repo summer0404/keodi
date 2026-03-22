@@ -2,6 +2,7 @@ export const API_BASE_PATHS = {
   AUTH: '/api/v1/auth',
   CATEGORIES: '/api/v1/categories',
   PLACES: '/api/v1/places',
+  FAVORITES: '/api/v1/favorites',
   USERS: '/api/v1/users',
 } as const;
 
@@ -16,6 +17,7 @@ export const API_ENDPOINTS = {
   REFRESH: `${API_BASE_PATHS.AUTH}/refresh`,
   GOOGLE_LOGIN_MOBILE: `${API_BASE_PATHS.AUTH}/google/mobile`,
   PLACES_NEAR_ME: `${API_BASE_PATHS.PLACES}/near-me`,
+  FAVORITES: API_BASE_PATHS.FAVORITES,
   ONBOARDING_CATEGORIES: `${API_BASE_PATHS.CATEGORIES}/onboarding`,
   SUBMIT_ONBOARDING: `${API_BASE_PATHS.USERS}/onboarding`,
 } as const;

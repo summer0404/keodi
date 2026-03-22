@@ -69,7 +69,7 @@ export interface AuthMeResponse {
   phoneNumber: string | null;
 }
 
-export type PlaceSortBy = 'distance' | 'rating' | 'name';
+export type PlaceSortBy = 'distance' | 'rating' | 'name' | 'createdAt';
 
 export interface GetNearbyPlacesRequest {
   page: number;
@@ -112,6 +112,31 @@ export interface GetNearbyPlacesResponse {
   page: number;
   totalPages: number;
   limit: number;
+}
+
+export interface GetFavoritesRequest {
+  page: number;
+  limit: number;
+  sortBy: PlaceSortBy;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export type FavoriteItem = Omit<PlaceItem, 'distance' | 'has_attributes' | 'isFavorite'> & {
+  distance?: number;
+};
+
+export interface GetFavoritesResponse {
+  favorites: FavoriteItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
+export interface AddFavoriteResponse {
+  userId: string;
+  placeId: string;
+  createdAt: string;
 }
 
 export interface OnboardingCategory {

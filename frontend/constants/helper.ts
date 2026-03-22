@@ -171,8 +171,8 @@ export const normalizeCityLabel = (cityValue: string) => {
   return hcmAliases.has(normalized) ? 'TPHCM' : cityValue;
 };
 
-export const buildSortOrder = (value: 'distance' | 'rating' | 'name') =>
-  value === 'rating' ? 'desc' : 'asc';
+export const buildSortOrder = (value: 'distance' | 'rating' | 'name' | 'createdAt') =>
+  value === 'rating' || value === 'createdAt' ? 'desc' : 'asc';
 
 export interface Category {
   id: string;

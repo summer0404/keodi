@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 import { Image, type ImageProps } from 'expo-image';
 import { Clock3, Heart, MapPin, MoveDiagonal, Star, type LucideIcon } from 'lucide-react-native';
@@ -19,7 +19,7 @@ type PlaceCardProps = {
   imageSource: ImageProps['source'];
   title: string;
   rating: number | string;
-  distanceLabel: string;
+  distanceLabel?: string;
   fullAddress?: string | null;
   street?: string | null;
   ward?: string | null;
@@ -30,7 +30,7 @@ type PlaceCardProps = {
   statusLabel?: string;
   defaultFavorite?: boolean;
   tags?: PlaceCardTag[];
-  onFavoriteChange?: (isFavorite: boolean) => void;
+  onFavoriteChange?: (isFavorite: boolean) => boolean | void | Promise<boolean | void>;
   className?: string;
   style?: StyleProp<ViewStyle>;
 };
@@ -58,6 +58,11 @@ export default function PlaceCard({
 }: PlaceCardProps) {
   const { t, i18n } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(defaultFavorite);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+
+  useEffect(() => {
+    setIsFavorite(defaultFavorite);
+  }, [defaultFavorite]);
 
   const fallbackAddress = [
     street?.trim(),
@@ -68,10 +73,30 @@ export default function PlaceCard({
 
   const addressText = fullAddress?.trim() || fallbackAddress || address?.trim() || '';
 
-  const handleFavoritePress = () => {
+  const handleFavoritePress = async () => {
+    if (isFavoriteLoading) {
+      return;
+    }
+
+    const previousValue = isFavorite;
     const nextValue = !isFavorite;
     setIsFavorite(nextValue);
-    onFavoriteChange?.(nextValue);
+
+    if (!onFavoriteChange) {
+      return;
+    }
+
+    setIsFavoriteLoading(true);
+    try {
+      const shouldKeepNextValue = await onFavoriteChange(nextValue);
+      if (shouldKeepNextValue === false) {
+        setIsFavorite(previousValue);
+      }
+    } catch {
+      setIsFavorite(previousValue);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
   };
 
   return (
@@ -109,6 +134,7 @@ export default function PlaceCard({
           accessibilityRole="button"
           accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           className="absolute right-4 top-4 h-11 w-11 items-center justify-center rounded-full bg-white"
+          disabled={isFavoriteLoading}
           onPress={handleFavoritePress}
         >
           <Heart
@@ -124,10 +150,13 @@ export default function PlaceCard({
             {statusLabel}
           </Typography>
         </View>
-        <View className="absolute bottom-4 right-4 rounded-full bg-white/90 px-3 py-1.5 flex-row items-center gap-2">
-          <MoveDiagonal size={iconSize} color={Palette.black} strokeWidth={2} />
-          <Typography variant="caption">{distanceLabel}</Typography>
-        </View>
+        {distanceLabel && (
+          <View className="absolute bottom-4 right-4 rounded-full bg-white/90 px-3 py-1.5 flex-row items-center gap-2">
+            <MoveDiagonal size={iconSize} color={Palette.black} strokeWidth={2} />
+
+            <Typography variant="caption">{distanceLabel}</Typography>
+          </View>
+        )}
       </View>
 
       <View className="px-5 pb-5 pt-4">
