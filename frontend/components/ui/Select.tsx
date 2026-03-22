@@ -37,7 +37,9 @@ export const Select: React.FC<SelectProps> = ({
   const [triggerLayout, setTriggerLayout] = useState<LayoutRectangle | null>(null);
   const triggerRef = useRef<View>(null);
 
-  const selected = options.find((o) => o.value === value);
+  const isSameValue = (a: string | number, b: string | number) => String(a) === String(b);
+
+  const selected = options.find((o) => isSameValue(o.value, value));
 
   const handleOpen = () => {
     triggerRef.current?.measure((x, y, width, height, pageX, pageY) => {
@@ -49,16 +51,17 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <>
       {/* Trigger */}
-      <View ref={triggerRef} collapsable={false}>
+      <View ref={triggerRef} collapsable={false} className={clsx('flex-1', className)}>
         <Pressable
           onPress={handleOpen}
           className={clsx(
-            'flex-row items-center justify-between rounded-2xl bg-white px-4 py-3',
-            'border border-gray-200',
-            className
+            'w-full min-h-[48px] flex-row items-center justify-between rounded-2xl bg-white px-4 py-3',
+            'border border-gray-200'
           )}
         >
-          <Typography className="text-black">{selected?.label ?? placeholder}</Typography>
+          <Typography className="flex-1 text-black" numberOfLines={1}>
+            {selected?.label ?? placeholder}
+          </Typography>
 
           <ChevronDown size={18} color="#000" />
         </Pressable>
@@ -94,7 +97,7 @@ export const Select: React.FC<SelectProps> = ({
                     keyExtractor={(item) => item.value.toString()}
                     scrollEnabled={false} // disable scroll if options short
                     renderItem={({ item }) => {
-                      const isSelected = item.value === value;
+                      const isSelected = isSameValue(item.value, value);
 
                       return (
                         <Pressable

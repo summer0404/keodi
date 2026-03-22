@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClientKafka } from '@nestjs/microservices';
 import { Response } from 'express';
 import { firstValueFrom } from 'rxjs';
+import { GoogleService } from 'src/providers/google/google.service';
 import {
   ForgotPasswordOTPDto,
   LoginDto,

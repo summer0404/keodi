@@ -11,6 +11,8 @@ export const Palette = {
   white: '#FFFFFF',
   red: '#FF0000',
   blue: '#1D61E7',
+  star: '#FF8800',
+  green: '#22BB33',
 };
 
 export const Colors = {
