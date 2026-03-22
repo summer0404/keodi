@@ -125,6 +125,7 @@
     "sortByDistance": "Khoảng cách",
     "sortByRating": "Đánh giá",
     "sortByName": "Tên",
+    "sortByCreatedAt": "Ngày tạo",
     "radius2km": "2 km",
     "radius5km": "5 km",
     "radius15km": "15 km",
@@ -140,6 +141,7 @@
     "yourFavoritePlaces": "Địa điểm yêu thích của bạn",
     "noFavorites": "Chưa có địa điểm yêu thích nào",
     "noFavoritesDescription": "Nhấn vào biểu tượng trái tim trên trang chủ để lưu các địa điểm yêu thích của bạn.",
-    "goToHome": "Đi đến trang chủ"
+    "goToHome": "Đi đến trang chủ",
+    "totalFavorites": "{{totalFavorites}} địa điểm"
   }
 }

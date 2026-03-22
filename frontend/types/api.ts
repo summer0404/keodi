@@ -69,7 +69,7 @@ export interface AuthMeResponse {
   phoneNumber: string | null;
 }
 
-export type PlaceSortBy = 'distance' | 'rating' | 'name';
+export type PlaceSortBy = 'distance' | 'rating' | 'name' | 'createdAt';
 
 export interface GetNearbyPlacesRequest {
   page: number;

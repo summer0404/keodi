@@ -125,6 +125,7 @@
     "sortByDistance": "Distance",
     "sortByRating": "Rating",
     "sortByName": "Name",
+    "sortByCreatedAt": "Created At",
     "radius2km": "2 km",
     "radius5km": "5 km",
     "radius15km": "15 km",
@@ -140,7 +141,8 @@
     "yourFavoritePlaces": "Your Favorite Places",
     "noFavorites": "No favorites yet",
     "noFavoritesDescription": "Tap the heart icon on Home to save your favorite places.",
-    "goToHome": "Go to home"
+    "goToHome": "Go to home",
+    "totalFavorites": "{{totalFavorites}} places"
   }
 
 }

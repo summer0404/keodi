@@ -33,8 +33,7 @@ export default function FavoriteScreen() {
   const cardWidth = width - horizontalPadding * 2;
 
   const [activeSegment, setActiveSegment] = useState<SegmentKey>('favorite');
-  const [sortBy, setSortBy] = useState<PlaceSortBy>('distance');
-  const [distanceFilter, setDistanceFilter] = useState(5);
+  const [sortBy, setSortBy] = useState<PlaceSortBy>('createdAt');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [favoritePlaces, setFavoritePlaces] = useState<FavoriteItem[]>([]);
@@ -62,21 +61,11 @@ export default function FavoriteScreen() {
 
   const sortOptions = useMemo(
     () => [
-      { label: t('home.sortByDistance'), value: 'distance' },
+      { label: t('home.sortByCreatedAt'), value: 'createdAt' },
       { label: t('home.sortByRating'), value: 'rating' },
       { label: t('home.sortByName'), value: 'name' },
     ],
-    []
-  );
-
-  const distanceOptions = useMemo(
-    () => [
-      { label: t('home.radius2km'), value: 2 },
-      { label: t('home.radius5km'), value: 5 },
-      { label: t('home.radius15km'), value: 15 },
-      { label: t('home.radius15kmPlus'), value: 50 },
-    ],
-    []
+    [t]
   );
 
   const categoryOptions = useMemo(
@@ -227,7 +216,9 @@ export default function FavoriteScreen() {
   const listFooter = (
     <>
       {isLoadingMore ? (
-        <Typography className="mt-4 text-center text-gray-500">{t('library.loadingFavorites')}</Typography>
+        <Typography className="mt-4 text-center text-gray-500">
+          {t('library.loadingFavorites')}
+        </Typography>
       ) : null}
       <View style={{ height: insets.bottom + 100 }} />
     </>
@@ -292,16 +283,6 @@ export default function FavoriteScreen() {
             className="flex-1"
           />
           <Select
-            value={distanceFilter}
-            onChange={(value) => {
-              if (typeof value === 'number') {
-                setDistanceFilter(value);
-              }
-            }}
-            options={distanceOptions}
-            className="flex-1"
-          />
-          <Select
             value={categoryFilter}
             onChange={(value) => {
               if (typeof value === 'string') {
@@ -317,7 +298,9 @@ export default function FavoriteScreen() {
           <View className="mt-5 flex-row items-center justify-between">
             <Typography variant="h5">{t('library.yourFavoritePlaces')}</Typography>
             <View className="rounded-full bg-red-500 px-3 py-2">
-              <Typography variant='caption-sm' className='text-white font-bold'>{totalFavorites} places</Typography>
+              <Typography variant="caption-sm" className="text-white font-bold">
+                {t('library.totalFavorites', { totalFavorites })}
+              </Typography>
             </View>
           </View>
         ) : null}
@@ -348,7 +331,9 @@ export default function FavoriteScreen() {
           ListFooterComponent={listFooter}
           ListEmptyComponent={
             isLoading ? (
-              <Typography className="px-4 pt-3 text-gray-500">{t('library.loadingFavorites')}</Typography>
+              <Typography className="px-4 pt-3 text-gray-500">
+                {t('library.loadingFavorites')}
+              </Typography>
             ) : (
               <View className="px-4 pt-3">
                 <AlertScreen
