@@ -7,20 +7,29 @@ import { VerifyUrlPurpose } from 'src/shared/enums/verifyUrl.enum';
 
 @Controller()
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) { }
+  constructor(private readonly notificationService: NotificationService) {}
 
   @EventPattern('notification.forgot-password')
   async forgotPassword(@Payload() data: SendOTPMailDto) {
-    return await this.notificationService.sendOTPByEmail(data, OtpPurpose.FORGOT_PASSWORD)
+    return await this.notificationService.sendOTPByEmail(
+      data,
+      OtpPurpose.FORGOT_PASSWORD,
+    );
   }
 
   @EventPattern('notification.reset-password')
   async resetPassword(@Payload() data: SendOTPMailDto) {
-    return await this.notificationService.sendOTPByEmail(data, OtpPurpose.RESET_PASSWORD)
+    return await this.notificationService.sendOTPByEmail(
+      data,
+      OtpPurpose.RESET_PASSWORD,
+    );
   }
 
   @EventPattern('notification.verify-email')
   async verifyEmail(@Payload() data: SendVerifyURLDto) {
-    return await this.notificationService.sendVerifyURLByEmail(data, VerifyUrlPurpose.VERIFY_EMAIL)
+    return await this.notificationService.sendVerifyURLByEmail(
+      data,
+      VerifyUrlPurpose.VERIFY_EMAIL,
+    );
   }
 }
