@@ -57,6 +57,28 @@ export class SearchDto extends NearMeQueryDto {
     mode?: SearchMode = SearchMode.KEYWORD;
 }
 
+export class OpeningHourDto {
+    @ApiProperty({ description: 'Day of week (0 = Sunday, 6 = Saturday)', example: 1 })
+    dayOfWeek: number;
+
+    @ApiProperty({ description: 'Opening time', example: '08:00:00' })
+    openTime: Date;
+
+    @ApiProperty({ description: 'Closing time', example: '22:00:00' })
+    closeTime: Date;
+}
+
+export class PlaceCategoryDto {
+    @ApiProperty({ description: 'Category ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+    id: string;
+
+    @ApiProperty({ description: 'Category name', example: 'Coffee Shop' })
+    name: string;
+
+    @ApiProperty({ description: 'Whether this is the main category', example: true })
+    isMain: boolean;
+}
+
 export class PlaceDistanceDto {
     id: string;
     fromGoogle: boolean;
@@ -79,6 +101,12 @@ export class PlaceDistanceDto {
     updatedAt: Date;
     distance: number; // in kilometers
     isFavorite: boolean;
+
+    @ApiProperty({ type: [OpeningHourDto], description: 'Opening hours of the place' })
+    openingHours: OpeningHourDto[];
+
+    @ApiProperty({ type: [PlaceCategoryDto], description: 'Categories of the place' })
+    categories: PlaceCategoryDto[];
 }
 
 export class NearMePlacesResponseDto extends PaginationResponseDto {
