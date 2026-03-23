@@ -8,6 +8,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from '../image/image.service';
 import { UserActionType } from '@prisma/client';
 import { SearchService } from '../search/search.service';
+import { PlaceRecommendationResponseDto } from 'src/shared/dtos/recommendation.dto';
 
 @Injectable()
 export class RecommendationService {
@@ -23,7 +24,7 @@ export class RecommendationService {
     try {
       const allPlaces = (await Promise.all(
         searchTerms.map(async (term) => {
-          const places = await this.prismaService.$queryRaw<any[]>`
+          const places = await this.prismaService.$queryRaw<PlaceRecommendationResponseDto[]>`
                 SELECT
                     p.id,
                     p.name,
@@ -35,8 +36,7 @@ export class RecommendationService {
                     p.feature_image_url as "featureImageUrl",
                     p.google_map_link as "googleMapLink",
                     p.phone_number as "phoneNumber",
-                    p.website,
-                    COUNT(ua.id) AS actions
+                    p.website
                 FROM places p
                 LEFT JOIN user_actions ua
                     ON ua.place_id = p.id
@@ -44,14 +44,13 @@ export class RecommendationService {
                 WHERE
                     p.name ILIKE '%' || ${term} || '%'
                 GROUP BY p.id
-                ORDER BY actions DESC, p.rating DESC
+                ORDER BY COUNT(ua.id) DESC, p.rating DESC
                 LIMIT ${PLACES_PER_SEARCH_TERM}
             `;
 
           const enrichedPlaces = await Promise.all(
             places.map(async (place) => ({
               ...place,
-              actions: Number(place.actions),
               featureImageUrl: place.featureImageUrl
                 ? await this.imageService.getImageViewUrl(place.featureImageUrl)
                 : null,
@@ -91,7 +90,7 @@ export class RecommendationService {
 
   async getTopPlacesFromUserActions() {
     try {
-      const places = await this.prismaService.$queryRaw<any[]>`
+      const places = await this.prismaService.$queryRaw<PlaceRecommendationResponseDto[]>`
         WITH constants AS (
           SELECT NOW() AS current_time, ${TIME_DECAY}::float AS decay_rate
         ),
@@ -109,8 +108,7 @@ export class RecommendationService {
               END)
               * EXP(-c.decay_rate * (EXTRACT(EPOCH FROM c.current_time - ua.created_at) / 3600)::float)
             ) AS weighted_score,
-            COUNT(DISTINCT ua.user_id)::float AS unique_users,
-            COUNT(*) AS actions
+            COUNT(DISTINCT ua.user_id)::float AS unique_users
           FROM user_actions ua
           CROSS JOIN constants c
           -- WHERE ua.created_at > c.current_time - INTERVAL '48 hours'
@@ -127,20 +125,16 @@ export class RecommendationService {
           p.feature_image_url as "featureImageUrl",
           p.google_map_link as "googleMapLink",
           p.phone_number as "phoneNumber",
-          p.website,
-          a.actions,
-          (a.weighted_score * LN(a.unique_users + 1)) AS final_score
+          p.website
         FROM action_scores a
         JOIN places p ON p.id = a.place_id 
-        ORDER BY final_score DESC
+        ORDER BY (a.weighted_score * LN(a.unique_users + 1)) DESC
         LIMIT 10
       `;
 
       const enrichedPlaces = await Promise.all(
         places.map(async (place) => ({
           ...place,
-          actions: Number(place.actions),
-          final_score: Number(place.final_score),
           featureImageUrl: place.featureImageUrl
             ? await this.imageService.getImageViewUrl(place.featureImageUrl)
             : null,
@@ -207,7 +201,7 @@ export class RecommendationService {
     }
 
     const trendingPlaces = this.recommendationHelper.deduplicatePlaces([
-      ...cachedPlacesFromSearchTerms, 
+      ...cachedPlacesFromSearchTerms,
       ...cachedPlacesFromActions
     ]);
 

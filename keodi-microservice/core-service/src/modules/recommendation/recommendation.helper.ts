@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
+import { PlaceRecommendationResponseDto } from "src/shared/dtos/recommendation.dto";
 
 
 @Injectable()
 export class RecommendationHelper {
-    deduplicatePlaces(places: any[]): any[] {
-        const placeMap = new Map<string, any>();
+    deduplicatePlaces(places: PlaceRecommendationResponseDto[]): PlaceRecommendationResponseDto[] {
+        const placeMap = new Map<string, PlaceRecommendationResponseDto>();
 
         places.forEach(place => {
             if (placeMap.get(place.id)) {
@@ -17,7 +18,7 @@ export class RecommendationHelper {
         return Array.from(placeMap.values());
     }
 
-    shufflePlaces(array: any[]): any[] {
+    shufflePlaces(array: PlaceRecommendationResponseDto[]): PlaceRecommendationResponseDto[] {
         const shuffled = [...array];
 
         for (let i = shuffled.length - 1; i > 0; i--) {
