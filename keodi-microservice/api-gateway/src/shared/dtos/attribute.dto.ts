@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsArray } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsArray } from 'class-validator';
 
 export class CreateAttributeDto {
   @ApiProperty({
@@ -9,5 +9,5 @@ export class CreateAttributeDto {
     required: true,
   })
   @IsArray()
-  name: string[] 
+  name: string[];
 }

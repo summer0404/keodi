@@ -9,10 +9,10 @@ import { SearchMode } from 'src/shared/enums/search.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import {
-    PlaceDetailResponse,
-    PlacePaginatedResponse,
-    PlaceWithDistance,
-    RawPlace,
+  PlaceDetailResponse,
+  PlacePaginatedResponse,
+  PlaceWithDistance,
+  RawPlace,
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
 
@@ -219,13 +219,13 @@ export class PlaceService {
                     p.created_at as "createdAt",
                     p.updated_at as "updatedAt",
                     (
-                        ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(
+                        ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(LEAST(1, GREATEST(-1,
                             cos(radians(${latitude})) 
                             * cos(radians(p.latitude)) 
                             * cos(radians(p.longitude) - radians(${longitude})) 
                             + sin(radians(${latitude})) 
                             * sin(radians(p.latitude))
-                        )
+                        )))
                     ) AS distance,
                     ${hasAttributeSelect}
                 FROM places p
@@ -258,13 +258,13 @@ export class PlaceService {
             FROM (
                 SELECT 
                     (
-                        ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(
+                        ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(LEAST(1, GREATEST(-1,
                             cos(radians(${latitude})) 
                             * cos(radians(p.latitude)) 
                             * cos(radians(p.longitude) - radians(${longitude})) 
                             + sin(radians(${latitude})) 
                             * sin(radians(p.latitude))
-                        )
+                        )))
                     ) AS distance
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
@@ -300,28 +300,29 @@ export class PlaceService {
     );
 
     try {
-      const rawPlaces = await this.queryPlacesInRadiusWithDistance(
-        latitude,
-        longitude,
-        latDelta,
-        longDelta,
-        radius,
-        orderByClause,
-        limit,
-        offset,
-      );
+      const [rawPlaces, total] = await Promise.all([
+        this.queryPlacesInRadiusWithDistance(
+          latitude,
+          longitude,
+          latDelta,
+          longDelta,
+          radius,
+          orderByClause,
+          limit,
+          offset,
+        ),
+        this.countPlacesInRadius(
+          latitude,
+          longitude,
+          latDelta,
+          longDelta,
+          radius,
+        ),
+      ]);
 
       const places = await this.enrichPlacesWithFavoriteAndImage(
         rawPlaces,
         userId,
-      );
-
-      const total = await this.countPlacesInRadius(
-        latitude,
-        longitude,
-        latDelta,
-        longDelta,
-        radius,
       );
       const totalPages = Math.ceil(total / limit);
 
@@ -364,30 +365,31 @@ export class PlaceService {
       if (mode === SearchMode.KEYWORD) {
         const searchPattern = `%${search}%`;
 
-        const rawPlaces = await this.queryPlacesInRadiusWithDistance(
-          latitude,
-          longitude,
-          latDelta,
-          longDelta,
-          radius,
-          orderByClause,
-          limit,
-          offset,
-          searchPattern,
-        );
+        const [rawPlaces, total] = await Promise.all([
+          this.queryPlacesInRadiusWithDistance(
+            latitude,
+            longitude,
+            latDelta,
+            longDelta,
+            radius,
+            orderByClause,
+            limit,
+            offset,
+            searchPattern,
+          ),
+          this.countPlacesInRadius(
+            latitude,
+            longitude,
+            latDelta,
+            longDelta,
+            radius,
+            searchPattern,
+          ),
+        ]);
 
         const places = await this.enrichPlacesWithFavoriteAndImage(
           rawPlaces,
           userId,
-        );
-
-        const total = await this.countPlacesInRadius(
-          latitude,
-          longitude,
-          latDelta,
-          longDelta,
-          radius,
-          searchPattern,
         );
         const totalPages = Math.ceil(total / limit);
 
@@ -422,33 +424,34 @@ export class PlaceService {
           ? undefined
           : extractedIntent.categories;
 
-        const rawPlaces = await this.queryPlacesInRadiusWithDistance(
-          latitude,
-          longitude,
-          latDelta,
-          longDelta,
-          radius,
-          orderByClause,
-          limit,
-          offset,
-          keywordPattern,
-          categoriesToUse,
-          extractedIntent.attributes,
-        );
+        const [rawPlaces, total] = await Promise.all([
+          this.queryPlacesInRadiusWithDistance(
+            latitude,
+            longitude,
+            latDelta,
+            longDelta,
+            radius,
+            orderByClause,
+            limit,
+            offset,
+            keywordPattern,
+            categoriesToUse,
+            extractedIntent.attributes,
+          ),
+          this.countPlacesInRadius(
+            latitude,
+            longitude,
+            latDelta,
+            longDelta,
+            radius,
+            keywordPattern,
+            categoriesToUse,
+          ),
+        ]);
 
         const places = await this.enrichPlacesWithFavoriteAndImage(
           rawPlaces,
           userId,
-        );
-
-        const total = await this.countPlacesInRadius(
-          latitude,
-          longitude,
-          latDelta,
-          longDelta,
-          radius,
-          keywordPattern,
-          categoriesToUse,
         );
         const totalPages = Math.ceil(total / limit);
 
@@ -502,14 +505,16 @@ export class PlaceService {
         });
       }
 
+      const { favorites, placeCategories, ...placeData } = place;
+
       return {
-        ...place,
-        isFavorite: place.favorites.length > 0,
-        featureImageUrl: place.featureImageUrl
-          ? await this.imageService.getImageViewUrl(place.featureImageUrl)
+        ...placeData,
+        isFavorite: favorites.length > 0,
+        featureImageUrl: placeData.featureImageUrl
+          ? await this.imageService.getImageViewUrl(placeData.featureImageUrl)
           : null,
-        openingHours: place.openingHours,
-        categories: place.placeCategories.map((pc) => ({
+        openingHours: placeData.openingHours,
+        categories: placeCategories.map((pc) => ({
           id: pc.category.id,
           name: pc.category.name,
           isMain: pc.isMain,
