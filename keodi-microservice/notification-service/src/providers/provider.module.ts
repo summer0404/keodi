@@ -9,4 +9,4 @@ import { RedisService } from './redis/redis.service';
   providers: [EmailService, FcmService, RedisService],
   exports: [EmailService, FcmService, RedisService, KafkaModule],
 })
-export class ProvidersModule {}
+export class ProviderModule {}
