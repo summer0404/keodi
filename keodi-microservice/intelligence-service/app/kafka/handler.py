@@ -1,6 +1,9 @@
 import json
+import logging
 import math
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 from typing import Optional
 from app.kafka.producer import KafkaProducer, get_producer
 from app.kafka.consumer import KafkaConsumerService, get_consumer_service
@@ -138,11 +141,13 @@ class Handlers:
         try:
             existing_user = await self.user_repository.get_by_id(user_id)
             if not existing_user:
-                raise Exception(f"User not found: {user_id}")
+                logger.warning("user_action skipped: User not found: %s", user_id)
+                return
 
             existing_place = await self.place_repository.get_by_id(place_id)
             if not existing_place:
-                raise Exception(f"Place not found: {place_id}")
+                logger.warning("user_action skipped: Place not found: %s", place_id)
+                return
 
             await self.user_action_repository.create_user_action(user_id, place_id, action)
 
