@@ -7,6 +7,7 @@ import { SearchScheduler } from './search.scheduler';
 @Module({
   controllers: [SearchController],
   providers: [SearchService, SearchScheduler],
-  imports: [RedisModule]
+  imports: [RedisModule],
+  exports: [SearchService]
 })
 export class SearchModule {}

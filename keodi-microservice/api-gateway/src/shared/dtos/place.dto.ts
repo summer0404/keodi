@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PartialType, PickType } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, Max, Min } from "class-validator";
 import { PlaceConstants } from "../constants/place.constant";
@@ -80,26 +80,68 @@ export class PlaceCategoryDto {
 }
 
 export class PlaceDistanceDto {
+    @ApiProperty({ description: 'Unique identifier of the place', example: '123e4567-e89b-12d3-a456-426614174000' })
     id: string;
+
+    @ApiProperty({ description: 'Indicates if the place data is sourced from Google Places API', example: true })
     fromGoogle: boolean;
+
+    @ApiProperty({ description: 'Place name', example: 'Starbucks Coffee' })
     name: string;
+
+    @ApiProperty({ description: 'Place description', example: 'A popular coffeehouse chain' })
     description: string | null;
+
+    @ApiProperty({ description: 'Average rating of the place', example: 4.5 })
     rating: number;
+
+    @ApiProperty({ description: 'Google Maps link for the place', example: 'https://maps.google.com/?q=10.76407,106.67838' })
     googleMapLink: string;
+
+    
+    @ApiProperty({ description: 'Website URL of the place', example: 'https://www.starbucks.com' })
     website: string | null;
+
+    @ApiProperty({ description: 'Phone number of the place', example: '+1 234 567 890' })
     phoneNumber: string | null;
+
+    @ApiProperty({ description: 'Feature image URL of the place', example: 'https://www.example.com/image.jpg' })
     featureImageUrl: string | null;
+
+    @ApiProperty({ description: 'Owner ID of the place', example: '123e4567-e89b-12d3-a456-426614174000' })
     ownerId: string | null;
+
+    @ApiProperty({ description: 'Latitude of the place', example: 10.76407 })
     latitude: number;
+
+    @ApiProperty({ description: 'Longitude of the place', example: 106.67838 })
     longitude: number;
+
+    @ApiProperty({ description: 'Full address of the place', example: '255 Đỗ Xuân Hợp, Phường Tân Phú, Quận 9, TP. Hồ Chí Minh, Việt Nam' })
     fullAddress: string | null;
+
+    @ApiProperty({ description: 'Ward of the place', example: 'Phường Tân Phú' })
     ward: string | null;
+
+    @ApiProperty({ description: 'Street of the place', example: '255 Đỗ Xuân Hợp' })
     street: string | null;
+
+    @ApiProperty({ description: 'District of the place', example: 'Quận 9, TP. Hồ Chí Minh' })
     city: string | null;
+
+    @ApiProperty({ description: 'Country code of the place', example: 'VN' })
     countryCode: string | null;
+
+    @ApiProperty({ description: 'Created at timestamp', example: '2024-01-01T00:00:00Z' })
     createdAt: Date;
+
+    @ApiProperty({ description: 'Updated at timestamp', example: '2024-01-02T00:00:00Z' })
     updatedAt: Date;
+
+    @ApiProperty({ description: 'Distance from the user location in kilometers', example: 2.5 })
     distance: number; // in kilometers
+
+    @ApiProperty({ description: 'Indicates if the place is marked as favorite by the user', example: true })
     isFavorite: boolean;
 
     @ApiProperty({ type: [OpeningHourDto], description: 'Opening hours of the place' })
@@ -113,3 +155,17 @@ export class NearMePlacesResponseDto extends PaginationResponseDto {
     @ApiProperty({ type: [PlaceDistanceDto], description: 'List of nearby places' })
     places: PlaceDistanceDto[];
 }
+
+export class PlaceRecommendationResponseDto extends PickType(PlaceDistanceDto, [
+    'id',
+    'name',
+    'description',
+    'rating',
+    'fullAddress',
+    'latitude',
+    'longitude',
+    'featureImageUrl',
+    'googleMapLink',
+    'phoneNumber',
+    'website'
+] as const) {}

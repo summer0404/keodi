@@ -54,4 +54,8 @@ export class PlaceService {
 
         return await this.reviewService.getByPlaceId(getReviewsDto, placeId);
     }
+
+    async getTrending() {
+        return await firstValueFrom(this.client.send('recommendation.trending', {}));
+    }
 }

@@ -8,7 +8,6 @@ class GroqProvider(BaseLLMProvider):
     def __init__(self):
         try:
             from groq import AsyncGroq
-            self.client = AsyncGroq(api_key=settings.groq_api_key)
 
             # Script for my company PC :))))
             # import httpx
@@ -17,6 +16,8 @@ class GroqProvider(BaseLLMProvider):
             #     api_key=settings.groq_api_key,
             #     http_client=http_client
             # )
+
+            self.client = AsyncGroq(api_key=settings.groq_api_key)
 
             self.model = settings.groq_model
         except ImportError:
