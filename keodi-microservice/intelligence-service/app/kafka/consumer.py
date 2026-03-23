@@ -4,6 +4,9 @@ from app.kafka.client import get_kafka_consumer
 from app.kafka.router import MessageRouter
 from aiokafka import AIOKafkaConsumer
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 class KafkaConsumerService:
     def __init__(self):
@@ -49,7 +52,7 @@ class KafkaConsumerService:
 
             await self.router.route(msg.topic, data, headers)
         except Exception as e:
-            raise RuntimeError(f"Error routing message from topic {msg.topic}: {e}") from e
+            logger.error("Skipping message from topic %s: %s", msg.topic, e)
         
     async def stop(self):
         self.running = False

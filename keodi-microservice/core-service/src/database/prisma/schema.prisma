@@ -181,7 +181,7 @@ model Category {
 
 model PlaceCategory {
   placeId    String  @map("place_id")
-  categoryId String  @map("category_id")
+  categoryId String  @map("category_id") 
   isMain     Boolean @default(false) @map("is_main")
 
   place    Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)

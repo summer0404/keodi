@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from 'src/providers/redis/redis.service';
+import {
+  PLACES_PER_SEARCH_TERM,
+  RecommendationRedisKeys,
+  TIME_DECAY,
+} from 'src/shared/constants/recommendation.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
-import { PLACES_PER_SEARCH_TERM, RecommendationRedisKeys, TIME_DECAY } from 'src/shared/constants/recommendation.constant';
 import { RecommendationHelper } from './recommendation.helper';
 // import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
-import { PrismaService } from 'src/database/prisma.service';
-import { ImageService } from '../image/image.service';
 import { UserActionType } from '@prisma/client';
-import { SearchService } from '../search/search.service';
+import { PrismaService } from 'src/database/prisma.service';
 import { PlaceRecommendationResponseDto } from 'src/shared/dtos/recommendation.dto';
+import { ImageService } from '../image/image.service';
+import { SearchService } from '../search/search.service';
 
 @Injectable()
 export class RecommendationService {
@@ -17,14 +21,60 @@ export class RecommendationService {
     private readonly recommendationHelper: RecommendationHelper,
     private readonly searchService: SearchService,
     private readonly prismaService: PrismaService,
-    private readonly imageService: ImageService
-  ) { }
+    private readonly imageService: ImageService,
+  ) {}
+
+  private async enrichPlacesWithRelations(
+    places: PlaceRecommendationResponseDto[],
+  ): Promise<PlaceRecommendationResponseDto[]> {
+    const placeIds = places.map((p) => p.id);
+
+    const placesWithRelations = await this.prismaService.place.findMany({
+      where: { id: { in: placeIds } },
+      include: {
+        openingHours: {
+          select: { dayOfWeek: true, openTime: true, closeTime: true },
+          orderBy: { dayOfWeek: 'asc' },
+        },
+        placeCategories: {
+          select: {
+            isMain: true,
+            category: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    const relationsMap = new Map(placesWithRelations.map((p) => [p.id, p]));
+
+    return await Promise.all(
+      places.map(async (place) => {
+        const relations = relationsMap.get(place.id);
+        return {
+          ...place,
+          featureImageUrl: place.featureImageUrl
+            ? await this.imageService.getImageViewUrl(place.featureImageUrl)
+            : null,
+          openingHours: relations?.openingHours ?? [],
+          categories:
+            relations?.placeCategories.map((pc) => ({
+              id: pc.category.id,
+              name: pc.category.name,
+              isMain: pc.isMain,
+            })) ?? [],
+        };
+      }),
+    );
+  }
 
   async getPlacesFromSearchTerms(searchTerms: string[]) {
     try {
-      const allPlaces = (await Promise.all(
-        searchTerms.map(async (term) => {
-          const places = await this.prismaService.$queryRaw<PlaceRecommendationResponseDto[]>`
+      const allPlaces = (
+        await Promise.all(
+          searchTerms.map(async (term) => {
+            const places = await this.prismaService.$queryRaw<
+              PlaceRecommendationResponseDto[]
+            >`
                 SELECT
                     p.id,
                     p.name,
@@ -48,27 +98,21 @@ export class RecommendationService {
                 LIMIT ${PLACES_PER_SEARCH_TERM}
             `;
 
-          const enrichedPlaces = await Promise.all(
-            places.map(async (place) => ({
-              ...place,
-              featureImageUrl: place.featureImageUrl
-                ? await this.imageService.getImageViewUrl(place.featureImageUrl)
-                : null,
-            }))
-          );
+            const enrichedPlaces = await this.enrichPlacesWithRelations(places);
 
-          return enrichedPlaces;
-        })
-      )).flatMap(places => places);
+            return enrichedPlaces;
+          }),
+        )
+      ).flatMap((places) => places);
 
-      const uniquePlaces = this.recommendationHelper.deduplicatePlaces(allPlaces);
+      const uniquePlaces =
+        this.recommendationHelper.deduplicatePlaces(allPlaces);
 
       return uniquePlaces;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
   }
-
 
   async updatePlaceFromTrendingSearchesForRedis(searchTerms: string[]) {
     try {
@@ -79,10 +123,9 @@ export class RecommendationService {
       );
 
       // await this.redisService.expire(
-      //   RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS, 
+      //   RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
       //   SEARCH_TRENDING_TTL_SECONDS
       // );
-
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -90,7 +133,9 @@ export class RecommendationService {
 
   async getTopPlacesFromUserActions() {
     try {
-      const places = await this.prismaService.$queryRaw<PlaceRecommendationResponseDto[]>`
+      const places = await this.prismaService.$queryRaw<
+        PlaceRecommendationResponseDto[]
+      >`
         WITH constants AS (
           SELECT NOW() AS current_time, ${TIME_DECAY}::float AS decay_rate
         ),
@@ -132,18 +177,10 @@ export class RecommendationService {
         LIMIT 10
       `;
 
-      const enrichedPlaces = await Promise.all(
-        places.map(async (place) => ({
-          ...place,
-          featureImageUrl: place.featureImageUrl
-            ? await this.imageService.getImageViewUrl(place.featureImageUrl)
-            : null,
-        }))
-      );
+      const enrichedPlaces = await this.enrichPlacesWithRelations(places);
 
       return enrichedPlaces;
-    }
-    catch (error) {
+    } catch (error) {
       console.error('SQL Error in getTopPlacesFromUserActions:', error);
       return handleServiceErrorCatching(error);
     }
@@ -158,7 +195,7 @@ export class RecommendationService {
       );
 
       // await this.redisService.expire(
-      //   RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS, 
+      //   RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
       //   SEARCH_TRENDING_TTL_SECONDS
       // );
     } catch (error) {
@@ -170,27 +207,43 @@ export class RecommendationService {
     let rawCachedPlacesFromSearchTerms: string | null = null;
     let rawCachedPlacesFromActions: string | null = null;
     try {
-      rawCachedPlacesFromSearchTerms = await this.redisService.get(RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS);
+      rawCachedPlacesFromSearchTerms = await this.redisService.get(
+        RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
+      );
     } catch (error) {
-      console.error('Error fetching trending places from search terms from Redis:', error);
+      console.error(
+        'Error fetching trending places from search terms from Redis:',
+        error,
+      );
     }
 
     try {
-      rawCachedPlacesFromActions = await this.redisService.get(RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS);
+      rawCachedPlacesFromActions = await this.redisService.get(
+        RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
+      );
     } catch (error) {
-      console.error('Error fetching trending places from user actions from Redis:', error);
+      console.error(
+        'Error fetching trending places from user actions from Redis:',
+        error,
+      );
     }
 
-    let cachedPlacesFromSearchTerms = rawCachedPlacesFromSearchTerms ? JSON.parse(rawCachedPlacesFromSearchTerms) : [];
-    let cachedPlacesFromActions = rawCachedPlacesFromActions ? JSON.parse(rawCachedPlacesFromActions) : [];
+    let cachedPlacesFromSearchTerms = rawCachedPlacesFromSearchTerms
+      ? JSON.parse(rawCachedPlacesFromSearchTerms)
+      : [];
+    let cachedPlacesFromActions = rawCachedPlacesFromActions
+      ? JSON.parse(rawCachedPlacesFromActions)
+      : [];
 
     try {
       if (cachedPlacesFromSearchTerms.length === 0) {
         const searchTerms = await this.searchService.getTrending();
-        cachedPlacesFromSearchTerms = await this.getPlacesFromSearchTerms(searchTerms
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 5)
-          .map(search => search.extractedTerm));
+        cachedPlacesFromSearchTerms = await this.getPlacesFromSearchTerms(
+          searchTerms
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5)
+            .map((search) => search.extractedTerm),
+        );
       }
 
       if (cachedPlacesFromActions.length === 0) {
@@ -202,12 +255,13 @@ export class RecommendationService {
 
     const trendingPlaces = this.recommendationHelper.deduplicatePlaces([
       ...cachedPlacesFromSearchTerms,
-      ...cachedPlacesFromActions
+      ...cachedPlacesFromActions,
     ]);
 
     // TODO: Ranking recommedation for more personalized result
     // For now, we just shuffle the places to make it more dynamic
-    const shuffledTrendingPlaces = this.recommendationHelper.shufflePlaces(trendingPlaces);
+    const shuffledTrendingPlaces =
+      this.recommendationHelper.shufflePlaces(trendingPlaces);
 
     return shuffledTrendingPlaces;
   }
