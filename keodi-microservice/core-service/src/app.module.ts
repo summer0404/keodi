@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './database/prisma.module';
 import { AttributeModule } from './modules/attribute/attribute.module';
 import { CategoryModule } from './modules/category/category.module';
@@ -11,6 +10,8 @@ import { ImageModule } from './modules/image/image.module';
 import { PlaceModule } from './modules/place/place.module';
 import { ReviewModule } from './modules/review/review.module';
 import { SearchModule } from './modules/search/search.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RecommendationModule } from './modules/recommendation/recommendation.module';
 import { UserModule } from './modules/user/user.module';
 import { KafkaModule } from './providers/kafka/kafka.module';
 
@@ -30,6 +31,7 @@ import { KafkaModule } from './providers/kafka/kafka.module';
     AttributeModule,
     GroupSessionModule,
     SearchModule,
+    RecommendationModule
   ],
   controllers: [],
   providers: [],

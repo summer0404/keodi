@@ -4,13 +4,7 @@ import { SearchService } from "./search.service";
 
 @Injectable()
 export class SearchScheduler {
-    constructor(private readonly searchService: SearchService,) {}
-
-    @Cron('*/5 * * * *', { disabled: true })
-    async updateTrendingSearchesForRedis() {
-        const trendingSearches = await this.searchService.getTrending(); 
-        await this.searchService.updateTrendingForRedis(trendingSearches);
-    }
+    constructor(private readonly searchService: SearchService) {}
 
     @Cron('0 3 * * 0', { disabled: true})
     async clearOldHistory() {

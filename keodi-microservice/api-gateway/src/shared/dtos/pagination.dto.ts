@@ -28,15 +28,15 @@ export class PaginationQueryDto {
 }
 
 export abstract class PaginationResponseDto {
-    @ApiProperty({ description: 'Total number of items' })
+    @ApiProperty({ description: 'Total number of items', example: 1 })
     total: number;
 
-    @ApiProperty({ description: 'Current page number' })
+    @ApiProperty({ description: 'Current page number', example: 1 })
     page: number;
 
-    @ApiProperty({ description: 'Total number of pages' })
+    @ApiProperty({ description: 'Total number of pages', example: 1 })
     totalPages: number;
 
-    @ApiProperty({ description: 'Items per page' })
+    @ApiProperty({ description: 'Items per page', example: 10 })
     limit: number;
 }

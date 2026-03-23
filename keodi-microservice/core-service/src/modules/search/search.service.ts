@@ -3,7 +3,7 @@ import { CreateSearchDto, SearchTrendingScoreDto } from 'src/shared/dtos/search.
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import { MAX_RECENT_SEARCHES_PER_USER, SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
+import { MAX_RECENT_SEARCHES_PER_USER, SEARCH_TRENDING_TTL_SECONDS, SearchRedisKeys } from 'src/shared/constants/search.constant';
 
 @Injectable()
 export class SearchService {
@@ -13,8 +13,8 @@ export class SearchService {
     ){}
     async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
         try {
-            await this.redisService.zadd('search:trending', trendingSearches.flatMap(search => [search.score, search.extractedTerm]));
-            await this.redisService.expire('search:trending', SEARCH_TRENDING_TTL_SECONDS);
+            await this.redisService.zadd(SearchRedisKeys.TRENDING, trendingSearches.flatMap(search => [search.score, search.extractedTerm]));
+            await this.redisService.expire(SearchRedisKeys.TRENDING, SEARCH_TRENDING_TTL_SECONDS);
         } catch (error) {
             return handleServiceErrorCatching(error)
         }
@@ -64,11 +64,9 @@ export class SearchService {
                             END
                         ) as decay_score
                     FROM searches
-                    WHERE
-                        created_at > NOW() - INTERVAL '24 hour'
+                    -- WHERE created_at > NOW() - INTERVAL '24 hour'
                     GROUP BY extracted_term
-                    -- HAVING
-                    --    COUNT(*) > 0
+                    -- HAVING COUNT(*) > 0
                 )
                 SELECT
                     extracted_term as "extractedTerm",

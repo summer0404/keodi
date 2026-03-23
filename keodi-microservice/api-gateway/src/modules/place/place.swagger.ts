@@ -6,7 +6,7 @@ import {
   ApiOperation,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { NearMePlacesResponseDto } from 'src/shared/dtos/place.dto';
+import { NearMePlacesResponseDto, PlaceDistanceDto, PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 import { ReviewResponseDto } from 'src/shared/dtos/review.dto';
 
 export function ApiNearMePlace() {
@@ -93,6 +93,25 @@ export function ApiGetPlaceReviews() {
     }),
     ApiBadRequestResponse({
         description: 'Invalid place ID format',
+    }),
+  );
+}
+
+export function ApiGetTrendingPlaces() {
+  return applyDecorators(
+    ApiOperation({
+        summary: 'Get trending places',
+        description: 'Retrieve a list of trending places based on user interactions and search trends',
+    }),
+    ApiOkResponse({
+        description: 'List of trending places retrieved successfully',
+        type: [PlaceRecommendationResponseDto],
+    }),
+    ApiUnauthorizedResponse({
+        description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiBadRequestResponse({
+        description: 'Invalid request parameters',
     }),
   );
 }

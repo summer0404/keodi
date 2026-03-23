@@ -34,6 +34,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf('place.get-by-id');
     this.kafkaClient.subscribeToResponseOf('place.near-me');
     this.kafkaClient.subscribeToResponseOf('place.search');
+    this.kafkaClient.subscribeToResponseOf('recommendation.trending');
 
     //favorite topic
     this.kafkaClient.subscribeToResponseOf('favorite.add');
