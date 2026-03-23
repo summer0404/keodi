@@ -22,5 +22,77 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  userDeviceTokens UserDeviceToken[]
+  notifications    Notification[]
+
   @@map("users")
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+}
+
+model UserDeviceToken {
+  id         String         @id @default(cuid())
+  userId     String         @map("user_id")
+  token      String         @unique
+  platform   DevicePlatform
+  deviceId   String?        @map("device_id")
+  appVersion String?        @map("app_version")
+  isActive   Boolean        @default(true) @map("is_active")
+  lastSeenAt DateTime       @default(now()) @map("last_seen_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([lastSeenAt])
+  @@map("user_device_tokens")
+}
+
+enum NotificationType {
+  GROUP_INVITE
+  GROUP_VOTE_REMINDER
+  GROUP_VOTE_FINALIZED
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  SYSTEM
+}
+
+enum NotificationChannel {
+  WEBSOCKET
+  FCM
+  BOTH
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String              @map("user_id")
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?
+  deepLink    String?             @map("deep_link")
+  channel     NotificationChannel @default(BOTH)
+  status      NotificationStatus  @default(PENDING)
+  eventId     String?             @unique @map("event_id")
+  isRead      Boolean             @default(false) @map("is_read")
+  deliveredAt DateTime?           @map("delivered_at")
+  readAt      DateTime?           @map("read_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@index([createdAt])
+  @@map("notifications")
 }

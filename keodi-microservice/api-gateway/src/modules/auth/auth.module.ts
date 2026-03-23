@@ -19,10 +19,6 @@ import { GoogleModule } from 'src/providers/google/google.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    GoogleStrategy,
-    JwtStrategy,
-  ],
+  providers: [AuthService, GoogleStrategy, JwtStrategy],
 })
-export class AuthModule { }
+export class AuthModule {}

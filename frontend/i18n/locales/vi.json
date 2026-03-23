@@ -1,6 +1,9 @@
 {
-  "hello": "Xin chào",
-  "welcome": "Chào mừng bạn đến với ứng dụng",
+  "address": {
+    "ward": "Phường",
+    "district": "Quận",
+    "hcmc": "TPHCM"
+  },
   "selectDate": "Chọn ngày",
   "onboarding": {
     "slide1": {
@@ -111,5 +114,34 @@
     "resetTokenExpired": "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu OTP lại",
     "emailExists": "Email đã tồn tại",
     "loadCategories": "Không thể tải danh mục. Vui lòng thử lại sau"
+  },
+  "home": {
+    "greeting": "Hi @{{username}},",
+    "subGreeting": "Bạn muốn đi đâu nào?",
+    "loadingPlaces": "Đang tải địa điểm ...",
+    "retry": "Thử lại",
+    "noPlaces": "Ui! Không tìm thấy địa điểm nào",
+    "subNoPlaces": "Có vẻ như không có địa điểm nào phù hợp. Hãy thử lại nhé!",
+    "sortByDistance": "Khoảng cách",
+    "sortByRating": "Đánh giá",
+    "sortByName": "Tên",
+    "sortByCreatedAt": "Ngày tạo",
+    "radius2km": "2 km",
+    "radius5km": "5 km",
+    "radius15km": "15 km",
+    "radius15kmPlus": "> 15 km",
+    "loadingLocation": "Đang lấy vị trí của bạn...",
+    "locationDisabled": "Vị trí chưa được bật"
+  },
+  "library": {
+    "title": "Thư viện",
+    "loadingFavorites": "Đang tải danh sách yêu thích...",
+    "favorite": "Yêu thích",
+    "history": "Lịch sử",
+    "yourFavoritePlaces": "Địa điểm yêu thích của bạn",
+    "noFavorites": "Chưa có địa điểm yêu thích nào",
+    "noFavoritesDescription": "Nhấn vào biểu tượng trái tim trên trang chủ để lưu các địa điểm yêu thích của bạn.",
+    "goToHome": "Đi đến trang chủ",
+    "totalFavorites": "{{totalFavorites}} địa điểm"
   }
 }

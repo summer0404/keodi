@@ -3,15 +3,21 @@ import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import { createId } from '@paralleldrive/cuid2';
 import {
-  GroupSessionStatus,
-  VoteStatus,
-  type GroupSession,
+    GroupSessionStatus,
+    VoteStatus,
+    type GroupSession,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { PrismaService } from 'src/database/prisma.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { GroupSessionMessages } from 'src/shared/constants/group-session.constant';
+import {
+    NotificationPreferredChannel,
+    NotificationTopics,
+    NotificationType,
+} from 'src/shared/constants/notification-topic.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
-import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
 export class GroupSessionService {
@@ -21,7 +27,27 @@ export class GroupSessionService {
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
     private readonly groupSessionHelper: GroupSessionHelper,
+    private readonly kafkaService: KafkaService,
   ) {}
+
+  private async notifySessionMembers(
+    sessionId: string,
+    eventType: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    const members = await this.prismaService.groupSessionMember.findMany({
+      where: { sessionId },
+      select: { userId: true },
+    });
+    const kafka = this.kafkaService.getClient();
+    for (const member of members) {
+      if (!member.userId) continue;
+      kafka.emit(NotificationTopics.RealtimePush, {
+        userId: member.userId,
+        event: { type: eventType, ...payload },
+      });
+    }
+  }
 
   private generateShareCode(
     length: number = GroupSessionService.SHARE_CODE_LENGTH,
@@ -314,6 +340,26 @@ export class GroupSessionService {
         });
       }
 
+      // Fetch inviter name for notification body
+      const inviter = await this.prismaService.user.findUnique({
+        where: { id: inviterId },
+        select: { firstName: true, lastName: true },
+      });
+      const inviterName =
+        [inviter?.firstName, inviter?.lastName].filter(Boolean).join(' ') ||
+        'Someone';
+
+      this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
+        eventId: createId(),
+        userId: friendId,
+        type: NotificationType.GROUP_INVITE,
+        title: 'Group Session Invite',
+        body: `${inviterName} invited you to join a group session. Use code: ${session.shareCode}`,
+        data: { sessionId, shareCode: session.shareCode, inviterId },
+        preferredChannel: NotificationPreferredChannel.BOTH,
+        createdAt: new Date().toISOString(),
+      });
+
       return {
         sessionId,
         shareCode: session.shareCode,
@@ -453,6 +499,17 @@ export class GroupSessionService {
         });
       });
 
+      // Notify all session members about the new/updated vote in real time
+      void this.notifySessionMembers(sessionId, 'vote.cast', {
+        sessionId,
+        vote: {
+          memberId: vote.member.id,
+          userId: vote.member.userId,
+          nickname: vote.member.nickname,
+          place: vote.place,
+        },
+      });
+
       return vote;
     } catch (error) {
       if (
@@ -590,6 +647,37 @@ export class GroupSessionService {
         voteAutoFinalized = true;
       }
 
+      // Notify all members: someone locked in their vote
+      void this.notifySessionMembers(sessionId, 'vote.member_finalized', {
+        sessionId,
+        memberId: member.id,
+        finalizedVotes,
+        totalMembers,
+        voteAutoFinalized,
+      });
+
+      // If auto-finalized, also send a push notification to all authenticated members
+      if (voteAutoFinalized) {
+        const members = await this.prismaService.groupSessionMember.findMany({
+          where: { sessionId, userId: { not: null } },
+          select: { userId: true },
+        });
+        const kafka = this.kafkaService.getClient();
+        for (const m of members) {
+          if (!m.userId) continue;
+          kafka.emit(NotificationTopics.Dispatch, {
+            eventId: createId(),
+            userId: m.userId,
+            type: NotificationType.GROUP_VOTE_FINALIZED,
+            title: 'Vote Finalized!',
+            body: 'All members have voted. Check out the results!',
+            data: { sessionId },
+            preferredChannel: NotificationPreferredChannel.BOTH,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+
       return {
         vote: updatedVote,
         voteAutoFinalized,
@@ -686,6 +774,22 @@ export class GroupSessionService {
           },
         }),
       ]);
+
+      // Notify all authenticated members with push notification
+      const kafka = this.kafkaService.getClient();
+      for (const m of session.members) {
+        if (!m.userId) continue;
+        kafka.emit(NotificationTopics.Dispatch, {
+          eventId: createId(),
+          userId: m.userId,
+          type: NotificationType.GROUP_VOTE_FINALIZED,
+          title: 'Vote Finalized!',
+          body: 'The session host has finalized the vote. Check out the results!',
+          data: { sessionId, winningPlaceId },
+          preferredChannel: NotificationPreferredChannel.BOTH,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
       return {
         sessionId,

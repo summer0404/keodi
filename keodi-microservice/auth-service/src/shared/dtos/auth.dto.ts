@@ -3,7 +3,8 @@ import { CreateUserDto } from './user.dto';
 
 export class RegisterDto extends CreateUserDto {}
 
-export class LoginDto extends PickType(RegisterDto, ['username', 'password']) {
+export class LoginDto extends PickType(RegisterDto, ['password'] as const) {
+  identifier: string;
   rememberMe?: boolean;
 }
 

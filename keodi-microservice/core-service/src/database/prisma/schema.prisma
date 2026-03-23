@@ -52,7 +52,6 @@ model User {
   favorites          Favorite[]
   sessionMemberships GroupSessionMember[]
   searches           Search[]
-
   sentRequests     FriendRequest[] @relation("SentRequests")
   receivedRequests FriendRequest[] @relation("ReceivedRequests")
   friendships      Friendship[]    @relation("UserFriendships")

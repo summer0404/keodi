@@ -1,6 +1,9 @@
 {
-  "hello": "Hello",
-  "welcome": "Welcome to the app",
+  "address": {
+    "ward": "Ward",
+    "district": "District",
+    "hcmc": "HCMC"
+  },
   "selectDate": "Select Date",
   "onboarding": {
     "slide1": {
@@ -111,5 +114,35 @@
     "resetTokenExpired": "Reset session expired. Please request OTP again",
     "emailExists": "Email already exists",
     "loadCategories": "Unable to load categories. Please try again later"
+  },
+  "home": {
+    "greeting": "Hi @{{username}},",
+    "subGreeting": "Where do you wanna go?",
+    "loadingPlaces": "Loading places ...",
+    "retry": "Retry",
+    "noPlaces": "Oops! No places found",
+    "subNoPlaces": "It seems like there are no places. Please try again!",
+    "sortByDistance": "Distance",
+    "sortByRating": "Rating",
+    "sortByName": "Name",
+    "sortByCreatedAt": "Created At",
+    "radius2km": "2 km",
+    "radius5km": "5 km",
+    "radius15km": "15 km",
+    "radius15kmPlus": "> 15 km",
+    "loadingLocation": "Getting your location...",
+    "locationDisabled": "Location is not enabled"
+  },
+  "library": {
+    "title": "My Library",
+    "loadingFavorites": "Loading favorite places...",
+    "favorite": "Favorite",
+    "history": "History",
+    "yourFavoritePlaces": "Your Favorite Places",
+    "noFavorites": "No favorites yet",
+    "noFavoritesDescription": "Tap the heart icon on Home to save your favorite places.",
+    "goToHome": "Go to home",
+    "totalFavorites": "{{totalFavorites}} places"
   }
+
 }
