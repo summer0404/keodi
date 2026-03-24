@@ -4,7 +4,6 @@ import { NotificationDispatchController } from './notification.dispatch.controll
 import { NotificationDispatcherService } from './notification.dispatcher.service';
 import { NotificationService } from './notification.service';
 import { NotificationHelper } from './notification.helper';
-import { ProviderModule } from 'src/providers/provider.module';
 
 @Module({
   controllers: [NotificationController, NotificationDispatchController],
