@@ -14,8 +14,8 @@ import { PlaceModule } from './modules/place/place.module';
 import { ReviewModule } from './modules/review/review.module';
 import { SearchModule } from './modules/search/search.module';
 import { UserModule } from './modules/user/user.module';
-import { KafkaModule } from './providers/kafka/kafka.module';
-import { RedisModule } from './providers/redis/redis.module';
+import { ProviderModule } from './providers/provider.module';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   providers: [
@@ -30,19 +30,22 @@ import { RedisModule } from './providers/redis/redis.module';
   ],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 120000,
+    }),
     AuthModule,
     UserModule,
-    KafkaModule,
     PlaceModule,
     FavoriteModule,
     CategoryModule,
     FriendModule,
     GroupSessionModule,
-    RedisModule,
     ReviewModule,
     AttributeModule,
     SearchModule,
     NotificationRealtimeModule,
+    ProviderModule
   ],
 })
 export class AppModule {}

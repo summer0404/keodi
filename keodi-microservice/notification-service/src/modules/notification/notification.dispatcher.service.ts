@@ -7,8 +7,8 @@ import {
   NotificationStatus,
   NotificationTopics,
 } from 'src/shared/constants/notification.constant';
-import { DispatchNotificationEvent } from './notification.dispatch.controller';
 import { NotificationHelper } from './notification.helper';
+import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
 
 @Injectable()
 export class NotificationDispatcherService {
@@ -18,19 +18,19 @@ export class NotificationDispatcherService {
     private readonly notificationHelper: NotificationHelper,
   ) {}
 
-  async dispatch(evt: DispatchNotificationEvent): Promise<void> {
+  async dispatch(event: DispatchNotificationEvent): Promise<void> {
     const kafka = this.kafkaService.getClient();
-    const channel = evt.preferredChannel ?? NotificationPreferredChannel.BOTH;
+    const channel = event.preferredChannel ?? NotificationPreferredChannel.BOTH;
 
     //persist pending
     kafka.emit(NotificationTopics.PersistInbox, {
-      ...evt,
+      ...event,
       channel,
       status: NotificationStatus.PENDING,
     });
 
     const isOnline = await this.notificationHelper.isOnline(
-      evt.userId,
+      event.userId,
     );
     let delivered = false;
 
@@ -41,8 +41,8 @@ export class NotificationDispatcherService {
         channel === NotificationPreferredChannel.BOTH)
     ) {
       kafka.emit(NotificationTopics.RealtimePush, {
-        userId: evt.userId,
-        event: evt,
+        userId: event.userId,
+        event: event,
       });
       delivered = true;
     }
@@ -54,22 +54,22 @@ export class NotificationDispatcherService {
       try {
         const tokensRes = await firstValueFrom(
           kafka.send(NotificationTopics.GetActiveTokens, {
-            userId: evt.userId,
+            userId: event.userId,
           }),
         );
 
         const tokens: string[] = tokensRes?.tokens ?? [];
         if (tokens.length) {
           const invalidTokens = await this.fcmService.sendMulticast(tokens, {
-            title: evt.title,
-            body: evt.body,
-            data: evt.data as Record<string, string> | undefined,
+            title: event.title,
+            body: event.body,
+            data: event.data as Record<string, string> | undefined,
           });
 
           //Deactive invalid tokens
           for (const token of invalidTokens) {
             kafka.emit(NotificationTopics.DeactivateToken, {
-              userId: evt.userId,
+              userId: event.userId,
               token,
             });
           }
@@ -81,7 +81,7 @@ export class NotificationDispatcherService {
     }
     if (delivered) {
       kafka.emit(NotificationTopics.PersistInbox, {
-        ...evt,
+        ...event,
         channel,
         status: NotificationStatus.SENT,
         deliveredAt: new Date().toISOString(),

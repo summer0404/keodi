@@ -1,12 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 
 @Injectable()
 export class CategoryService {
-    constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
+    constructor(private readonly kafkaService: KafkaService) {}
 
     async getListOnBoarding() {
-        return await firstValueFrom(this.client.send('category.get-list-onboarding', {}));
+        return await firstValueFrom(this.kafkaService.getClient().send('category.get-list-onboarding', {}));
     }
 }

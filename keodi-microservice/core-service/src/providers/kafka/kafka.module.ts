@@ -1,9 +1,8 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { KafkaService } from './kafka.service';
 
-@Global()
 @Module({
     imports: [
         ClientsModule.registerAsync([
@@ -34,6 +33,6 @@ import { KafkaService } from './kafka.service';
         ]),
     ],
     providers: [KafkaService],
-    exports: [ClientsModule, KafkaService],
+    exports: [KafkaService],
 })
 export class KafkaModule { }

@@ -9,6 +9,5 @@ import { ProviderModule } from 'src/providers/provider.module';
 @Module({
   controllers: [NotificationController, NotificationDispatchController],
   providers: [NotificationService, NotificationDispatcherService, NotificationHelper],
-  imports: [ProviderModule],
 })
 export class NotificationModule {}

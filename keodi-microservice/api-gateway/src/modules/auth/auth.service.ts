@@ -1,9 +1,9 @@
-import { Inject, Injectable, Res, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Res, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ClientKafka } from '@nestjs/microservices';
 import { Response } from 'express';
 import { firstValueFrom } from 'rxjs';
 import { GoogleService } from 'src/providers/google/google.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   ForgotPasswordOTPDto,
   LoginDto,
@@ -17,7 +17,7 @@ import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 @Injectable()
 export class AuthService {
   constructor(
-    @Inject('KAFKA_SERVICE') private client: ClientKafka,
+    private readonly kafkaService: KafkaService,
     private readonly configService: ConfigService,
     private readonly googleService: GoogleService,
   ) {}
@@ -42,7 +42,7 @@ export class AuthService {
 
   async register(body: RegisterDto) {
     try {
-      return await firstValueFrom(this.client.send('auth.register', body));
+      return await firstValueFrom(this.kafkaService.getClient().send('auth.register', body));
     } catch (error) {
       throw error;
     }
@@ -51,7 +51,7 @@ export class AuthService {
   async login(@Res({ passthrough: true }) res: Response, body: LoginDto) {
     try {
       const response = await firstValueFrom(
-        this.client.send('auth.login', body),
+        this.kafkaService.getClient().send('auth.login', body),
       );
 
       const cookieMaxAge = body.rememberMe
@@ -81,7 +81,7 @@ export class AuthService {
       const userInfo = await this.verifyGoogleIdToken(token);
 
       const response = await firstValueFrom(
-        this.client.send('auth.google', userInfo),
+        this.kafkaService.getClient().send('auth.google', userInfo),
       );
 
       res.cookie('refreshToken', response.refreshToken, {
@@ -102,7 +102,7 @@ export class AuthService {
   async googleCallback(@Res({ passthrough: true }) res: Response, user: any) {
     try {
       const response = await firstValueFrom(
-        this.client.send('auth.google', user),
+        this.kafkaService.getClient().send('auth.google', user),
       );
 
       res.cookie('refreshToken', response.refreshToken, {
@@ -123,7 +123,7 @@ export class AuthService {
   async forgotPasswordOTP(body: ForgotPasswordOTPDto) {
     try {
       return await firstValueFrom(
-        this.client.send('auth.forgot-password-otp', body),
+        this.kafkaService.getClient().send('auth.forgot-password-otp', body),
       );
     } catch (error) {
       throw error;
@@ -133,7 +133,7 @@ export class AuthService {
   async resetPasswordOTP(body: ResetPasswordOTPDto) {
     try {
       return await firstValueFrom(
-        this.client.send('auth.reset-password-otp', body),
+        this.kafkaService.getClient().send('auth.reset-password-otp', body),
       );
     } catch (error) {
       throw error;
@@ -143,7 +143,7 @@ export class AuthService {
   async validateOtp(body: ValidateOTPDto, purpose: string) {
     try {
       return await firstValueFrom(
-        this.client.send('auth.validate-otp', { ...body, purpose }),
+        this.kafkaService.getClient().send('auth.validate-otp', { ...body, purpose }),
       );
     } catch (error) {
       throw error;
@@ -153,7 +153,7 @@ export class AuthService {
   async resetPassword(body: ResetPasswordDto & { userId: string }) {
     try {
       return await firstValueFrom(
-        this.client.send('auth.reset-password', body),
+        this.kafkaService.getClient().send('auth.reset-password', body),
       );
     } catch (error) {
       throw error;
@@ -163,7 +163,7 @@ export class AuthService {
   async verifyEmail(token: string) {
     try {
       return await firstValueFrom(
-        this.client.send('auth.verify-email', { token }),
+        this.kafkaService.getClient().send('auth.verify-email', { token }),
       );
     } catch (error) {
       throw error;
@@ -173,7 +173,7 @@ export class AuthService {
   async externalResendVerifyEmail(userId: string) {
     try {
       return await firstValueFrom(
-        this.client.send('auth.external-resend-verify-email', { userId }),
+        this.kafkaService.getClient().send('auth.external-resend-verify-email', { userId }),
       );
     } catch (error) {
       throw error;
@@ -183,7 +183,7 @@ export class AuthService {
   async resendVerifyEmail(userId: string) {
     try {
       return await firstValueFrom(
-        this.client.send('auth.resend-verify-email', { userId }),
+        this.kafkaService.getClient().send('auth.resend-verify-email', { userId }),
       );
     } catch (error) {
       throw error;
@@ -193,7 +193,7 @@ export class AuthService {
   async me(user: CurrentUserDto) {
     try {
       const userInfo = await firstValueFrom(
-        this.client.send('user.get', { userId: user.id }),
+        this.kafkaService.getClient().send('user.get', { userId: user.id }),
       );
 
       return {
@@ -207,7 +207,7 @@ export class AuthService {
 
   async refresh(res: Response, refreshToken: string) {
     const response = await firstValueFrom(
-      this.client.send('auth.refresh', { refreshToken }),
+      this.kafkaService.getClient().send('auth.refresh', { refreshToken }),
     );
 
     const newTokenPayload = JSON.parse(

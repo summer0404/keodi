@@ -1,6 +1,7 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ClientKafka, RpcException } from '@nestjs/microservices';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 
 @Injectable()
@@ -8,7 +9,7 @@ export class UserService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly redisService: RedisService,
-        @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka
+        private readonly kafkaService: KafkaService
     ) { }
 
     async unverifyUser(userId: string) {
@@ -97,7 +98,9 @@ export class UserService {
                 message: 'User not found'
             })
 
-            this.kafkaClient.emit(
+            const kafka = this.kafkaService.getClient();
+
+            kafka.emit(
                 'user.create',
                 {
                     userId: existingUser.id,

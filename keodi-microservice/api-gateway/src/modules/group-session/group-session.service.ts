@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
     GroupSessionResponseDto,
     JoinGroupSessionDto,
@@ -9,10 +9,10 @@ import {
 
 @Injectable()
 export class GroupSessionService {
-  constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
+  constructor(private readonly kafkaService: KafkaService) {}
 
   async create(userId: string): Promise<GroupSessionResponseDto> {
-    return await firstValueFrom(this.client.send('group-session.create', { userId }));
+    return await firstValueFrom(this.kafkaService.getClient().send('group-session.create', { userId }));
   }
 
   async join(
@@ -20,7 +20,7 @@ export class GroupSessionService {
     userId?: string,
   ): Promise<JoinGroupSessionResponseDto> {
     return await firstValueFrom(
-      this.client.send('group-session.join', {
+      this.kafkaService.getClient().send('group-session.join', {
         ...joinGroupSessionDto,
         userId,
       }),
@@ -29,7 +29,7 @@ export class GroupSessionService {
 
   async inviteFriend(sessionId: string, inviterId: string, friendId: string) {
     return await firstValueFrom(
-      this.client.send('group-session.invite-friend', {
+      this.kafkaService.getClient().send('group-session.invite-friend', {
         sessionId,
         inviterId,
         friendId,
@@ -39,7 +39,7 @@ export class GroupSessionService {
 
   async close(sessionId: string, userId: string) {
     return await firstValueFrom(
-      this.client.send('group-session.close', { sessionId, userId }),
+      this.kafkaService.getClient().send('group-session.close', { sessionId, userId }),
     );
   }
 
@@ -50,7 +50,7 @@ export class GroupSessionService {
     guestId?: string,
   ) {
     return await firstValueFrom(
-      this.client.send('group-session.cast-vote', {
+      this.kafkaService.getClient().send('group-session.cast-vote', {
         sessionId,
         placeId,
         userId,
@@ -65,7 +65,7 @@ export class GroupSessionService {
     guestId?: string,
   ) {
     return await firstValueFrom(
-      this.client.send('group-session.finalize-member-vote', {
+      this.kafkaService.getClient().send('group-session.finalize-member-vote', {
         sessionId,
         userId,
         guestId,
@@ -75,7 +75,7 @@ export class GroupSessionService {
 
   async finalizeSessionVote(sessionId: string, userId: string) {
     return await firstValueFrom(
-      this.client.send('group-session.finalize-session-vote', {
+      this.kafkaService.getClient().send('group-session.finalize-session-vote', {
         sessionId,
         userId,
       }),
@@ -84,13 +84,13 @@ export class GroupSessionService {
 
   async getVotes(sessionId: string) {
     return await firstValueFrom(
-      this.client.send('group-session.get-votes', { sessionId }),
+      this.kafkaService.getClient().send('group-session.get-votes', { sessionId }),
     );
   }
 
   async getSession(sessionId: string) {
     return await firstValueFrom(
-      this.client.send('group-session.get-session', { sessionId }),
+      this.kafkaService.getClient().send('group-session.get-session', { sessionId }),
     );
   }
 }

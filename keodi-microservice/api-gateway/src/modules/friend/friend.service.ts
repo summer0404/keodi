@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { PaginationConstants } from 'src/shared/constants/pagination.constants';
 import {
   GetFriendsQueryDto,
@@ -10,35 +11,35 @@ import { FriendSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 
 @Injectable()
 export class FriendService {
-  constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
+  constructor(private readonly kafkaService: KafkaService) {}
 
   async sendRequest(userId: string, receiverId: string) {
     return firstValueFrom(
-      this.client.send('friend.send-request', { userId, receiverId }),
+      this.kafkaService.getClient().send('friend.send-request', { userId, receiverId }),
     );
   }
 
   async acceptRequest(userId: string, requestId: string) {
     return firstValueFrom(
-      this.client.send('friend.accept-request', { userId, requestId }),
+      this.kafkaService.getClient().send('friend.accept-request', { userId, requestId }),
     );
   }
 
   async rejectRequest(userId: string, requestId: string) {
     return firstValueFrom(
-      this.client.send('friend.reject-request', { userId, requestId }),
+      this.kafkaService.getClient().send('friend.reject-request', { userId, requestId }),
     );
   }
 
   async cancelRequest(userId: string, requestId: string) {
     return firstValueFrom(
-      this.client.send('friend.cancel-request', { userId, requestId }),
+      this.kafkaService.getClient().send('friend.cancel-request', { userId, requestId }),
     );
   }
 
   async getFriends(userId: string, query: GetFriendsQueryDto) {
     return firstValueFrom(
-      this.client.send('friend.get-friends', {
+      this.kafkaService.getClient().send('friend.get-friends', {
         userId,
         page: query.page || PaginationConstants.DEFAULT_PAGE,
         limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
@@ -50,7 +51,7 @@ export class FriendService {
 
   async getPendingRequests(userId: string, query: GetPendingRequestsQueryDto) {
     return firstValueFrom(
-      this.client.send('friend.get-pending-requests', {
+      this.kafkaService.getClient().send('friend.get-pending-requests', {
         userId,
         page: query.page || PaginationConstants.DEFAULT_PAGE,
         limit: query.limit || PaginationConstants.DEFAULT_LIMIT,
@@ -62,7 +63,7 @@ export class FriendService {
 
   async removeFriend(userId: string, friendId: string) {
     return firstValueFrom(
-      this.client.send('friend.remove-friend', { userId, friendId }),
+      this.kafkaService.getClient().send('friend.remove-friend', { userId, friendId }),
     );
   }
 }
