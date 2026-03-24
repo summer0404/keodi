@@ -4,20 +4,9 @@ import { AuthController } from './auth.controller';
 import { GoogleStrategy } from '../../common/strategies/google.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
-import { RedisModule } from 'src/providers/redis/redis.module';
-import { CacheModule } from '@nestjs/cache-manager';
-import { GoogleModule } from 'src/providers/google/google.module';
 
 @Module({
-  imports: [
-    PassportModule,
-    RedisModule,
-    GoogleModule,
-    CacheModule.register({
-      isGlobal: true,
-      ttl: 120000,
-    }),
-  ],
+  imports: [PassportModule],
   controllers: [AuthController],
   providers: [AuthService, GoogleStrategy, JwtStrategy],
 })

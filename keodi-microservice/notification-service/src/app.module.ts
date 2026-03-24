@@ -1,17 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { NotificationModule } from './modules/notification/notification.module';
-import { KafkaModule } from './providers/kafka/kafka.module';
+import { ProviderModule } from './providers/provider.module';
+import { PrismaModule } from './database/prisma.module';
+import { NotificationInboxModule } from './modules/notification-inbox/notification-inbox.module';
+import { DeviceTokenModule } from './modules/device-token/device-token.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    KafkaModule,
+    ProviderModule,
     NotificationModule,
+    NotificationInboxModule,
+    DeviceTokenModule,
+    PrismaModule
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

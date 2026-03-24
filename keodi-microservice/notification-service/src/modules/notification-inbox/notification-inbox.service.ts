@@ -4,10 +4,10 @@ import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
 export class NotificationInboxService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   async upsertByEventId(payload: any) {
-    return await this.prisma.notification.upsert({
+    return await this.prismaService.notification.upsert({
       where: { eventId: payload.eventId },
       create: {
         eventId: payload.eventId,

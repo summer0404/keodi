@@ -15,13 +15,14 @@ import {
   RawPlace,
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 
 @Injectable()
 export class PlaceService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
-    @Inject('KAFKA_SERVICE') private readonly clientKafka: ClientKafka,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   private calculateGeoDeltas(latitude: number, radius: number) {
@@ -406,7 +407,7 @@ export class PlaceService {
           categories?: string[];
           attributes?: string[];
         } = await firstValueFrom(
-          this.clientKafka.send('intelligence.extract-user-intent', { search }),
+          this.kafkaService.getClient().send('intelligence.extract-user-intent', { search }),
         );
 
         const keywordPattern = extractedIntent.keywords
@@ -414,7 +415,7 @@ export class PlaceService {
           : undefined;
 
         if (keywordPattern) {
-          this.clientKafka.emit('search.create', {
+          this.kafkaService.getClient().emit('search.create', {
             userId,
             extractedTerm: extractedIntent.keywords,
           });
