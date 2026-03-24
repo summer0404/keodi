@@ -22,7 +22,7 @@ export class RecommendationService {
     private readonly searchService: SearchService,
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
-  ) {}
+  ) { }
 
   private async enrichPlacesWithRelations(
     places: PlaceRecommendationResponseDto[],
@@ -69,46 +69,37 @@ export class RecommendationService {
 
   async getPlacesFromSearchTerms(searchTerms: string[]) {
     try {
-      const allPlaces = (
-        await Promise.all(
-          searchTerms.map(async (term) => {
-            const places = await this.prismaService.$queryRaw<
-              PlaceRecommendationResponseDto[]
-            >`
-                SELECT
-                    p.id,
-                    p.name,
-                    p.description,
-                    p.rating,
-                    p.full_address as "fullAddress",
-                    p.latitude,
-                    p.longitude,
-                    p.feature_image_url as "featureImageUrl",
-                    p.google_map_link as "googleMapLink",
-                    p.phone_number as "phoneNumber",
-                    p.website
-                FROM places p
-                LEFT JOIN user_actions ua
-                    ON ua.place_id = p.id
-                    -- AND ua.created_at > NOW() - INTERVAL '7 days'
-                WHERE
-                    p.name ILIKE '%' || ${term} || '%'
-                GROUP BY p.id
-                ORDER BY COUNT(ua.id) DESC, p.rating DESC
-                LIMIT ${PLACES_PER_SEARCH_TERM}
-            `;
+      const allPlaces = await this.prismaService.$queryRaw<PlaceRecommendationResponseDto[]>`
+      SELECT DISTINCT ON (p.id)
+        p.id,
+        p.name,
+        p.description,
+        p.rating,
+        p.full_address as "fullAddress",
+        p.latitude,
+        p.longitude,
+        p.feature_image_url as "featureImageUrl",
+        p.google_map_link as "googleMapLink",
+        p.phone_number as "phoneNumber",
+        p.website
+      FROM unnest(${searchTerms}::text[]) AS term
+      CROSS JOIN LATERAL (
+        SELECT p_inner.*
+        FROM places p_inner
+        LEFT JOIN user_actions ua 
+        ON ua.place_id = p_inner.id
+          -- AND ua.created_at > NOW() - INTERVAL '7 days'
+        WHERE p_inner.name ILIKE '%' || term || '%'
+        GROUP BY p_inner.id
+        ORDER BY COUNT(ua.id) DESC, p_inner.rating DESC
+        LIMIT ${PLACES_PER_SEARCH_TERM}
+      ) p
+      ORDER BY p.id; 
+    `;
 
-            const enrichedPlaces = await this.enrichPlacesWithRelations(places);
+      const enhancedPlaces = await this.enrichPlacesWithRelations(allPlaces);
 
-            return enrichedPlaces;
-          }),
-        )
-      ).flatMap((places) => places);
-
-      const uniquePlaces =
-        this.recommendationHelper.deduplicatePlaces(allPlaces);
-
-      return uniquePlaces;
+      return enhancedPlaces;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -264,5 +255,9 @@ export class RecommendationService {
       this.recommendationHelper.shufflePlaces(trendingPlaces);
 
     return shuffledTrendingPlaces;
+  }
+
+  async getForYou() {
+
   }
 }
