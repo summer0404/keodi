@@ -13,6 +13,8 @@ import { PrismaService } from 'src/database/prisma.service';
 import { PlaceRecommendationResponseDto } from 'src/shared/dtos/recommendation.dto';
 import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
+import { SortOrder } from 'src/shared/enums/sort.enum';
+import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
 
 @Injectable()
 export class RecommendationService {
@@ -65,6 +67,51 @@ export class RecommendationService {
         };
       }),
     );
+  }
+
+  private async getContentBasedPlaceCandidates(userId: string) {
+    try {
+      return this.prismaService.place.findMany({
+        where: {
+          placeCategories: {
+            some: {
+              category: {
+                userCategories: {
+                  some: {
+                    userId: userId,
+                    isOnboardSelected: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        take: 40,
+        orderBy: {
+          rating: SortOrder.DESC
+        }
+      });
+    } catch (error) {
+      return []
+    }
+  }
+
+  private async getRecentlyInteractedPlaceCandidates(userId: string) {
+    const recentSearches = await this.prismaService.search.findMany({
+      where: { userId },
+      orderBy: { createdAt: SortOrder.DESC },
+      take: MAX_RECENT_SEARCHES_PER_USER,
+    })
+
+    const searchTerms = recentSearches.map(search => search.extractedTerm);
+
+    const recentCategories = await this.prismaService.userCategory.findMany({
+      where: { userId, lastInteractedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+      orderBy: { lastInteractedAt: SortOrder.DESC },
+      take: MAX_RECENT_SEARCHES_PER_USER,
+    });
+
+
   }
 
   async getPlacesFromSearchTerms(searchTerms: string[]) {
