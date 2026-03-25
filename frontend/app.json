@@ -20,10 +20,10 @@
     "android": {
       "package": "com.keodi.app",
       "versionCode": 1,
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/images/icon-new.png",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/icon.png"
+        "foregroundImage": "./assets/images/icon-new.png"
         // "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,

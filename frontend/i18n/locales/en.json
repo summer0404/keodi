@@ -4,6 +4,15 @@
     "district": "District",
     "hcmc": "HCMC"
   },
+  "dayOfWeek": {
+    "mon": "Monday",
+    "tue": "Tuesday",
+    "wed": "Wednesday",
+    "thu": "Thursday",
+    "fri": "Friday",
+    "sat": "Saturday",
+    "sun": "Sunday"
+  },
   "selectDate": "Select Date",
   "onboarding": {
     "slide1": {
@@ -63,6 +72,7 @@
     "username": "Username",
     "usernamePlaceholder": "Example: johndoe",
     "usernameExample": "No spaces, uppercase letters, or accents. 'John Doe' becomes 'johndoe'",
+    "identifier": "Email or username",
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot password?",
     "forgotPasswordDescription": "Enter your email to reset password",
@@ -90,6 +100,7 @@
   },
   "errors": {
     "usernameRequired": "Username is required",
+    "identifierRequired": "Identifier is required",
     "usernameInvalid": "Username can only contain lowercase letters, numbers, dots, and underscores",
     "usernameMax": "Username must be 20 characters or fewer",
     "usernameMin": "Username must be at least 3 characters",
@@ -102,7 +113,7 @@
     "passwordComplex": "Password must include at least one uppercase letter, one number and one special character.",
     "confirmPasswordRequired": "Please confirm your password",
     "passwordMatch": "Passwords must match",
-    "invalidCredentials": "Your username or password was incorrect",
+    "invalidCredentials": "Your identifier or password was incorrect",
     "resendTooManyRequests": "Please wait {{seconds}} seconds before resending verification email",
     "otpTooManyRequests": "Please wait {{seconds}} seconds before requesting a new OTP",
     "tooManyRequests": "You have made too many attempts. Please try again later",
@@ -131,7 +142,27 @@
     "radius15km": "15 km",
     "radius15kmPlus": "> 15 km",
     "loadingLocation": "Getting your location...",
-    "locationDisabled": "Location is not enabled"
+    "locationDisabled": "Location is not enabled",
+    "locationUndefined": "Undefined location",
+    "address": "Address",
+    "phone": "Phone",
+    "website": "Website",
+    "userReviews": "Customer Reviews",
+    "distanceAway": "{{distance}} away",
+    "overview": "Overview",
+    "reviews": "Reviews",
+    "details": "Details",
+    "addToGroup": "Add to Group",
+    "call": "Call",
+    "direction": "Map",
+    "status": "Status",
+    "rating": "Rating",
+    "close": "Close",
+    "open": "Open",
+    "about": "About",
+    "more": "More",
+    "hightlight": "Highlight",
+    "openingHours": "Opening hours"
   },
   "library": {
     "title": "My Library",
@@ -144,5 +175,4 @@
     "goToHome": "Go to home",
     "totalFavorites": "{{totalFavorites}} places"
   }
-
 }

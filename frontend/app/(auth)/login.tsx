@@ -12,7 +12,7 @@ import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/api/auth';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingStore } from '@/store/useSettingStore';
-import { sanitizeUsername, extractWaitSeconds } from '@/constants/helper';
+import { extractWaitSeconds } from '@/constants/helper';
 import type { LoginRequest } from '@/types/api';
 import {
   GoogleSignin,
@@ -23,10 +23,10 @@ import {
 export default function LoginScreen() {
   const router = useRouter();
   const [rememberMe, setRememberMe] = useState(false);
-  const [username, setUsername] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [usernameError, setUsernameError] = useState('');
+  const [identifierError, setIdentifierError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [credentialError, setCredentialError] = useState('');
   const { t } = useTranslation();
@@ -87,14 +87,14 @@ export default function LoginScreen() {
 
   const validate = () => {
     let isValid = true;
-    const normalizedUsername = username.trim();
+    const normalizedIdentifier = identifier.trim();
 
-    setUsernameError('');
+    setIdentifierError('');
     setPasswordError('');
     setCredentialError('');
 
-    if (!normalizedUsername) {
-      setUsernameError(t('errors.usernameRequired'));
+    if (!normalizedIdentifier) {
+      setIdentifierError(t('errors.identifierRequired'));
       isValid = false;
     }
 
@@ -121,7 +121,7 @@ export default function LoginScreen() {
 
     try {
       const result = await loginMutation.mutateAsync({
-        username: username.trim(),
+        identifier: identifier.trim(),
         password,
         rememberMe,
       } satisfies LoginRequest);
@@ -198,23 +198,25 @@ export default function LoginScreen() {
     <View className="mt-6">
       <View className="gap-4">
         <View>
-          <Typography className="text-black/60 mb-2">{t('auth.username')}</Typography>
+          <Typography className="text-black/60 mb-2">{t('auth.identifier')}</Typography>
           <TextInput
-            value={username}
+            value={identifier}
             onChangeText={(value) => {
-              const sanitized = sanitizeUsername(value);
-              setUsername(sanitized);
-              if (usernameError) {
-                setUsernameError('');
+              setIdentifier(value);
+              if (identifierError) {
+                setIdentifierError('');
+              }
+              if (credentialError) {
+                setCredentialError('');
               }
             }}
             autoCapitalize="none"
             className="rounded-xl border border-black/10 bg-white px-4 py-3 text-black"
-            placeholder={t('auth.username')}
+            placeholder={t('auth.identifier')}
           />
-          {!!usernameError && (
+          {!!identifierError && (
             <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
-              {usernameError}
+              {identifierError}
             </Typography>
           )}
         </View>
