@@ -4,8 +4,6 @@ import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { OtpService } from './otp.service';
 import { VerifyUrlService } from './verifyUrl.service';
-import { RedisModule } from 'src/providers/redis/redis.module';
-import { KafkaModule } from 'src/providers/kafka/kafka.module';
 import { UserModule } from 'src/modules/user/user.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -18,8 +16,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         secret: configService.get<string>('JWT_SECRET'),
       }),
     }),
-    RedisModule,
-    KafkaModule,
     UserModule
   ],
   controllers: [AuthController],

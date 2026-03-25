@@ -1,12 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 
 @Injectable()
 export class SearchService {
     constructor(
-        @Inject('KAFKA_SERVICE') private readonly clientKafka: ClientKafka,
+        private readonly kafkaService: KafkaService,
         private readonly redisService: RedisService,
     ) { }
 
@@ -21,9 +21,9 @@ export class SearchService {
         const trendingSearches: {
             extractedTerm: string;
             score: number
-        }[] = await firstValueFrom(this.clientKafka.send('search.trending', {}));
+        }[] = await firstValueFrom(this.kafkaService.getClient().send('search.trending', {}));
 
-        this.clientKafka.emit('search.update-trending-for-redis', { trendingSearches });
+        this.kafkaService.getClient().emit('search.update-trending-for-redis', { trendingSearches });
 
         return trendingSearches
             .sort((a, b) => b.score - a.score)

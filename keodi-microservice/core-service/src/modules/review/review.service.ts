@@ -1,17 +1,17 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
 import { CreateReviewDto, GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { PlaceService } from '../place/place.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 
 @Injectable()
 export class ReviewService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly placeService: PlaceService,
-        @Inject('KAFKA_SERVICE') private readonly client: ClientKafka
+        private readonly kafkaService: KafkaService
     ) { }
 
     async create(createReview: CreateReviewDto) {
@@ -61,7 +61,7 @@ export class ReviewService {
             });
 
             if (text) {
-                this.client.emit('intelligence.sentiment-analysis', {
+                this.kafkaService.getClient().emit('intelligence.sentiment-analysis', {
                     text,
                     placeId,
                     reviewId

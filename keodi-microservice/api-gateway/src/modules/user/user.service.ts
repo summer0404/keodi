@@ -1,22 +1,22 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 
 @Injectable()
 export class UserService {
-    constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) { }
+    constructor(private readonly kafkaService: KafkaService) { }
 
     async unverifyUser(userId: string) {
-        return await firstValueFrom(this.client.send('user.unverify', { userId }))
+        return await firstValueFrom(this.kafkaService.getClient().send('user.unverify', { userId }))
     }
 
     async updateUsername(userId: string, username: string, accessToken: string) {
-        return await firstValueFrom(this.client.send('user.update-username', { userId, username, accessToken }))
+        return await firstValueFrom(this.kafkaService.getClient().send('user.update-username', { userId, username, accessToken }))
     }
 
     async updatePicture(userId: string, file: Buffer, type: string) {
-        return await firstValueFrom(this.client.send('user.update-picture', { 
+        return await firstValueFrom(this.kafkaService.getClient().send('user.update-picture', { 
             userId, 
             file, 
             type,
@@ -24,14 +24,14 @@ export class UserService {
     }
 
     async updateProfile(userId: string, data: UpdateUserProfileDto) {
-        return await firstValueFrom(this.client.send('user.update-profile', { userId, data }))
+        return await firstValueFrom(this.kafkaService.getClient().send('user.update-profile', { userId, data }))
     }
 
     async getAll() {
-        return await firstValueFrom(this.client.send('user.get-all', {}))
+        return await firstValueFrom(this.kafkaService.getClient().send('user.get-all', {}))
     }
 
     async onBoarding(userId: string, categoryIds: string[]) {
-        return await firstValueFrom(this.client.send('user.onboarding', { userId, categoryIds }))
+        return await firstValueFrom(this.kafkaService.getClient().send('user.onboarding', { userId, categoryIds }))
     }
 }

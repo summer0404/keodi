@@ -1,30 +1,31 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   FavoriteResponseDto,
   FavoritesListResponseDto,
   IsFavoriteResponseDto,
 } from 'src/shared/dtos/favorite.dto';
-import { PlaceSortBy, SortBy, SortOrder } from 'src/shared/enums/sort.enum';
+import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { UserAction } from 'src/shared/enums/user.enum';
 
 @Injectable()
 export class FavoriteService {
-  constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) {}
+  constructor(private readonly kafkaService: KafkaService) {}
 
   async addFavorite(
     userId: string,
     placeId: string,
   ): Promise<FavoriteResponseDto> {
-    this.client.emit('intelligence.user-action', {
+    this.kafkaService.getClient().emit('intelligence.user-action', {
       userId,
       placeId,
       action: UserAction.FAVORITE,
     });
 
     return await firstValueFrom(
-      this.client.send('favorite.add', { userId, placeId }),
+      this.kafkaService.getClient().send('favorite.add', { userId, placeId }),
     );
   }
 
@@ -33,7 +34,7 @@ export class FavoriteService {
     placeId: string,
   ): Promise<FavoriteResponseDto> {
     return await firstValueFrom(
-      this.client.send('favorite.remove', { userId, placeId }),
+      this.kafkaService.getClient().send('favorite.remove', { userId, placeId }),
     );
   }
 
@@ -45,7 +46,7 @@ export class FavoriteService {
     sortOrder?: SortOrder,
   ): Promise<FavoritesListResponseDto> {
     return await firstValueFrom(
-      this.client.send('favorite.get-list', {
+      this.kafkaService.getClient().send('favorite.get-list', {
         userId,
         page,
         limit,
@@ -60,7 +61,7 @@ export class FavoriteService {
     placeId: string,
   ): Promise<IsFavoriteResponseDto> {
     return await firstValueFrom(
-      this.client.send('favorite.check', { userId, placeId }),
+      this.kafkaService.getClient().send('favorite.check', { userId, placeId }),
     );
   }
 }

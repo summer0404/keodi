@@ -1,15 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices/client/client-kafka';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { CreateAttributeDto } from 'src/shared/dtos/attribute.dto';
 
 @Injectable()
 export class AttributeService {
-    constructor(@Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka) {}
+    constructor(private readonly kafkaService: KafkaService) {}
 
     async create(createAttributeDto: CreateAttributeDto) {
         return await firstValueFrom(
-            this.kafkaClient.send('attribute.create', createAttributeDto)
+            this.kafkaService.getClient().send('attribute.create', createAttributeDto)
         );
     }
 }

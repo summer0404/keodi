@@ -1,29 +1,29 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ratingActionMap } from 'src/shared/constants/review.constant';
 import { CreateReviewDto, GetReviewsDto } from 'src/shared/dtos/review.dto';
 
 
 @Injectable()
 export class ReviewService {
-    constructor(@Inject('KAFKA_SERVICE') private readonly client: ClientKafka) { }
+    constructor(private readonly kafkaService: KafkaService) { }
 
     async create(userId: string, createReviewDto: CreateReviewDto) {
-        this.client.emit('intelligence.user-action', {
+        this.kafkaService.getClient().emit('intelligence.user-action', {
             userId,
             placeId: createReviewDto.placeId,
             action: ratingActionMap[createReviewDto.rating]
         });
 
         return await firstValueFrom(
-            this.client.send('review.create', { userId, ...createReviewDto })
+            this.kafkaService.getClient().send('review.create', { userId, ...createReviewDto })
         );
     }
 
     async getByPlaceId(getReviewsDto: GetReviewsDto, placeId: string) {
         return await firstValueFrom(
-            this.client.send('review.get_by_place_id', { ...getReviewsDto, placeId })
+            this.kafkaService.getClient().send('review.get_by_place_id', { ...getReviewsDto, placeId })
         );
     }
 }

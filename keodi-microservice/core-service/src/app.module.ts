@@ -13,13 +13,13 @@ import { SearchModule } from './modules/search/search.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationModule } from './modules/recommendation/recommendation.module';
 import { UserModule } from './modules/user/user.module';
-import { KafkaModule } from './providers/kafka/kafka.module';
+import { ProviderModule } from './providers/provider.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
-    KafkaModule,
+    ProviderModule,
     PlaceModule,
     PrismaModule,
     UserModule,
