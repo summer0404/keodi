@@ -4,6 +4,15 @@
     "district": "Quận",
     "hcmc": "TPHCM"
   },
+  "dayOfWeek": {
+    "mon": "Thứ 2",
+    "tue": "Thứ 3",
+    "wed": "Thứ 4",
+    "thu": "Thứ 5",
+    "fri": "Thứ 6",
+    "sat": "Thứ 7",
+    "sun": "Chủ nhật"
+  },
   "selectDate": "Chọn ngày",
   "onboarding": {
     "slide1": {
@@ -63,6 +72,7 @@
     "username": "Tên người dùng",
     "usernamePlaceholder": "Ví dụ: toideptrai",
     "usernameExample": "Không khoảng cách, chữ hoa hay dấu. 'Tôi đẹp trai' sẽ thành 'toideptrai'",
+    "identifier": "Email hoặc tên người dùng",
     "rememberMe": "Ghi nhớ đăng nhập",
     "forgotPassword": "Quên mật khẩu?",
     "forgotPasswordDescription": "Nhập email để đặt lại mật khẩu",
@@ -90,6 +100,7 @@
   },
   "errors": {
     "usernameRequired": "Bạn phải nhập tên người dùng",
+    "identifierRequired": "Bạn phải nhập email hoặc tên người dùng",
     "usernameInvalid": "Tên người dùng chỉ gồm chữ thường, số, dấu chấm hoặc gạch dưới",
     "usernameMax": "Tên người dùng tối đa 20 ký tự",
     "usernameMin": "Tên người dùng phải có ít nhất 3 ký tự",
@@ -102,7 +113,7 @@
     "passwordComplex": "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 số và 1 ký tự đặc biệt",
     "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu",
     "passwordMatch": "Mật khẩu xác nhận không khớp",
-    "invalidCredentials": "Tên người dùng hoặc mật khẩu không đúng",
+    "invalidCredentials": "Email hoặc tên người dùng hoặc mật khẩu không đúng",
     "resendTooManyRequests": "Vui lòng đợi {{seconds}} giây trước khi gửi lại email xác minh",
     "tooManyRequests": "Bạn thao tác quá nhiều lần. Vui lòng thử lại sau",
     "otpTooManyRequests": "Vui lòng đợi {{seconds}} giây trước khi yêu cầu OTP mới",
@@ -131,7 +142,27 @@
     "radius15km": "15 km",
     "radius15kmPlus": "> 15 km",
     "loadingLocation": "Đang lấy vị trí của bạn...",
-    "locationDisabled": "Vị trí chưa được bật"
+    "locationDisabled": "Vị trí chưa được bật",
+    "locationUndefined": "Không xác định",
+    "address": "Địa chỉ",
+    "phone": "Số điện thoại",
+    "website": "Website",
+    "userReviews": "Đánh giá của người dùng",
+    "distanceAway": "Cách {{distance}}",
+    "overview": "Tổng quan",
+    "reviews": "Đánh giá",
+    "details": "Chi tiết",
+    "addToGroup": "Thêm vào nhóm",
+    "call": "Gọi",
+    "direction": "Map",
+    "status": "Trạng thái",
+    "rating": "Đánh giá",
+    "close": "Đóng",
+    "open": "Mở",
+    "about": "Giới thiệu",
+    "more": "Xem thêm",
+    "hightlight": "Nổi bật",
+    "openingHours": "Giờ mở cửa"
   },
   "library": {
     "title": "Thư viện",

@@ -9,6 +9,8 @@ import Typography from './Typography';
 import { Palette } from '@/constants/theme';
 import { getLocalizedLocation } from '@/constants/helper';
 
+const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
+
 type PlaceCardTag = {
   label: string;
   icon?: LucideIcon;
@@ -25,9 +27,10 @@ type PlaceCardProps = {
   ward?: string | null;
   city?: string | null;
   address?: string;
-  openingHours: string;
+  openingHours?: string;
   description?: string;
   statusLabel?: string;
+  isOpen?: boolean;
   defaultFavorite?: boolean;
   tags?: PlaceCardTag[];
   onFavoriteChange?: (isFavorite: boolean) => boolean | void | Promise<boolean | void>;
@@ -49,7 +52,8 @@ export default function PlaceCard({
   address,
   openingHours,
   description,
-  statusLabel = 'Open',
+  statusLabel,
+  isOpen = true,
   defaultFavorite = false,
   tags = [],
   onFavoriteChange,
@@ -59,10 +63,17 @@ export default function PlaceCard({
   const { t, i18n } = useTranslation();
   const [isFavorite, setIsFavorite] = useState(defaultFavorite);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const [resolvedImageSource, setResolvedImageSource] = useState<ImageProps['source']>(
+    imageSource || DEFAULT_PLACE_IMAGE
+  );
 
   useEffect(() => {
     setIsFavorite(defaultFavorite);
   }, [defaultFavorite]);
+
+  useEffect(() => {
+    setResolvedImageSource(imageSource || DEFAULT_PLACE_IMAGE);
+  }, [imageSource]);
 
   const fallbackAddress = [
     street?.trim(),
@@ -72,6 +83,7 @@ export default function PlaceCard({
     .join(', ');
 
   const addressText = fullAddress?.trim() || fallbackAddress || address?.trim() || '';
+  const computedStatusLabel = statusLabel ?? (isOpen ? 'Open' : 'Close');
 
   const handleFavoritePress = async () => {
     if (isFavoriteLoading) {
@@ -118,14 +130,19 @@ export default function PlaceCard({
           transition giúp fade in mượt, tránh flash trắng đột ngột */}
       <View className="relative h-[186px] w-full bg-[#E8EAED]">
         <Image
-          source={imageSource}
+          source={resolvedImageSource}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
           transition={200} // fade in 200ms
+          onError={() => {
+            setResolvedImageSource(DEFAULT_PLACE_IMAGE);
+          }}
           recyclingKey={
-            // tái sử dụng đúng ô khi scroll
-            typeof imageSource === 'object' && imageSource !== null && 'uri' in imageSource
-              ? (imageSource as { uri: string }).uri
+            // reuse the same image instance for identical sources to optimize memory
+            typeof resolvedImageSource === 'object' &&
+            resolvedImageSource !== null &&
+            'uri' in resolvedImageSource
+              ? (resolvedImageSource as { uri: string }).uri
               : 'default'
           }
         />
@@ -145,9 +162,14 @@ export default function PlaceCard({
           />
         </Pressable>
 
-        <View className="bg-green-500 rounded-full absolute bottom-4 left-4 px-3 py-1.5">
+        <View
+          className={clsx(
+            'rounded-full absolute bottom-4 left-4 px-3 py-1.5',
+            isOpen ? 'bg-green-500' : 'bg-red-500'
+          )}
+        >
           <Typography variant="caption-sm" className="font-bold text-white">
-            {statusLabel}
+            {computedStatusLabel}
           </Typography>
         </View>
         {distanceLabel && (
@@ -177,12 +199,14 @@ export default function PlaceCard({
           </Typography>
         </View>
 
-        <View className="mt-3 pr-5 flex-row items-start gap-2">
-          <Clock3 size={18} color={Palette.black} strokeWidth={2} />
-          <Typography variant="caption" className="flex-1">
-            {openingHours}
-          </Typography>
-        </View>
+        {openingHours ? (
+          <View className="mt-3 pr-5 flex-row items-start gap-2">
+            <Clock3 size={18} color={Palette.black} strokeWidth={2} />
+            <Typography variant="caption" className="flex-1">
+              {openingHours}
+            </Typography>
+          </View>
+        ) : null}
 
         {description && (
           <Typography className="mt-4" numberOfLines={2}>
@@ -196,15 +220,13 @@ export default function PlaceCard({
               key={label}
               className={clsx(
                 'flex-row items-center gap-1 rounded-full border px-3 py-2',
-                active ? 'border-[#0B0F10] bg-[#0B0F10]' : 'border-[#D7D7D7] bg-white'
+                active ? 'border-black bg-black' : 'border-gray-400 bg-white shadow-md'
               )}
             >
               {Icon ? (
                 <Icon size={18} color={active ? Palette.white : Palette.grey} strokeWidth={1.8} />
               ) : null}
-              <Typography className={clsx(active ? 'text-white' : 'text-[#8491A2]')}>
-                {label}
-              </Typography>
+              <Typography className={clsx(active ? 'text-white' : '')}>{label}</Typography>
             </View>
           ))}
         </View>
