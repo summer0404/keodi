@@ -10,9 +10,11 @@ import PlaceCard from '@/components/ui/PlaceCard';
 import AlertScreen from '@/components/ui/AlertScreen';
 import { Palette } from '@/constants/theme';
 import { favoriteService } from '@/api/favorite';
+import { placesService } from '@/api/places';
 import type { FavoriteItem, PlaceSortBy } from '@/types/api';
-import { buildSortOrder, PLACES_DEFAULT_LIMIT, PLACES_DEFAULT_PAGE } from '@/constants/helper';
+import { buildSortOrder, DEFAULT_LIMIT, DEFAULT_PAGE } from '@/constants/helper';
 import { useTranslation } from 'react-i18next';
+import { usePlacesStore } from '@/store/usePlacesStore';
 
 const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
 
@@ -39,9 +41,10 @@ export default function FavoriteScreen() {
   const [favoritePlaces, setFavoritePlaces] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(PLACES_DEFAULT_PAGE);
+  const [currentPage, setCurrentPage] = useState(DEFAULT_PAGE);
   const [hasMore, setHasMore] = useState(true);
   const [totalFavorites, setTotalFavorites] = useState(0);
+  const upsertPlace = usePlacesStore((state) => state.upsertPlace);
 
   const requestVersionRef = useRef(0);
   const inFlightPageRef = useRef<number | null>(null);
@@ -93,7 +96,7 @@ export default function FavoriteScreen() {
       try {
         const response = await favoriteService.getFavorites({
           page,
-          limit: PLACES_DEFAULT_LIMIT,
+          limit: DEFAULT_LIMIT,
           sortBy: sortByRef.current,
           sortOrder: buildSortOrder(sortByRef.current),
         });
@@ -145,10 +148,10 @@ export default function FavoriteScreen() {
     const requestVersion = requestVersionRef.current;
     inFlightPageRef.current = null;
 
-    setCurrentPage(PLACES_DEFAULT_PAGE);
+    setCurrentPage(DEFAULT_PAGE);
     setHasMore(true);
 
-    fetchFavoritesPage(PLACES_DEFAULT_PAGE, 'replace', requestVersion);
+    fetchFavoritesPage(DEFAULT_PAGE, 'replace', requestVersion);
   }, [activeSegment, fetchFavoritesPage]);
 
   useEffect(() => {
@@ -174,40 +177,61 @@ export default function FavoriteScreen() {
     fetchFavoritesPage(currentPageRef.current + 1, 'append', requestVersionRef.current);
   }, [activeSegment, fetchFavoritesPage]);
 
+  const handleOpenPlace = useCallback(
+    async (item: FavoriteItem) => {
+      try {
+        const fullPlace = await placesService.getPlaceById(item.id);
+        upsertPlace(fullPlace);
+      } catch {
+        // Fallback to locally available favorite item shape to keep navigation smooth.
+        upsertPlace({
+          ...item,
+          distance: item.distance ?? 0,
+          has_attributes: 0,
+          isFavorite: true,
+        });
+      }
+
+      router.push(`/place/${item.id}` as any);
+    },
+    [router, upsertPlace]
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: FavoriteItem }) => (
-      <PlaceCard
-        className=""
-        style={{ width: cardWidth, elevation: 0 }}
-        imageSource={item.featureImageUrl ? { uri: item.featureImageUrl } : DEFAULT_PLACE_IMAGE}
-        title={item.name}
-        rating={item.rating <= 0 ? 'N/A' : item.rating.toFixed(1)}
-        fullAddress={item.fullAddress}
-        street={item.street}
-        ward={item.ward}
-        city={item.city}
-        openingHours="Opening hours updating"
-        description={item.description?.trim() ?? undefined}
-        statusLabel="Open"
-        defaultFavorite
-        onFavoriteChange={async (nextIsFavorite) => {
-          try {
-            if (nextIsFavorite) {
-              await favoriteService.addFavorite(item.id);
-              return true;
-            }
+      <Pressable onPress={() => void handleOpenPlace(item)}>
+        <PlaceCard
+          style={{ width: cardWidth, elevation: 0 }}
+          imageSource={item.featureImageUrl ? { uri: item.featureImageUrl } : DEFAULT_PLACE_IMAGE}
+          title={item.name}
+          rating={item.rating <= 0 ? 'N/A' : item.rating.toFixed(1)}
+          fullAddress={item.fullAddress}
+          street={item.street}
+          ward={item.ward}
+          city={item.city}
+          openingHours="Opening hours updating"
+          description={item.description?.trim() ?? undefined}
+          statusLabel="Open"
+          defaultFavorite
+          onFavoriteChange={async (nextIsFavorite) => {
+            try {
+              if (nextIsFavorite) {
+                await favoriteService.addFavorite(item.id);
+                return true;
+              }
 
-            await favoriteService.removeFavorite(item.id);
-            setFavoritePlaces((prev) => prev.filter((place) => place.id !== item.id));
-            setTotalFavorites((prev) => Math.max(0, prev - 1));
-            return true;
-          } catch {
-            return false;
-          }
-        }}
-      />
+              await favoriteService.removeFavorite(item.id);
+              setFavoritePlaces((prev) => prev.filter((place) => place.id !== item.id));
+              setTotalFavorites((prev) => Math.max(0, prev - 1));
+              return true;
+            } catch {
+              return false;
+            }
+          }}
+        />
+      </Pressable>
     ),
-    [cardWidth]
+    [cardWidth, handleOpenPlace]
   );
 
   const itemSeparator = useCallback(() => <View style={{ height: 16 }} />, []);

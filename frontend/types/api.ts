@@ -10,7 +10,7 @@ export interface RegisterResponse {
 }
 
 export interface LoginRequest {
-  username: string;
+  identifier: string;
   password: string;
   rememberMe?: boolean;
 }
@@ -81,6 +81,18 @@ export interface GetNearbyPlacesRequest {
   radius: number;
 }
 
+export interface PlaceOpeningHour {
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+}
+
+export interface PlaceCategory {
+  id: string;
+  name: string;
+  isMain: boolean;
+}
+
 export interface PlaceItem {
   id: string;
   fromGoogle: boolean;
@@ -101,9 +113,11 @@ export interface PlaceItem {
   countryCode: string | null;
   createdAt: string;
   updatedAt: string;
-  distance: number;
+  distance?: number;
   has_attributes: number;
   isFavorite: boolean;
+  openingHours?: PlaceOpeningHour[];
+  categories?: PlaceCategory[];
 }
 
 export interface GetNearbyPlacesResponse {
@@ -151,4 +165,33 @@ export interface SubmitOnboardingCategoriesRequest {
 
 export interface SubmitOnboardingCategoriesResponse {
   message?: string;
+}
+
+export interface Review {
+  id: string;
+  placeId: string;
+  userId: string | null;
+  fromGoogle: boolean;
+  reviewerName: string;
+  reviewerPicture: string | null;
+  rating: number;
+  text: string | null;
+  originalLanguage: string | null;
+  sentimentAnalyzed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetPlaceReviewsRequest {
+  page: number;
+  limit: number;
+  sortBy?: 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface GetPlaceReviewsResponse {
+  reviews: Review[];
+  total: number;
+  page: number;
+  limit: number;
 }

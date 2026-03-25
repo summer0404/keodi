@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import { MapPin, MoveDiagonal, ArrowUpDown } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import PlaceCard from '@/components/ui/PlaceCard';
@@ -11,17 +12,22 @@ import { placesService } from '@/api/places';
 import { Select } from '@/components/ui/Select';
 import type { PlaceItem, PlaceSortBy } from '@/types/api';
 import {
-  PLACES_DEFAULT_LIMIT,
-  PLACES_DEFAULT_PAGE,
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
   normalizeDistrictLabel,
   normalizeCityLabel,
   buildSortOrder,
+  formatDistance,
+  formatOpeningHoursLabel,
+  getPrimaryImageUrl,
+  isPlaceOpenNow,
 } from '@/constants/helper';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
 import AlertScreen from '@/components/ui/AlertScreen';
 import { favoriteService } from '@/api/favorite';
-import axios from 'axios';
+import { usePlacesStore } from '@/store/usePlacesStore';
+import { isAxiosError } from 'axios';
 
 const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
 const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
@@ -38,9 +44,13 @@ const updateFavoriteInPlaces = (places: PlaceItem[], placeId: string, isFavorite
   places.map((place) => (place.id === placeId ? { ...place, isFavorite } : place));
 
 export default function HomeScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t } = useTranslation();
+  const cacheNearbyPlaces = usePlacesStore((s) => s.cacheNearbyPlaces);
+  const setLastNearbyParams = usePlacesStore((s) => s.setLastNearbyParams);
+  const setPlaceFavorite = usePlacesStore((s) => s.setPlaceFavorite);
   const horizontalPadding = 20;
   const cardWidth = width - horizontalPadding * 2;
 
@@ -57,7 +67,7 @@ export default function HomeScreen() {
     { label: t('home.radius15kmPlus'), value: 50 },
   ];
 
-  const [locationLabel, setLocationLabel] = useState('Đang lấy vị trí...');
+  const [locationLabel, setLocationLabel] = useState(t('home.loadingLocation'));
   const [username, setUsername] = useState('bạn');
   const [avatarSource, setAvatarSource] = useState<any>(DEFAULT_AVATAR_SOURCE);
   const [sortBy, setSortBy] = useState<PlaceSortBy>('distance');
@@ -67,7 +77,7 @@ export default function HomeScreen() {
   const [isPlacesLoading, setIsPlacesLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(PLACES_DEFAULT_PAGE);
+  const [currentPage, setCurrentPage] = useState(DEFAULT_PAGE);
   const [hasMorePlaces, setHasMorePlaces] = useState(true);
 
   // Refs to avoid recreate fetchPlacesPage on every render due to changing dependencies
@@ -82,6 +92,8 @@ export default function HomeScreen() {
   const hasMorePlacesRef = useRef(hasMorePlaces);
   const isPlacesLoadingRef = useRef(isPlacesLoading);
   const isLoadingMoreRef = useRef(isLoadingMore);
+  const cacheNearbyPlacesRef = useRef(cacheNearbyPlaces);
+  const setLastNearbyParamsRef = useRef(setLastNearbyParams);
 
   coordsRef.current = coords;
   radiusRef.current = radius;
@@ -90,6 +102,8 @@ export default function HomeScreen() {
   hasMorePlacesRef.current = hasMorePlaces;
   isPlacesLoadingRef.current = isPlacesLoading;
   isLoadingMoreRef.current = isLoadingMore;
+  cacheNearbyPlacesRef.current = cacheNearbyPlaces;
+  setLastNearbyParamsRef.current = setLastNearbyParams;
 
   // fetchPlacesPage STABLE (deps empty) - read params via refs, avoid recreating function every render
   const fetchPlacesPage = useCallback(
@@ -110,7 +124,7 @@ export default function HomeScreen() {
       try {
         const response = await placesService.getNearbyPlaces({
           page,
-          limit: PLACES_DEFAULT_LIMIT,
+          limit: DEFAULT_LIMIT,
           sortBy: sortByRef.current,
           sortOrder: buildSortOrder(sortByRef.current),
           latitude: currentCoords.latitude,
@@ -124,6 +138,16 @@ export default function HomeScreen() {
         const receivedPlaces = response.places ?? [];
         const totalPages = response.totalPages ?? page;
         const hasMore = page < totalPages && receivedPlaces.length > 0;
+
+        setLastNearbyParamsRef.current({
+          limit: DEFAULT_LIMIT,
+          sortBy: sortByRef.current,
+          sortOrder: buildSortOrder(sortByRef.current),
+          latitude: currentCoords.latitude,
+          longitude: currentCoords.longitude,
+          radius: radiusRef.current,
+        });
+        cacheNearbyPlacesRef.current(receivedPlaces);
 
         // Batch all state updates in one go to avoid multiple re-renders and ensure consistency
         setCurrentPage(page);
@@ -169,12 +193,12 @@ export default function HomeScreen() {
 
   const fetchCurrentLocation = async () => {
     setIsLocationLoading(true);
-    setLocationLabel('Đang lấy vị trí...');
+    setLocationLabel(t('home.loadingLocation'));
 
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== 'granted') {
-        setLocationLabel('Vị trí chưa bật');
+        setLocationLabel(t('home.locationDisabled'));
         setCoords(null);
         setNearbyPlaces([]);
         return;
@@ -201,7 +225,7 @@ export default function HomeScreen() {
       // console.log('[GPS] reverseGeocodeAsync result:', JSON.stringify(place, null, 2));
 
       if (!place) {
-        setLocationLabel('Không xác định');
+        setLocationLabel(t('home.locationUndefined'));
         return;
       }
 
@@ -211,9 +235,9 @@ export default function HomeScreen() {
       const cityLabel = cityRaw ? normalizeCityLabel(cityRaw) : '';
       const nextLabel = [districtLabel, cityLabel].filter(Boolean).join(', ');
 
-      setLocationLabel(nextLabel || 'Không xác định');
+      setLocationLabel(nextLabel || t('home.locationUndefined'));
     } catch {
-      setLocationLabel('Không xác định');
+      setLocationLabel(t('home.locationUndefined'));
       setCoords(null);
       setNearbyPlaces([]);
     } finally {
@@ -260,15 +284,23 @@ export default function HomeScreen() {
     const requestVersion = requestVersionRef.current;
     inFlightPageRef.current = null; // reset in-flight when params change
 
-    setCurrentPage(PLACES_DEFAULT_PAGE);
+    setCurrentPage(DEFAULT_PAGE);
     setHasMorePlaces(true);
 
-    fetchPlacesPage(PLACES_DEFAULT_PAGE, 'replace', requestVersion);
+    fetchPlacesPage(DEFAULT_PAGE, 'replace', requestVersion);
   }, [coords, radius, sortBy, fetchPlacesPage]);
 
   // Render item separated out to avoid inline closure that gets recreated every render
   const renderItem = useCallback(
     ({ item }: { item: PlaceItem }) => {
+      const openingHoursLabel = formatOpeningHoursLabel(item.openingHours, t);
+      const isOpen = isPlaceOpenNow(item.openingHours);
+      const primaryImageUrl = getPrimaryImageUrl(item.featureImageUrl);
+      const tags = (item.categories ?? []).slice(0, 4).map((category) => ({
+        label: category.name,
+        active: category.isMain,
+      }));
+
       const handleFavoriteChange = async (nextIsFavorite: boolean) => {
         try {
           if (nextIsFavorite) {
@@ -278,11 +310,13 @@ export default function HomeScreen() {
           }
 
           setNearbyPlaces((prev) => updateFavoriteInPlaces(prev, item.id, nextIsFavorite));
+          setPlaceFavorite(item.id, nextIsFavorite);
           return true;
         } catch (error) {
           // If place is already in favorites, keep the heart in favorited state.
-          if (nextIsFavorite && axios.isAxiosError(error) && error.response?.status === 409) {
+          if (nextIsFavorite && isAxiosError(error) && error.response?.status === 409) {
             setNearbyPlaces((prev) => updateFavoriteInPlaces(prev, item.id, true));
+            setPlaceFavorite(item.id, true);
             return true;
           }
 
@@ -291,26 +325,30 @@ export default function HomeScreen() {
       };
 
       return (
-        <PlaceCard
-          className=""
-          style={{ width: cardWidth, elevation: 0 }}
-          imageSource={item.featureImageUrl ? { uri: item.featureImageUrl } : DEFAULT_PLACE_IMAGE}
-          title={item.name}
-          rating={item.rating <= 0 ? 'N/A' : item.rating.toFixed(1)}
-          distanceLabel={`${item.distance < 1 ? item.distance.toFixed(2) : item.distance.toFixed(1)} km`}
-          fullAddress={item.fullAddress}
-          street={item.street}
-          ward={item.ward}
-          city={item.city}
-          openingHours="Opening hours updating"
-          description={item.description?.trim()}
-          statusLabel="Open"
-          defaultFavorite={!!item.isFavorite}
-          onFavoriteChange={handleFavoriteChange}
-        />
+        <Pressable onPress={() => router.push(`/place/${item.id}` as any)}>
+          <PlaceCard
+            className=""
+            style={{ width: cardWidth, elevation: 0 }}
+            imageSource={primaryImageUrl ? { uri: primaryImageUrl } : DEFAULT_PLACE_IMAGE}
+            title={item.name}
+            rating={item.rating <= 0 ? 'N/A' : item.rating.toFixed(1)}
+            distanceLabel={formatDistance(item.distance)}
+            fullAddress={item.fullAddress}
+            street={item.street}
+            ward={item.ward}
+            city={item.city}
+            openingHours={openingHoursLabel}
+            description={item.description?.trim()}
+            statusLabel={isOpen ? t('home.open') : t('home.close')}
+            isOpen={isOpen}
+            tags={tags}
+            defaultFavorite={!!item.isFavorite}
+            onFavoriteChange={handleFavoriteChange}
+          />
+        </Pressable>
       );
     },
-    [cardWidth]
+    [cardWidth, router, setPlaceFavorite, t]
   );
 
   const itemSeparator = useCallback(() => <View style={{ height: 20 }} />, []);
@@ -408,7 +446,7 @@ export default function HomeScreen() {
             primaryButtonText="home.retry"
             primaryButtonAction={() => {
               fetchCurrentLocation();
-              fetchPlacesPage(PLACES_DEFAULT_PAGE, 'replace', requestVersionRef.current);
+              fetchPlacesPage(DEFAULT_PAGE, 'replace', requestVersionRef.current);
             }}
           />
         ) : null}
