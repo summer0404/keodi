@@ -19,7 +19,7 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
@@ -57,7 +57,7 @@ export class PlaceController {
   @UseInterceptors(RecommendationCacheInterceptor)
   @CacheTTL(60)
   @Get('for-you')
-  @ApiGetTrendingPlaces()
+  @ApiGetForYouPlaces()
   async getForYou(
     @Query() query: CoordinateDto, 
     @CurrentUser() user: CurrentUserDto

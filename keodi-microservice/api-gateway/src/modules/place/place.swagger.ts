@@ -6,7 +6,7 @@ import {
   ApiOperation,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { NearMePlacesResponseDto, PlaceDistanceDto, PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
+import { NearMePlacesResponseDto, PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 import { ReviewResponseDto } from 'src/shared/dtos/review.dto';
 
 export function ApiNearMePlace() {
@@ -105,6 +105,22 @@ export function ApiGetTrendingPlaces() {
     }),
     ApiOkResponse({
         description: 'List of trending places retrieved successfully',
+        type: [PlaceRecommendationResponseDto],
+    }),
+    ApiUnauthorizedResponse({
+        description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+  );
+}
+
+export function ApiGetForYouPlaces() {
+  return applyDecorators(
+    ApiOperation({
+        summary: 'Get personalized place recommendations',
+        description: 'Retrieve a list of personalized place recommendations based on user preferences and behavior',
+    }),
+    ApiOkResponse({
+        description: 'List of personalized place recommendations retrieved successfully',
         type: [PlaceRecommendationResponseDto],
     }),
     ApiUnauthorizedResponse({
