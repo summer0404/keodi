@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { ApiProperty, PickType } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType, PickType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsEnum,
@@ -14,17 +14,7 @@ import { SearchMode } from '../enums/search.enum';
 import { PlaceSortBy } from '../enums/sort.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 
-export class NearMeQueryDto extends PaginationQueryDto {
-  @ApiProperty({
-    description: 'Sort by field',
-    enum: PlaceSortBy,
-    default: PlaceSortBy.DISTANCE,
-    required: false,
-  })
-  @IsOptional()
-  @IsEnum(PlaceSortBy)
-  sortBy: PlaceSortBy = PlaceSortBy.DISTANCE;
-
+export class CoordinateDto {
   @ApiProperty({ description: 'User latitude', example: 10.76407 })
   @Type(() => Number)
   @IsNumber()
@@ -38,6 +28,18 @@ export class NearMeQueryDto extends PaginationQueryDto {
   @Min(-180)
   @Max(180)
   longitude: number;
+}
+
+export class NearMeQueryDto extends IntersectionType(CoordinateDto, PaginationQueryDto) {
+  @ApiProperty({
+    description: 'Sort by field',
+    enum: PlaceSortBy,
+    default: PlaceSortBy.DISTANCE,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(PlaceSortBy)
+  sortBy: PlaceSortBy = PlaceSortBy.DISTANCE;
 
   @ApiProperty({
     description: 'Search radius in kilometers',
@@ -82,10 +84,10 @@ export class OpeningHourDto {
   dayOfWeek: number;
 
   @ApiProperty({ description: 'Opening time', example: '08:00:00' })
-  openTime: Date;
+  openTime: Date | null;
 
   @ApiProperty({ description: 'Closing time', example: '22:00:00' })
-  closeTime: Date;
+  closeTime: Date | null;
 }
 
 export class PlaceCategoryDto {

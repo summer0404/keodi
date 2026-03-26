@@ -3,8 +3,8 @@ import { CategoryInfo, OpeningHourInfo } from '../interfaces/place.interface';
 export class PlaceRecommendationResponseDto {
   id: string;
   name: string;
-  description: string;
-  fullAddress: string;
+  description: string | null;
+  fullAddress: string | null;
   latitude: number;
   longitude: number;
   featureImageUrl: string | null;

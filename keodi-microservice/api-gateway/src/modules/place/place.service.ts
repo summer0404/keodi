@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Inject, Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/shared/dtos/place.dto';
+import { CoordinateDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/shared/dtos/place.dto';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { ReviewService } from '../review/review.service';
 import { UserAction } from 'src/shared/enums/user.enum';
@@ -57,5 +57,9 @@ export class PlaceService {
 
     async getTrending() {
         return await firstValueFrom(this.kafkaService.getClient().send('recommendation.trending', {}));
+    }
+
+    async getForYou(userId: string, coordinateDto: CoordinateDto) {
+        return await firstValueFrom(this.kafkaService.getClient().send('recommendation.for-you', { userId, coordinateDto }));  
     }
 }

@@ -11,6 +11,7 @@ import {
   ApiTags
 } from '@nestjs/swagger';
 import {
+  CoordinateDto,
   NearMePlacesResponseDto,
   NearMeQueryDto,
   SearchDto
@@ -18,9 +19,10 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
-import { CacheInterceptor } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
 
 @ApiTags('Places')
 @Controller('places')
@@ -51,7 +53,18 @@ export class PlaceController {
   async getTrending() {
     return await this.placeService.getTrending();
   }
-  
+
+  @UseInterceptors(RecommendationCacheInterceptor)
+  @CacheTTL(60)
+  @Get('for-you')
+  @ApiGetForYouPlaces()
+  async getForYou(
+    @Query() query: CoordinateDto, 
+    @CurrentUser() user: CurrentUserDto
+  ) {
+    return await this.placeService.getForYou(user.id, query);
+  }
+
   @Get(':id')
   @ApiGetPlaceById()
   async getById(

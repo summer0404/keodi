@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { GeoConstants } from "src/shared/constants/place.constant";
 import { PlaceRecommendationResponseDto } from "src/shared/dtos/recommendation.dto";
 
 
@@ -28,5 +29,24 @@ export class RecommendationHelper {
         }
 
         return shuffled;
+    }
+
+    getBoundingBoxCondition(latitude: number, longitude: number, radiusKm: number) { 
+        const latitudeDelta = radiusKm / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
+
+        const latitudeInRadians = latitude * (Math.PI / GeoConstants.DEGREES_IN_HALF_CIRCLE);
+        const actualKilometerPerDegreeLongitude = GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE * Math.cos(latitudeInRadians);
+        const longitudeDelta = radiusKm / actualKilometerPerDegreeLongitude;
+
+        return {
+            latitude: {
+                gte: latitude - latitudeDelta,
+                lte: latitude + latitudeDelta,
+            },
+            longitude: {
+                gte: longitude - longitudeDelta,
+                lte: longitude + longitudeDelta,
+            },
+        }
     }
 }

@@ -1,7 +1,7 @@
 export interface OpeningHourInfo {
   dayOfWeek: number;
-  openTime: Date;
-  closeTime: Date;
+  openTime: Date | null;
+  closeTime: Date | null;
 }
 
 export interface CategoryInfo {

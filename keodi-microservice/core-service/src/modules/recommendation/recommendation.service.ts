@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from 'src/providers/redis/redis.service';
 import {
+  MAX_CANDINDATE_PLACES,
+  MAX_RECOMMENDATIONS_BOUNDING_KM,
   PLACES_PER_SEARCH_TERM,
   RecommendationRedisKeys,
   TIME_DECAY,
@@ -8,11 +10,13 @@ import {
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { RecommendationHelper } from './recommendation.helper';
 // import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
-import { UserActionType } from '@prisma/client';
+import { UserActionType, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { PlaceRecommendationResponseDto } from 'src/shared/dtos/recommendation.dto';
 import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
+import { SortOrder } from 'src/shared/enums/sort.enum';
+import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
 
 @Injectable()
 export class RecommendationService {
@@ -22,10 +26,10 @@ export class RecommendationService {
     private readonly searchService: SearchService,
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
-  ) {}
+  ) { }
 
   private async enrichPlacesWithRelations(
-    places: PlaceRecommendationResponseDto[],
+    places: Omit<PlaceRecommendationResponseDto, 'openingHours' | 'categories'>[],
   ): Promise<PlaceRecommendationResponseDto[]> {
     const placeIds = places.map((p) => p.id);
 
@@ -67,48 +71,148 @@ export class RecommendationService {
     );
   }
 
+  private async getContentBasedPlaceCandidates(userId: string, latitude: number, longitude: number) {
+    try {
+      return this.prismaService.place.findMany({
+        where: {
+          ...this.recommendationHelper.getBoundingBoxCondition(latitude, longitude, MAX_RECOMMENDATIONS_BOUNDING_KM),
+          placeCategories: {
+            some: {
+              category: {
+                userCategories: {
+                  some: {
+                    userId: userId,
+                    isOnboardSelected: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        take: MAX_CANDINDATE_PLACES,
+        orderBy: {
+          rating: SortOrder.DESC
+        }
+      });
+    } catch (error) {
+      return []
+    }
+  }
+
+  private async getRecentlyInteractedPlaceCandidates(userId: string, latitude: number, longitude: number) {
+    try {
+      const recentSearches = await this.prismaService.search.findMany({
+        where: { userId },
+        orderBy: { createdAt: SortOrder.DESC },
+        take: MAX_RECENT_SEARCHES_PER_USER,
+      })
+
+      const searchTerms = recentSearches.map(search => search.extractedTerm);
+
+      const recentCategories = await this.prismaService.userCategory.findMany({
+        where: { userId },
+        orderBy: { lastInteractedAt: SortOrder.DESC },
+        take: MAX_RECENT_SEARCHES_PER_USER,
+      });
+
+      const categoryIds = recentCategories.map(uc => uc.categoryId);
+
+      const textSearchConditions = searchTerms.map(term => ({
+        name: { contains: term, mode: Prisma.QueryMode.insensitive }
+      }));
+
+      return this.prismaService.place.findMany({
+        where: {
+          ...this.recommendationHelper.getBoundingBoxCondition(latitude, longitude, MAX_RECOMMENDATIONS_BOUNDING_KM),
+          OR: [
+            { placeCategories: { some: { categoryId: { in: categoryIds } } } },
+            ...(textSearchConditions.length > 0 ? [{ OR: textSearchConditions }] : [])
+          ]
+        },
+        take: MAX_CANDINDATE_PLACES,
+        orderBy: {
+          rating: SortOrder.DESC
+        }
+      });
+    } catch (error) {
+      return []
+    }
+  }
+
+  private async getNetworkBasedPlaceCandidates(userId: string, latitude: number, longitude: number) {
+    try {
+      const friendships = await this.prismaService.friendship.findMany({
+        where: { userId },
+        select: { friendId: true },
+      });
+
+      const friendIds = friendships.map(f => f.friendId);
+
+      const userNetworkIds = [userId, ...friendIds];
+
+      return this.prismaService.place.findMany({
+        where: {
+          OR: [
+            {
+              favorites: {
+                some: { userId: { in: friendIds } }
+              },
+              ...this.recommendationHelper.getBoundingBoxCondition(latitude, longitude, MAX_RECOMMENDATIONS_BOUNDING_KM)
+            },
+            {
+              wonGroupSessions: {
+                some: {
+                  members: {
+                    some: {
+                      userId: { in: userNetworkIds }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        take: MAX_CANDINDATE_PLACES,
+        orderBy: { rating: SortOrder.DESC }
+      });
+    } catch (error) {
+      return []
+    }
+  }
+
   async getPlacesFromSearchTerms(searchTerms: string[]) {
     try {
-      const allPlaces = (
-        await Promise.all(
-          searchTerms.map(async (term) => {
-            const places = await this.prismaService.$queryRaw<
-              PlaceRecommendationResponseDto[]
-            >`
-                SELECT
-                    p.id,
-                    p.name,
-                    p.description,
-                    p.rating,
-                    p.full_address as "fullAddress",
-                    p.latitude,
-                    p.longitude,
-                    p.feature_image_url as "featureImageUrl",
-                    p.google_map_link as "googleMapLink",
-                    p.phone_number as "phoneNumber",
-                    p.website
-                FROM places p
-                LEFT JOIN user_actions ua
-                    ON ua.place_id = p.id
-                    -- AND ua.created_at > NOW() - INTERVAL '7 days'
-                WHERE
-                    p.name ILIKE '%' || ${term} || '%'
-                GROUP BY p.id
-                ORDER BY COUNT(ua.id) DESC, p.rating DESC
-                LIMIT ${PLACES_PER_SEARCH_TERM}
-            `;
+      const allPlaces = await this.prismaService.$queryRaw<PlaceRecommendationResponseDto[]>`
+      SELECT DISTINCT ON (p.id)
+        p.id,
+        p.name,
+        p.description,
+        p.rating,
+        p.full_address as "fullAddress",
+        p.latitude,
+        p.longitude,
+        p.feature_image_url as "featureImageUrl",
+        p.google_map_link as "googleMapLink",
+        p.phone_number as "phoneNumber",
+        p.website
+      FROM unnest(${searchTerms}::text[]) AS term
+      CROSS JOIN LATERAL (
+        SELECT p_inner.*
+        FROM places p_inner
+        LEFT JOIN user_actions ua 
+        ON ua.place_id = p_inner.id
+          -- AND ua.created_at > NOW() - INTERVAL '7 days'
+        WHERE p_inner.name ILIKE '%' || term || '%'
+        GROUP BY p_inner.id
+        ORDER BY COUNT(ua.id) DESC, p_inner.rating DESC
+        LIMIT ${PLACES_PER_SEARCH_TERM}
+      ) p
+      ORDER BY p.id; 
+    `;
 
-            const enrichedPlaces = await this.enrichPlacesWithRelations(places);
+      const enhancedPlaces = await this.enrichPlacesWithRelations(allPlaces);
 
-            return enrichedPlaces;
-          }),
-        )
-      ).flatMap((places) => places);
-
-      const uniquePlaces =
-        this.recommendationHelper.deduplicatePlaces(allPlaces);
-
-      return uniquePlaces;
+      return enhancedPlaces;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -264,5 +368,32 @@ export class RecommendationService {
       this.recommendationHelper.shufflePlaces(trendingPlaces);
 
     return shuffledTrendingPlaces;
+  }
+
+  async getForYou(userId: string, latitude: number, longitude: number) {
+    try {
+      const [contentBased, recentlyInteracted, networkBased] = await Promise.all([
+        this.getContentBasedPlaceCandidates(userId, latitude, longitude),
+        this.getRecentlyInteractedPlaceCandidates(userId, latitude, longitude),
+        this.getNetworkBasedPlaceCandidates(userId, latitude, longitude)
+      ]);
+
+      const allCandidates = [
+        ...recentlyInteracted,
+        ...contentBased,
+        ...networkBased
+      ];
+
+      const enrichedCandidates = await this.enrichPlacesWithRelations(allCandidates);
+
+      const deduplicatedCandidates = this.recommendationHelper.deduplicatePlaces(enrichedCandidates);
+
+      // TODO: Ranking recommedation for more personalized result
+
+      return deduplicatedCandidates;
+    } catch (error) {
+      console.error('Error fetching personalized recommendations:', error);
+      return []
+    }
   }
 }
