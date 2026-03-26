@@ -152,8 +152,8 @@ model OpeningHour {
   placeId   String @map("place_id")
   dayOfWeek Int    @map("day_of_week")
 
-  openTime  DateTime @map("open_time") @db.Time
-  closeTime DateTime @map("close_time") @db.Time
+  openTime  DateTime? @map("open_time") @db.Time
+  closeTime DateTime? @map("close_time") @db.Time
 
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
