@@ -392,6 +392,9 @@ export interface Category {
   icon: string;
 }
 
+export const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
+export const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
+
 export const CATEGORIES: Category[] = [
   { id: 'dining', titleKey: 'categories.diningOut', icon: '🍴' },
   { id: 'movies', titleKey: 'categories.movies', icon: '🎬' },

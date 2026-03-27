@@ -70,8 +70,6 @@
     "email": "Email",
     "password": "Mật khẩu",
     "username": "Tên người dùng",
-    "usernamePlaceholder": "Ví dụ: toideptrai",
-    "usernameExample": "Không khoảng cách, chữ hoa hay dấu. 'Tôi đẹp trai' sẽ thành 'toideptrai'",
     "identifier": "Email hoặc tên người dùng",
     "rememberMe": "Ghi nhớ đăng nhập",
     "forgotPassword": "Quên mật khẩu?",
@@ -124,7 +122,11 @@
     "resetTokenMissing": "Thiếu phiên đặt lại mật khẩu. Vui lòng yêu cầu OTP lại",
     "resetTokenExpired": "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu OTP lại",
     "emailExists": "Email đã tồn tại",
-    "loadCategories": "Không thể tải danh mục. Vui lòng thử lại sau"
+    "loadCategories": "Không thể tải danh mục. Vui lòng thử lại sau",
+    "dateOfBirthFormat": "Ngày sinh phải có định dạng DD/MM/YYYY",
+    "imageTooLarge": "Hình ảnh quá lớn. Vui lòng chọn hình ảnh nhỏ hơn",
+    "invalidImageFormat": "Chỉ hỗ trợ tệp JPG, JPEG, PNG, và WEBP",
+    "unableToUpdateProfile": "Không thể cập nhật hồ sơ. Vui lòng thử lại"
   },
   "home": {
     "greeting": "Hi @{{username}},",
@@ -162,7 +164,11 @@
     "about": "Giới thiệu",
     "more": "Xem thêm",
     "hightlight": "Nổi bật",
-    "openingHours": "Giờ mở cửa"
+    "openingHours": "Giờ mở cửa",
+    "firstName": "Tên",
+    "lastName": "Họ",
+    "dateOfBirth": "Ngày sinh",
+    "editProfile": "Hồ sơ người dùng"
   },
   "library": {
     "title": "Thư viện",
@@ -174,5 +180,10 @@
     "noFavoritesDescription": "Nhấn vào biểu tượng trái tim trên trang chủ để lưu các địa điểm yêu thích của bạn.",
     "goToHome": "Đi đến trang chủ",
     "totalFavorites": "{{totalFavorites}} địa điểm"
+  },
+  "button": {
+    "update": "Cập nhật",
+    "updating": "Đang cập nhật...",
+    "updateSuccess": "Cập nhật thành công"
   }
 }

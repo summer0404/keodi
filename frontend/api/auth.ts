@@ -17,7 +17,12 @@ import { API_ENDPOINTS } from '@/constants/api';
 
 export const authService = {
   getMe: async (): Promise<AuthMeResponse> => {
-    const response = await apiClient.get<AuthMeResponse>(API_ENDPOINTS.AUTH_ME);
+    const response = await apiClient.get<AuthMeResponse>(API_ENDPOINTS.AUTH_ME, {
+      headers: {
+        'Cache-Control': 'no-cache, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    });
     return response.data;
   },
   register: async (payload: RegisterRequest): Promise<RegisterResponse> => {

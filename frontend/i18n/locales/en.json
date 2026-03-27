@@ -70,8 +70,6 @@
     "email": "Email",
     "password": "Password",
     "username": "Username",
-    "usernamePlaceholder": "Example: johndoe",
-    "usernameExample": "No spaces, uppercase letters, or accents. 'John Doe' becomes 'johndoe'",
     "identifier": "Email or username",
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot password?",
@@ -124,7 +122,11 @@
     "resetTokenMissing": "Reset session is missing. Please request OTP again",
     "resetTokenExpired": "Reset session expired. Please request OTP again",
     "emailExists": "Email already exists",
-    "loadCategories": "Unable to load categories. Please try again later"
+    "loadCategories": "Unable to load categories. Please try again later",
+    "dateOfBirthFormat": "Date of birth must be in DD/MM/YYYY format",
+    "imageTooLarge": "Image is too large. Please choose a smaller image",
+    "invalidImageFormat": "Only JPG, JPEG, PNG, and WEBP files are supported",
+    "unableToUpdateProfile": "Unable to update profile. Please try again"
   },
   "home": {
     "greeting": "Hi @{{username}},",
@@ -162,7 +164,11 @@
     "about": "About",
     "more": "More",
     "hightlight": "Highlight",
-    "openingHours": "Opening hours"
+    "openingHours": "Opening hours",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "dateOfBirth": "Date of birth",
+    "editProfile": "Edit profile"
   },
   "library": {
     "title": "My Library",
@@ -174,5 +180,10 @@
     "noFavoritesDescription": "Tap the heart icon on Home to save your favorite places.",
     "goToHome": "Go to home",
     "totalFavorites": "{{totalFavorites}} places"
+  },
+  "button": {
+    "update": "Update",
+    "updating": "Updating...",
+    "updateSuccess": "Update successful"
   }
 }

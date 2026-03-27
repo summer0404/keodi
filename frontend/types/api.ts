@@ -69,6 +69,27 @@ export interface AuthMeResponse {
   phoneNumber: string | null;
 }
 
+export interface UpdateUsernameRequest {
+  username: string;
+}
+
+export interface UpdatePictureRequest {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export interface UpdateUserProfileRequest {
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
+  dateOfBirth?: string | null;
+}
+
+export interface UpdateUserResponse {
+  message?: string;
+}
+
 export type PlaceSortBy = 'distance' | 'rating' | 'name' | 'createdAt';
 
 export interface GetNearbyPlacesRequest {
