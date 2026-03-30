@@ -195,3 +195,39 @@ export interface GetPlaceReviewsResponse {
   page: number;
   limit: number;
 }
+
+export interface TrendingPlaceItem {
+  id: string;
+  name: string;
+  description: string | null;
+  rating: number;
+  googleMapLink: string | null;
+  website: string | null;
+  phoneNumber: string | null;
+  featureImageUrl: string | null;
+  latitude: number;
+  longitude: number;
+  fullAddress: string | null;
+  openingHours?: PlaceOpeningHour[];
+  categories?: PlaceCategory[];
+}
+
+export interface SearchPlacesRequest {
+  latitude: number;
+  longitude: number;
+  page?: number;
+  limit?: number;
+  sortOrder?: 'asc' | 'desc';
+  sortBy?: PlaceSortBy;
+  radius?: number;
+  search: string;
+  mode?: string;
+}
+
+export interface SearchPlacesResponse {
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+  places: PlaceItem[];
+}
