@@ -21,68 +21,13 @@ import { Button } from '@/components/ui/Button';
 import { ThreadsDatePicker } from '@/components/ui/DatePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette } from '@/constants/theme';
-import { sanitizeUsername, DEFAULT_AVATAR_SOURCE } from '@/constants/helper';
+import { sanitizeUsername, DEFAULT_AVATAR_SOURCE, MAX_AVATAR_FILE_BYTES, toApiDate, parseDateForPicker, toDisplayDate, toComparableDate, normalizeNullable } from '@/constants/helper';
 import { authService } from '@/api/auth';
 import { userService } from '@/api/user';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { AuthMeResponse, UpdatePictureRequest, UpdateUserProfileRequest } from '@/types/api';
 import { useTranslation } from 'react-i18next';
 import { type TFunction } from 'i18next';
-
-const MAX_AVATAR_FILE_BYTES = 1024 * 1024;
-
-const toDisplayDate = (value: string | null | undefined) => {
-  if (!value) return '';
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
-
-  const day = String(parsed.getDate()).padStart(2, '0');
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const year = parsed.getFullYear();
-  return `${day}/${month}/${year}`;
-};
-
-const toApiDate = (value: string) => {
-  const cleaned = value.replace(/[^0-9]/g, '');
-  if (cleaned.length !== 8) return null;
-
-  const day = Number(cleaned.slice(0, 2));
-  const month = Number(cleaned.slice(2, 4));
-  const year = Number(cleaned.slice(4, 8));
-  const date = new Date(year, month - 1, day);
-
-  if (
-    Number.isNaN(date.getTime()) ||
-    date.getDate() !== day ||
-    date.getMonth() !== month - 1 ||
-    date.getFullYear() !== year
-  ) {
-    return null;
-  }
-
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-};
-
-const parseDateForPicker = (value: string) => {
-  const apiDate = toApiDate(value);
-  if (!apiDate) return new Date();
-
-  const [year, month, day] = apiDate.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
-
-const toComparableDate = (value: string | null | undefined) => {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 10);
-};
-
-const normalizeNullable = (value: string) => {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
 
 const createEditProfileSchema = (t: TFunction) =>
   z

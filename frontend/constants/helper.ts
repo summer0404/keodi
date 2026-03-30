@@ -395,6 +395,62 @@ export interface Category {
 export const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
 export const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
 
+
+export const MAX_AVATAR_FILE_BYTES = 1024 * 1024;
+
+export const toDisplayDate = (value: string | null | undefined) => {
+  if (!value) return '';
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const year = parsed.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+export const toApiDate = (value: string) => {
+  const cleaned = value.replace(/[^0-9]/g, '');
+  if (cleaned.length !== 8) return null;
+
+  const day = Number(cleaned.slice(0, 2));
+  const month = Number(cleaned.slice(2, 4));
+  const year = Number(cleaned.slice(4, 8));
+  const date = new Date(year, month - 1, day);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getDate() !== day ||
+    date.getMonth() !== month - 1 ||
+    date.getFullYear() !== year
+  ) {
+    return null;
+  }
+
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+export const parseDateForPicker = (value: string) => {
+  const apiDate = toApiDate(value);
+  if (!apiDate) return new Date();
+
+  const [year, month, day] = apiDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+export const toComparableDate = (value: string | null | undefined) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+};
+
+export const normalizeNullable = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 export const CATEGORIES: Category[] = [
   { id: 'dining', titleKey: 'categories.diningOut', icon: '🍴' },
   { id: 'movies', titleKey: 'categories.movies', icon: '🎬' },
