@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { Home, Search, Users, Heart, Settings } from 'lucide-react-native';
@@ -34,6 +34,7 @@ function TabIcon({
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <Tabs
@@ -44,7 +45,7 @@ export default function TabsLayout() {
 
         tabBarStyle: {
           position: 'absolute',
-          bottom: insets.bottom + 16, 
+          bottom: insets.bottom + 4, 
           left: 16,
           right: 16,
           height: 64,
@@ -120,7 +121,14 @@ export default function TabsLayout() {
 
       <Tabs.Screen
         name="setting"
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/(tabs)/setting');
+          },
+        }}
         options={{
+          popToTopOnBlur: true,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Settings} />,
         }}
       />

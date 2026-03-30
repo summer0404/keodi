@@ -85,7 +85,7 @@ export const ThreadsDatePicker: React.FC<ThreadsDatePickerProps> = ({
     if (selectedDay > maxDay) {
       setSelectedDay(maxDay);
     }
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, selectedDay]);
 
   const handleConfirm = () => {
     const date = new Date(selectedYear, selectedMonth - 1, selectedDay);
