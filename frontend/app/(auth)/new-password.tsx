@@ -7,7 +7,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Eye, EyeClosed } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import axios from 'axios';
 import { type TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MapPin, MoveDiagonal, ArrowUpDown } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import PlaceCard from '@/components/ui/PlaceCard';
@@ -21,6 +21,8 @@ import {
   formatOpeningHoursLabel,
   getPrimaryImageUrl,
   isPlaceOpenNow,
+  DEFAULT_AVATAR_SOURCE,
+  DEFAULT_PLACE_IMAGE,
 } from '@/constants/helper';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
@@ -28,9 +30,6 @@ import AlertScreen from '@/components/ui/AlertScreen';
 import { favoriteService } from '@/api/favorite';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import { isAxiosError } from 'axios';
-
-const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
-const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
 
 const appendUniquePlaces = (prev: PlaceItem[], next: PlaceItem[]) => {
   const existingIds = new Set(prev.map((item) => item.id));
@@ -245,27 +244,32 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    let active = true;
+  // Fetch avatar on screen focus to catch updates from edit-profile
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
 
-    const fetchMe = async () => {
-      try {
-        const profile = await authService.getMe();
-        if (!active) return;
-        if (profile.username?.trim()) setUsername(profile.username.trim());
-        setAvatarSource(
-          profile.pictureUrl ? { uri: profile.pictureUrl.trim() } : DEFAULT_AVATAR_SOURCE
-        );
-      } catch {
-        if (active) setAvatarSource(DEFAULT_AVATAR_SOURCE);
-      }
-    };
+      const fetchMe = async () => {
+        try {
+          const profile = await authService.getMe();
+          if (!active) return;
+          if (profile.username?.trim()) setUsername(profile.username.trim());
+          setAvatarSource(
+            profile.pictureUrl ? { uri: profile.pictureUrl.trim() } : DEFAULT_AVATAR_SOURCE
+          );
+        } catch {
+          if (active) {
+            setAvatarSource(DEFAULT_AVATAR_SOURCE);
+          }
+        }
+      };
 
-    fetchMe();
-    return () => {
-      active = false;
-    };
-  }, []);
+      fetchMe();
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
   useEffect(() => {
     fetchCurrentLocation();
@@ -393,13 +397,19 @@ export default function HomeScreen() {
               <Typography className="text-gray-600">{locationLabel}</Typography>
             </Pressable>
 
-            <View className="h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">
-              <Image
-                source={avatarSource}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-              />
-            </View>
+            <Pressable onPress={() => router.push('/setting/edit-profile' as any)}>
+              <View className="h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">
+                <Image
+                  source={
+                    avatarSource && typeof avatarSource === 'object' && 'uri' in avatarSource
+                      ? { uri: `${avatarSource.uri}?t=${Date.now()}` }
+                      : avatarSource
+                  }
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
+              </View>
+            </Pressable>
           </View>
         </View>
 

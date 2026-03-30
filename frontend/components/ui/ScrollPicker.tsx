@@ -43,7 +43,7 @@ export const ScrollPicker: React.FC<ScrollPickerProps> = ({
         });
       }, 100);
     }
-  }, []);
+  }, [itemHeight, items, value]);
 
   return (
     <View style={{ height, width: '100%' }}>
