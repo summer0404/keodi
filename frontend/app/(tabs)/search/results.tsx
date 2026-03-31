@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
+import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isAxiosError } from 'axios';
@@ -269,7 +270,14 @@ export default function SearchResultsScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <Typography className="text-gray-500">{t('search.searching')}</Typography>
+          <Video
+            source={require('@/assets/images/loading.mp4')}
+            style={{ width: 800, height: 800 }}
+            shouldPlay
+            isLooping
+            isMuted
+            resizeMode={ResizeMode.CONTAIN}
+          />
         </View>
       ) : isNotFound || displayedPlaces.length === 0 ? (
         <View className="flex-1 px-4">
@@ -277,7 +285,7 @@ export default function SearchResultsScreen() {
             imageSrc={require('@/assets/images/404.png')}
             heading="search.noResults"
             description="search.noResultsDesc"
-            primaryButtonText="search.goBack"
+            primaryButtonText="search.clearSearch"
             primaryButtonAction={() => router.back()}
           />
         </View>

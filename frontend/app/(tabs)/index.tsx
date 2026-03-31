@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
@@ -23,6 +23,10 @@ import {
   isPlaceOpenNow,
   DEFAULT_AVATAR_SOURCE,
   DEFAULT_PLACE_IMAGE,
+  getSortOptions,
+  getRadiusOptions,
+  DEFAULT_RADIUS,
+  DEFAULT_SORT_BY,
 } from '@/constants/helper';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
@@ -50,27 +54,16 @@ export default function HomeScreen() {
   const cacheNearbyPlaces = usePlacesStore((s) => s.cacheNearbyPlaces);
   const setLastNearbyParams = usePlacesStore((s) => s.setLastNearbyParams);
   const setPlaceFavorite = usePlacesStore((s) => s.setPlaceFavorite);
+  const sortOptions = useMemo(() => getSortOptions(t), [t]);
+  const radiusOptions = useMemo(() => getRadiusOptions(t), [t]);
   const horizontalPadding = 20;
   const cardWidth = width - horizontalPadding * 2;
-
-  const SORT_OPTIONS = [
-    { label: t('home.sortByDistance'), value: 'distance' },
-    { label: t('home.sortByRating'), value: 'rating' },
-    { label: t('home.sortByName'), value: 'name' },
-  ];
-
-  const RADIUS_OPTIONS = [
-    { label: t('home.radius2km'), value: 2 },
-    { label: t('home.radius5km'), value: 5 },
-    { label: t('home.radius15km'), value: 15 },
-    { label: t('home.radius15kmPlus'), value: 50 },
-  ];
 
   const [locationLabel, setLocationLabel] = useState(t('home.loadingLocation'));
   const [username, setUsername] = useState('bạn');
   const [avatarSource, setAvatarSource] = useState<any>(DEFAULT_AVATAR_SOURCE);
-  const [sortBy, setSortBy] = useState<PlaceSortBy>('distance');
-  const [radius, setRadius] = useState(5);
+  const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
+  const [radius, setRadius] = useState(DEFAULT_RADIUS);
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<PlaceItem[]>([]);
   const [isPlacesLoading, setIsPlacesLoading] = useState(false);
@@ -429,7 +422,7 @@ export default function HomeScreen() {
             onChange={(value) => {
               if (typeof value === 'string') setSortBy(value as PlaceSortBy);
             }}
-            options={SORT_OPTIONS}
+            options={sortOptions}
             className="flex-[1.2]"
           />
 
@@ -439,7 +432,7 @@ export default function HomeScreen() {
             onChange={(value) => {
               if (typeof value === 'number') setRadius(value);
             }}
-            options={RADIUS_OPTIONS}
+            options={radiusOptions}
             className="flex-1"
           />
         </View>
@@ -453,7 +446,7 @@ export default function HomeScreen() {
             imageSrc={require('@/assets/images/404.png')}
             heading="home.noPlaces"
             description="home.subNoPlaces"
-            primaryButtonText="home.retry"
+            primaryButtonText="button.retry"
             primaryButtonAction={() => {
               fetchCurrentLocation();
               fetchPlacesPage(DEFAULT_PAGE, 'replace', requestVersionRef.current);

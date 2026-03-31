@@ -386,6 +386,9 @@ export const normalizeCityLabel = (cityValue: string) => {
 export const buildSortOrder = (value: 'distance' | 'rating' | 'name' | 'createdAt') =>
   value === 'rating' || value === 'createdAt' ? 'desc' : 'asc';
 
+export const DEFAULT_RADIUS = 5;
+export const DEFAULT_SORT_BY = 'distance';
+
 export interface Category {
   id: string;
   titleKey: string;
@@ -394,7 +397,6 @@ export interface Category {
 
 export const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
 export const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
-
 
 export const MAX_AVATAR_FILE_BYTES = 1024 * 1024;
 
@@ -450,6 +452,23 @@ export const normalizeNullable = (value: string) => {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 };
+
+export type TranslateFn = (key: string) => string;
+
+export const getSortOptions = (t: TranslateFn) => [
+  { label: t('home.sortByDistance'), value: 'distance' },
+  { label: t('home.sortByRating'), value: 'rating' },
+  { label: t('home.sortByName'), value: 'name' },
+];
+
+export const getRadiusOptions = (t: TranslateFn) => [
+  { label: t('home.radius2km'), value: 2 },
+  { label: t('home.radius5km'), value: 5 },
+  { label: t('home.radius15km'), value: 15 },
+  { label: t('home.radius15kmPlus'), value: 50 },
+];
+
+export const MAX_RECENT_SEARCHES = 5;
 
 export const CATEGORIES: Category[] = [
   { id: 'dining', titleKey: 'categories.diningOut', icon: '🍴' },

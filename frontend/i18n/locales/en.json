@@ -37,7 +37,6 @@
     }
   },
   "categories": {
-    "retry": "Retry",
     "diningOut": "Dining Out",
     "movies": "Movies",
     "travel": "Travel",
@@ -112,6 +111,7 @@
     "confirmPasswordRequired": "Please confirm your password",
     "passwordMatch": "Passwords must match",
     "invalidCredentials": "Your identifier or password was incorrect",
+    "emailNotVerified": "Your email is not verified yet. We've sent a new verification link to your inbox.",
     "resendTooManyRequests": "Please wait {{seconds}} seconds before resending verification email",
     "otpTooManyRequests": "Please wait {{seconds}} seconds before requesting a new OTP",
     "tooManyRequests": "You have made too many attempts. Please try again later",
@@ -132,7 +132,6 @@
     "greeting": "Hi @{{username}},",
     "subGreeting": "Where do you wanna go?",
     "loadingPlaces": "Loading places ...",
-    "retry": "Retry",
     "noPlaces": "Oops! No places found",
     "subNoPlaces": "It seems like there are no places. Please try again!",
     "sortByDistance": "Distance",
@@ -181,9 +180,26 @@
     "goToHome": "Go to home",
     "totalFavorites": "{{totalFavorites}} places"
   },
+  "search": {
+    "title": "Search",
+    "recent": "Recent",
+    "trending": "Trending",
+    "noResults": "Oops! \n No results found",
+    "noResultsDesc": "We couldn’t find what you’re looking for\nMaybe try a different keyword \nor check your filters?",
+    "clearSearch": "Clear search and try again",
+    "locationRequired": "Location is required",
+    "locationRequiredDesc": "Location is required to search for nearby places. Please enable location services and try again.",
+    "loadingLocation": "Getting your location...",
+    "categories": "Categories",
+    "distance": "Distance",
+    "rating": "Rating",
+    "sortBy": "Sort by",
+    "loadingMore": "Loading more..."
+  },
   "button": {
     "update": "Update",
     "updating": "Updating...",
-    "updateSuccess": "Update successful"
+    "updateSuccess": "Update successful",
+    "retry": "Retry"
   }
 }

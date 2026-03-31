@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import {
   ArrowLeft,
   Clock,
   TrendingUp,
-  Circle,
+  X,
   UtensilsCrossed,
   Hotel,
   Fuel,
@@ -27,15 +27,18 @@ import AlertScreen from '@/components/ui/AlertScreen';
 import { Palette } from '@/constants/theme';
 import { placesService } from '@/api/places';
 import { usePlacesStore } from '@/store/usePlacesStore';
-import type { TrendingPlaceItem } from '@/types/api';
+import type { PlaceSortBy, TrendingPlaceItem } from '@/types/api';
 import { useTranslation } from 'react-i18next';
+import {
+  buildSortOrder,
+  getSortOptions,
+  getRadiusOptions,
+  DEFAULT_RADIUS,
+  DEFAULT_SORT_BY,
+  MAX_RECENT_SEARCHES,
+} from '@/constants/helper';
 
 const RECENT_SEARCHES_KEY = '@keodi_recent_searches';
-const MAX_RECENT_SEARCHES = 5;
-
-const DEFAULT_RADIUS = 5;
-const DEFAULT_SORT_BY = 'distance';
-const DEFAULT_SORT_ORDER = 'asc';
 
 interface FilterCategory {
   id: string;
@@ -77,12 +80,13 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const upsertPlace = usePlacesStore((s) => s.upsertPlace);
+  const sortOptions = useMemo(() => getSortOptions(t), [t]);
+  const radiusOptions = useMemo(() => getRadiusOptions(t), [t]);
 
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
-  const [minRating, setMinRating] = useState<number>(0);
-  const [openFilter, setOpenFilter] = useState<'all' | 'open'>('all');
+  const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
 
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
@@ -91,36 +95,6 @@ export default function SearchScreen() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [trendingPlaces, setTrendingPlaces] = useState<TrendingPlaceItem[]>([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState(false);
-
-  const RADIUS_OPTIONS = useMemo(
-    () => [
-      { label: '2 km', value: 2 },
-      { label: '5 km', value: 5 },
-      { label: '10 km', value: 10 },
-      { label: '15 km', value: 15 },
-      { label: '50 km', value: 50 },
-    ],
-    []
-  );
-
-  const RATING_OPTIONS = useMemo(
-    () => [
-      { label: t('search.ratingAll'), value: 0 },
-      { label: '3.0+', value: 3 },
-      { label: '3.5+', value: 3.5 },
-      { label: '4.0+', value: 4 },
-      { label: '4.5+', value: 4.5 },
-    ],
-    [t]
-  );
-
-  const OPEN_OPTIONS = useMemo(
-    () => [
-      { label: t('search.openAll'), value: 'all' },
-      { label: t('search.openNow'), value: 'open' },
-    ],
-    [t]
-  );
 
   const fetchLocation = useCallback(async () => {
     setIsLocationLoading(true);
@@ -163,7 +137,7 @@ export default function SearchScreen() {
     placesService
       .getTrendingPlaces()
       .then((data) => {
-        if (active) setTrendingPlaces(data);
+        if (active) setTrendingPlaces(data.slice(0, 10));
       })
       .catch(() => {
         if (active) setTrendingPlaces([]);
@@ -191,14 +165,12 @@ export default function SearchScreen() {
           latitude: String(coords.latitude),
           longitude: String(coords.longitude),
           radius: String(radius),
-          sortBy: DEFAULT_SORT_BY,
-          sortOrder: DEFAULT_SORT_ORDER,
-          minRating: String(minRating),
-          openFilter,
+          sortBy,
+          sortOrder: buildSortOrder(sortBy),
         },
       } as any);
     },
-    [coords, radius, minRating, openFilter, router]
+    [coords, radius, sortBy, router]
   );
 
   const handleCategoryPress = useCallback(
@@ -215,6 +187,19 @@ export default function SearchScreen() {
       executeSearch(term);
     },
     [executeSearch]
+  );
+
+  const handleClearRecentPress = useCallback(
+    async (term: string) => {
+      const updated = recentSearches.filter((s) => s.toLowerCase() !== term.toLowerCase());
+      setRecentSearches(updated);
+      try {
+        await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch {
+        // Keep UI state even if persistence fails.
+      }
+    },
+    [recentSearches]
   );
 
   const handleTrendingPress = useCallback(
@@ -257,12 +242,12 @@ export default function SearchScreen() {
             <Typography variant="h4">{t('search.title')}</Typography>
           </View>
         </View>
-        <View className="flex-1 items-center justify-center px-4">
+        <View className="flex-1 justify-center px-4">
           <AlertScreen
             imageSrc={require('@/assets/images/404.png')}
             heading="search.locationRequired"
             description="search.locationRequiredDesc"
-            primaryButtonText="search.retryLocation"
+            primaryButtonText="button.retry"
             primaryButtonAction={fetchLocation}
           />
         </View>
@@ -296,7 +281,7 @@ export default function SearchScreen() {
             onSubmitEditing={() => executeSearch(query)}
             onSettingsPress={() => setShowFilters((prev) => !prev)}
             settingsActive={showFilters}
-            placeholder={t('search.placeholder')}
+            placeholder={t('search.title')}
           />
         </View>
 
@@ -313,12 +298,7 @@ export default function SearchScreen() {
         {showFilters ? (
           <View className="px-4">
             <View className="flex-row items-center justify-between">
-              <Typography variant="h5" className="font-bold">
-                {t('search.categories')}
-              </Typography>
-              <Pressable>
-                <Typography className="text-blue-600">{t('search.viewAll')}</Typography>
-              </Pressable>
+              <Typography variant="h5">{t('search.categories')}</Typography>
             </View>
 
             <ScrollView
@@ -349,80 +329,71 @@ export default function SearchScreen() {
 
             <View className="mt-4 flex-row gap-3">
               <View className="flex-1">
-                <Typography className="mb-1.5 font-semibold">
+                <Typography variant="h5" className="mb-1.5">
                   {t('search.distance')}
                 </Typography>
                 <Select
                   value={radius}
-                  onChange={(v) => {
-                    if (typeof v === 'number') setRadius(v);
+                  onChange={(value) => {
+                    if (typeof value === 'number') setRadius(value);
                   }}
-                  options={RADIUS_OPTIONS}
+                  options={radiusOptions}
                 />
               </View>
-              <View className="flex-1">
-                <Typography className="mb-1.5 font-semibold">
-                  {t('search.rating')}
+              <View className="flex-1 mb-4">
+                <Typography variant="h5" className="mb-1.5">
+                  {t('search.sortBy')}
                 </Typography>
                 <Select
-                  value={minRating}
-                  onChange={(v) => {
-                    if (typeof v === 'number') setMinRating(v);
+                  value={sortBy}
+                  onChange={(value) => {
+                    if (typeof value === 'string') setSortBy(value as PlaceSortBy);
                   }}
-                  options={RATING_OPTIONS}
+                  options={sortOptions}
                 />
               </View>
-            </View>
-
-            <View className="mt-3 flex-row gap-3">
-              <View className="flex-1">
-                <Typography className="mb-1.5 font-semibold">{t('search.open')}</Typography>
-                <Select
-                  value={openFilter}
-                  onChange={(v) => {
-                    if (typeof v === 'string') setOpenFilter(v as 'all' | 'open');
-                  }}
-                  options={OPEN_OPTIONS}
-                />
-              </View>
-              <View className="flex-1" />
             </View>
           </View>
         ) : null}
 
-        <View className="mt-5 px-4">
-          <Typography variant="h5" className="font-bold">
-            {t('search.recent')}
-          </Typography>
-
-          {recentSearches.length === 0 ? (
-            <Typography className="mt-2 text-gray-400">{t('search.noRecent')}</Typography>
-          ) : (
-            <View className="mt-2">
-              {recentSearches.map((term, index) => (
-                <Pressable
-                  key={`${term}-${index}`}
-                  className="flex-row items-center gap-3 py-2.5"
-                  onPress={() => handleRecentPress(term)}
-                >
-                  <Clock size={18} color={Palette.grey} strokeWidth={2} />
-                  <Typography className="flex-1" numberOfLines={1}>
-                    {term}
-                  </Typography>
-                </Pressable>
-              ))}
-            </View>
+        <View className="px-4">
+          {recentSearches.length > 0 && (
+            <>
+              <Typography variant="h5">{t('search.recent')}</Typography>
+              <View className="mt-2 justify-between gap-2">
+                {recentSearches.map((term, index) => (
+                  <View
+                    key={`${term}-${index}`}
+                    className="flex-row items-center justify-between gap-2"
+                  >
+                    <Pressable
+                      className="flex-1 flex-row items-center gap-3 py-2.5"
+                      onPress={() => handleRecentPress(term)}
+                    >
+                      <Clock size={18} color={Palette.grey} strokeWidth={2} />
+                      <Typography className="flex-1" numberOfLines={1}>
+                        {term}
+                      </Typography>
+                    </Pressable>
+                    <Pressable
+                      className="h-8 w-8 items-center justify-center"
+                      onPress={() => handleClearRecentPress(term)}
+                    >
+                      <X size={16} color="#6B7280" strokeWidth={2} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </>
           )}
         </View>
 
         <View className="mt-5 px-4">
-          <Typography variant="h5" className="font-bold">
-            {t('search.youMightAlsoLike')}
+          <Typography variant="h5">
+            {t('search.trending')}
           </Typography>
 
-          {isTrendingLoading ? (
-            <Typography className="mt-2 text-gray-400">{t('search.loadingTrending')}</Typography>
-          ) : trendingPlaces.length === 0 ? (
+          {trendingPlaces.length === 0 ? (
             <Typography className="mt-2 text-gray-400">{t('search.noTrending')}</Typography>
           ) : (
             <View className="mt-2">
@@ -432,11 +403,7 @@ export default function SearchScreen() {
                   className="flex-row items-center gap-3 py-2.5"
                   onPress={() => handleTrendingPress(place)}
                 >
-                  {index % 2 === 0 ? (
-                    <TrendingUp size={18} color="#E03131" strokeWidth={2} />
-                  ) : (
-                    <Circle size={18} color={Palette.black} strokeWidth={2} />
-                  )}
+                  <TrendingUp size={18} color={Palette.red} strokeWidth={2} />
                   <Typography className="flex-1" numberOfLines={1}>
                     {place.name}
                   </Typography>
