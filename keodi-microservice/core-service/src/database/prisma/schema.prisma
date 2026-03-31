@@ -57,6 +57,7 @@ model User {
   friendships      Friendship[]    @relation("UserFriendships")
   friendsOf        Friendship[]    @relation("FriendFriendships")
   groupSessions    GroupSession[]  @relation("CreatedSessions")
+  setting UserSetting?
 
   @@map("users")
 }
@@ -384,4 +385,13 @@ model Search {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("searches")
+}
+
+model UserSetting {
+  userId String @id @map("user_id")
+  settings Json @default("{}")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
 }
