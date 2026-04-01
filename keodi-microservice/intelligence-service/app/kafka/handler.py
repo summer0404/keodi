@@ -175,9 +175,26 @@ class Handlers:
         try:
             df = await self.ranking_service._prepare_training_data()
 
-            await asyncio.to_thread(self.ranking_service._run_lightgbm_training_async, df)
+            await asyncio.to_thread(self.ranking_service._run_lightgbm_training, df)
         except Exception as e:
             raise Exception(f"Failed to train ranking model: {str(e)}")
+        
+    async def ranking(self, message: dict, headers: dict):
+        user_id = message.get("userId", "")
+        place_ids = message.get("placeIds", [])
+        kafka_correlationId = headers.get("kafka_correlationId", "")
+        try:
+            ranking_scores = await self.ranking_service.ranking(user_id, place_ids)
+            scores = json.dumps(ranking_scores)
+
+            return await self.producer.send_response(
+                topic=Topics.RANKING_REPLY,
+                kafka_correlationId=kafka_correlationId,
+                payload=scores,
+            )
+        except Exception as e:
+            raise Exception(f"Failed to calculate ranking: {str(e)}")
+
 
 
 handlers: Optional[Handlers] = None

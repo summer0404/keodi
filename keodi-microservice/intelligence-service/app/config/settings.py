@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     ltr_max_depth: int
     ltr_learning_rate: float
     ltr_num_iterations: int
-    ltr_objective: str = 'regression'
+    ltr_objective: str
     ltr_metric: str = 'rmse'
     ltr_boosting_type: str = 'gbdt'
     ltr_feature_fraction: float = 0.9
