@@ -15,6 +15,7 @@ import { RecommendationModule } from './modules/recommendation/recommendation.mo
 import { UserModule } from './modules/user/user.module';
 import { ProviderModule } from './providers/provider.module';
 import { SettingModule } from './modules/setting/setting.module';
+import { NotificationPushModule } from './modules/notification-push/notification-push.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { SettingModule } from './modules/setting/setting.module';
     SearchModule,
     RecommendationModule,
     SettingModule,
+    NotificationPushModule,
   ],
   controllers: [],
   providers: [],

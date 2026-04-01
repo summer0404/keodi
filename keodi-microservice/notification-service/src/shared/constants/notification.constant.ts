@@ -14,6 +14,8 @@ export enum NotificationType {
   FRIEND_REQUEST = 'FRIEND_REQUEST',
   FRIEND_ACCEPTED = 'FRIEND_ACCEPTED',
   SYSTEM = 'SYSTEM',
+  NEARBY_PLACE = 'NEARBY_PLACE',
+  RECOMMENDATION = 'RECOMMENDATION',
 }
 
 export enum NotificationPreferredChannel {

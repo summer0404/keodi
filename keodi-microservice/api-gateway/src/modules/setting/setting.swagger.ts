@@ -1,11 +1,15 @@
 import { applyDecorators } from '@nestjs/common';
 import {
-    ApiBadRequestResponse,
-    ApiOkResponse,
-    ApiOperation,
-    ApiUnauthorizedResponse,
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiOkResponse,
+  ApiOperation,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { UserSettingsDto } from 'src/shared/dtos/setting.dto';
+import {
+  UpdateUserSettingDto,
+  UserSettingsDto,
+} from 'src/shared/dtos/setting.dto';
 
 export function ApiGetSettings() {
   return applyDecorators(
@@ -31,6 +35,7 @@ export function ApiUpdateSettings() {
       description:
         'Partially update user settings. Only send the fields you want to change — all fields are optional.',
     }),
+    ApiBody({ type: UpdateUserSettingDto }),
     ApiOkResponse({
       description: 'User settings updated successfully',
       type: UserSettingsDto,
