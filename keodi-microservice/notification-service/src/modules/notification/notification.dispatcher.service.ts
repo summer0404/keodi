@@ -6,9 +6,16 @@ import {
   NotificationPreferredChannel,
   NotificationStatus,
   NotificationTopics,
+  NotificationType,
 } from 'src/shared/constants/notification.constant';
 import { NotificationHelper } from './notification.helper';
 import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
+
+const NOTIFICATION_SETTING_MAP: Partial<Record<NotificationType, string>> = {
+  [NotificationType.GROUP_INVITE]: 'notifyGroupInvites',
+  [NotificationType.GROUP_VOTE_FINALIZED]: 'notifyVotingResults',
+  [NotificationType.GROUP_VOTE_REMINDER]: 'notifyVotingResults',
+};
 
 @Injectable()
 export class NotificationDispatcherService {
@@ -20,6 +27,22 @@ export class NotificationDispatcherService {
 
   async dispatch(event: DispatchNotificationEvent): Promise<void> {
     const kafka = this.kafkaService.getClient();
+
+    // Check user notification preferences
+    const settingKey = NOTIFICATION_SETTING_MAP[event.type];
+    if (settingKey) {
+      try {
+        const settings = await firstValueFrom(
+          kafka.send('setting.get', event.userId),
+        );
+        if (settings?.[settingKey] === false) {
+          return; // User disabled this notification type
+        }
+      } catch {
+        // Settings fetch failed → still send notification
+      }
+    }
+
     const channel = event.preferredChannel ?? NotificationPreferredChannel.BOTH;
 
     //persist pending
