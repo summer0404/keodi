@@ -4,156 +4,175 @@ import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
+import { RedisService } from 'src/providers/redis/redis.service';
 
 @Injectable()
 export class UserService {
-    constructor(
-        private readonly prismaService: PrismaService,
-        private readonly imageService: ImageService
-    ) { }
+  private static readonly USER_LOCATIONS_KEY = 'user:locations';
 
-    async getAll() {
-        try {
-            return await this.prismaService.user.findMany({
-                select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    phoneNumber: true,
-                    pictureUrl: true,
-                },
-            });
-        } catch (error) {
-            return handleServiceErrorCatching(error)
-        }
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly imageService: ImageService,
+    private readonly redisService: RedisService,
+  ) {}
+
+  async getAll() {
+    try {
+      return await this.prismaService.user.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+          pictureUrl: true,
+        },
+      });
+    } catch (error) {
+      return handleServiceErrorCatching(error);
     }
+  }
 
-    async create(userId: string) {
-        try {
-            await this.prismaService.user.create({
-                data: { id: userId }
-            })
-        } catch (error) {
-            return handleServiceErrorCatching(error)
-        }
+  async create(userId: string) {
+    try {
+      await this.prismaService.user.create({
+        data: { id: userId },
+      });
+    } catch (error) {
+      return handleServiceErrorCatching(error);
     }
+  }
 
-    async updatePicture(
-        file: Buffer,
-        userId: string,
-        type?: string
-    ) {
-        try {
-            const existingUser = await this.prismaService.user.findUnique({ where: { id: userId } })
+  async updatePicture(file: Buffer, userId: string, type?: string) {
+    try {
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
 
-            if (!existingUser) throw new RpcException({
-                status: HttpStatus.BAD_REQUEST,
-                message: 'User not found'
-            })
+      if (!existingUser)
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'User not found',
+        });
 
-            const image = await this.imageService.updateUserProfilePicture(
-                existingUser.id,
-                file,
-                type
-            );
+      const image = await this.imageService.updateUserProfilePicture(
+        existingUser.id,
+        file,
+        type,
+      );
 
-            if (!existingUser.pictureUrl || existingUser.pictureUrl !== image.url) {
-                await this.prismaService.user.update({
-                    where: {
-                        id: existingUser.id
-                    },
-                    data: {
-                        pictureUrl: image.url
-                    }
-                })
-            }
+      if (!existingUser.pictureUrl || existingUser.pictureUrl !== image.url) {
+        await this.prismaService.user.update({
+          where: {
+            id: existingUser.id,
+          },
+          data: {
+            pictureUrl: image.url,
+          },
+        });
+      }
 
-            return { message: "Profile picture updated successfully" }
-
-        } catch (error) {
-            return handleServiceErrorCatching(error)
-        }
+      return { message: 'Profile picture updated successfully' };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
     }
+  }
 
-    async getById(userId: string) {
-        try {
-            const user = await this.prismaService.user.findUnique({ where: { id: userId } })
-            if (!user) throw new RpcException({
-                status: HttpStatus.BAD_REQUEST,
-                message: 'User not found'
-            })
+  async getById(userId: string) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+      if (!user)
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'User not found',
+        });
 
-            const pictureUrl = user.pictureUrl ? await this.imageService.getImageViewUrl(user.pictureUrl) : null;
+      const pictureUrl = user.pictureUrl
+        ? await this.imageService.getImageViewUrl(user.pictureUrl)
+        : null;
 
-            return {
-                ...user,
-                pictureUrl
-            }
-        } catch (error) {
-            return handleServiceErrorCatching(error)
-        }
+      return {
+        ...user,
+        pictureUrl,
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
     }
+  }
 
-    async updateProfile(
-        userId: string,
-        data: UpdateUserProfileDto
-    ) {
-        try {
-            const existingUser = await this.prismaService.user.findUnique({ where: { id: userId } })
-            if (!existingUser) throw new RpcException({
-                status: HttpStatus.BAD_REQUEST,
-                message: 'User not found'
-            })
+  async updateProfile(userId: string, data: UpdateUserProfileDto) {
+    try {
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+      if (!existingUser)
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'User not found',
+        });
 
-            if (data.phoneNumber) {
-                const userWithPhoneNumber = await this.prismaService.user.findUnique({
-                    where: { phoneNumber: data.phoneNumber }
-                })
+      if (data.phoneNumber) {
+        const userWithPhoneNumber = await this.prismaService.user.findUnique({
+          where: { phoneNumber: data.phoneNumber },
+        });
 
-                if (userWithPhoneNumber && userWithPhoneNumber.id !== existingUser.id) {
-                    throw new RpcException({
-                        status: HttpStatus.BAD_REQUEST,
-                        message: 'Phone number already in use'
-                    })
-                }
-            }
-
-            await this.prismaService.user.update({
-                where: {
-                    id: existingUser.id
-                },
-                data: data
-            })
-            return { message: "Profile updated successfully" }
-        } catch (error) {
-            return handleServiceErrorCatching(error)
+        if (userWithPhoneNumber && userWithPhoneNumber.id !== existingUser.id) {
+          throw new RpcException({
+            status: HttpStatus.BAD_REQUEST,
+            message: 'Phone number already in use',
+          });
         }
+      }
+
+      await this.prismaService.user.update({
+        where: {
+          id: existingUser.id,
+        },
+        data: data,
+      });
+      return { message: 'Profile updated successfully' };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
     }
+  }
 
-    async onBoarding(
-        userId: string,
-        categoryIds: string[],
-    ) {
-        try {
-            const existingUser = await this.prismaService.user.findUnique({ where: { id: userId } })
+  async onBoarding(userId: string, categoryIds: string[]) {
+    try {
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
 
-            if (!existingUser) throw new RpcException({
-                status: HttpStatus.BAD_REQUEST,
-                message: 'User not found'
-            })
+      if (!existingUser)
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'User not found',
+        });
 
-            await this.prismaService.userCategory.createMany({
-                data: categoryIds.map(categoryId => ({
-                    userId: existingUser.id,
-                    categoryId,
-                    isOnboardSelected: true
-                })),
-                skipDuplicates: true
-            })
+      await this.prismaService.userCategory.createMany({
+        data: categoryIds.map((categoryId) => ({
+          userId: existingUser.id,
+          categoryId,
+          isOnboardSelected: true,
+        })),
+        skipDuplicates: true,
+      });
 
-            return { message: "Onboarding completed successfully" }
-        } catch (error) {
-            return handleServiceErrorCatching(error)
-        }
+      return { message: 'Onboarding completed successfully' };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
     }
+  }
+
+  async updateLocation(userId: string, latitude: number, longitude: number) {
+    await this.redisService.hSet(
+      UserService.USER_LOCATIONS_KEY,
+      userId,
+      JSON.stringify({
+        lat: latitude,
+        lng: longitude,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  }
 }

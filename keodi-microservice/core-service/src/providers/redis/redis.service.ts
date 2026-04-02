@@ -32,4 +32,12 @@ export class RedisService {
     async expire(key: string, seconds: number): Promise<void> {
         await this.redis.expire(key, seconds)
     }
+
+    async hSet(key: string, field: string, value: string): Promise<void> {
+        await this.redis.hset(key, field, value);
+    }
+
+    async hGetAll(key: string): Promise<Record<string, string>> {
+        return this.redis.hgetall(key);
+    }
 }

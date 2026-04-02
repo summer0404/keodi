@@ -69,13 +69,21 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf('group-session.invite-friend');
     this.kafkaClient.subscribeToResponseOf('group-session.close');
     this.kafkaClient.subscribeToResponseOf('group-session.cast-vote');
-    this.kafkaClient.subscribeToResponseOf('group-session.finalize-member-vote');
-    this.kafkaClient.subscribeToResponseOf('group-session.finalize-session-vote');
+    this.kafkaClient.subscribeToResponseOf(
+      'group-session.finalize-member-vote',
+    );
+    this.kafkaClient.subscribeToResponseOf(
+      'group-session.finalize-session-vote',
+    );
     this.kafkaClient.subscribeToResponseOf('group-session.get-votes');
     this.kafkaClient.subscribeToResponseOf('group-session.get-session');
 
     //search topic
     this.kafkaClient.subscribeToResponseOf('search.trending');
+
+    //setting topics
+    this.kafkaClient.subscribeToResponseOf('setting.get');
+    this.kafkaClient.subscribeToResponseOf('setting.update');
 
     await this.kafkaClient.connect();
   }

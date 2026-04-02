@@ -8,6 +8,7 @@ export class KafkaService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    this.kafkaClient.subscribeToResponseOf('setting.get');
     await this.kafkaClient.connect();
   }
 

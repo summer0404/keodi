@@ -24,6 +24,7 @@ import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { CategoryOnboardingDto } from 'src/shared/dtos/category.dto';
 import {
   CurrentUserDto,
+  UpdateLocationDto,
   UpdateUsernameDto,
   UpdateUserProfileDto,
 } from 'src/shared/dtos/user.dto';
@@ -139,5 +140,17 @@ export class UserController {
     @Body() data: CategoryOnboardingDto,
   ) {
     return await this.userService.onBoarding(user.id, data.categoryIds);
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ description: 'Update user current location for background notifications' })
+  @ApiOkResponse({ description: 'Location updated' })
+  @Patch('location')
+  async updateLocation(
+    @CurrentUser() user: CurrentUserDto,
+    @Body() body: UpdateLocationDto,
+  ) {
+    await this.userService.updateLocation(user.id, body.latitude, body.longitude);
+    return { message: 'LOCATION_UPDATED' };
   }
 }

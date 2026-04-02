@@ -162,6 +162,18 @@ export class NotificationGateway
     const userId = client.data.userId;
     if (!userId || !payload?.sessionId) return;
 
+    try {
+      const settings = await firstValueFrom(
+        this.kafkaService
+          .getClient()
+          .send('setting.get', { userId })
+          .pipe(timeout(3000)),
+      );
+      if (!settings?.shareLocation) return;
+    } catch {
+      // fail-open: if settings can't be fetched, allow location sharing
+    }
+
     await this.redisService.setEx(
       `session:${payload.sessionId}:location:${userId}`,
       JSON.stringify({

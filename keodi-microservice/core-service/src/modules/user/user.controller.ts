@@ -3,6 +3,7 @@ import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
 
+
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserService) { }
@@ -63,5 +64,12 @@ export class UserController {
       data.userId,
       data.categoryIds
     )
+  }
+
+  @EventPattern('user.update-location')
+  async updateLocation(
+    @Payload() data: { userId: string; latitude: number; longitude: number },
+  ) {
+    await this.userService.updateLocation(data.userId, data.latitude, data.longitude);
   }
 }
