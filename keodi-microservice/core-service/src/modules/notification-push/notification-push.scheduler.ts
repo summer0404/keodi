@@ -11,12 +11,19 @@ import {
   NotificationTopics,
   NotificationType,
 } from 'src/shared/constants/notification-topic.constant';
+import { getSearchRadiusKm } from 'src/shared/constants/setting.constant';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 
 interface UserLocation {
   lat: number;
   lng: number;
   updatedAt: string;
+}
+
+interface SchedulerSettings {
+  notifyNearbyPlaces: boolean;
+  notifyRecommendations: boolean;
+  defaultSearchRadius?: string;
 }
 
 @Injectable()
@@ -39,9 +46,9 @@ export class NotificationPushScheduler {
       'Running daily nearby & recommendation push notifications...',
     );
 
-    const allLocations = (await this.redisService.hGetAll(
+    const allLocations = await this.redisService.hGetAll(
       NotificationPushScheduler.USER_LOCATIONS_KEY,
-    )) as Record<string, string>;
+    );
 
     if (!allLocations || Object.keys(allLocations).length === 0) {
       this.logger.log('No user locations found, skipping.');
@@ -61,7 +68,9 @@ export class NotificationPushScheduler {
           continue;
         }
 
-        const settings = await this.settingService.get(userId);
+        const settings = (await this.settingService.get(
+          userId,
+        )) as SchedulerSettings;
 
         if (settings.notifyNearbyPlaces) {
           await this.pushNearbyPlaces(kafka, userId, location, settings);
@@ -85,17 +94,10 @@ export class NotificationPushScheduler {
     kafka: ReturnType<KafkaService['getClient']>,
     userId: string,
     location: UserLocation,
-    settings: Record<string, unknown>,
+    settings: SchedulerSettings,
   ) {
     try {
-      const radiusMap: Record<string, number> = {
-        KM_2: 2,
-        KM_5: 5,
-        KM_10: 10,
-        KM_20: 20,
-      };
-      const radiusKey = (settings.defaultSearchRadius as string) ?? 'KM_5';
-      const radius = radiusMap[radiusKey] ?? 5;
+      const radius = getSearchRadiusKm(settings.defaultSearchRadius);
 
       const result = await this.placeService.findNearby({
         latitude: location.lat,

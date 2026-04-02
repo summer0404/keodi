@@ -1,19 +1,11 @@
-import {
-  AppLanguage,
-  MinRating,
-  ProfileVisibility,
-  SearchRadius,
-} from '../enums/setting.enum';
+export const SEARCH_RADIUS_KM_MAP: Record<string, number> = {
+  KM_2: 2,
+  KM_5: 5,
+  KM_10: 10,
+  KM_20: 20,
+};
 
-export const DEFAULT_USER_SETTINGS = {
-  shareLocation: true,
-  profileVisibility: ProfileVisibility.PUBLIC,
-  notifyGroupInvites: true,
-  notifyVotingResults: true,
-  notifyNearbyPlaces: true,
-  notifyRecommendations: true,
-  defaultSearchRadius: SearchRadius.KM_5,
-  defaultMinRating: MinRating.ABOVE_3,
-  language: AppLanguage.VI,
-  darkMode: false,
+export const getSearchRadiusKm = (radius: string | undefined): number => {
+  if (!radius) return 5;
+  return SEARCH_RADIUS_KM_MAP[radius] ?? 5;
 };

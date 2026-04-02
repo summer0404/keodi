@@ -1,7 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
-import { DEFAULT_USER_SETTINGS } from 'src/shared/constants/setting.constant';
 import { UpdateUserSettingDto } from 'src/shared/dtos/setting.dto';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 
@@ -11,14 +10,14 @@ export class SettingService {
 
   async get(userId: string) {
     try {
-      const record = await this.prismaService.userSetting.findUnique({
+      const record = await this.prismaService.userSetting.upsert({
         where: { userId },
+        create: { userId },
+        update: {},
       });
 
-      return {
-        ...DEFAULT_USER_SETTINGS,
-        ...((record?.settings as object) ?? {}),
-      };
+      const { userId: _, ...settings } = record;
+      return settings;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -37,16 +36,14 @@ export class SettingService {
         });
       }
 
-      const current = await this.get(userId);
-      const merged = { ...current, ...data };
-
-      await this.prismaService.userSetting.upsert({
+      const record = await this.prismaService.userSetting.upsert({
         where: { userId },
-        create: { userId, settings: merged },
-        update: { settings: merged },
+        create: { userId, ...data },
+        update: { ...data },
       });
 
-      return merged;
+      const { userId: _, ...settings } = record;
+      return settings;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
