@@ -8,6 +8,8 @@ RUN npm install && npm install -g wait-port
 
 COPY . .
 
+RUN npm run prisma:generate
+
 RUN npm run build
 
 EXPOSE  3002

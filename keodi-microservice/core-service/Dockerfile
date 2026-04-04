@@ -14,4 +14,4 @@ RUN npm run build
 
 EXPOSE 3003
 
-CMD wait-port kafka:9092 && npm run prisma:deploy && npm run start
+CMD wait-port kafka:9092 && npm run start
