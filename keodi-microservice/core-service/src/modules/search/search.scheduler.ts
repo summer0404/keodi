@@ -8,6 +8,7 @@ export class SearchScheduler {
 
     @Cron('0 3 * * 0', { disabled: true})
     async clearOldHistory() {
+        console.log('Running search scheduler to clear old search history...');
         return await this.searchService.clearOldHistory();
     }
 }

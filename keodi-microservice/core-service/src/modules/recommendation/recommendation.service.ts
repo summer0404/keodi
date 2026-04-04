@@ -17,6 +17,8 @@ import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
 import { SortOrder } from 'src/shared/enums/sort.enum';
 import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class RecommendationService {
@@ -26,6 +28,7 @@ export class RecommendationService {
     private readonly searchService: SearchService,
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
+    private readonly kafkaService: KafkaService,
   ) { }
 
   private async enrichPlacesWithRelations(
@@ -362,8 +365,6 @@ export class RecommendationService {
       ...cachedPlacesFromActions,
     ]);
 
-    // TODO: Ranking recommedation for more personalized result
-    // For now, we just shuffle the places to make it more dynamic
     const shuffledTrendingPlaces =
       this.recommendationHelper.shufflePlaces(trendingPlaces);
 
@@ -388,12 +389,25 @@ export class RecommendationService {
 
       const deduplicatedCandidates = this.recommendationHelper.deduplicatePlaces(enrichedCandidates);
 
-      // TODO: Ranking recommedation for more personalized result
+      const rankingResults = await firstValueFrom(this.kafkaService.getClient().send('intelligence.ranking', {
+        userId,
+        placeIds: deduplicatedCandidates.map(place => place.id)
+      }))
 
-      return deduplicatedCandidates;
+      return rankingResults.map((result: { place_id: string, ranking_score: number }) => {
+        const place = deduplicatedCandidates.find(p => p.id === result.place_id);
+        return {
+          ...place,
+          rankingScore: result.ranking_score
+        }
+      });
     } catch (error) {
       console.error('Error fetching personalized recommendations:', error);
       return []
     }
+  }
+
+  async trainRankingModel() {
+    return this.kafkaService.getClient().emit('intelligence.train-ranking-model', {});
   }
 }
