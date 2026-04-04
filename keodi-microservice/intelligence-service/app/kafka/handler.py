@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import asyncio
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -8,6 +9,7 @@ from typing import Optional
 from app.kafka.producer import KafkaProducer, get_producer
 from app.kafka.consumer import KafkaConsumerService, get_consumer_service
 from app.services.llm.llm_service import LLMService, get_llm_service
+from app.services.ranking.ranking_service import RankingService, get_ranking_service
 from app.kafka.topic import Topics
 from app.repositories.place_repository import PlaceRepository
 from app.repositories.attribute_repository import AttributeRepository
@@ -25,6 +27,7 @@ class Handlers:
     producer: Optional[KafkaProducer] = None
     consumer_service: Optional[KafkaConsumerService] = None
     llm_service: Optional[LLMService] = None
+    ranking_service: Optional[RankingService] = None
     place_repository: Optional[PlaceRepository] = None
     attribute_repository: Optional[AttributeRepository] = None
     place_attribute_repository: Optional[PlaceAttributeRepository] = None
@@ -42,6 +45,7 @@ class Handlers:
         
     async def start(self):
         self.llm_service = await get_llm_service()
+        self.ranking_service = await get_ranking_service()
         self.place_repository = await PlaceRepository.start()
         self.attribute_repository = await AttributeRepository.start()
         self.place_attribute_repository = await PlaceAttributeRepository.start()
@@ -166,6 +170,31 @@ class Handlers:
                 await self.user_category_repository.update_user_category(user_id, place_category.categoryId)
         except Exception as e:
             raise Exception(f"Failed to process user action: {str(e)}")
+        
+    async def train_ranking_model(self, message: dict, headers: dict):
+        try:
+            df = await self.ranking_service._prepare_training_data()
+
+            await asyncio.to_thread(self.ranking_service._run_lightgbm_training, df)
+        except Exception as e:
+            raise Exception(f"Failed to train ranking model: {str(e)}")
+        
+    async def ranking(self, message: dict, headers: dict):
+        user_id = message.get("userId", "")
+        place_ids = message.get("placeIds", [])
+        kafka_correlationId = headers.get("kafka_correlationId", "")
+        try:
+            ranking_scores = await self.ranking_service.ranking(user_id, place_ids)
+            scores = json.dumps(ranking_scores)
+
+            return await self.producer.send_response(
+                topic=Topics.RANKING_REPLY,
+                kafka_correlationId=kafka_correlationId,
+                payload=scores,
+            )
+        except Exception as e:
+            raise Exception(f"Failed to calculate ranking: {str(e)}")
+
 
 
 handlers: Optional[Handlers] = None

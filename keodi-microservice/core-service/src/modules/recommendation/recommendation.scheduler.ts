@@ -8,7 +8,7 @@ export class RecommendationScheduler {
   constructor(
     private readonly recommendationService: RecommendationService,
     private readonly searchService: SearchService,
-  ) {}
+  ) { }
 
   @Cron('*/5 * * * *')
   async updateTrendingForRedis() {
@@ -26,4 +26,14 @@ export class RecommendationScheduler {
     );
     await this.recommendationService.updateTrendingPlaceFromActionsForRedis();
   }
+
+  // @Cron('*/1 * * * *') // For testing, run every minute
+  @Cron('0 3 * * 0', { disabled: true })
+  async trainRankingModel() {
+    console.log('Running recommendation scheduler to train ranking model...');
+    return this.recommendationService.trainRankingModel()
+  }
 }
+
+
+

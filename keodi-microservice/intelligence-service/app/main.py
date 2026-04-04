@@ -26,6 +26,16 @@ async def lifespan(app: FastAPI):
         handler=handlers.user_action
     )
 
+    consumer_service.register_handler(
+        topic=Topics.TRAIN_RANKING_MODEL,
+        handler=handlers.train_ranking_model
+    )
+
+    consumer_service.register_handler(
+        topic=Topics.RANKING,
+        handler=handlers.ranking
+    )
+
     asyncio.create_task(consumer_service.start(
         topics=Topics.get_consuming_topics()
     ))
