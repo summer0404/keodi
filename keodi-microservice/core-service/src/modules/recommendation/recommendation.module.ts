@@ -9,13 +9,11 @@ import { ImageModule } from '../image/image.module';
 @Module({
   controllers: [RecommendationController],
   providers: [
-    RecommendationService, 
+    RecommendationService,
     RecommendationScheduler,
     RecommendationHelper,
   ],
-  imports: [
-    SearchModule,
-    ImageModule
-  ],
+  exports: [RecommendationService],
+  imports: [SearchModule, ImageModule],
 })
 export class RecommendationModule {}

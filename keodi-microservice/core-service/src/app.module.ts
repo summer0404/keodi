@@ -14,6 +14,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RecommendationModule } from './modules/recommendation/recommendation.module';
 import { UserModule } from './modules/user/user.module';
 import { ProviderModule } from './providers/provider.module';
+import { SettingModule } from './modules/setting/setting.module';
+import { NotificationPushModule } from './modules/notification-push/notification-push.module';
 
 @Module({
   imports: [
@@ -31,7 +33,9 @@ import { ProviderModule } from './providers/provider.module';
     AttributeModule,
     GroupSessionModule,
     SearchModule,
-    RecommendationModule
+    RecommendationModule,
+    SettingModule,
+    NotificationPushModule,
   ],
   controllers: [],
   providers: [],

@@ -16,6 +16,7 @@ import { SearchModule } from './modules/search/search.module';
 import { UserModule } from './modules/user/user.module';
 import { ProviderModule } from './providers/provider.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { SettingModule } from './modules/setting/setting.module';
 
 @Module({
   providers: [
@@ -45,7 +46,8 @@ import { CacheModule } from '@nestjs/cache-manager';
     AttributeModule,
     SearchModule,
     NotificationRealtimeModule,
-    ProviderModule
+    ProviderModule,
+    SettingModule,
   ],
 })
 export class AppModule {}
