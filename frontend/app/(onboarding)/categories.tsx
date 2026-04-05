@@ -109,7 +109,7 @@ export default function CategoriesOnboardingScreen() {
               {t('errors.loadCategories')}
             </Typography>
             <Button rounded="full" variant="outline" onPress={() => categoriesQuery.refetch()}>
-              {t('categories.retry')}
+              {t('button.retry')}
             </Button>
           </View>
         ) : (

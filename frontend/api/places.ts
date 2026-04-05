@@ -6,6 +6,9 @@ import type {
   GetPlaceReviewsRequest,
   GetPlaceReviewsResponse,
   PlaceItem,
+  SearchPlacesRequest,
+  SearchPlacesResponse,
+  TrendingPlaceItem,
 } from '@/types/api';
 
 export const placesService = {
@@ -27,6 +30,17 @@ export const placesService = {
       `/api/v1/places/${placeId}/reviews`,
       { params }
     );
+    return response.data;
+  },
+  searchPlaces: async (params: SearchPlacesRequest): Promise<SearchPlacesResponse> => {
+    // console.log('placesService.searchPlaces ->', API_ENDPOINTS.PLACES_SEARCH, params);
+    const response = await apiClient.get<SearchPlacesResponse>(API_ENDPOINTS.PLACES_SEARCH, {
+      params,
+    });
+    return response.data;
+  },
+  getTrendingPlaces: async (): Promise<TrendingPlaceItem[]> => {
+    const response = await apiClient.get<TrendingPlaceItem[]>(API_ENDPOINTS.PLACES_TRENDING);
     return response.data;
   },
 };
