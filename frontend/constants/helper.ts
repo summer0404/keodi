@@ -1,4 +1,6 @@
 import type { PlaceItem } from '@/types/api';
+import { Coffee, Dumbbell, Fuel, Hotel, ShoppingBag, TreePine, UtensilsCrossed, Wine } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 
 export const sanitizeUsername = (text: string) => {
   return text
@@ -469,6 +471,24 @@ export const getRadiusOptions = (t: TranslateFn) => [
 ];
 
 export const MAX_RECENT_SEARCHES = 5;
+
+interface FilterCategory {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  keyword: string;
+}
+
+export const FILTER_CATEGORIES: FilterCategory[] = [
+  { id: 'restaurant', label: 'Restaurants', icon: UtensilsCrossed, keyword: 'restaurant' },
+  { id: 'hotel', label: 'Hotels', icon: Hotel, keyword: 'hotel' },
+  { id: 'gas', label: 'Gas', icon: Fuel, keyword: 'gas station' },
+  { id: 'coffee', label: 'Coffee', icon: Coffee, keyword: 'coffee' },
+  { id: 'shopping', label: 'Shopping', icon: ShoppingBag, keyword: 'shopping' },
+  { id: 'bar', label: 'Bars', icon: Wine, keyword: 'bar' },
+  { id: 'gym', label: 'Gym', icon: Dumbbell, keyword: 'gym' },
+  { id: 'park', label: 'Parks', icon: TreePine, keyword: 'park' },
+];
 
 export const CATEGORIES: Category[] = [
   { id: 'dining', titleKey: 'categories.diningOut', icon: '🍴' },

@@ -126,8 +126,7 @@
     "dateOfBirthFormat": "Ngày sinh phải có định dạng DD/MM/YYYY",
     "imageTooLarge": "Hình ảnh quá lớn. Vui lòng chọn hình ảnh nhỏ hơn",
     "invalidImageFormat": "Chỉ hỗ trợ tệp JPG, JPEG, PNG, và WEBP",
-    "unableToUpdateProfile": "Không thể cập nhật hồ sơ. Vui lòng thử lại",
-    "loadingMore": "Đang tải thêm..."
+    "unableToUpdateProfile": "Không thể cập nhật hồ sơ. Vui lòng thử lại"
   },
   "home": {
     "greeting": "Hi @{{username}},",
@@ -194,7 +193,8 @@
     "categories": "Danh mục",
     "distance": "Khoảng cách",
     "rating": "Đánh giá",
-    "sortBy": "Sắp xếp theo"
+    "sortBy": "Sắp xếp theo",
+    "loadingMore": "Đang tải thêm..."
   },
   "button": {
     "update": "Cập nhật",

@@ -5,16 +5,7 @@ import {
   Clock,
   TrendingUp,
   X,
-  UtensilsCrossed,
-  Hotel,
-  Fuel,
-  Coffee,
-  ShoppingBag,
-  Wine,
-  Dumbbell,
-  TreePine,
 } from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -36,28 +27,11 @@ import {
   DEFAULT_RADIUS,
   DEFAULT_SORT_BY,
   MAX_RECENT_SEARCHES,
+  FILTER_CATEGORIES,
 } from '@/constants/helper';
 import { Button } from '@/components/ui/Button';
 
 const RECENT_SEARCHES_KEY = '@keodi_recent_searches';
-
-interface FilterCategory {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  keyword: string;
-}
-
-const FILTER_CATEGORIES: FilterCategory[] = [
-  { id: 'restaurant', label: 'Restaurants', icon: UtensilsCrossed, keyword: 'restaurant' },
-  { id: 'hotel', label: 'Hotels', icon: Hotel, keyword: 'hotel' },
-  { id: 'gas', label: 'Gas', icon: Fuel, keyword: 'gas station' },
-  { id: 'coffee', label: 'Coffee', icon: Coffee, keyword: 'coffee' },
-  { id: 'shopping', label: 'Shopping', icon: ShoppingBag, keyword: 'shopping' },
-  { id: 'bar', label: 'Bars', icon: Wine, keyword: 'bar' },
-  { id: 'gym', label: 'Gym', icon: Dumbbell, keyword: 'gym' },
-  { id: 'park', label: 'Parks', icon: TreePine, keyword: 'park' },
-];
 
 const getRecentSearches = async (): Promise<string[]> => {
   try {
