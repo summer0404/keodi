@@ -1,7 +1,7 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ClientKafka, RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { PrismaService } from 'src/database/prisma.service';
 import { GeoConstants } from 'src/shared/constants/place.constant';
 import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
@@ -402,13 +402,34 @@ export class PlaceService {
           limit,
         };
       } else if (mode === SearchMode.CONTEXTUAL) {
-        const extractedIntent: {
+        let extractedIntent: {
           keywords?: string;
           categories?: string[];
           attributes?: string[];
-        } = await firstValueFrom(
-          this.kafkaService.getClient().send('intelligence.extract-user-intent', { search }),
-        );
+        };
+
+        try {
+          extractedIntent = await firstValueFrom(
+            this.kafkaService
+              .getClient()
+              .send('intelligence.extract-user-intent', { search })
+              .pipe(timeout(5000)),
+          );
+        } catch (error: any) {
+          if (error?.name === 'TimeoutError') {
+            extractedIntent = {
+              keywords: search,
+              categories: [],
+              attributes: [],
+            };
+          } else {
+            throw new RpcException({
+              status: HttpStatus.BAD_GATEWAY,
+              code: 'INTELLIGENCE_EXTRACT_INTENT_FAILED',
+              message: 'Failed to get extract-user-intent response',
+            });
+          }
+        }
 
         const keywordPattern = extractedIntent.keywords
           ? `%${extractedIntent.keywords}%`

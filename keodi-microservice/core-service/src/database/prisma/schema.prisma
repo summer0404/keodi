@@ -5,11 +5,13 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector]
 }
 
 enum PlaceImageType {
@@ -52,12 +54,12 @@ model User {
   favorites          Favorite[]
   sessionMemberships GroupSessionMember[]
   searches           Search[]
-  sentRequests     FriendRequest[] @relation("SentRequests")
-  receivedRequests FriendRequest[] @relation("ReceivedRequests")
-  friendships      Friendship[]    @relation("UserFriendships")
-  friendsOf        Friendship[]    @relation("FriendFriendships")
-  groupSessions    GroupSession[]  @relation("CreatedSessions")
-  setting UserSetting?
+  sentRequests       FriendRequest[]      @relation("SentRequests")
+  receivedRequests   FriendRequest[]      @relation("ReceivedRequests")
+  friendships        Friendship[]         @relation("UserFriendships")
+  friendsOf          Friendship[]         @relation("FriendFriendships")
+  groupSessions      GroupSession[]       @relation("CreatedSessions")
+  setting            UserSetting?
 
   @@map("users")
 }
@@ -171,9 +173,11 @@ model Attribute {
 }
 
 model Category {
-  id              String          @id @default(cuid())
-  name            String          @unique
-  isSelectable    Boolean         @default(false) @map("is_selectable")
+  id           String                      @id @default(cuid())
+  name         String                      @unique
+  isSelectable Boolean                     @default(false) @map("is_selectable")
+  embedding    Unsupported("vector(384)")?
+
   placeCategories PlaceCategory[]
   userCategories  UserCategory[]
 
@@ -182,7 +186,7 @@ model Category {
 
 model PlaceCategory {
   placeId    String  @map("place_id")
-  categoryId String  @map("category_id") 
+  categoryId String  @map("category_id")
   isMain     Boolean @default(false) @map("is_main")
 
   place    Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
@@ -390,16 +394,16 @@ model Search {
 model UserSetting {
   userId String @id @map("user_id")
 
-  shareLocation        Boolean           @default(true) @map("share_location")
-  profileVisibility    ProfileVisibility @default(PUBLIC) @map("profile_visibility")
-  notifyGroupInvites   Boolean           @default(true) @map("notify_group_invites")
-  notifyVotingResults  Boolean           @default(true) @map("notify_voting_results")
-  notifyNearbyPlaces   Boolean           @default(true) @map("notify_nearby_places")
-  notifyRecommendations Boolean          @default(true) @map("notify_recommendations")
-  defaultSearchRadius  SearchRadius      @default(KM_5) @map("default_search_radius")
-  defaultMinRating     MinRating         @default(ABOVE_3) @map("default_min_rating")
-  language             AppLanguage       @default(VI)
-  darkMode             Boolean           @default(false) @map("dark_mode")
+  shareLocation         Boolean           @default(true) @map("share_location")
+  profileVisibility     ProfileVisibility @default(PUBLIC) @map("profile_visibility")
+  notifyGroupInvites    Boolean           @default(true) @map("notify_group_invites")
+  notifyVotingResults   Boolean           @default(true) @map("notify_voting_results")
+  notifyNearbyPlaces    Boolean           @default(true) @map("notify_nearby_places")
+  notifyRecommendations Boolean           @default(true) @map("notify_recommendations")
+  defaultSearchRadius   SearchRadius      @default(KM_5) @map("default_search_radius")
+  defaultMinRating      MinRating         @default(ABOVE_3) @map("default_min_rating")
+  language              AppLanguage       @default(VI)
+  darkMode              Boolean           @default(false) @map("dark_mode")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
