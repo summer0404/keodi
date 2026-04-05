@@ -1,15 +1,16 @@
 from typing import Optional, Dict
 import json
+import asyncio
 from app.config.settings import get_settings
 from app.prompts.prompt import Prompts
 from app.services.llm.base_provider import BaseLLMProvider
 from app.services.llm.groq_provider import GroqProvider
 from app.services.llm.modal_provider import ModalProvider
+from app.services.embedding.embedding_service import get_embedding_service
 from app.repositories.attribute_repository import AttributeRepository
 from app.repositories.category_repository import CategoryRepository
 
 settings = get_settings()
-
 
 class LLMService:
     def __init__(self):
@@ -18,6 +19,7 @@ class LLMService:
 
         self.prompts = Prompts()
 
+        self.embedding_service = get_embedding_service()
         self.attribute_repository: Optional[AttributeRepository] = None
         self.category_repository: Optional[CategoryRepository] = None
 
@@ -56,10 +58,11 @@ class LLMService:
         last_error = None
 
         attributes = await self.attribute_repository.get_all_attributes()
-        categories = await self.category_repository.get_all_categories()
-
         attributes_list = [attr.name for attr in attributes] if attributes else []
-        categories_list = [cat.name for cat in categories] if categories else []
+
+        search_vector = await asyncio.to_thread(self.embedding_service.get_embedding, search)
+        categories = await self.category_repository.get_top_k_attributes(search_vector)
+        categories_list = [cat.name if hasattr(cat, "name") else cat.get("name") for cat in categories] if categories else []
 
         prompt = self.prompts.EXTRACT_USER_INTENT.format(
             search=search,

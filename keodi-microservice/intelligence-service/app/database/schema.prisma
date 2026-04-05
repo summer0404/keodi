@@ -20,7 +20,7 @@ enum PlaceImageType {
 }
 
 enum UserImageType {
-  PICTURE
+  PICTURE 
   GALLERY
 }
 
@@ -52,13 +52,13 @@ model User {
   places             Place[]
   favorites          Favorite[]
   sessionMemberships GroupSessionMember[]
-
-  sentRequests     FriendRequest[] @relation("SentRequests")
-  receivedRequests FriendRequest[] @relation("ReceivedRequests")
-  friendships      Friendship[]    @relation("UserFriendships")
-  friendsOf        Friendship[]    @relation("FriendFriendships")
-  groupSessions    GroupSession[]  @relation("CreatedSessions")
-  searches         Search[]
+  searches           Search[]
+  sentRequests       FriendRequest[]      @relation("SentRequests")
+  receivedRequests   FriendRequest[]      @relation("ReceivedRequests")
+  friendships        Friendship[]         @relation("UserFriendships")
+  friendsOf          Friendship[]         @relation("FriendFriendships")
+  groupSessions      GroupSession[]       @relation("CreatedSessions")
+  setting            UserSetting?
 
   @@map("users")
 }
@@ -154,8 +154,8 @@ model OpeningHour {
   placeId   String @map("place_id")
   dayOfWeek Int    @map("day_of_week")
 
-  openTime  DateTime @map("open_time") @db.Time
-  closeTime DateTime @map("close_time") @db.Time
+  openTime  DateTime? @map("open_time") @db.Time
+  closeTime DateTime? @map("close_time") @db.Time
 
   place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
 
@@ -172,9 +172,11 @@ model Attribute {
 }
 
 model Category {
-  id              String          @id @default(cuid())
-  name            String          @unique
-  isSelectable    Boolean         @default(false) @map("is_selectable")
+  id           String                      @id @default(cuid())
+  name         String                      @unique
+  isSelectable Boolean                     @default(false) @map("is_selectable")
+  embedding    Unsupported("vector(384)")? 
+
   placeCategories PlaceCategory[]
   userCategories  UserCategory[]
 
@@ -384,5 +386,51 @@ model Search {
   createdAt     DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("searches")
+}
+
+model UserSetting {
+  userId String @id @map("user_id")
+
+  shareLocation         Boolean           @default(true) @map("share_location")
+  profileVisibility     ProfileVisibility @default(PUBLIC) @map("profile_visibility")
+  notifyGroupInvites    Boolean           @default(true) @map("notify_group_invites")
+  notifyVotingResults   Boolean           @default(true) @map("notify_voting_results")
+  notifyNearbyPlaces    Boolean           @default(true) @map("notify_nearby_places")
+  notifyRecommendations Boolean           @default(true) @map("notify_recommendations")
+  defaultSearchRadius   SearchRadius      @default(KM_5) @map("default_search_radius")
+  defaultMinRating      MinRating         @default(ABOVE_3) @map("default_min_rating")
+  language              AppLanguage       @default(VI)
+  darkMode              Boolean           @default(false) @map("dark_mode")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+enum ProfileVisibility {
+  PUBLIC
+  FRIENDS_ONLY
+  PRIVATE
+}
+
+enum SearchRadius {
+  KM_2
+  KM_5
+  KM_10
+  KM_20
+}
+
+enum MinRating {
+  ABOVE_1
+  ABOVE_2
+  ABOVE_3
+  ABOVE_4
+  FIVE_STAR
+}
+
+enum AppLanguage {
+  VI
+  EN
 }

@@ -90,7 +90,19 @@ class Handlers:
     async def extract_user_intent(self, message: dict, headers: dict):
         search = message.get("search", "")
         kafka_correlationId = headers.get("kafka_correlationId", "")
-        intent = await self.llm_service.extract_user_intent(search=search)
+
+        intent = json.dumps(
+            {
+                "keywords": search,
+                "categories": [],
+                "attributes": [],
+            }
+        )
+        try:
+            intent = await self.llm_service.extract_user_intent(search=search)
+        except Exception as e:
+            logger.exception("Failed to extract user intent for search '%s': %s", search, str(e))
+        
         return await self.producer.send_response(
             topic=Topics.EXTRACT_USER_INTENT_REPLY,
             kafka_correlationId=kafka_correlationId,
