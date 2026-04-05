@@ -200,6 +200,8 @@
     "update": "Update",
     "updating": "Updating...",
     "updateSuccess": "Update successful",
-    "retry": "Retry"
+    "retry": "Retry",
+    "clear": "Clear",
+    "aiMode": "AI Mode"
   }
 }

@@ -37,6 +37,7 @@ import {
   DEFAULT_SORT_BY,
   MAX_RECENT_SEARCHES,
 } from '@/constants/helper';
+import { Button } from '@/components/ui/Button';
 
 const RECENT_SEARCHES_KEY = '@keodi_recent_searches';
 
@@ -85,6 +86,7 @@ export default function SearchScreen() {
 
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [isAIMode, setIsAIMode] = useState(false);
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
   const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
 
@@ -167,10 +169,11 @@ export default function SearchScreen() {
           radius: String(radius),
           sortBy,
           sortOrder: buildSortOrder(sortBy),
+          mode: isAIMode ? 'contextual' : 'keyword',
         },
       } as any);
     },
-    [coords, radius, sortBy, router]
+    [coords, radius, sortBy, isAIMode, router]
   );
 
   const handleCategoryPress = useCallback(
@@ -281,6 +284,9 @@ export default function SearchScreen() {
             onSubmitEditing={() => executeSearch(query)}
             onSettingsPress={() => setShowFilters((prev) => !prev)}
             settingsActive={showFilters}
+            showAI={true}
+            isAIActive={isAIMode}
+            onAIPress={() => setIsAIMode((prev) => !prev)}
             placeholder={t('search.title')}
           />
         </View>
@@ -299,6 +305,17 @@ export default function SearchScreen() {
           <View className="px-4">
             <View className="flex-row items-center justify-between">
               <Typography variant="h5">{t('search.categories')}</Typography>
+              <Button
+                onPress={() => {
+                  setRadius(DEFAULT_RADIUS);
+                  setSortBy(DEFAULT_SORT_BY);
+                  setShowFilters(false);
+                }}
+                variant="ghost"
+                className="flex-row items-center gap-1"
+              >
+                <X size={18} color={Palette.grey} strokeWidth={2} />
+              </Button>
             </View>
 
             <ScrollView
@@ -379,7 +396,7 @@ export default function SearchScreen() {
                       className="h-8 w-8 items-center justify-center"
                       onPress={() => handleClearRecentPress(term)}
                     >
-                      <X size={16} color="#6B7280" strokeWidth={2} />
+                      <X size={16} color={Palette.grey} strokeWidth={2} />
                     </Pressable>
                   </View>
                 ))}
@@ -388,14 +405,9 @@ export default function SearchScreen() {
           )}
         </View>
 
-        <View className="mt-5 px-4">
-          <Typography variant="h5">
-            {t('search.trending')}
-          </Typography>
-
-          {trendingPlaces.length === 0 ? (
-            <Typography className="mt-2 text-gray-400">{t('search.noTrending')}</Typography>
-          ) : (
+        {trendingPlaces.length === 0 ? null : (
+          <View className="mt-5 px-4">
+            <Typography variant="h5">{t('search.trending')}</Typography>
             <View className="mt-2">
               {trendingPlaces.map((place, index) => (
                 <Pressable
@@ -410,8 +422,8 @@ export default function SearchScreen() {
                 </Pressable>
               ))}
             </View>
-          )}
-        </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

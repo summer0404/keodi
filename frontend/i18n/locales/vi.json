@@ -200,6 +200,8 @@
     "update": "Cập nhật",
     "updating": "Đang cập nhật...",
     "updateSuccess": "Cập nhật thành công",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "clear": "Xóa",
+    "aiMode": "Chế độ AI"
   }
 }

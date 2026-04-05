@@ -33,6 +33,7 @@ export const placesService = {
     return response.data;
   },
   searchPlaces: async (params: SearchPlacesRequest): Promise<SearchPlacesResponse> => {
+    // console.log('placesService.searchPlaces ->', API_ENDPOINTS.PLACES_SEARCH, params);
     const response = await apiClient.get<SearchPlacesResponse>(API_ENDPOINTS.PLACES_SEARCH, {
       params,
     });

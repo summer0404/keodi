@@ -50,6 +50,7 @@ export default function SearchResultsScreen() {
     radius: string;
     sortBy: string;
     sortOrder: string;
+    mode: string;
     minRating: string;
     openFilter: string;
   }>();
@@ -60,6 +61,7 @@ export default function SearchResultsScreen() {
   const radius = Number(params.radius) || 5;
   const sortBy = (params.sortBy as PlaceSortBy) || 'distance';
   const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'asc';
+  const searchMode = params.mode === 'contextual' ? 'contextual' : 'keyword';
   const minRating = Number(params.minRating) || 0;
   const openFilter = params.openFilter ?? 'all';
 
@@ -118,7 +120,7 @@ export default function SearchResultsScreen() {
           sortOrder,
           page,
           limit: DEFAULT_LIMIT,
-          mode: 'keyword',
+          mode: searchMode,
         });
 
         if (requestVersion !== requestVersionRef.current) return;
@@ -156,7 +158,7 @@ export default function SearchResultsScreen() {
         }
       }
     },
-    [searchTerm, latitude, longitude, radius, sortBy, sortOrder]
+    [searchTerm, latitude, longitude, radius, sortBy, sortOrder, searchMode]
   );
 
   useEffect(() => {
@@ -272,7 +274,7 @@ export default function SearchResultsScreen() {
         <View className="flex-1 items-center justify-center">
           <Video
             source={require('@/assets/images/loading.mp4')}
-            style={{ width: 800, height: 800 }}
+            style={{ width: 700, height: 700 }}
             shouldPlay
             isLooping
             isMuted
