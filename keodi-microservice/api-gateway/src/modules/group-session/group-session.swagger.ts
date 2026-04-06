@@ -156,6 +156,24 @@ export const ApiGetSession = () => {
   );
 };
 
+export const ApiGetAllSessions = (): MethodDecorator => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get all sessions of current user',
+      description:
+        'Retrieve all group sessions where the authenticated user is a participant.',
+    }),
+    ApiOkResponse({
+      description: 'User sessions retrieved successfully',
+      type: GroupSessionResponseDto,
+      isArray: true,
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+  ) as MethodDecorator;
+};
+
 export const GroupSessionApiTags = () => {
   return applyDecorators(ApiTags('Group Sessions'));
 };

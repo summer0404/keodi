@@ -3,26 +3,28 @@ import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import { createId } from '@paralleldrive/cuid2';
 import {
-    GroupSessionStatus,
-    VoteStatus,
-    type GroupSession,
+  GroupSessionStatus,
+  VoteStatus,
+  type GroupSession,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { GroupSessionMessages } from 'src/shared/constants/group-session.constant';
 import {
-    NotificationPreferredChannel,
-    NotificationTopics,
-    NotificationType,
+  GROUP_SESSION_DEFAULT_AUTO_CLOSE_DELAY_MINUTES,
+  GROUP_SESSION_SHARE_CODE_LENGTH,
+  GroupSessionMessages,
+} from 'src/shared/constants/group-session.constant';
+import {
+  NotificationPreferredChannel,
+  NotificationTopics,
+  NotificationType,
 } from 'src/shared/constants/notification-topic.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
 
 @Injectable()
 export class GroupSessionService {
-  private static readonly SHARE_CODE_LENGTH = 6;
-
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
@@ -50,7 +52,7 @@ export class GroupSessionService {
   }
 
   private generateShareCode(
-    length: number = GroupSessionService.SHARE_CODE_LENGTH,
+    length: number = GROUP_SESSION_SHARE_CODE_LENGTH,
   ): string {
     const chars = this.configService.get<string>('SHARE_CODE_CHARS');
     if (!chars) {
@@ -66,6 +68,24 @@ export class GroupSessionService {
     }
 
     return result;
+  }
+
+  private getAutoCloseDelayMinutes(): number {
+    const raw = this.configService.get<string>(
+      'GROUP_SESSION_AUTO_CLOSE_DELAY_MINUTES',
+    );
+    const parsed = Number(raw);
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return GROUP_SESSION_DEFAULT_AUTO_CLOSE_DELAY_MINUTES;
+    }
+
+    return Math.floor(parsed);
+  }
+
+  private buildAutoCloseAt(finalizedAt: Date): Date {
+    const delayMinutes = this.getAutoCloseDelayMinutes();
+    return new Date(finalizedAt.getTime() + delayMinutes * 60 * 1000);
   }
 
   private async checkActiveSession(userId: string): Promise<void> {
@@ -402,7 +422,7 @@ export class GroupSessionService {
 
       return await this.prismaService.groupSession.update({
         where: { sessionId },
-        data: { status: GroupSessionStatus.CLOSED },
+        data: { status: GroupSessionStatus.CLOSED, closeAt: null },
       });
     } catch (error) {
       handleServiceErrorCatching(error);
@@ -635,12 +655,15 @@ export class GroupSessionService {
         const autoVoteResults =
           this.groupSessionHelper.buildVoteResults(allVotes);
         const winningPlaceId = autoVoteResults[0]?.place?.id ?? null;
+        const finalizedAt = new Date();
+        const closeAt = this.buildAutoCloseAt(finalizedAt);
 
         await this.prismaService.groupSession.updateMany({
           where: { sessionId, voteStatus: VoteStatus.OPEN },
           data: {
             voteStatus: VoteStatus.FINALIZED,
-            finalizedAt: new Date(),
+            finalizedAt,
+            closeAt,
             winningPlaceId,
           },
         });
@@ -759,6 +782,8 @@ export class GroupSessionService {
         session.votes,
       );
       const winningPlaceId = voteResults[0]?.place?.id ?? null;
+      const finalizedAt = new Date();
+      const closeAt = this.buildAutoCloseAt(finalizedAt);
 
       await this.prismaService.$transaction([
         this.prismaService.sessionVote.updateMany({
@@ -769,7 +794,8 @@ export class GroupSessionService {
           where: { sessionId },
           data: {
             voteStatus: VoteStatus.FINALIZED,
-            finalizedAt: new Date(),
+            finalizedAt,
+            closeAt,
             winningPlaceId,
           },
         }),
@@ -930,5 +956,41 @@ export class GroupSessionService {
     } catch (error) {
       handleServiceErrorCatching(error);
     }
+  }
+
+  async getAll(userId: string) {
+    try {
+      return await this.prismaService.groupSession.findMany({
+        where: {
+          members: {
+            some: {
+              userId,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async autoCloseExpiredSessions() {
+    const now = new Date();
+
+    return await this.prismaService.groupSession.updateMany({
+      where: {
+        status: GroupSessionStatus.ACTIVE,
+        voteStatus: VoteStatus.FINALIZED,
+        closeAt: {
+          lte: now,
+        },
+      },
+      data: {
+        status: GroupSessionStatus.CLOSED,
+      },
+    });
   }
 }

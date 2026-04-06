@@ -346,6 +346,7 @@ model GroupSession {
   status         GroupSessionStatus @default(ACTIVE)
   voteStatus     VoteStatus         @default(OPEN) @map("vote_status")
   finalizedAt    DateTime?          @map("finalized_at")
+  closeAt        DateTime?          @map("close_at")
   winningPlaceId String?            @map("winning_place_id")
 
   creator      User   @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
@@ -354,6 +355,7 @@ model GroupSession {
   members GroupSessionMember[]
   votes   SessionVote[]
 
+  @@index([status, voteStatus, closeAt], map: "group_sessions_status_vote_status_close_at_idx")
   @@map("group_sessions")
 }
 
