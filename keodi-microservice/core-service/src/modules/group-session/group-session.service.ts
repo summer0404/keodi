@@ -22,6 +22,7 @@ import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
 @Injectable()
 export class GroupSessionService {
   private static readonly SHARE_CODE_LENGTH = 6;
+  private static readonly DEFAULT_AUTO_CLOSE_DELAY_MINUTES = 10;
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -66,6 +67,24 @@ export class GroupSessionService {
     }
 
     return result;
+  }
+
+  private getAutoCloseDelayMinutes(): number {
+    const raw = this.configService.get<string>(
+      'GROUP_SESSION_AUTO_CLOSE_DELAY_MINUTES',
+    );
+    const parsed = Number(raw);
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return GroupSessionService.DEFAULT_AUTO_CLOSE_DELAY_MINUTES;
+    }
+
+    return Math.floor(parsed);
+  }
+
+  private buildAutoCloseAt(finalizedAt: Date): Date {
+    const delayMinutes = this.getAutoCloseDelayMinutes();
+    return new Date(finalizedAt.getTime() + delayMinutes * 60 * 1000);
   }
 
   private async checkActiveSession(userId: string): Promise<void> {
@@ -402,7 +421,7 @@ export class GroupSessionService {
 
       return await this.prismaService.groupSession.update({
         where: { sessionId },
-        data: { status: GroupSessionStatus.CLOSED },
+        data: { status: GroupSessionStatus.CLOSED, closeAt: null },
       });
     } catch (error) {
       handleServiceErrorCatching(error);
@@ -635,12 +654,15 @@ export class GroupSessionService {
         const autoVoteResults =
           this.groupSessionHelper.buildVoteResults(allVotes);
         const winningPlaceId = autoVoteResults[0]?.place?.id ?? null;
+        const finalizedAt = new Date();
+        const closeAt = this.buildAutoCloseAt(finalizedAt);
 
         await this.prismaService.groupSession.updateMany({
           where: { sessionId, voteStatus: VoteStatus.OPEN },
           data: {
             voteStatus: VoteStatus.FINALIZED,
-            finalizedAt: new Date(),
+            finalizedAt,
+            closeAt,
             winningPlaceId,
           },
         });
@@ -759,6 +781,8 @@ export class GroupSessionService {
         session.votes,
       );
       const winningPlaceId = voteResults[0]?.place?.id ?? null;
+      const finalizedAt = new Date();
+      const closeAt = this.buildAutoCloseAt(finalizedAt);
 
       await this.prismaService.$transaction([
         this.prismaService.sessionVote.updateMany({
@@ -769,7 +793,8 @@ export class GroupSessionService {
           where: { sessionId },
           data: {
             voteStatus: VoteStatus.FINALIZED,
-            finalizedAt: new Date(),
+            finalizedAt,
+            closeAt,
             winningPlaceId,
           },
         }),
@@ -949,5 +974,22 @@ export class GroupSessionService {
     } catch (error) {
       handleServiceErrorCatching(error);
     }
+  }
+
+  async autoCloseExpiredSessions() {
+    const now = new Date();
+
+    return await this.prismaService.groupSession.updateMany({
+      where: {
+        status: GroupSessionStatus.ACTIVE,
+        voteStatus: VoteStatus.FINALIZED,
+        closeAt: {
+          lte: now,
+        },
+      },
+      data: {
+        status: GroupSessionStatus.CLOSED,
+      },
+    });
   }
 }
