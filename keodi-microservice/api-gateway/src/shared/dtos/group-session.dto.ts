@@ -33,8 +33,27 @@ export class GroupSessionResponseDto {
     enum: SessionStatus,
   })
   status: SessionStatus;
-}
+  @ApiProperty({
+    description: 'Current vote status of the session',
+    example: 'OPEN',
+    enum: ['OPEN', 'FINALIZED'],
+  })
+  voteStatus: 'OPEN' | 'FINALIZED';
 
+  @ApiProperty({
+    description: 'Timestamp when voting was finalized',
+    example: null,
+    nullable: true,
+  })
+  finalizedAt: Date | null;
+
+  @ApiProperty({
+    description: 'Winning place ID after vote finalization',
+    example: null,
+    nullable: true,
+  })
+  winningPlaceId: string | null;
+}
 export class JoinGroupSessionDto {
   @IsNotEmpty()
   @IsString()

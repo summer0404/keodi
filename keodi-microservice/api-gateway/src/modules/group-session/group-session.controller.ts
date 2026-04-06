@@ -26,6 +26,7 @@ import {
   ApiCreateGroupSession,
   ApiFinalizeMemberVote,
   ApiFinalizeSessionVote,
+  ApiGetAllSessions,
   ApiGetSession,
   ApiGetVotes,
   ApiInviteFriendToSession,
@@ -140,5 +141,11 @@ export class GroupSessionController {
   @ApiGetVotes()
   async getVotes(@Param('sessionId') sessionId: string) {
     return await this.groupSessionService.getVotes(sessionId);
+  }
+
+  @Get()
+  @ApiGetAllSessions()
+  async getAll(@CurrentUser() user: CurrentUserDto) {
+    return await this.groupSessionService.getAll(user.id);
   }
 }

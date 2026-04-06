@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
-    GroupSessionResponseDto,
-    JoinGroupSessionDto,
-    JoinGroupSessionResponseDto,
+  GroupSessionResponseDto,
+  JoinGroupSessionDto,
+  JoinGroupSessionResponseDto,
 } from 'src/shared/dtos/group-session.dto';
 
 @Injectable()
@@ -12,7 +12,9 @@ export class GroupSessionService {
   constructor(private readonly kafkaService: KafkaService) {}
 
   async create(userId: string): Promise<GroupSessionResponseDto> {
-    return await firstValueFrom(this.kafkaService.getClient().send('group-session.create', { userId }));
+    return await firstValueFrom(
+      this.kafkaService.getClient().send('group-session.create', { userId }),
+    );
   }
 
   async join(
@@ -39,7 +41,9 @@ export class GroupSessionService {
 
   async close(sessionId: string, userId: string) {
     return await firstValueFrom(
-      this.kafkaService.getClient().send('group-session.close', { sessionId, userId }),
+      this.kafkaService
+        .getClient()
+        .send('group-session.close', { sessionId, userId }),
     );
   }
 
@@ -75,22 +79,34 @@ export class GroupSessionService {
 
   async finalizeSessionVote(sessionId: string, userId: string) {
     return await firstValueFrom(
-      this.kafkaService.getClient().send('group-session.finalize-session-vote', {
-        sessionId,
-        userId,
-      }),
+      this.kafkaService
+        .getClient()
+        .send('group-session.finalize-session-vote', {
+          sessionId,
+          userId,
+        }),
     );
   }
 
   async getVotes(sessionId: string) {
     return await firstValueFrom(
-      this.kafkaService.getClient().send('group-session.get-votes', { sessionId }),
+      this.kafkaService
+        .getClient()
+        .send('group-session.get-votes', { sessionId }),
     );
   }
 
   async getSession(sessionId: string) {
     return await firstValueFrom(
-      this.kafkaService.getClient().send('group-session.get-session', { sessionId }),
+      this.kafkaService
+        .getClient()
+        .send('group-session.get-session', { sessionId }),
+    );
+  }
+
+  async getAll(userId: string) {
+    return await firstValueFrom(
+      this.kafkaService.getClient().send('group-session.get-all', { userId }),
     );
   }
 }
