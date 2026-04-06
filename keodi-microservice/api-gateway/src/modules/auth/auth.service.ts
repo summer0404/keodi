@@ -1,9 +1,9 @@
 import { Injectable, Res, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
-import { firstValueFrom } from 'rxjs';
 import { GoogleService } from 'src/providers/google/google.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { AuthTopics, UserTopics } from 'src/shared/constants/topic.constant';
 import {
   ForgotPasswordOTPDto,
   LoginDto,
@@ -42,7 +42,7 @@ export class AuthService {
 
   async register(body: RegisterDto) {
     try {
-      return await firstValueFrom(this.kafkaService.getClient().send('auth.register', body));
+      return await this.kafkaService.sendWithTimeout(AuthTopics.Register, body);
     } catch (error) {
       throw error;
     }
@@ -50,9 +50,7 @@ export class AuthService {
 
   async login(@Res({ passthrough: true }) res: Response, body: LoginDto) {
     try {
-      const response = await firstValueFrom(
-        this.kafkaService.getClient().send('auth.login', body),
-      );
+      const response = await this.kafkaService.sendWithTimeout(AuthTopics.Login, body);
 
       const cookieMaxAge = body.rememberMe
         ? 365 * 24 * 60 * 60 * 1000 // 1 year
@@ -80,9 +78,7 @@ export class AuthService {
     try {
       const userInfo = await this.verifyGoogleIdToken(token);
 
-      const response = await firstValueFrom(
-        this.kafkaService.getClient().send('auth.google', userInfo),
-      );
+      const response = await this.kafkaService.sendWithTimeout(AuthTopics.Google, userInfo);
 
       res.cookie('refreshToken', response.refreshToken, {
         httpOnly: true,
@@ -101,9 +97,7 @@ export class AuthService {
 
   async googleCallback(@Res({ passthrough: true }) res: Response, user: any) {
     try {
-      const response = await firstValueFrom(
-        this.kafkaService.getClient().send('auth.google', user),
-      );
+      const response = await this.kafkaService.sendWithTimeout(AuthTopics.Google, user);
 
       res.cookie('refreshToken', response.refreshToken, {
         httpOnly: true,
@@ -122,9 +116,7 @@ export class AuthService {
 
   async forgotPasswordOTP(body: ForgotPasswordOTPDto) {
     try {
-      return await firstValueFrom(
-        this.kafkaService.getClient().send('auth.forgot-password-otp', body),
-      );
+      return await this.kafkaService.sendWithTimeout(AuthTopics.ForgotPasswordOtp, body);
     } catch (error) {
       throw error;
     }
@@ -132,9 +124,7 @@ export class AuthService {
 
   async resetPasswordOTP(body: ResetPasswordOTPDto) {
     try {
-      return await firstValueFrom(
-        this.kafkaService.getClient().send('auth.reset-password-otp', body),
-      );
+      return await this.kafkaService.sendWithTimeout(AuthTopics.ResetPasswordOtp, body);
     } catch (error) {
       throw error;
     }
@@ -142,9 +132,7 @@ export class AuthService {
 
   async validateOtp(body: ValidateOTPDto, purpose: string) {
     try {
-      return await firstValueFrom(
-        this.kafkaService.getClient().send('auth.validate-otp', { ...body, purpose }),
-      );
+      return await this.kafkaService.sendWithTimeout(AuthTopics.ValidateOtp, { ...body, purpose });
     } catch (error) {
       throw error;
     }
@@ -152,9 +140,7 @@ export class AuthService {
 
   async resetPassword(body: ResetPasswordDto & { userId: string }) {
     try {
-      return await firstValueFrom(
-        this.kafkaService.getClient().send('auth.reset-password', body),
-      );
+      return await this.kafkaService.sendWithTimeout(AuthTopics.ResetPassword, body);
     } catch (error) {
       throw error;
     }
@@ -162,9 +148,7 @@ export class AuthService {
 
   async verifyEmail(token: string) {
     try {
-      return await firstValueFrom(
-        this.kafkaService.getClient().send('auth.verify-email', { token }),
-      );
+      return await this.kafkaService.sendWithTimeout(AuthTopics.VerifyEmail, { token });
     } catch (error) {
       throw error;
     }
@@ -172,9 +156,7 @@ export class AuthService {
 
   async externalResendVerifyEmail(userId: string) {
     try {
-      return await firstValueFrom(
-        this.kafkaService.getClient().send('auth.external-resend-verify-email', { userId }),
-      );
+      return await this.kafkaService.sendWithTimeout(AuthTopics.ExternalResendVerifyEmail, { userId });
     } catch (error) {
       throw error;
     }
@@ -182,9 +164,7 @@ export class AuthService {
 
   async resendVerifyEmail(userId: string) {
     try {
-      return await firstValueFrom(
-        this.kafkaService.getClient().send('auth.resend-verify-email', { userId }),
-      );
+      return await this.kafkaService.sendWithTimeout(AuthTopics.ResendVerifyEmail, { userId });
     } catch (error) {
       throw error;
     }
@@ -192,9 +172,7 @@ export class AuthService {
 
   async me(user: CurrentUserDto) {
     try {
-      const userInfo = await firstValueFrom(
-        this.kafkaService.getClient().send('user.get', { userId: user.id }),
-      );
+      const userInfo = await this.kafkaService.sendWithTimeout(UserTopics.Get, { userId: user.id });
 
       return {
         ...userInfo,
@@ -206,9 +184,7 @@ export class AuthService {
   }
 
   async refresh(res: Response, refreshToken: string) {
-    const response = await firstValueFrom(
-      this.kafkaService.getClient().send('auth.refresh', { refreshToken }),
-    );
+    const response = await this.kafkaService.sendWithTimeout(AuthTopics.Refresh, { refreshToken });
 
     const newTokenPayload = JSON.parse(
       Buffer.from(response.refreshToken.split('.')[1], 'base64').toString(),

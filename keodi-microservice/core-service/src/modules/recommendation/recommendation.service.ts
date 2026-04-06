@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from 'src/providers/redis/redis.service';
 import {
   MAX_CANDINDATE_PLACES,
@@ -18,10 +18,12 @@ import { SearchService } from '../search/search.service';
 import { SortOrder } from 'src/shared/enums/sort.enum';
 import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { firstValueFrom } from 'rxjs';
+import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class RecommendationService {
+  private readonly logger = new Logger(RecommendationService.name);
+
   constructor(
     private readonly redisService: RedisService,
     private readonly recommendationHelper: RecommendationHelper,
@@ -288,7 +290,6 @@ export class RecommendationService {
 
       return enrichedPlaces;
     } catch (error) {
-      console.error('SQL Error in getTopPlacesFromUserActions:', error);
       return handleServiceErrorCatching(error);
     }
   }
@@ -318,10 +319,7 @@ export class RecommendationService {
         RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
       );
     } catch (error) {
-      console.error(
-        'Error fetching trending places from search terms from Redis:',
-        error,
-      );
+      this.logger.error('Error fetching trending places from search terms from Redis', error.stack);
     }
 
     try {
@@ -329,10 +327,7 @@ export class RecommendationService {
         RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
       );
     } catch (error) {
-      console.error(
-        'Error fetching trending places from user actions from Redis:',
-        error,
-      );
+      this.logger.error('Error fetching trending places from user actions from Redis', error.stack);
     }
 
     let cachedPlacesFromSearchTerms = rawCachedPlacesFromSearchTerms
@@ -357,7 +352,7 @@ export class RecommendationService {
         cachedPlacesFromActions = await this.getTopPlacesFromUserActions();
       }
     } catch (error) {
-      console.error('Error fetching trending places from database:', error);
+      this.logger.error('Error fetching trending places from database', error.stack);
     }
 
     const trendingPlaces = this.recommendationHelper.deduplicatePlaces([
@@ -389,25 +384,30 @@ export class RecommendationService {
 
       const deduplicatedCandidates = this.recommendationHelper.deduplicatePlaces(enrichedCandidates);
 
-      const rankingResults = await firstValueFrom(this.kafkaService.getClient().send('intelligence.ranking', {
-        userId,
-        placeIds: deduplicatedCandidates.map(place => place.id)
-      }))
+      try {
+        const rankingResults = await this.kafkaService.sendWithTimeout(
+          IntelligenceTopics.Ranking,
+          { userId, placeIds: deduplicatedCandidates.map(place => place.id) },
+        )
 
-      return rankingResults.map((result: { place_id: string, ranking_score: number }) => {
-        const place = deduplicatedCandidates.find(p => p.id === result.place_id);
-        return {
-          ...place,
-          rankingScore: result.ranking_score
-        }
-      });
+        return rankingResults.map((result: { place_id: string, ranking_score: number }) => {
+          const place = deduplicatedCandidates.find(p => p.id === result.place_id);
+          return {
+            ...place,
+            rankingScore: result.ranking_score
+          }
+        });
+      } catch (error) {
+        return this.recommendationHelper.shufflePlaces(deduplicatedCandidates);
+      }
+
     } catch (error) {
-      console.error('Error fetching personalized recommendations:', error);
-      return []
+      this.logger.error('Error fetching personalized recommendations', error.stack);
+      handleServiceErrorCatching(error);
     }
   }
 
   async trainRankingModel() {
-    return this.kafkaService.getClient().emit('intelligence.train-ranking-model', {});
+    return this.kafkaService.getClient().emit(IntelligenceTopics.TrainRankingModel, {});
   }
 }

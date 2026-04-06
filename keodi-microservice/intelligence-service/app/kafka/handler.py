@@ -6,11 +6,11 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 from typing import Optional
-from app.kafka.producer import KafkaProducer, get_producer
 from app.kafka.consumer import KafkaConsumerService, get_consumer_service
 from app.services.llm.llm_service import LLMService, get_llm_service
 from app.services.ranking.ranking_service import RankingService, get_ranking_service
 from app.kafka.topic import Topics
+from app.kafka.decorators import request_response
 from app.repositories.place_repository import PlaceRepository
 from app.repositories.attribute_repository import AttributeRepository
 from app.repositories.place_attribute_repository import PlaceAttributeRepository
@@ -24,7 +24,6 @@ from app.common.constant import SMOOTHING_FACTOR, TIME_DECAY, UPDATE_USER_ATTRIB
 from app.common.helper import clip
 
 class Handlers:
-    producer: Optional[KafkaProducer] = None
     consumer_service: Optional[KafkaConsumerService] = None
     llm_service: Optional[LLMService] = None
     ranking_service: Optional[RankingService] = None
@@ -40,7 +39,6 @@ class Handlers:
 
 
     def __init__(self):
-        self.producer = get_producer()
         self.consumer_service = get_consumer_service()
         
     async def start(self):
@@ -87,27 +85,14 @@ class Handlers:
 
         return current_score * decay + contribution
 
+    @request_response(topic=Topics.EXTRACT_USER_INTENT_REPLY, error_code="EXTRACT_INTENT_FAILED")
     async def extract_user_intent(self, message: dict, headers: dict):
         search = message.get("search", "")
-        kafka_correlationId = headers.get("kafka_correlationId", "")
-
-        intent = json.dumps(
-            {
-                "keywords": search,
-                "categories": [],
-                "attributes": [],
-            }
-        )
         try:
-            intent = await self.llm_service.extract_user_intent(search=search)
+            return await self.llm_service.extract_user_intent(search=search)
         except Exception as e:
-            logger.exception("Failed to extract user intent for search '%s': %s", search, str(e))
-        
-        return await self.producer.send_response(
-            topic=Topics.EXTRACT_USER_INTENT_REPLY,
-            kafka_correlationId=kafka_correlationId,
-            payload=intent,
-        )
+            logger.exception("LLM extract_user_intent failed for search '%s'", e)
+            return json.dumps({"keywords": search, "categories": [], "attributes": []})
     
     async def sentiment_analysis(self, message: dict, headers: dict):
         text = message.get("text", "")
@@ -191,22 +176,14 @@ class Handlers:
         except Exception as e:
             raise Exception(f"Failed to train ranking model: {str(e)}")
         
+    @request_response(topic=Topics.RANKING_REPLY, error_code="RANKING_FAILED")
     async def ranking(self, message: dict, headers: dict):
         user_id = message.get("userId", "")
         place_ids = message.get("placeIds", [])
-        kafka_correlationId = headers.get("kafka_correlationId", "")
         try:
-            ranking_scores = await self.ranking_service.ranking(user_id, place_ids)
-            scores = json.dumps(ranking_scores)
-
-            return await self.producer.send_response(
-                topic=Topics.RANKING_REPLY,
-                kafka_correlationId=kafka_correlationId,
-                payload=scores,
-            )
+            return await self.ranking_service.ranking(user_id, place_ids)
         except Exception as e:
-            raise Exception(f"Failed to calculate ranking: {str(e)}")
-
+            raise Exception(f"Failed to get ranking: {str(e)}")
 
 
 handlers: Optional[Handlers] = None

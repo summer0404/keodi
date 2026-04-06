@@ -1,6 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientKafka } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   FavoriteResponseDto,
@@ -9,6 +7,7 @@ import {
 } from 'src/shared/dtos/favorite.dto';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { UserAction } from 'src/shared/enums/user.enum';
+import { FavoriteTopics, IntelligenceTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class FavoriteService {
@@ -18,24 +17,20 @@ export class FavoriteService {
     userId: string,
     placeId: string,
   ): Promise<FavoriteResponseDto> {
-    this.kafkaService.getClient().emit('intelligence.user-action', {
+    this.kafkaService.getClient().emit(IntelligenceTopics.UserAction, {
       userId,
       placeId,
       action: UserAction.FAVORITE,
     });
 
-    return await firstValueFrom(
-      this.kafkaService.getClient().send('favorite.add', { userId, placeId }),
-    );
+    return await this.kafkaService.sendWithTimeout(FavoriteTopics.Add, { userId, placeId });
   }
 
   async removeFavorite(
     userId: string,
     placeId: string,
   ): Promise<FavoriteResponseDto> {
-    return await firstValueFrom(
-      this.kafkaService.getClient().send('favorite.remove', { userId, placeId }),
-    );
+    return await this.kafkaService.sendWithTimeout(FavoriteTopics.Remove, { userId, placeId });
   }
 
   async getUserFavorites(
@@ -45,23 +40,13 @@ export class FavoriteService {
     sortBy?: PlaceSortBy,
     sortOrder?: SortOrder,
   ): Promise<FavoritesListResponseDto> {
-    return await firstValueFrom(
-      this.kafkaService.getClient().send('favorite.get-list', {
-        userId,
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-      }),
-    );
+    return await this.kafkaService.sendWithTimeout(FavoriteTopics.GetList, { userId, page, limit, sortBy, sortOrder });
   }
 
   async isFavorite(
     userId: string,
     placeId: string,
   ): Promise<IsFavoriteResponseDto> {
-    return await firstValueFrom(
-      this.kafkaService.getClient().send('favorite.check', { userId, placeId }),
-    );
+    return await this.kafkaService.sendWithTimeout(FavoriteTopics.Check, { userId, placeId });
   }
 }

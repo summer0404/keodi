@@ -1,17 +1,18 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { GroupSessionService } from './group-session.service';
+import { GroupSessionTopics } from 'src/shared/constants/topic.constant';
 
 @Controller('group-session')
 export class GroupSessionController {
   constructor(private readonly groupSessionService: GroupSessionService) {}
 
-  @MessagePattern('group-session.create')
+  @MessagePattern(GroupSessionTopics.Create)
   async createGroupSession(@Payload() data: { userId: string }) {
     return await this.groupSessionService.create(data.userId);
   }
 
-  @MessagePattern('group-session.join')
+  @MessagePattern(GroupSessionTopics.Join)
   async join(
     @Payload()
     data: {
@@ -24,21 +25,21 @@ export class GroupSessionController {
     return await this.groupSessionService.join(data);
   }
 
-  @MessagePattern('group-session.invite-friend')
+  @MessagePattern(GroupSessionTopics.InviteFriend)
   async inviteFriend(
     @Payload() data: { sessionId: string; inviterId: string; friendId: string },
   ) {
     return await this.groupSessionService.inviteFriend(data);
   }
 
-  @MessagePattern('group-session.close')
+  @MessagePattern(GroupSessionTopics.Close)
   async closeGroupSession(
     @Payload() data: { sessionId: string; userId: string },
   ) {
     return await this.groupSessionService.close(data);
   }
 
-  @MessagePattern('group-session.cast-vote')
+  @MessagePattern(GroupSessionTopics.CastVote)
   async castVote(
     @Payload()
     data: {
@@ -51,7 +52,7 @@ export class GroupSessionController {
     return await this.groupSessionService.castVote(data);
   }
 
-  @MessagePattern('group-session.finalize-member-vote')
+  @MessagePattern(GroupSessionTopics.FinalizeMemberVote)
   async finalizeMemberVote(
     @Payload()
     data: {
@@ -63,7 +64,7 @@ export class GroupSessionController {
     return await this.groupSessionService.finalizeMemberVote(data);
   }
 
-  @MessagePattern('group-session.finalize-session-vote')
+  @MessagePattern(GroupSessionTopics.FinalizeSessionVote)
   async finalizeSessionVote(
     @Payload()
     data: {
@@ -74,7 +75,7 @@ export class GroupSessionController {
     return await this.groupSessionService.finalizeSessionVote(data);
   }
 
-  @MessagePattern('group-session.get-votes')
+  @MessagePattern(GroupSessionTopics.GetVotes)
   async getVotes(
     @Payload()
     data: {
@@ -84,7 +85,7 @@ export class GroupSessionController {
     return await this.groupSessionService.getVotes(data.sessionId);
   }
 
-  @MessagePattern('group-session.get-session')
+  @MessagePattern(GroupSessionTopics.GetSession)
   async getSession(
     @Payload()
     data: {
@@ -94,7 +95,7 @@ export class GroupSessionController {
     return await this.groupSessionService.getSession(data.sessionId);
   }
 
-  @MessagePattern('group-session.get-all')
+  @MessagePattern(GroupSessionTopics.GetAll)
   async getAll(@Payload() data: { userId: string }) {
     return await this.groupSessionService.getAll(data.userId);
   }

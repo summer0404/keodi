@@ -6,6 +6,7 @@ import { OtpPurpose } from "src/shared/enums/otp.enum";
 import { getTTLForPurpose } from "src/shared/utils/ttl-redis.helper";
 import { RedisService } from "src/providers/redis/redis.service";
 import { KafkaService } from "src/providers/kafka/kafka.service";
+import { NotificationTopics } from "src/shared/constants/topic.constant";
 
 @Injectable()
 export class OtpService {
@@ -33,10 +34,10 @@ export class OtpService {
 
         switch (purpose) {
             case OtpPurpose.FORGOT_PASSWORD:
-                this.kafkaService.getClient().emit('notification.forgot-password', { to: email, code: otp })
+                this.kafkaService.getClient().emit(NotificationTopics.ForgotPassword, { to: email, code: otp })
                 break
             case OtpPurpose.RESET_PASSWORD:
-                this.kafkaService.getClient().emit('notification.reset-password', { to: email, code: otp })
+                this.kafkaService.getClient().emit(NotificationTopics.ResetPassword, { to: email, code: otp })
                 break
             default:
                 break

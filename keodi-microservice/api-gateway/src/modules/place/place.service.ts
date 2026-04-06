@@ -1,11 +1,11 @@
 /* eslint-disable prettier/prettier */
-import { Inject, Injectable } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
+import { Injectable } from '@nestjs/common';
 import { CoordinateDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/shared/dtos/place.dto';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { ReviewService } from '../review/review.service';
 import { UserAction } from 'src/shared/enums/user.enum';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { IntelligenceTopics, PlaceTopics, RecommendationTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class PlaceService {
@@ -15,38 +15,28 @@ export class PlaceService {
     ) { }
 
     async getNearbyPlaces(query: NearMeQueryDto, userId: string): Promise<NearMePlacesResponseDto> {
-        return await firstValueFrom(
-            this.kafkaService.getClient().send('place.near-me', {
-                ...query,
-                userId,
-            })
-        );
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.NearMe, { ...query, userId });
     }
 
     async search(
         query: SearchDto,
         userId: string
     ): Promise<NearMePlacesResponseDto> {
-        return await firstValueFrom(
-            this.kafkaService.getClient().send('place.search', {
-                ...query,
-                userId,
-            })
-        );
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Search, { ...query, userId });
     }
 
     async getById(id: string, userId: string): Promise<PlaceDistanceDto> {
-        this.kafkaService.getClient().emit('intelligence.user-action', {
+        this.kafkaService.getClient().emit(IntelligenceTopics.UserAction, {
             userId,
             placeId: id,
             action: UserAction.CLICK,
         });
 
-        return await firstValueFrom(this.kafkaService.getClient().send('place.get-by-id', { id, userId }));
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.GetById, { id, userId });
     }
 
     async getReviewsById (getReviewsDto: GetReviewsDto, placeId: string, userId: string) {
-        this.kafkaService.getClient().emit('intelligence.user-action', {
+        this.kafkaService.getClient().emit(IntelligenceTopics.UserAction, {
             userId,
             placeId,
             action: UserAction.READ_REVIEWS,
@@ -56,10 +46,10 @@ export class PlaceService {
     }
 
     async getTrending() {
-        return await firstValueFrom(this.kafkaService.getClient().send('recommendation.trending', {}));
+        return await this.kafkaService.sendWithTimeout(RecommendationTopics.Trending, {});
     }
 
     async getForYou(userId: string, coordinateDto: CoordinateDto) {
-        return await firstValueFrom(this.kafkaService.getClient().send('recommendation.for-you', { userId, coordinateDto }));  
+        return await this.kafkaService.sendWithTimeout(RecommendationTopics.ForYou, { userId, coordinateDto });
     }
 }

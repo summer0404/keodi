@@ -1,8 +1,8 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { Injectable } from '@nestjs/common';
 import { SendOTPMailDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
 import { EmailService } from 'src/providers/email/email.service';
 import { NotificationHelper } from './notification.helper';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 
 @Injectable()
 export class NotificationService {
@@ -15,14 +15,7 @@ export class NotificationService {
     try {
       return await this.emailService.sendOTPMail({ ...sendEmail, subject: this.notificationHelper.getEmailSubject(purpose) });
     } catch (error) {
-      console.error(error)
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error
-      })
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -30,14 +23,7 @@ export class NotificationService {
     try {
       return await this.emailService.sendVerifyURL({ ...sendEmail, subject: this.notificationHelper.getEmailSubject(purpose) });
     } catch (error) {
-      console.error(error)
-      if (error instanceof RpcException) {
-        throw error;  
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error
-      })
+      handleServiceErrorCatching(error);
     }
   }
 }

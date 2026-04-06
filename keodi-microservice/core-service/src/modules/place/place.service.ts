@@ -16,6 +16,7 @@ import {
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class PlaceService {
@@ -23,7 +24,7 @@ export class PlaceService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
-  ) {}
+  ) { }
 
   private calculateGeoDeltas(latitude: number, radius: number) {
     const latDelta = radius / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
@@ -409,26 +410,16 @@ export class PlaceService {
         };
 
         try {
-          extractedIntent = await firstValueFrom(
-            this.kafkaService
-              .getClient()
-              .send('intelligence.extract-user-intent', { search })
-              .pipe(timeout(5000)),
+          extractedIntent = await this.kafkaService.sendWithTimeout(
+            IntelligenceTopics.ExtractUserIntent,
+            { search },
           );
         } catch (error: any) {
-          if (error?.name === 'TimeoutError') {
-            extractedIntent = {
-              keywords: search,
-              categories: [],
-              attributes: [],
-            };
-          } else {
-            throw new RpcException({
-              status: HttpStatus.BAD_GATEWAY,
-              code: 'INTELLIGENCE_EXTRACT_INTENT_FAILED',
-              message: 'Failed to get extract-user-intent response',
-            });
-          }
+          extractedIntent = {
+            keywords: search,
+            categories: [],
+            attributes: [],
+          };
         }
 
         const keywordPattern = extractedIntent.keywords
@@ -436,7 +427,7 @@ export class PlaceService {
           : undefined;
 
         if (keywordPattern) {
-          this.kafkaService.getClient().emit('search.create', {
+          this.kafkaService.getClient().emit(SearchTopics.Create, {
             userId,
             extractedTerm: extractedIntent.keywords,
           });

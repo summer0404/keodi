@@ -1,10 +1,11 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
 import * as bcrypt from 'bcrypt';
 import type { StringValue } from 'ms';
 import { PrismaService } from 'src/database/prisma.service';
 import { UserService } from 'src/modules/user/user.service';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import {
   LoginDto,
   RegisterDto,
@@ -31,6 +32,8 @@ import { VerifyUrlService } from './verifyUrl.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
@@ -115,14 +118,7 @@ export class AuthService {
 
       return { message: 'User created successfully', userId: newUser.id };
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -181,14 +177,7 @@ export class AuthService {
 
       return tokens;
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -237,14 +226,7 @@ export class AuthService {
 
       return tokens;
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -264,14 +246,7 @@ export class AuthService {
 
       return { userId: isExistingUser.id };
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -291,14 +266,7 @@ export class AuthService {
 
       return { message: 'Verification email has sent' };
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -325,14 +293,7 @@ export class AuthService {
         });
       }
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -353,14 +314,7 @@ export class AuthService {
 
       return { message: 'Password reset successfully' };
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -400,14 +354,7 @@ export class AuthService {
 
       return successVerifyAccountTemplate();
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -433,7 +380,7 @@ export class AuthService {
 
       return resendSuccessTemplate();
     } catch (error) {
-      console.log(error);
+      this.logger.error(error.message ?? error, error.stack);
       return resendFailedTemplate();
     }
   }
@@ -470,14 +417,7 @@ export class AuthService {
 
       return { message: 'resend email successfully' };
     } catch (error) {
-      console.error(error);
-      if (error instanceof RpcException) {
-        throw error;
-      }
-      throw new RpcException({
-        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message ?? error,
-      });
+      handleServiceErrorCatching(error);
     }
   }
 
@@ -519,10 +459,10 @@ export class AuthService {
       });
       return tokens;
     } catch (error) {
-      console.error(error);
       if (error instanceof RpcException) {
         throw error;
       }
+      this.logger.error(error.message ?? error, error.stack);
       throw new RpcException({
         status: HttpStatus.UNAUTHORIZED,
         message: 'Invalid or expired refresh token',

@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
 import { FcmService } from 'src/providers/fcm/fcm.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   NotificationPreferredChannel,
   NotificationStatus,
-  NotificationTopics,
   NotificationType,
 } from 'src/shared/constants/notification.constant';
 import { NotificationHelper } from './notification.helper';
 import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
+import { DeviceTokenTopics, NotificationTopics, SettingTopics } from 'src/shared/constants/topic.contant';
 
 const NOTIFICATION_SETTING_MAP: Partial<Record<NotificationType, string>> = {
   [NotificationType.GROUP_INVITE]: 'notifyGroupInvites',
@@ -34,15 +33,11 @@ export class NotificationDispatcherService {
     const settingKey = NOTIFICATION_SETTING_MAP[event.type];
     if (settingKey) {
       try {
-        const settings = await firstValueFrom(
-          kafka.send('setting.get', event.userId),
-        );
+        const settings = await this.kafkaService.sendWithTimeout(SettingTopics.Get, event.userId);
         if (settings?.[settingKey] === false) {
-          return; // User disabled this notification type
+          return;
         }
-      } catch {
-        // Settings fetch failed → still send notification
-      }
+      } catch { }
     }
 
     const channel = event.preferredChannel ?? NotificationPreferredChannel.BOTH;
@@ -77,11 +72,9 @@ export class NotificationDispatcherService {
       channel !== NotificationPreferredChannel.WEBSOCKET
     ) {
       try {
-        const tokensRes = await firstValueFrom(
-          kafka.send(NotificationTopics.GetActiveTokens, {
-            userId: event.userId,
-          }),
-        );
+        const tokensRes = await this.kafkaService.sendWithTimeout(DeviceTokenTopics.GetActiveTokens, {
+          userId: event.userId,
+        });
 
         const tokens: string[] = tokensRes?.tokens ?? [];
         if (tokens.length) {
@@ -93,16 +86,14 @@ export class NotificationDispatcherService {
 
           //Deactive invalid tokens
           for (const token of invalidTokens) {
-            kafka.emit(NotificationTopics.DeactivateToken, {
+            kafka.emit(DeviceTokenTopics.DeactivateToken, {
               userId: event.userId,
               token,
             });
           }
           delivered = true;
         }
-      } catch (error) {
-        // FCM failure is non-fatal; notification is already persisted as PENDING
-      }
+      } catch (error) { }
     }
     if (delivered) {
       kafka.emit(NotificationTopics.PersistInbox, {

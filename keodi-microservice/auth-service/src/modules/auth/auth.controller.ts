@@ -9,27 +9,28 @@ import {
 import { ValidateOTPDto } from 'src/shared/dtos/otp.dto';
 import { OtpPurpose } from 'src/shared/enums/otp.enum';
 import { VerifyUrlPurpose } from 'src/shared/enums/verifyUrl.enum';
+import { AuthTopics } from 'src/shared/constants/topic.constant';
 
 @Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @MessagePattern('auth.register')
+  @MessagePattern(AuthTopics.Register)
   async register(@Payload() data: RegisterDto) {
     return await this.authService.register(data);
   }
 
-  @MessagePattern('auth.login')
+  @MessagePattern(AuthTopics.Login)
   async login(@Payload() data: LoginDto) {
     return await this.authService.login(data);
   }
 
-  @MessagePattern('auth.google')
+  @MessagePattern(AuthTopics.Google)
   async googleLogin(@Payload() data: any) {
     return await this.authService.googleLogin(data);
   }
 
-  @MessagePattern('auth.forgot-password-otp')
+  @MessagePattern(AuthTopics.ForgotPasswordOtp)
   async forgotPasswordOTP(@Payload() data: { email: string }) {
     return await this.authService.sendOTPWithPurpose(
       data.email,
@@ -37,7 +38,7 @@ export class AuthController {
     );
   }
 
-  @MessagePattern('auth.reset-password-otp')
+  @MessagePattern(AuthTopics.ResetPasswordOtp)
   async resetPasswordOTP(@Payload() data: { email: string }) {
     return await this.authService.sendOTPWithPurpose(
       data.email,
@@ -45,22 +46,22 @@ export class AuthController {
     );
   }
 
-  @MessagePattern('auth.validate-otp')
+  @MessagePattern(AuthTopics.ValidateOtp)
   async validateOTP(@Payload() data: ValidateOTPDto) {
     return await this.authService.validateOTPWithPurpose(data);
   }
 
-  @MessagePattern('auth.reset-password')
+  @MessagePattern(AuthTopics.ResetPassword)
   async resetPassword(@Payload() data: ResetPasswordDto) {
     return await this.authService.resetPassword(data);
   }
 
-  @MessagePattern('auth.verify-email')
+  @MessagePattern(AuthTopics.VerifyEmail)
   async verifyEmail(@Payload() data: { token: string }) {
     return await this.authService.verifyEmail(data.token);
   }
 
-  @MessagePattern('auth.external-resend-verify-email')
+  @MessagePattern(AuthTopics.ExternalResendVerifyEmail)
   async externalResendVerifyEmail(@Payload() data: { userId: string }) {
     return await this.authService.externalResendVerifyEmail(
       data.userId,
@@ -68,7 +69,7 @@ export class AuthController {
     );
   }
 
-  @MessagePattern('auth.resend-verify-email')
+  @MessagePattern(AuthTopics.ResendVerifyEmail)
   async resendVerifyEmail(@Payload() data: { userId: string }) {
     return await this.authService.resendVerifyEmail(
       data.userId,
@@ -76,7 +77,7 @@ export class AuthController {
     );
   }
 
-  @MessagePattern('auth.refresh')
+  @MessagePattern(AuthTopics.Refresh)
   async refresh(@Payload() data: { refreshToken: string }) {
     return await this.authService.refresh(data.refreshToken);
   }

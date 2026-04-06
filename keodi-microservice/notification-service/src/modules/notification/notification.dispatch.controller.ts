@@ -1,8 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { NotificationTopics } from 'src/shared/constants/notification.constant';
 import { NotificationDispatcherService } from './notification.dispatcher.service';
 import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
+import { NotificationTopics } from 'src/shared/constants/topic.contant';
 
 @Controller()
 export class NotificationDispatchController {

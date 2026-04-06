@@ -1,61 +1,39 @@
 import { Injectable } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
+import { UserTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class UserService {
   constructor(private readonly kafkaService: KafkaService) {}
 
   async unverifyUser(userId: string) {
-    return await firstValueFrom(
-      this.kafkaService.getClient().send('user.unverify', { userId }),
-    );
+    return await this.kafkaService.sendWithTimeout(UserTopics.Unverify, { userId });
   }
 
   async updateUsername(userId: string, username: string, accessToken: string) {
-    return await firstValueFrom(
-      this.kafkaService
-        .getClient()
-        .send('user.update-username', { userId, username, accessToken }),
-    );
+    return await this.kafkaService.sendWithTimeout(UserTopics.UpdateUsername, { userId, username, accessToken });
   }
 
   async updatePicture(userId: string, file: Buffer, type: string) {
-    return await firstValueFrom(
-      this.kafkaService.getClient().send('user.update-picture', {
-        userId,
-        file,
-        type,
-      }),
-    );
+    return await this.kafkaService.sendWithTimeout(UserTopics.UpdatePicture, { userId, file, type });
   }
 
   async updateProfile(userId: string, data: UpdateUserProfileDto) {
-    return await firstValueFrom(
-      this.kafkaService
-        .getClient()
-        .send('user.update-profile', { userId, data }),
-    );
+    return await this.kafkaService.sendWithTimeout(UserTopics.UpdateProfile, { userId, data });
   }
 
   async getAll() {
-    return await firstValueFrom(
-      this.kafkaService.getClient().send('user.get-all', {}),
-    );
+    return await this.kafkaService.sendWithTimeout(UserTopics.GetAll, {});
   }
 
   async onBoarding(userId: string, categoryIds: string[]) {
-    return await firstValueFrom(
-      this.kafkaService
-        .getClient()
-        .send('user.onboarding', { userId, categoryIds }),
-    );
+    return await this.kafkaService.sendWithTimeout(UserTopics.Onboarding, { userId, categoryIds });
   }
 
   async updateLocation(userId: string, latitude: number, longitude: number) {
     this.kafkaService
       .getClient()
-      .emit('user.update-location', { userId, latitude, longitude });
+      .emit(UserTopics.UpdateLocation, { userId, latitude, longitude });
   }
 }

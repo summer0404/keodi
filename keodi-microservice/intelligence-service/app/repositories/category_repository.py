@@ -1,5 +1,5 @@
 from app.repositories.base_repository import BaseRepository
-from app.common.constant import TOP_K_CATEGORIES, THREADSOLD_SIMILARITY
+from app.common.constant import TOP_K_CATEGORIES, THRESHOLD_SIMILARITY
 
 class CategoryRepository(BaseRepository):
     async def get_all_categories(self):
@@ -22,6 +22,6 @@ class CategoryRepository(BaseRepository):
         return await self.db.query_raw(
             query,
             vector_literal,
-            float(THREADSOLD_SIMILARITY),
+            float(THRESHOLD_SIMILARITY),
             TOP_K_CATEGORIES,
         )

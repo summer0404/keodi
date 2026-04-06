@@ -2,19 +2,20 @@ import { Controller } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
+import { UserTopics } from 'src/shared/constants/topic.constant';
 
 
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserService) { }
 
-  @EventPattern('user.create')
+  @EventPattern(UserTopics.Create)
   async create(@Payload() data: { userId: string }) {
     return await this.userService.create(data.userId)
   }
 
 
-  @MessagePattern('user.update-picture')
+  @MessagePattern(UserTopics.UpdatePicture)
   async updatePicture(
     @Payload() data: {
       file: Buffer,
@@ -29,19 +30,19 @@ export class UserController {
     )
   }
 
-  @MessagePattern('user.get')
+  @MessagePattern(UserTopics.Get)
   async getById(
     @Payload() data: { userId: string }
   ) {
     return await this.userService.getById(data.userId)
   }
 
-  @MessagePattern('user.get-all')
+  @MessagePattern(UserTopics.GetAll)
   async getAll() {
     return await this.userService.getAll();
   }
 
-  @MessagePattern('user.update-profile')
+  @MessagePattern(UserTopics.UpdateProfile)
   async updateProfile(
     @Payload() data: {
       userId: string,
@@ -53,7 +54,7 @@ export class UserController {
     )
   }
 
-  @MessagePattern('user.onboarding')
+  @MessagePattern(UserTopics.Onboarding)
   async onBoarding(
     @Payload() data: {
       userId: string,
@@ -66,7 +67,7 @@ export class UserController {
     )
   }
 
-  @EventPattern('user.update-location')
+  @EventPattern(UserTopics.UpdateLocation)
   async updateLocation(
     @Payload() data: { userId: string; latitude: number; longitude: number },
   ) {

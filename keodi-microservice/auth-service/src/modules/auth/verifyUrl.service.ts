@@ -5,6 +5,7 @@ import { VerifyUrlDto } from "src/shared/dtos/verifyUrl.dto";
 import { getTTLForPurpose } from "src/shared/utils/ttl-redis.helper";
 import { RedisService } from "src/providers/redis/redis.service";
 import { KafkaService } from "src/providers/kafka/kafka.service";
+import { NotificationTopics } from "src/shared/constants/topic.constant";
 
 @Injectable()
 export class VerifyUrlService{
@@ -22,7 +23,7 @@ export class VerifyUrlService{
 
         switch(purpose) {
             case VerifyUrlPurpose.VERIFY_EMAIL:
-                this.kafkaService.getClient().emit('notification.verify-email', {to: email, url: process.env.VERIFY_EMAIL_API + token})
+                this.kafkaService.getClient().emit(NotificationTopics.VerifyEmail, {to: email, url: process.env.VERIFY_EMAIL_API + token})
                 break
             default:
                 break

@@ -41,7 +41,7 @@ export class EmailService {
             this.logger.log(`OTP sent to ${sendMailDto.to}`)
         } catch (error) {
             this.logger.log(`Failed to send OTP to ${sendMailDto.to}`)
-            console.log(error)
+            this.logger.error(error.message ?? error, error.stack)
             throw new RpcException({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
                 message: 'Error when sending OTP mail to user'
@@ -65,7 +65,7 @@ export class EmailService {
             this.logger.log(`Verification URL sent to ${sendMailDto.to}`)
         } catch (error) {
             this.logger.log(`Failed to send verification URL to ${sendMailDto.to}`)
-            console.log(error)
+            this.logger.error(error.message ?? error, error.stack)
             throw new RpcException({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
                 message: 'Error when sending verification URL mail to user'
