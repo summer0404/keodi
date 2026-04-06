@@ -7,27 +7,23 @@ import { UserTopics } from 'src/shared/constants/topic.constant';
 
 @Controller()
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   @EventPattern(UserTopics.Create)
   async create(@Payload() data: { userId: string }) {
-    return await this.userService.create(data.userId)
+    return await this.userService.create(data.userId);
   }
 
 
   @MessagePattern(UserTopics.UpdatePicture)
   async updatePicture(
-    @Payload() data: {
-      file: Buffer,
-      userId: string,
-      type?: string
-    }
+    @Payload() data: { file: Buffer; userId: string; type?: string },
   ) {
     return await this.userService.updatePicture(
       data.file,
       data.userId,
-      data.type
-    )
+      data.type,
+    );
   }
 
   @MessagePattern(UserTopics.Get)
@@ -44,14 +40,9 @@ export class UserController {
 
   @MessagePattern(UserTopics.UpdateProfile)
   async updateProfile(
-    @Payload() data: {
-      userId: string,
-      data: UpdateUserProfileDto
-    }) {
-    return await this.userService.updateProfile(
-      data.userId,
-      data.data
-    )
+    @Payload() data: { userId: string; data: UpdateUserProfileDto },
+  ) {
+    return await this.userService.updateProfile(data.userId, data.data);
   }
 
   @MessagePattern(UserTopics.Onboarding)
@@ -71,6 +62,10 @@ export class UserController {
   async updateLocation(
     @Payload() data: { userId: string; latitude: number; longitude: number },
   ) {
-    await this.userService.updateLocation(data.userId, data.latitude, data.longitude);
+    await this.userService.updateLocation(
+      data.userId,
+      data.latitude,
+      data.longitude,
+    );
   }
 }

@@ -42,6 +42,23 @@ export class UserController {
     return await this.userService.getAll();
   }
 
+  @ApiBearerAuth('access-token')
+  @Get(':userId/profile')
+  @ApiOperation({
+    description:
+      'Get another user profile with privacy filtering and friendship status',
+  })
+  @ApiOkResponse({
+    description:
+      'Return profile data based on profile visibility settings and relationship',
+  })
+  async getOtherProfile(
+    @CurrentUser() user: CurrentUserDto,
+    @Param('userId') userId: string,
+  ) {
+    return await this.userService.getOtherProfile(user.id, userId);
+  }
+
   @SkipAuth() // Skip authentication for testing purposes - remove in production
   @Patch(':userId/unverify')
   @ApiOperation({

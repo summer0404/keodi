@@ -1,10 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { FriendRequestStatus } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
+import { ProfileVisibility } from 'src/shared/enums/setting.enum';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 
 @Injectable()
 export class UserService {
@@ -95,6 +97,94 @@ export class UserService {
       return {
         ...user,
         pictureUrl,
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async getOtherProfile(viewerId: string, targetUserId: string) {
+    try {
+      const targetUser = await this.prismaService.user.findUnique({
+        where: { id: targetUserId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+          dateOfBirth: true,
+          pictureUrl: true,
+        },
+      });
+
+      if (!targetUser) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: 'User not found',
+        });
+      }
+
+      const isSelf = viewerId === targetUserId;
+
+      const [targetSetting, friendship, pendingRequest] = await Promise.all([
+        this.prismaService.userSetting.upsert({
+          where: { userId: targetUserId },
+          create: { userId: targetUserId },
+          update: {},
+          select: { profileVisibility: true },
+        }),
+        isSelf
+          ? Promise.resolve(null)
+          : this.prismaService.friendship.findUnique({
+              where: {
+                userId_friendId: {
+                  userId: viewerId,
+                  friendId: targetUserId,
+                },
+              },
+              select: { userId: true },
+            }),
+        isSelf
+          ? Promise.resolve(null)
+          : this.prismaService.friendRequest.findFirst({
+              where: {
+                status: FriendRequestStatus.PENDING,
+                OR: [
+                  { senderId: viewerId, receiverId: targetUserId },
+                  { senderId: targetUserId, receiverId: viewerId },
+                ],
+              },
+              select: { id: true },
+            }),
+      ]);
+
+      const isFriend = !!friendship;
+      const hasPendingRequest = !!pendingRequest;
+
+      const canViewFullProfile =
+        isSelf ||
+        targetSetting.profileVisibility === ProfileVisibility.PUBLIC ||
+        (targetSetting.profileVisibility === ProfileVisibility.FRIENDS_ONLY &&
+          isFriend);
+
+      const canSendFriendRequest = !isSelf && !isFriend && !hasPendingRequest;
+
+      const pictureUrl = targetUser.pictureUrl
+        ? await this.imageService.getImageViewUrl(targetUser.pictureUrl)
+        : null;
+
+      return {
+        id: targetUser.id,
+        firstName: targetUser.firstName,
+        lastName: targetUser.lastName,
+        pictureUrl,
+        phoneNumber: canViewFullProfile ? targetUser.phoneNumber : null,
+        dateOfBirth: canViewFullProfile ? targetUser.dateOfBirth : null,
+        profileVisibility: targetSetting.profileVisibility,
+        isProfileVisible: canViewFullProfile,
+        isFriend,
+        hasPendingRequest,
+        canSendFriendRequest,
       };
     } catch (error) {
       return handleServiceErrorCatching(error);

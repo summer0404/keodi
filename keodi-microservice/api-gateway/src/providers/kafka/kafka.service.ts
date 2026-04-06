@@ -33,7 +33,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ValidateOtp);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ResetPassword);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.VerifyEmail);
-    this.kafkaClient.subscribeToResponseOf(AuthTopics.ExternalResendVerifyEmail);
+    this.kafkaClient.subscribeToResponseOf(
+      AuthTopics.ExternalResendVerifyEmail,
+    );
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ResendVerifyEmail);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Refresh);
 
@@ -85,8 +87,12 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.InviteFriend);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Close);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.CastVote);
-    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.FinalizeMemberVote);
-    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.FinalizeSessionVote);
+    this.kafkaClient.subscribeToResponseOf(
+      GroupSessionTopics.FinalizeMemberVote,
+    );
+    this.kafkaClient.subscribeToResponseOf(
+      GroupSessionTopics.FinalizeSessionVote,
+    );
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetVotes);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetSession);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetAll);
@@ -105,7 +111,11 @@ export class KafkaService implements OnModuleInit {
     return this.kafkaClient;
   }
 
-  sendWithTimeout(topic: string, data: unknown, timeoutMs: number = KAFKA_TIMEOUT_MS) {
+  sendWithTimeout(
+    topic: string,
+    data: unknown,
+    timeoutMs: number = KAFKA_TIMEOUT_MS,
+  ) {
     return firstValueFrom(
       this.kafkaClient.send(topic, data).pipe(timeout(timeoutMs)),
     );

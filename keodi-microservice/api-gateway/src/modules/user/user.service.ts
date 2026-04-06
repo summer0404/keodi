@@ -27,6 +27,14 @@ export class UserService {
     return await this.kafkaService.sendWithTimeout(UserTopics.GetAll, {});
   }
 
+  async getOtherProfile(viewerId: string, targetUserId: string) {
+    return await firstValueFrom(
+      this.kafkaService
+        .getClient()
+        .send('user.get-other-profile', { viewerId, targetUserId }),
+    );
+  }
+
   async onBoarding(userId: string, categoryIds: string[]) {
     return await this.kafkaService.sendWithTimeout(UserTopics.Onboarding, { userId, categoryIds });
   }
