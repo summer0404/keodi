@@ -4,12 +4,13 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import { SendOTPMailDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
 import { OtpPurpose } from 'src/shared/enums/otp.enum';
 import { VerifyUrlPurpose } from 'src/shared/enums/verifyUrl.enum';
+import { NotificationTopics } from 'src/shared/constants/topic.contant';
 
 @Controller()
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  @EventPattern('notification.forgot-password')
+  @EventPattern(NotificationTopics.ForgotPassword)
   async forgotPassword(@Payload() data: SendOTPMailDto) {
     return await this.notificationService.sendOTPByEmail(
       data,
@@ -17,7 +18,7 @@ export class NotificationController {
     );
   }
 
-  @EventPattern('notification.reset-password')
+  @EventPattern(NotificationTopics.ResetPassword)
   async resetPassword(@Payload() data: SendOTPMailDto) {
     return await this.notificationService.sendOTPByEmail(
       data,
@@ -25,7 +26,7 @@ export class NotificationController {
     );
   }
 
-  @EventPattern('notification.verify-email')
+  @EventPattern(NotificationTopics.VerifyEmail)
   async verifyEmail(@Payload() data: SendVerifyURLDto) {
     return await this.notificationService.sendVerifyURLByEmail(
       data,

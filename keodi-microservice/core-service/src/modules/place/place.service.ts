@@ -16,6 +16,7 @@ import {
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class PlaceService {
@@ -409,11 +410,9 @@ export class PlaceService {
         };
 
         try {
-          extractedIntent = await firstValueFrom(
-            this.kafkaService
-              .getClient()
-              .send('intelligence.extract-user-intent', { search })
-              .pipe(timeout(5000)),
+          extractedIntent = await this.kafkaService.sendWithTimeout(
+            IntelligenceTopics.ExtractUserIntent,
+            { search },
           );
         } catch (error: any) {
           if (error?.name === 'TimeoutError') {
@@ -436,7 +435,7 @@ export class PlaceService {
           : undefined;
 
         if (keywordPattern) {
-          this.kafkaService.getClient().emit('search.create', {
+          this.kafkaService.getClient().emit(SearchTopics.Create, {
             userId,
             extractedTerm: extractedIntent.keywords,
           });

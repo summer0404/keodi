@@ -1,11 +1,12 @@
 import { GetObjectCommand, GetObjectCommandInput, PutObjectCommand, PutObjectCommandInput, S3Client } from "@aws-sdk/client-s3";
-import { HttpStatus, Injectable } from "@nestjs/common";
+import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { ImageConstants } from "src/shared/constants/image.constant";
 
 @Injectable()
 export class S3Service {
+    private readonly logger = new Logger(S3Service.name);
     private readonly s3Client: S3Client;
     private readonly bucket: string;
     private readonly region: string;
@@ -62,7 +63,7 @@ export class S3Service {
                 ContentType: contentType,
             }));
         } catch (error) {
-            console.error(error);
+            this.logger.error(error.message, error.stack);
 
             if (error instanceof RpcException) {
                 throw error;

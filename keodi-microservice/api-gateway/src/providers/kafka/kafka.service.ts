@@ -1,5 +1,21 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
+import { firstValueFrom, timeout } from 'rxjs';
+import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
+import {
+  AuthTopics,
+  UserTopics,
+  PlaceTopics,
+  RecommendationTopics,
+  FavoriteTopics,
+  CategoryTopics,
+  FriendTopics,
+  GroupSessionTopics,
+  SearchTopics,
+  SettingTopics,
+  AttributeTopics,
+  ReviewTopics,
+} from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
@@ -9,87 +25,88 @@ export class KafkaService implements OnModuleInit {
 
   async onModuleInit() {
     //auth topic
-    this.kafkaClient.subscribeToResponseOf('auth.register');
-    this.kafkaClient.subscribeToResponseOf('auth.login');
-    this.kafkaClient.subscribeToResponseOf('auth.google');
-    this.kafkaClient.subscribeToResponseOf('auth.forgot-password-otp');
-    this.kafkaClient.subscribeToResponseOf('auth.reset-password-otp');
-    this.kafkaClient.subscribeToResponseOf('auth.validate-otp');
-    this.kafkaClient.subscribeToResponseOf('auth.reset-password');
-    this.kafkaClient.subscribeToResponseOf('auth.verify-email');
-    this.kafkaClient.subscribeToResponseOf('auth.external-resend-verify-email');
-    this.kafkaClient.subscribeToResponseOf('auth.resend-verify-email');
-    this.kafkaClient.subscribeToResponseOf('auth.refresh');
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.Register);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.Login);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.Google);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.ForgotPasswordOtp);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.ResetPasswordOtp);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.ValidateOtp);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.ResetPassword);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.VerifyEmail);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.ExternalResendVerifyEmail);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.ResendVerifyEmail);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.Refresh);
 
     //user topic
-    this.kafkaClient.subscribeToResponseOf('user.get-all');
-    this.kafkaClient.subscribeToResponseOf('user.unverify');
-    this.kafkaClient.subscribeToResponseOf('user.update-username');
-    this.kafkaClient.subscribeToResponseOf('user.update-picture');
-    this.kafkaClient.subscribeToResponseOf('user.get');
-    this.kafkaClient.subscribeToResponseOf('user.update-profile');
-    this.kafkaClient.subscribeToResponseOf('user.onboarding');
+    this.kafkaClient.subscribeToResponseOf(UserTopics.GetAll);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.Unverify);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.UpdateUsername);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.UpdatePicture);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.Get);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.UpdateProfile);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.Onboarding);
 
     //place topic
-    this.kafkaClient.subscribeToResponseOf('place.get-by-id');
-    this.kafkaClient.subscribeToResponseOf('place.near-me');
-    this.kafkaClient.subscribeToResponseOf('place.search');
-    this.kafkaClient.subscribeToResponseOf('recommendation.trending');
-    this.kafkaClient.subscribeToResponseOf('recommendation.for-you');
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetById);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.NearMe);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Search);
+    this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
+    this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);
 
     //favorite topic
-    this.kafkaClient.subscribeToResponseOf('favorite.add');
-    this.kafkaClient.subscribeToResponseOf('favorite.remove');
-    this.kafkaClient.subscribeToResponseOf('favorite.get-list');
-    this.kafkaClient.subscribeToResponseOf('favorite.check');
+    this.kafkaClient.subscribeToResponseOf(FavoriteTopics.Add);
+    this.kafkaClient.subscribeToResponseOf(FavoriteTopics.Remove);
+    this.kafkaClient.subscribeToResponseOf(FavoriteTopics.GetList);
+    this.kafkaClient.subscribeToResponseOf(FavoriteTopics.Check);
 
     //category topic
-    this.kafkaClient.subscribeToResponseOf('category.get-list-onboarding');
+    this.kafkaClient.subscribeToResponseOf(CategoryTopics.GetListOnboarding);
 
     //friend topic
-    this.kafkaClient.subscribeToResponseOf('friend.send-request');
-    this.kafkaClient.subscribeToResponseOf('friend.accept-request');
-    this.kafkaClient.subscribeToResponseOf('friend.reject-request');
-    this.kafkaClient.subscribeToResponseOf('friend.cancel-request');
-    this.kafkaClient.subscribeToResponseOf('friend.remove-friend');
-    this.kafkaClient.subscribeToResponseOf('friend.get-friends');
-    this.kafkaClient.subscribeToResponseOf('friend.get-pending-requests');
-    this.kafkaClient.subscribeToResponseOf('friend.get-sent-requests');
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.SendRequest);
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.AcceptRequest);
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.RejectRequest);
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.CancelRequest);
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.RemoveFriend);
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.GetFriends);
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.GetPendingRequests);
+    this.kafkaClient.subscribeToResponseOf(FriendTopics.GetSentRequests);
 
     // attribute topic
-    this.kafkaClient.subscribeToResponseOf('attribute.create');
+    this.kafkaClient.subscribeToResponseOf(AttributeTopics.Create);
 
     // review topic
-    this.kafkaClient.subscribeToResponseOf('review.create');
-    this.kafkaClient.subscribeToResponseOf('review.get_by_place_id');
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetByPlaceId);
 
     //group session topic
-    this.kafkaClient.subscribeToResponseOf('group-session.create');
-    this.kafkaClient.subscribeToResponseOf('group-session.join');
-    this.kafkaClient.subscribeToResponseOf('group-session.invite-friend');
-    this.kafkaClient.subscribeToResponseOf('group-session.close');
-    this.kafkaClient.subscribeToResponseOf('group-session.cast-vote');
-    this.kafkaClient.subscribeToResponseOf(
-      'group-session.finalize-member-vote',
-    );
-    this.kafkaClient.subscribeToResponseOf(
-      'group-session.finalize-session-vote',
-    );
-    this.kafkaClient.subscribeToResponseOf('group-session.get-votes');
-    this.kafkaClient.subscribeToResponseOf('group-session.get-session');
-    this.kafkaClient.subscribeToResponseOf('group-session.get-all');
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Join);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.InviteFriend);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Close);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.CastVote);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.FinalizeMemberVote);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.FinalizeSessionVote);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetVotes);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetSession);
 
     //search topic
-    this.kafkaClient.subscribeToResponseOf('search.trending');
+    this.kafkaClient.subscribeToResponseOf(SearchTopics.Trending);
 
     //setting topics
-    this.kafkaClient.subscribeToResponseOf('setting.get');
-    this.kafkaClient.subscribeToResponseOf('setting.update');
+    this.kafkaClient.subscribeToResponseOf(SettingTopics.Get);
+    this.kafkaClient.subscribeToResponseOf(SettingTopics.Update);
 
     await this.kafkaClient.connect();
   }
 
   getClient(): ClientKafka {
     return this.kafkaClient;
+  }
+
+  sendWithTimeout(topic: string, data: unknown, timeoutMs: number = KAFKA_TIMEOUT_MS) {
+    return firstValueFrom(
+      this.kafkaClient.send(topic, data).pipe(timeout(timeoutMs)),
+    );
   }
 }

@@ -1,3 +1,5 @@
+import json
+
 from aiokafka import AIOKafkaProducer
 from app.kafka.config import KafkaConfig
 from app.kafka.client import get_kafka_producer
@@ -27,6 +29,22 @@ class KafkaProducer:
         return await self._producer.send(
             topic, 
             value=payload,  
+            headers=[("kafka_correlationId", kafka_correlationId.encode("utf-8"))]
+        )
+
+    async def send_error_response(
+        self,
+        topic: str,
+        kafka_correlationId: str,
+        code: str,
+        message: str,
+    ):
+        """Send a standardized error response compatible with NestJS microservices."""
+        await self._ensure_producer()
+        payload = json.dumps({"err": {"code": code, "message": message}, "response": None})
+        return await self._producer.send(
+            topic,
+            value=payload,
             headers=[("kafka_correlationId", kafka_correlationId.encode("utf-8"))]
         )
     

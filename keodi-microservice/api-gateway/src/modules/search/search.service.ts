@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { SearchTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class SearchService {
@@ -21,9 +21,9 @@ export class SearchService {
         const trendingSearches: {
             extractedTerm: string;
             score: number
-        }[] = await firstValueFrom(this.kafkaService.getClient().send('search.trending', {}));
+        }[] = await this.kafkaService.sendWithTimeout(SearchTopics.Trending, {});
 
-        this.kafkaService.getClient().emit('search.update-trending-for-redis', { trendingSearches });
+        this.kafkaService.getClient().emit(SearchTopics.UpdateTrendingForRedis, { trendingSearches });
 
         return trendingSearches
             .sort((a, b) => b.score - a.score)

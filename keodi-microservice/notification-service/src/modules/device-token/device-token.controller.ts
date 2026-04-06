@@ -1,20 +1,20 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { DevicePlatform } from '@prisma/client';
-import { NotificationTopics } from 'src/shared/constants/notification.constant';
 import { DeviceTokenService } from './device-token.service';
+import { DeviceTokenTopics } from 'src/shared/constants/topic.contant';
 
 @Controller()
 export class DeviceTokenController {
   constructor(private readonly service: DeviceTokenService) {}
 
-  @MessagePattern(NotificationTopics.GetActiveTokens)
+  @MessagePattern(DeviceTokenTopics.GetActiveTokens)
   async getActive(@Payload() payload: { userId: string }) {
     const tokens = await this.service.getActiveTokens(payload.userId);
     return { userId: payload.userId, tokens };
   }
 
-  @EventPattern(NotificationTopics.UpsertToken)
+  @EventPattern(DeviceTokenTopics.UpsertToken)
   async upsert(
     @Payload()
     payload: {
@@ -28,7 +28,7 @@ export class DeviceTokenController {
     return this.service.upsertToken(payload);
   }
 
-  @EventPattern(NotificationTopics.DeactivateToken)
+  @EventPattern(DeviceTokenTopics.DeactivateToken)
   async deactive(@Payload() payload: { token: string }) {
     return this.service.deactivateToken(payload.token);
   }

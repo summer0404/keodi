@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RecommendationService } from './recommendation.service';
 import { Cron } from '@nestjs/schedule/dist/decorators/cron.decorator';
 import { SearchService } from '../search/search.service';
 
 @Injectable()
 export class RecommendationScheduler {
+  private readonly logger = new Logger(RecommendationScheduler.name);
+
   constructor(
     private readonly recommendationService: RecommendationService,
     private readonly searchService: SearchService,
@@ -12,9 +14,7 @@ export class RecommendationScheduler {
 
   @Cron('*/5 * * * *')
   async updateTrendingForRedis() {
-    console.log(
-      'Running recommendation scheduler to update trending data in Redis...',
-    );
+    this.logger.log('Running recommendation scheduler to update trending data in Redis...');
     const trendingSearches = await this.searchService.getTrending();
     await this.searchService.updateTrendingForRedis(trendingSearches);
 
@@ -30,8 +30,8 @@ export class RecommendationScheduler {
   // @Cron('*/1 * * * *') // For testing, run every minute
   @Cron('0 3 * * 0', { disabled: true })
   async trainRankingModel() {
-    console.log('Running recommendation scheduler to train ranking model...');
-    return this.recommendationService.trainRankingModel();
+    this.logger.log('Running recommendation scheduler to train ranking model...');
+    return this.recommendationService.trainRankingModel()
   }
 }
 

@@ -8,10 +8,10 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import * as jwt from 'jsonwebtoken';
-import { firstValueFrom, timeout } from 'rxjs';
 import { Server, Socket } from 'socket.io';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { GroupSessionTopics, SettingTopics } from 'src/shared/constants/topic.constant';
 
 @WebSocketGateway({ namespace: '/notifications', cors: { origin: '*' } })
 export class NotificationGateway
@@ -94,14 +94,9 @@ export class NotificationGateway
 
     // Validate membership before joining the room
     try {
-      const session = await firstValueFrom(
-        this.kafkaService
-          .getClient()
-          .send('group-session.get-session', {
-            sessionId: payload.sessionId,
-          })
-          .pipe(timeout(5000)),
-      );
+      const session = await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetSession, {
+        sessionId: payload.sessionId,
+      });
 
       const isMember = session?.members?.some((m: any) => m.userId === userId);
       if (!isMember) {
@@ -163,12 +158,7 @@ export class NotificationGateway
     if (!userId || !payload?.sessionId) return;
 
     try {
-      const settings = await firstValueFrom(
-        this.kafkaService
-          .getClient()
-          .send('setting.get', { userId })
-          .pipe(timeout(3000)),
-      );
+      const settings = await this.kafkaService.sendWithTimeout(SettingTopics.Get, { userId }, 3000);
       if (!settings?.shareLocation) return;
     } catch {
       // fail-open: if settings can't be fetched, allow location sharing

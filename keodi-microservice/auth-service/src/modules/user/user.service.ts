@@ -3,6 +3,8 @@ import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { UserTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class UserService {
@@ -34,14 +36,7 @@ export class UserService {
 
             return { message: "User unverified successfully" }
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            handleServiceErrorCatching(error);
         }
     }
 
@@ -73,15 +68,7 @@ export class UserService {
 
             return { message: "Username updated successfully" }
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            handleServiceErrorCatching(error);
         }
     }
 
@@ -101,7 +88,7 @@ export class UserService {
             const kafka = this.kafkaService.getClient();
 
             kafka.emit(
-                'user.create',
+                UserTopics.Create,
                 {
                     userId: existingUser.id,
                     firstName,
@@ -110,14 +97,7 @@ export class UserService {
                 }
             )
         } catch (error) {
-            console.error(error)
-            if (error instanceof RpcException) {
-                throw error;
-            }
-            throw new RpcException({
-                status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message ?? error
-            })
+            handleServiceErrorCatching(error);
         }
     }
 }

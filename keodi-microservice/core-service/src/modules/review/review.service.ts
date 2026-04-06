@@ -5,6 +5,7 @@ import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { PlaceService } from '../place/place.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class ReviewService {
@@ -61,7 +62,7 @@ export class ReviewService {
             });
 
             if (text) {
-                this.kafkaService.getClient().emit('intelligence.sentiment-analysis', {
+                this.kafkaService.getClient().emit(IntelligenceTopics.SentimentAnalysis, {
                     text,
                     placeId,
                     reviewId
