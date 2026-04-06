@@ -10,7 +10,11 @@ import {
 import { randomBytes } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { GroupSessionMessages } from 'src/shared/constants/group-session.constant';
+import {
+  GROUP_SESSION_DEFAULT_AUTO_CLOSE_DELAY_MINUTES,
+  GROUP_SESSION_SHARE_CODE_LENGTH,
+  GroupSessionMessages,
+} from 'src/shared/constants/group-session.constant';
 import {
   NotificationPreferredChannel,
   NotificationTopics,
@@ -21,9 +25,6 @@ import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
 
 @Injectable()
 export class GroupSessionService {
-  private static readonly SHARE_CODE_LENGTH = 6;
-  private static readonly DEFAULT_AUTO_CLOSE_DELAY_MINUTES = 10;
-
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
@@ -51,7 +52,7 @@ export class GroupSessionService {
   }
 
   private generateShareCode(
-    length: number = GroupSessionService.SHARE_CODE_LENGTH,
+    length: number = GROUP_SESSION_SHARE_CODE_LENGTH,
   ): string {
     const chars = this.configService.get<string>('SHARE_CODE_CHARS');
     if (!chars) {
@@ -76,7 +77,7 @@ export class GroupSessionService {
     const parsed = Number(raw);
 
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      return GroupSessionService.DEFAULT_AUTO_CLOSE_DELAY_MINUTES;
+      return GROUP_SESSION_DEFAULT_AUTO_CLOSE_DELAY_MINUTES;
     }
 
     return Math.floor(parsed);
