@@ -95,7 +95,7 @@ export class GroupSessionController {
     return await this.groupSessionService.getSession(data.sessionId);
   }
 
-  @MessagePattern('group-session.get-all')
+  @MessagePattern(GroupSessionTopics.GetAll)
   async getAll(@Payload() data: { userId: string }) {
     return await this.groupSessionService.getAll(data.userId);
   }

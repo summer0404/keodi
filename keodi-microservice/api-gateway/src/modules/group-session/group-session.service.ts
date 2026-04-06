@@ -58,4 +58,8 @@ export class GroupSessionService {
   async getSession(sessionId: string) {
     return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetSession, { sessionId });
   }
+
+  async getAll(userId: string) {
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetAll, { userId });
+  }
 }

@@ -24,7 +24,7 @@ export class PlaceService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
-  ) {}
+  ) { }
 
   private calculateGeoDeltas(latitude: number, radius: number) {
     const latDelta = radius / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
@@ -415,19 +415,11 @@ export class PlaceService {
             { search },
           );
         } catch (error: any) {
-          if (error?.name === 'TimeoutError') {
-            extractedIntent = {
-              keywords: search,
-              categories: [],
-              attributes: [],
-            };
-          } else {
-            throw new RpcException({
-              status: HttpStatus.BAD_GATEWAY,
-              code: 'INTELLIGENCE_EXTRACT_INTENT_FAILED',
-              message: 'Failed to get extract-user-intent response',
-            });
-          }
+          extractedIntent = {
+            keywords: search,
+            categories: [],
+            attributes: [],
+          };
         }
 
         const keywordPattern = extractedIntent.keywords

@@ -89,6 +89,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.FinalizeSessionVote);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetVotes);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetSession);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetAll);
 
     //search topic
     this.kafkaClient.subscribeToResponseOf(SearchTopics.Trending);

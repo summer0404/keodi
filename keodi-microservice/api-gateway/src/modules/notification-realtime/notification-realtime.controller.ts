@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { NotificationTopics } from 'src/shared/constants/notification-topic.constant';
 import { NotificationGateway } from './notification.gateway';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
 
 @Controller()
 export class NotificationRealtimeController {

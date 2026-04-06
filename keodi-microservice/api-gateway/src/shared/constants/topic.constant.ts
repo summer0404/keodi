@@ -67,6 +67,7 @@ export const GroupSessionTopics = {
     FinalizeSessionVote: 'group-session.finalize-session-vote',
     GetVotes: 'group-session.get-votes',
     GetSession: 'group-session.get-session',
+    GetAll: 'group-session.get-all',
 } as const;
 
 export const SearchTopics = {
