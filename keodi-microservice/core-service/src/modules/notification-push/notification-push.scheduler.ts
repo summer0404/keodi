@@ -6,12 +6,9 @@ import { RecommendationService } from 'src/modules/recommendation/recommendation
 import { SettingService } from 'src/modules/setting/setting.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import {
-  NotificationPreferredChannel,
-  NotificationTopics,
-  NotificationType,
-} from 'src/shared/constants/notification-topic.constant';
 import { getSearchRadiusKm } from 'src/shared/constants/setting.constant';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
+import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 
 interface UserLocation {

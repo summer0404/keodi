@@ -1,22 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { FcmService } from 'src/providers/fcm/fcm.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import {
-  NotificationPreferredChannel,
-  NotificationStatus,
-  NotificationType,
-} from 'src/shared/constants/notification.constant';
+import { NOTIFICATION_SETTING_MAP } from 'src/shared/constants/notification.constant';
 import { NotificationHelper } from './notification.helper';
 import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
 import { DeviceTokenTopics, NotificationTopics, SettingTopics } from 'src/shared/constants/topic.contant';
-
-const NOTIFICATION_SETTING_MAP: Partial<Record<NotificationType, string>> = {
-  [NotificationType.GROUP_INVITE]: 'notifyGroupInvites',
-  [NotificationType.GROUP_VOTE_FINALIZED]: 'notifyVotingResults',
-  [NotificationType.GROUP_VOTE_REMINDER]: 'notifyVotingResults',
-  [NotificationType.NEARBY_PLACE]: 'notifyNearbyPlaces',
-  [NotificationType.RECOMMENDATION]: 'notifyRecommendations',
-};
+import { NotificationPreferredChannel, NotificationStatus } from 'src/shared/enums/notification.enum';
 
 @Injectable()
 export class NotificationDispatcherService {

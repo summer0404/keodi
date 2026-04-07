@@ -1,11 +1,9 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ClientKafka, RpcException } from '@nestjs/microservices';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
-import { firstValueFrom, timeout } from 'rxjs';
 import { PrismaService } from 'src/database/prisma.service';
 import { GeoConstants } from 'src/shared/constants/place.constant';
 import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
-import { SearchMode } from 'src/shared/enums/search.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import {
@@ -343,7 +341,6 @@ export class PlaceService {
   async search(searchDto: SearchDto): Promise<PlacePaginatedResponse> {
     const {
       search,
-      mode,
       userId,
       latitude,
       longitude,
@@ -364,120 +361,79 @@ export class PlaceService {
     );
 
     try {
-      if (mode === SearchMode.KEYWORD) {
-        const searchPattern = `%${search}%`;
 
-        const [rawPlaces, total] = await Promise.all([
-          this.queryPlacesInRadiusWithDistance(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            orderByClause,
-            limit,
-            offset,
-            searchPattern,
-          ),
-          this.countPlacesInRadius(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            searchPattern,
-          ),
-        ]);
+      let extractedIntent: {
+        keywords?: string;
+        categories?: string[];
+        attributes?: string[];
+      };
 
-        const places = await this.enrichPlacesWithFavoriteAndImage(
-          rawPlaces,
-          userId,
+      try {
+        extractedIntent = await this.kafkaService.sendWithTimeout(
+          IntelligenceTopics.ExtractUserIntent,
+          { search },
         );
-        const totalPages = Math.ceil(total / limit);
-
-        return {
-          places,
-          total,
-          page,
-          totalPages,
-          limit,
-        };
-      } else if (mode === SearchMode.CONTEXTUAL) {
-        let extractedIntent: {
-          keywords?: string;
-          categories?: string[];
-          attributes?: string[];
-        };
-
-        try {
-          extractedIntent = await this.kafkaService.sendWithTimeout(
-            IntelligenceTopics.ExtractUserIntent,
-            { search },
-          );
-        } catch (error: any) {
-          extractedIntent = {
-            keywords: search,
-            categories: [],
-            attributes: [],
-          };
-        }
-
-        const keywordPattern = extractedIntent.keywords
-          ? `%${extractedIntent.keywords}%`
-          : undefined;
-
-        if (keywordPattern) {
-          this.kafkaService.getClient().emit(SearchTopics.Create, {
-            userId,
-            extractedTerm: extractedIntent.keywords,
-          });
-        }
-        // Ưu tiên keyword hơn là categories
-        const categoriesToUse = extractedIntent.keywords
-          ? undefined
-          : extractedIntent.categories;
-
-        const [rawPlaces, total] = await Promise.all([
-          this.queryPlacesInRadiusWithDistance(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            orderByClause,
-            limit,
-            offset,
-            keywordPattern,
-            categoriesToUse,
-            extractedIntent.attributes,
-          ),
-          this.countPlacesInRadius(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            keywordPattern,
-            categoriesToUse,
-          ),
-        ]);
-
-        const places = await this.enrichPlacesWithFavoriteAndImage(
-          rawPlaces,
-          userId,
-        );
-        const totalPages = Math.ceil(total / limit);
-
-        return {
-          places,
-          total,
-          page,
-          totalPages,
-          limit,
+      } catch (error: any) {
+        extractedIntent = {
+          keywords: search,
+          categories: [],
+          attributes: [],
         };
       }
 
-      return { places: [], total: 0, page, totalPages: 0, limit };
+      const keywordPattern = extractedIntent.keywords
+        ? `%${extractedIntent.keywords}%`
+        : undefined;
+
+      if (keywordPattern) {
+        this.kafkaService.getClient().emit(SearchTopics.Create, {
+          userId,
+          extractedTerm: extractedIntent.keywords,
+        });
+      }
+      // Ưu tiên keyword hơn là categories
+      const categoriesToUse = extractedIntent.keywords
+        ? undefined
+        : extractedIntent.categories;
+
+      const [rawPlaces, total] = await Promise.all([
+        this.queryPlacesInRadiusWithDistance(
+          latitude,
+          longitude,
+          latDelta,
+          longDelta,
+          radius,
+          orderByClause,
+          limit,
+          offset,
+          keywordPattern,
+          categoriesToUse,
+          extractedIntent.attributes,
+        ),
+        this.countPlacesInRadius(
+          latitude,
+          longitude,
+          latDelta,
+          longDelta,
+          radius,
+          keywordPattern,
+          categoriesToUse,
+        ),
+      ]);
+
+      const places = await this.enrichPlacesWithFavoriteAndImage(
+        rawPlaces,
+        userId,
+      );
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        places,
+        total,
+        page,
+        totalPages,
+        limit,
+      };
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -498,7 +454,7 @@ export class PlaceService {
               openTime: true,
               closeTime: true,
             },
-            orderBy: { dayOfWeek: 'asc' },
+            orderBy: { dayOfWeek: SortOrder.ASC },
           },
           placeCategories: {
             select: {

@@ -63,17 +63,6 @@ export class SearchDto extends NearMeQueryDto {
   })
   @IsNotEmpty()
   search: string;
-
-  @ApiProperty({
-    description: 'Search mode',
-    enum: SearchMode,
-    example: SearchMode.KEYWORD,
-    required: false,
-    default: SearchMode.KEYWORD,
-  })
-  @IsOptional()
-  @IsEnum(SearchMode)
-  mode?: SearchMode = SearchMode.KEYWORD;
 }
 
 export class OpeningHourDto {

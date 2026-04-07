@@ -1,12 +1,3 @@
-export const NotificationTopics = {
-  Dispatch: 'notification.dispatch',
-  PersistInbox: 'notification.persist-inbox',
-  RealtimePush: 'notification.realtime.push',
-  GetActiveTokens: 'device-token.get-active',
-  UpsertToken: 'device-token.upsert',
-  DeactivateToken: 'device-token.deactivate',
-} as const;
-
 export enum NotificationType {
   GROUP_INVITE = 'GROUP_INVITE',
   GROUP_VOTE_REMINDER = 'GROUP_VOTE_REMINDER',
@@ -22,4 +13,10 @@ export enum NotificationPreferredChannel {
   WEBSOCKET = 'WEBSOCKET',
   FCM = 'FCM',
   BOTH = 'BOTH',
+}
+
+export enum NotificationStatus {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
 }

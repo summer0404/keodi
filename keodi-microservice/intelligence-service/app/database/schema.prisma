@@ -6,10 +6,12 @@
 
 generator client {
   provider = "prisma-client-py"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
+  extensions = [vector]
   url      = env("DATABASE_URL")
 }
 
@@ -20,7 +22,7 @@ enum PlaceImageType {
 }
 
 enum UserImageType {
-  PICTURE 
+  PICTURE
   GALLERY
 }
 
@@ -123,13 +125,15 @@ model Place {
   featureImageUrl String? @map("feature_image_url")
   ownerId         String? @map("owner_id")
 
-  latitude    Float
-  longitude   Float
-  fullAddress String? @map("full_address")
-  ward        String?
-  street      String?
-  city        String?
-  countryCode String? @map("country_code")
+  latitude       Float
+  longitude      Float
+  fullAddress    String?                     @map("full_address")
+  ward           String?
+  street         String?
+  city           String?
+  countryCode    String?                     @map("country_code")
+  embeddingTitle Unsupported("vector(384)")? @map("embedding_title")
+  embeddingFull  Unsupported("vector(384)")? @map("embedding_full")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -175,7 +179,7 @@ model Category {
   id           String                      @id @default(cuid())
   name         String                      @unique
   isSelectable Boolean                     @default(false) @map("is_selectable")
-  embedding    Unsupported("vector(384)")? 
+  embedding    Unsupported("vector(384)")?
 
   placeCategories PlaceCategory[]
   userCategories  UserCategory[]
@@ -345,6 +349,7 @@ model GroupSession {
   status         GroupSessionStatus @default(ACTIVE)
   voteStatus     VoteStatus         @default(OPEN) @map("vote_status")
   finalizedAt    DateTime?          @map("finalized_at")
+  closeAt        DateTime?          @map("close_at")
   winningPlaceId String?            @map("winning_place_id")
 
   creator      User   @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
@@ -353,6 +358,7 @@ model GroupSession {
   members GroupSessionMember[]
   votes   SessionVote[]
 
+  @@index([status, voteStatus, closeAt], map: "group_sessions_status_vote_status_close_at_idx")
   @@map("group_sessions")
 }
 

@@ -1,22 +1,9 @@
-export enum NotificationType {
-  GROUP_INVITE = 'GROUP_INVITE',
-  GROUP_VOTE_REMINDER = 'GROUP_VOTE_REMINDER',
-  GROUP_VOTE_FINALIZED = 'GROUP_VOTE_FINALIZED',
-  FRIEND_REQUEST = 'FRIEND_REQUEST',
-  FRIEND_ACCEPTED = 'FRIEND_ACCEPTED',
-  SYSTEM = 'SYSTEM',
-  NEARBY_PLACE = 'NEARBY_PLACE',
-  RECOMMENDATION = 'RECOMMENDATION',
-}
+import { NotificationType } from "../enums/notification.enum";
 
-export enum NotificationPreferredChannel {
-  WEBSOCKET = 'WEBSOCKET',
-  FCM = 'FCM',
-  BOTH = 'BOTH',
-}
-
-export enum NotificationStatus {
-  PENDING = 'PENDING',
-  SENT = 'SENT',
-  FAILED = 'FAILED',
-}
+export const NOTIFICATION_SETTING_MAP: Partial<Record<NotificationType, string>> = {
+  [NotificationType.GROUP_INVITE]: 'notifyGroupInvites',
+  [NotificationType.GROUP_VOTE_FINALIZED]: 'notifyVotingResults',
+  [NotificationType.GROUP_VOTE_REMINDER]: 'notifyVotingResults',
+  [NotificationType.NEARBY_PLACE]: 'notifyNearbyPlaces',
+  [NotificationType.RECOMMENDATION]: 'notifyRecommendations',
+};
