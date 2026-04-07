@@ -175,10 +175,9 @@ model Attribute {
 }
 
 model Category {
-  id           String                      @id @default(cuid())
-  name         String                      @unique
-  isSelectable Boolean                     @default(false) @map("is_selectable")
-  embedding    Unsupported("vector(384)")?
+  id           String  @id @default(cuid())
+  name         String  @unique
+  isSelectable Boolean @default(false) @map("is_selectable")
 
   placeCategories PlaceCategory[]
   userCategories  UserCategory[]
@@ -357,7 +356,6 @@ model GroupSession {
   members GroupSessionMember[]
   votes   SessionVote[]
 
-  @@index([status, voteStatus, closeAt], map: "group_sessions_status_vote_status_close_at_idx")
   @@map("group_sessions")
 }
 
@@ -369,9 +367,9 @@ enum GroupSessionStatus {
 model GroupSessionMember {
   id        String   @id @default(cuid())
   sessionId String   @map("session_id")
-  userId    String?  @map("user_id") //null for guest
+  userId    String?  @map("user_id") 
   guestId   String?  @map("guest_id")
-  nickname  String?  @db.VarChar(50) //nickname for guest
+  nickname  String?  @db.VarChar(50) 
   joinedAt  DateTime @default(now()) @map("joined_at")
 
   session GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
@@ -387,7 +385,8 @@ model GroupSessionMember {
 model Search {
   id            String   @id @default(cuid())
   userId        String?  @map("user_id")
-  extractedTerm String   @map("extracted_term")
+  rawQuery      String   @map("raw_query")
+  extractedTerm String?   @map("extracted_term")
   createdAt     DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)

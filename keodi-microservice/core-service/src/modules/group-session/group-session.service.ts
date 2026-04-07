@@ -15,11 +15,8 @@ import {
   GROUP_SESSION_SHARE_CODE_LENGTH,
   GroupSessionMessages,
 } from 'src/shared/constants/group-session.constant';
-import {
-  NotificationPreferredChannel,
-  NotificationTopics,
-  NotificationType,
-} from 'src/shared/constants/notification-topic.constant';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
+import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
 

@@ -1,6 +1,5 @@
 from typing import Optional, Dict
 import json
-import asyncio
 from app.config.settings import get_settings
 from app.prompts.prompt import Prompts
 from app.services.llm.base_provider import BaseLLMProvider
@@ -8,7 +7,6 @@ from app.services.llm.groq_provider import GroqProvider
 from app.services.llm.modal_provider import ModalProvider
 from app.services.embedding.embedding_service import get_embedding_service
 from app.repositories.attribute_repository import AttributeRepository
-from app.repositories.category_repository import CategoryRepository
 
 settings = get_settings()
 
@@ -21,13 +19,11 @@ class LLMService:
 
         self.embedding_service = get_embedding_service()
         self.attribute_repository: Optional[AttributeRepository] = None
-        self.category_repository: Optional[CategoryRepository] = None
 
         self._init_providers()
 
     async def start(self):
         self.attribute_repository = await AttributeRepository.start()
-        self.category_repository = await CategoryRepository.start()
         return self
 
     def _init_providers(self):
@@ -47,28 +43,15 @@ class LLMService:
         search: str,
         **kwargs
     ) -> str:
-        # Determine which provider to use
         provider = self.providers.get(self.mode)
 
         if not provider:
             raise ValueError(f"Provider not available: {self.mode}")
 
-        # Generate with retry logic
         max_retries = settings.llm_max_retries
         last_error = None
 
-        attributes = await self.attribute_repository.get_all_attributes()
-        attributes_list = [attr.name for attr in attributes] if attributes else []
-
-        search_vector = await asyncio.to_thread(self.embedding_service.get_embedding, search)
-        categories = await self.category_repository.get_top_k_attributes(search_vector)
-        categories_list = [cat.name if hasattr(cat, "name") else cat.get("name") for cat in categories] if categories else []
-
-        prompt = self.prompts.EXTRACT_USER_INTENT.format(
-            search=search,
-            attributes=json.dumps(attributes_list),
-            categories=json.dumps(categories_list)
-        )
+        prompt = self.prompts.EXTRACT_USER_INTENT.format(search=search)
         
 
         for attempt in range(max_retries):

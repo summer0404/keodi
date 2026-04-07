@@ -15,6 +15,7 @@ import {
 import { ImageService } from '../image/image.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
+import { VECTOR_SIMILARITY_THRESHOLD } from 'src/shared/constants/search.constant';
 
 @Injectable()
 export class PlaceService {
@@ -61,57 +62,17 @@ export class PlaceService {
     return { offset, orderByClause };
   }
 
-  private buildSearchCondition(searchPattern?: string) {
-    if (!searchPattern) {
+  private buildVectorSearchCondition(embedding?: number[]) {
+    if (!embedding || embedding.length === 0) {
       return Prisma.empty;
     }
+    const vectorStr = `[${embedding.join(',')}]`;
     return Prisma.sql`
+            AND p.embedding_title IS NOT NULL
             AND (
-                LOWER(p.name) LIKE LOWER(${searchPattern})
-                OR LOWER(p.full_address) LIKE LOWER(${searchPattern})
-                OR LOWER(p.street) LIKE LOWER(${searchPattern})
-                OR LOWER(p.ward) LIKE LOWER(${searchPattern})
-                OR LOWER(p.city) LIKE LOWER(${searchPattern})
-            )
-        `;
-  }
-
-  private buildCategoryCondition(categories?: string[]) {
-    if (!categories || categories.length === 0) {
-      return Prisma.empty;
-    }
-
-    const categoryConditions = categories.map(
-      (category) => Prisma.sql`UPPER(c.name) = UPPER(${category})`,
-    );
-
-    return Prisma.sql`
-            AND p.id IN (
-                SELECT pc.place_id
-                FROM place_categories pc
-                JOIN categories c ON pc.category_id = c.id
-                WHERE ${Prisma.join(categoryConditions, ' OR ')}
-            )
-        `;
-  }
-
-  private buildHasAttributeSelect(attributes?: string[]) {
-    if (!attributes || attributes.length === 0) {
-      return Prisma.sql`0 AS has_attributes`;
-    }
-
-    const attributeConditions = attributes.map(
-      (attr) => Prisma.sql`a.name = ${attr}`,
-    );
-
-    return Prisma.sql`
-            CASE WHEN EXISTS (
-                SELECT 1
-                FROM place_attributes pa
-                JOIN attributes a ON pa.attribute_id = a.id
-                WHERE pa.place_id = p.id
-                    AND (${Prisma.join(attributeConditions, ' OR ')})
-            ) THEN 1 ELSE 0 END AS has_attributes
+                0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
+                + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
+            ) >= ${VECTOR_SIMILARITY_THRESHOLD}
         `;
   }
 
@@ -181,18 +142,9 @@ export class PlaceService {
     orderByClause: string,
     limit: number,
     offset: number,
-    searchPattern?: string,
-    categories?: string[],
-    attributes?: string[],
+    embedding?: number[],
   ): Promise<(RawPlace & { distance: number })[]> {
-    const searchCondition = this.buildSearchCondition(searchPattern);
-    const categoryCondition = this.buildCategoryCondition(categories);
-    const hasAttributeSelect = this.buildHasAttributeSelect(attributes);
-
-    const finalOrderBy =
-      attributes && attributes.length > 0
-        ? Prisma.raw('ORDER BY has_attributes DESC, distance ASC')
-        : Prisma.raw(orderByClause);
+    const vectorCondition = this.buildVectorSearchCondition(embedding);
 
     return await this.prismaService.$queryRaw<
       (RawPlace & { distance: number })[]
@@ -226,16 +178,14 @@ export class PlaceService {
                             + sin(radians(${latitude})) 
                             * sin(radians(p.latitude))
                         )))
-                    ) AS distance,
-                    ${hasAttributeSelect}
+                    ) AS distance
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
-                    ${searchCondition}
-                    ${categoryCondition}
+                    ${vectorCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
-            ${finalOrderBy}
+            ${Prisma.raw(orderByClause)}
             LIMIT ${limit}
             OFFSET ${offset}
         `;
@@ -247,11 +197,9 @@ export class PlaceService {
     latDelta: number,
     longDelta: number,
     radius: number,
-    searchPattern?: string,
-    categories?: string[],
+    embedding?: number[],
   ): Promise<number> {
-    const searchCondition = this.buildSearchCondition(searchPattern);
-    const categoryCondition = this.buildCategoryCondition(categories);
+    const vectorCondition = this.buildVectorSearchCondition(embedding);
 
     const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(*) as count
@@ -269,8 +217,7 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
-                    ${searchCondition}
-                    ${categoryCondition}
+                    ${vectorCondition}
             ) as places_with_distance
             WHERE distance <= ${radius}
         `;
@@ -361,12 +308,10 @@ export class PlaceService {
     );
 
     try {
-
       let extractedIntent: {
         keywords?: string;
-        categories?: string[];
-        attributes?: string[];
-      };
+        embedding?: number[];
+      } = {};
 
       try {
         extractedIntent = await this.kafkaService.sendWithTimeout(
@@ -374,27 +319,19 @@ export class PlaceService {
           { search },
         );
       } catch (error: any) {
-        extractedIntent = {
-          keywords: search,
-          categories: [],
-          attributes: [],
-        };
+        if (error?.message?.includes('EMBEDDING_FAILED')) {
+          throw new RpcException({
+            status: HttpStatus.SERVICE_UNAVAILABLE,
+            message: 'Embedding service is unavailable',
+          });
+        }
       }
 
-      const keywordPattern = extractedIntent.keywords
-        ? `%${extractedIntent.keywords}%`
-        : undefined;
-
-      if (keywordPattern) {
-        this.kafkaService.getClient().emit(SearchTopics.Create, {
-          userId,
-          extractedTerm: extractedIntent.keywords,
-        });
-      }
-      // Ưu tiên keyword hơn là categories
-      const categoriesToUse = extractedIntent.keywords
-        ? undefined
-        : extractedIntent.categories;
+      this.kafkaService.getClient().emit(SearchTopics.Create, {
+        userId,
+        rawQuery: search,
+        extractedTerm: extractedIntent.keywords,
+      });
 
       const [rawPlaces, total] = await Promise.all([
         this.queryPlacesInRadiusWithDistance(
@@ -406,9 +343,7 @@ export class PlaceService {
           orderByClause,
           limit,
           offset,
-          keywordPattern,
-          categoriesToUse,
-          extractedIntent.attributes,
+          extractedIntent.embedding,
         ),
         this.countPlacesInRadius(
           latitude,
@@ -416,8 +351,7 @@ export class PlaceService {
           latDelta,
           longDelta,
           radius,
-          keywordPattern,
-          categoriesToUse,
+          extractedIntent.embedding,
         ),
       ]);
 
