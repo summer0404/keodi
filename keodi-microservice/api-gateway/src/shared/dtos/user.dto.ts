@@ -1,18 +1,19 @@
 import { ApiProperty, PickType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-    IsDate,
-    IsEmail,
-    IsNotEmpty,
-    IsNumber,
-    IsOptional,
-    IsString,
-    Matches,
-    Max,
-    MaxLength,
-    Min,
-    MinLength,
+  IsDate,
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
 } from 'class-validator';
+import { ProfileVisibility } from '../enums/setting.enum';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: 'Username is required' })
@@ -120,4 +121,64 @@ export class UpdateLocationDto {
   @Max(180)
   @ApiProperty({ example: 106.67838, description: 'User longitude' })
   longitude: number;
+}
+
+export class UserBasicResponseDto {
+  @ApiProperty({ example: 'clq2k3s9f000001l6gms61932' })
+  id: string;
+
+  @ApiProperty({ example: 'John', nullable: true })
+  firstName: string | null;
+
+  @ApiProperty({ example: 'Doe', nullable: true })
+  lastName: string | null;
+
+  @ApiProperty({ example: '+1234567890', nullable: true })
+  phoneNumber: string | null;
+
+  @ApiProperty({ example: 'https://example.com/avatar.png', nullable: true })
+  pictureUrl: string | null;
+}
+
+export class OtherUserProfileResponseDto {
+  @ApiProperty({ example: 'clq2k3s9f000001l6gms61932' })
+  id: string;
+
+  @ApiProperty({ example: 'Jane', nullable: true })
+  firstName: string | null;
+
+  @ApiProperty({ example: 'Doe', nullable: true })
+  lastName: string | null;
+
+  @ApiProperty({ example: 'https://example.com/image.png', nullable: true })
+  pictureUrl: string | null;
+
+  @ApiProperty({ example: '+1234567890', nullable: true })
+  phoneNumber: string | null;
+
+  @ApiProperty({ example: '1990-01-01T00:00:00.000Z', nullable: true })
+  dateOfBirth: Date | null;
+
+  @ApiProperty({
+    enum: ProfileVisibility,
+    example: ProfileVisibility.FRIENDS_ONLY,
+  })
+  profileVisibility: ProfileVisibility;
+
+  @ApiProperty({ example: false })
+  isProfileVisible: boolean;
+
+  @ApiProperty({ example: false })
+  isFriend: boolean;
+
+  @ApiProperty({ example: true })
+  hasPendingRequest: boolean;
+
+  @ApiProperty({ example: false })
+  canSendFriendRequest: boolean;
+}
+
+export class UserMessageResponseDto {
+  @ApiProperty({ example: 'Profile updated successfully' })
+  message: string;
 }

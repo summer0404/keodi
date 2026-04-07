@@ -11,13 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-  ApiOperation,
-} from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentAccessToken } from 'src/common/decorators/current-access-token.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
@@ -29,6 +23,16 @@ import {
   UpdateUserProfileDto,
 } from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
+import {
+  ApiGetAllUsers,
+  ApiGetOtherProfile,
+  ApiOnBoarding,
+  ApiUnverifyUser,
+  ApiUpdateLocation,
+  ApiUpdatePicture,
+  ApiUpdateProfile,
+  ApiUpdateUsername,
+} from './user.swagger';
 
 @Controller('users')
 export class UserController {
@@ -36,22 +40,14 @@ export class UserController {
 
   @SkipAuth() //Used for testing purposes - need to authorization this endpoint to admin later
   @Get('all')
-  @ApiOperation({ description: 'Get all users (for testing purposes)' })
-  @ApiOkResponse({ description: 'Return list of all users with their IDs' })
+  @ApiGetAllUsers()
   async getAll() {
     return await this.userService.getAll();
   }
 
   @ApiBearerAuth('access-token')
   @Get(':userId/profile')
-  @ApiOperation({
-    description:
-      'Get another user profile with privacy filtering and friendship status',
-  })
-  @ApiOkResponse({
-    description:
-      'Return profile data based on profile visibility settings and relationship',
-  })
+  @ApiGetOtherProfile()
   async getOtherProfile(
     @CurrentUser() user: CurrentUserDto,
     @Param('userId') userId: string,
@@ -61,22 +57,14 @@ export class UserController {
 
   @SkipAuth() // Skip authentication for testing purposes - remove in production
   @Patch(':userId/unverify')
-  @ApiOperation({
-    description: 'Use this API to mark user as unverified account',
-  })
-  @ApiOkResponse({
-    description: 'Return message inform that unverify user successfully',
-  })
+  @ApiUnverifyUser()
   async unverifyUser(@Param('userId') userId: string) {
     return await this.userService.unverifyUser(userId);
   }
 
   @ApiBearerAuth('access-token')
   @Patch('username')
-  @ApiOperation({ description: 'Use this API to update username of a user' })
-  @ApiOkResponse({
-    description: 'Return message inform that update username successfully',
-  })
+  @ApiUpdateUsername()
   async updateUsername(
     @CurrentAccessToken() accessToken: string,
     @CurrentUser() user: CurrentUserDto,
@@ -92,25 +80,7 @@ export class UserController {
   @ApiBearerAuth('access-token')
   @Patch('picture')
   @UseInterceptors(FileInterceptor('picture'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        picture: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  @ApiOperation({
-    description: 'Use this API to update profile picture of a user',
-  })
-  @ApiOkResponse({
-    description:
-      'Return message inform that update profile picture successfully',
-  })
+  @ApiUpdatePicture()
   async updatePicture(
     @CurrentUser() user: CurrentUserDto,
     @UploadedFile(
@@ -132,11 +102,8 @@ export class UserController {
   }
 
   @ApiBearerAuth('access-token')
-  @ApiOperation({ description: 'Use this API to update profile of a user' })
-  @ApiOkResponse({
-    description: 'Return message inform that update profile successfully',
-  })
   @Patch()
+  @ApiUpdateProfile()
   async updateProfile(
     @Body() body: UpdateUserProfileDto,
     @CurrentUser() user: CurrentUserDto,
@@ -145,13 +112,8 @@ export class UserController {
   }
 
   @ApiBearerAuth('access-token')
-  @ApiOperation({
-    description: 'Use this API to onboarding user with selected categories',
-  })
-  @ApiOkResponse({
-    description: 'Return message inform that onboarding user successfully',
-  })
   @Patch('onboarding')
+  @ApiOnBoarding()
   async onBoarding(
     @CurrentUser() user: CurrentUserDto,
     @Body() data: CategoryOnboardingDto,
@@ -160,14 +122,17 @@ export class UserController {
   }
 
   @ApiBearerAuth('access-token')
-  @ApiOperation({ description: 'Update user current location for background notifications' })
-  @ApiOkResponse({ description: 'Location updated' })
   @Patch('location')
+  @ApiUpdateLocation()
   async updateLocation(
     @CurrentUser() user: CurrentUserDto,
     @Body() body: UpdateLocationDto,
   ) {
-    await this.userService.updateLocation(user.id, body.latitude, body.longitude);
+    await this.userService.updateLocation(
+      user.id,
+      body.latitude,
+      body.longitude,
+    );
     return { message: 'LOCATION_UPDATED' };
   }
 }

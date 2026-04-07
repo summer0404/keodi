@@ -120,7 +120,7 @@ export class UserService {
       if (!targetUser) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'User not found',
+          message: 'USER_NOT_FOUND',
         });
       }
 
@@ -173,13 +173,20 @@ export class UserService {
         ? await this.imageService.getImageViewUrl(targetUser.pictureUrl)
         : null;
 
+      const visibleProfileFields = canViewFullProfile
+        ? {
+            phoneNumber: targetUser.phoneNumber,
+            dateOfBirth: targetUser.dateOfBirth,
+          }
+        : {
+            phoneNumber: null,
+            dateOfBirth: null,
+          };
+
       return {
-        id: targetUser.id,
-        firstName: targetUser.firstName,
-        lastName: targetUser.lastName,
+        ...targetUser,
         pictureUrl,
-        phoneNumber: canViewFullProfile ? targetUser.phoneNumber : null,
-        dateOfBirth: canViewFullProfile ? targetUser.dateOfBirth : null,
+        ...visibleProfileFields,
         profileVisibility: targetSetting.profileVisibility,
         isProfileVisible: canViewFullProfile,
         isFriend,

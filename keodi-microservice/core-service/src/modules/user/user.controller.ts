@@ -4,7 +4,6 @@ import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
 import { UserTopics } from 'src/shared/constants/topic.constant';
 
-
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -13,7 +12,6 @@ export class UserController {
   async create(@Payload() data: { userId: string }) {
     return await this.userService.create(data.userId);
   }
-
 
   @MessagePattern(UserTopics.UpdatePicture)
   async updatePicture(
@@ -27,10 +25,8 @@ export class UserController {
   }
 
   @MessagePattern(UserTopics.Get)
-  async getById(
-    @Payload() data: { userId: string }
-  ) {
-    return await this.userService.getById(data.userId)
+  async getById(@Payload() data: { userId: string }) {
+    return await this.userService.getById(data.userId);
   }
 
   @MessagePattern(UserTopics.GetAll)
@@ -46,16 +42,18 @@ export class UserController {
   }
 
   @MessagePattern(UserTopics.Onboarding)
-  async onBoarding(
-    @Payload() data: {
-      userId: string,
-      categoryIds: string[]
-    }
+  async onBoarding(@Payload() data: { userId: string; categoryIds: string[] }) {
+    return await this.userService.onBoarding(data.userId, data.categoryIds);
+  }
+
+  @MessagePattern(UserTopics.GetOtherProfile)
+  async getOtherProfile(
+    @Payload() data: { viewerId: string; targetUserId: string },
   ) {
-    return await this.userService.onBoarding(
-      data.userId,
-      data.categoryIds
-    )
+    return await this.userService.getOtherProfile(
+      data.viewerId,
+      data.targetUserId,
+    );
   }
 
   @EventPattern(UserTopics.UpdateLocation)
