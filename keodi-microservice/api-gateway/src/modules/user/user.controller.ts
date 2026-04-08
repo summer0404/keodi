@@ -7,6 +7,7 @@ import {
   Param,
   ParseFilePipe,
   Patch,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { CategoryOnboardingDto } from 'src/shared/dtos/category.dto';
 import {
   CurrentUserDto,
+  SearchUsersQueryDto,
   UpdateLocationDto,
   UpdateUsernameDto,
   UpdateUserProfileDto,
@@ -27,6 +29,7 @@ import {
   ApiGetAllUsers,
   ApiGetOtherProfile,
   ApiOnBoarding,
+  ApiSearchUsers,
   ApiUnverifyUser,
   ApiUpdateLocation,
   ApiUpdatePicture,
@@ -43,6 +46,21 @@ export class UserController {
   @ApiGetAllUsers()
   async getAll() {
     return await this.userService.getAll();
+  }
+
+  @ApiBearerAuth('access-token')
+  @Get('search')
+  @ApiSearchUsers()
+  async searchUsers(
+    @CurrentUser() user: CurrentUserDto,
+    @Query() query: SearchUsersQueryDto,
+  ) {
+    return await this.userService.searchUsers(
+      user.id,
+      query.keyword,
+      query.page,
+      query.limit,
+    );
   }
 
   @ApiBearerAuth('access-token')

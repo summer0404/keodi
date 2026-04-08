@@ -2,6 +2,7 @@ export const UserTopics = {
   Create: 'user.create',
   Get: 'user.get',
   GetAll: 'user.get-all',
+  SearchOthers: 'user.search-others',
   UpdatePicture: 'user.update-picture',
   UpdateProfile: 'user.update-profile',
   UpdateLocation: 'user.update-location',

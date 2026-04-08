@@ -1,11 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { FriendRequestStatus, ProfileVisibility } from '@prisma/client';
+import { FriendRequestStatus, Prisma, ProfileVisibility } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import {
   CreateUserDto,
+  SearchOthersDto,
   SyncUsernameDto,
   UpdateUserProfileDto,
 } from 'src/shared/dtos/user.dto';
@@ -20,6 +21,80 @@ export class UserService {
     private readonly imageService: ImageService,
     private readonly redisService: RedisService,
   ) {}
+
+  async searchOthers(dto: SearchOthersDto) {
+    const { userId, keyword, limit, page } = dto;
+    try {
+      if (!keyword) return { users: [], total: 0, page, totalPages: 0, limit };
+
+      const offset = (page - 1) * limit;
+      const tokens = keyword.split(/\s+/).filter(Boolean);
+      const keywordPattern = `%${keyword}%`;
+
+      const searchTarget = Prisma.sql`
+      unaccent(lower(concat_ws(' ', u.first_name, u.last_name, u.username)))
+    `;
+
+      const tokenConditions = tokens.map((token) => {
+        return Prisma.sql`${searchTarget} LIKE unaccent(${`%${token}%`})`;
+      });
+
+      const whereClause = Prisma.sql`
+        u.id <> ${userId}
+        AND (
+          ${searchTarget} LIKE unaccent(${keywordPattern})
+          ${
+            tokenConditions.length
+              ? Prisma.sql`OR (${Prisma.join(tokenConditions, ' AND ')})`
+              : Prisma.empty
+          }
+        )
+      `;
+
+      const [countResult, rawUsers] = await Promise.all([
+        this.prismaService.$queryRaw<[{ count: bigint }]>(
+          Prisma.sql`SELECT COUNT(*) as count FROM users u WHERE ${whereClause}`,
+        ),
+        this.prismaService.$queryRaw<
+          {
+            id: string;
+            username: string | null;
+            firstName: string | null;
+            lastName: string | null;
+            pictureUrl: string | null;
+          }[]
+        >(Prisma.sql`
+          SELECT
+            u.id,
+            u.username,
+            u.first_name AS "firstName",
+            u.last_name AS "lastName",
+            u.picture_url AS "pictureUrl"
+          FROM users u
+          WHERE ${whereClause}
+          ORDER BY u.first_name ASC NULLS LAST, u.last_name ASC NULLS LAST
+          LIMIT ${limit}
+          OFFSET ${offset}
+        `),
+      ]);
+
+      const total = Number(countResult[0].count);
+      const totalPages = Math.ceil(total / limit);
+
+      const users = await Promise.all(
+        rawUsers.map(async (user) => ({
+          ...user,
+          pictureUrl: user.pictureUrl
+            ? await this.imageService.getImageViewUrl(user.pictureUrl)
+            : null,
+        })),
+      );
+
+      return { users, total, page, totalPages, limit };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
 
   async getAll() {
     try {

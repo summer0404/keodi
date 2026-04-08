@@ -1,11 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 import { UserTopics } from 'src/shared/constants/topic.constant';
+import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 
 @Injectable()
 export class UserService {
   constructor(private readonly kafkaService: KafkaService) {}
+
+  async searchUsers(
+    userId: string,
+    keyword: string,
+    page: number,
+    limit: number,
+  ) {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    if (!normalizedKeyword)
+      return { users: [], total: 0, page, totalPages: 0, limit };
+
+    return await this.kafkaService.sendWithTimeout(UserTopics.SearchOthers, {
+      userId,
+      keyword: normalizedKeyword,
+      page,
+      limit,
+    });
+  }
 
   async unverifyUser(userId: string) {
     return await this.kafkaService.sendWithTimeout(UserTopics.Unverify, {
