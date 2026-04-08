@@ -6,6 +6,7 @@ export const UserTopics = {
   UpdateProfile: 'user.update-profile',
   UpdateLocation: 'user.update-location',
   Onboarding: 'user.onboarding',
+  GetOtherProfile: 'user.get-other-profile',
 } as const;
 
 export const PlaceTopics = {

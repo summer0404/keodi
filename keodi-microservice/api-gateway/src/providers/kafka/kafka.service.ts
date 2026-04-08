@@ -33,7 +33,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ValidateOtp);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ResetPassword);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.VerifyEmail);
-    this.kafkaClient.subscribeToResponseOf(AuthTopics.ExternalResendVerifyEmail);
+    this.kafkaClient.subscribeToResponseOf(
+      AuthTopics.ExternalResendVerifyEmail,
+    );
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ResendVerifyEmail);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Refresh);
 
@@ -45,6 +47,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(UserTopics.Get);
     this.kafkaClient.subscribeToResponseOf(UserTopics.UpdateProfile);
     this.kafkaClient.subscribeToResponseOf(UserTopics.Onboarding);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.GetOtherProfile);
 
     //place topic
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetById);
@@ -85,8 +88,12 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.InviteFriend);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Close);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.CastVote);
-    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.FinalizeMemberVote);
-    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.FinalizeSessionVote);
+    this.kafkaClient.subscribeToResponseOf(
+      GroupSessionTopics.FinalizeMemberVote,
+    );
+    this.kafkaClient.subscribeToResponseOf(
+      GroupSessionTopics.FinalizeSessionVote,
+    );
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetVotes);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetSession);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetAll);
@@ -105,7 +112,11 @@ export class KafkaService implements OnModuleInit {
     return this.kafkaClient;
   }
 
-  sendWithTimeout(topic: string, data: unknown, timeoutMs: number = KAFKA_TIMEOUT_MS) {
+  sendWithTimeout(
+    topic: string,
+    data: unknown,
+    timeoutMs: number = KAFKA_TIMEOUT_MS,
+  ) {
     return firstValueFrom(
       this.kafkaClient.send(topic, data).pipe(timeout(timeoutMs)),
     );

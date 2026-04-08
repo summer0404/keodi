@@ -8,27 +8,50 @@ export class UserService {
   constructor(private readonly kafkaService: KafkaService) {}
 
   async unverifyUser(userId: string) {
-    return await this.kafkaService.sendWithTimeout(UserTopics.Unverify, { userId });
+    return await this.kafkaService.sendWithTimeout(UserTopics.Unverify, {
+      userId,
+    });
   }
 
   async updateUsername(userId: string, username: string, accessToken: string) {
-    return await this.kafkaService.sendWithTimeout(UserTopics.UpdateUsername, { userId, username, accessToken });
+    return await this.kafkaService.sendWithTimeout(UserTopics.UpdateUsername, {
+      userId,
+      username,
+      accessToken,
+    });
   }
 
   async updatePicture(userId: string, file: Buffer, type: string) {
-    return await this.kafkaService.sendWithTimeout(UserTopics.UpdatePicture, { userId, file, type });
+    return await this.kafkaService.sendWithTimeout(UserTopics.UpdatePicture, {
+      userId,
+      file,
+      type,
+    });
   }
 
   async updateProfile(userId: string, data: UpdateUserProfileDto) {
-    return await this.kafkaService.sendWithTimeout(UserTopics.UpdateProfile, { userId, data });
+    return await this.kafkaService.sendWithTimeout(UserTopics.UpdateProfile, {
+      userId,
+      data,
+    });
   }
 
   async getAll() {
     return await this.kafkaService.sendWithTimeout(UserTopics.GetAll, {});
   }
 
+  async getOtherProfile(viewerId: string, targetUserId: string) {
+    return await this.kafkaService.sendWithTimeout(UserTopics.GetOtherProfile, {
+      viewerId,
+      targetUserId,
+    });
+  }
+
   async onBoarding(userId: string, categoryIds: string[]) {
-    return await this.kafkaService.sendWithTimeout(UserTopics.Onboarding, { userId, categoryIds });
+    return await this.kafkaService.sendWithTimeout(UserTopics.Onboarding, {
+      userId,
+      categoryIds,
+    });
   }
 
   async updateLocation(userId: string, latitude: number, longitude: number) {
