@@ -143,11 +143,23 @@ export class PlaceService {
     limit: number,
     offset: number,
     embedding?: number[],
-  ): Promise<(RawPlace & { distance: number })[]> {
+  ): Promise<(RawPlace & { distance: number; similarity_score?: number })[]> {
     const vectorCondition = this.buildVectorSearchCondition(embedding);
+    const hasEmbedding = embedding && embedding.length > 0;
+    
+    const searchOrderBy = hasEmbedding 
+      ? 'ORDER BY similarity_score DESC, distance ASC' 
+      : orderByClause;
+
+    const vectorStr = hasEmbedding ? `[${embedding.join(',')}]` : null;
+    const similarityColumn = vectorStr ? Prisma.sql`,
+                    (
+                        0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
+                        + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
+                    ) AS similarity_score` : Prisma.sql`, NULL AS similarity_score`;
 
     return await this.prismaService.$queryRaw<
-      (RawPlace & { distance: number })[]
+      (RawPlace & { distance: number; similarity_score?: number })[]
     >`
             SELECT * FROM (
                 SELECT
@@ -179,13 +191,14 @@ export class PlaceService {
                             * sin(radians(p.latitude))
                         )))
                     ) AS distance
+                    ${similarityColumn}
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
                     ${vectorCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
-            ${Prisma.raw(orderByClause)}
+            ${Prisma.raw(searchOrderBy)}
             LIMIT ${limit}
             OFFSET ${offset}
         `;
@@ -332,7 +345,7 @@ export class PlaceService {
         rawQuery: search,
         extractedTerm: extractedIntent.keywords,
       });
-
+      
       const [rawPlaces, total] = await Promise.all([
         this.queryPlacesInRadiusWithDistance(
           latitude,
