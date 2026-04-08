@@ -140,22 +140,7 @@ export class UserBasicResponseDto {
   pictureUrl: string | null;
 }
 
-export class OtherUserProfileResponseDto {
-  @ApiProperty({ example: 'clq2k3s9f000001l6gms61932' })
-  id: string;
-
-  @ApiProperty({ example: 'Jane', nullable: true })
-  firstName: string | null;
-
-  @ApiProperty({ example: 'Doe', nullable: true })
-  lastName: string | null;
-
-  @ApiProperty({ example: 'https://example.com/image.png', nullable: true })
-  pictureUrl: string | null;
-
-  @ApiProperty({ example: '+1234567890', nullable: true })
-  phoneNumber: string | null;
-
+export class OtherUserProfileResponseDto extends UserBasicResponseDto {
   @ApiProperty({ example: '1990-01-01T00:00:00.000Z', nullable: true })
   dateOfBirth: Date | null;
 
