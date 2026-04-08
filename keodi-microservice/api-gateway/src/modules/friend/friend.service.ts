@@ -13,19 +13,31 @@ export class FriendService {
   constructor(private readonly kafkaService: KafkaService) {}
 
   async sendRequest(userId: string, receiverId: string) {
-    return this.kafkaService.sendWithTimeout(FriendTopics.SendRequest, { userId, receiverId });
+    return this.kafkaService.sendWithTimeout(FriendTopics.SendRequest, {
+      userId,
+      receiverId,
+    });
   }
 
   async acceptRequest(userId: string, requestId: string) {
-    return this.kafkaService.sendWithTimeout(FriendTopics.AcceptRequest, { userId, requestId });
+    return this.kafkaService.sendWithTimeout(FriendTopics.AcceptRequest, {
+      userId,
+      requestId,
+    });
   }
 
   async rejectRequest(userId: string, requestId: string) {
-    return this.kafkaService.sendWithTimeout(FriendTopics.RejectRequest, { userId, requestId });
+    return this.kafkaService.sendWithTimeout(FriendTopics.RejectRequest, {
+      userId,
+      requestId,
+    });
   }
 
   async cancelRequest(userId: string, requestId: string) {
-    return this.kafkaService.sendWithTimeout(FriendTopics.CancelRequest, { userId, requestId });
+    return this.kafkaService.sendWithTimeout(FriendTopics.CancelRequest, {
+      userId,
+      requestId,
+    });
   }
 
   async getFriends(userId: string, query: GetFriendsQueryDto) {
@@ -49,6 +61,9 @@ export class FriendService {
   }
 
   async removeFriend(userId: string, friendId: string) {
-    return this.kafkaService.sendWithTimeout(FriendTopics.RemoveFriend, { userId, friendId });
+    return this.kafkaService.sendWithTimeout(FriendTopics.RemoveFriend, {
+      userId,
+      friendId,
+    });
   }
 }

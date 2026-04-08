@@ -20,7 +20,7 @@ export class UserService {
 
   async getAll() {
     try {
-      return await this.prismaService.user.findMany({
+      const users = await this.prismaService.user.findMany({
         select: {
           id: true,
           firstName: true,
@@ -29,6 +29,15 @@ export class UserService {
           pictureUrl: true,
         },
       });
+
+      return await Promise.all(
+        users.map(async (user) => ({
+          ...user,
+          pictureUrl: user.pictureUrl
+            ? await this.imageService.getImageViewUrl(user.pictureUrl)
+            : null,
+        })),
+      );
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
