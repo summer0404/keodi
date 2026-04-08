@@ -1,14 +1,18 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
-import { FriendPaginationDto, UserCommonPaginationDto } from 'src/shared/dtos/user.dto';
+import { PrismaService } from 'src/database/prisma.service';
+import { FriendPaginationDto } from 'src/shared/dtos/user.dto';
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
-import { PrismaService } from 'src/database/prisma.service';
+import { ImageService } from '../image/image.service';
 
 @Injectable()
 export class FriendService {
-  constructor(private readonly prismaService: PrismaService) { }
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly imageService: ImageService,
+  ) {}
 
   async sendRequest(senderId: string, receiverId: string) {
     // Can't send invite to yourself
@@ -76,7 +80,7 @@ export class FriendService {
         data: { senderId, receiverId },
       });
     } catch (error) {
-      return handleServiceErrorCatching(error)
+      return handleServiceErrorCatching(error);
     }
   }
 
@@ -124,7 +128,7 @@ export class FriendService {
         return { success: true, message: 'Friend request accepted' };
       });
     } catch (error) {
-      return handleServiceErrorCatching(error)
+      return handleServiceErrorCatching(error);
     }
   }
 
@@ -162,7 +166,7 @@ export class FriendService {
 
       return { success: true, message: 'Friend request rejected' };
     } catch (error) {
-      return handleServiceErrorCatching(error)
+      return handleServiceErrorCatching(error);
     }
   }
 
@@ -200,7 +204,7 @@ export class FriendService {
 
       return { success: true, message: 'Friend request cancelled' };
     } catch (error) {
-      return handleServiceErrorCatching(error)
+      return handleServiceErrorCatching(error);
     }
   }
 
@@ -241,15 +245,29 @@ export class FriendService {
         this.prismaService.friendship.count({ where: { userId } }),
       ]);
 
+      const friendsWithViewablePictureUrl = await Promise.all(
+        friends.map(async (friendship) => ({
+          ...friendship,
+          friend: {
+            ...friendship.friend,
+            pictureUrl: friendship.friend.pictureUrl
+              ? await this.imageService.getImageViewUrl(
+                  friendship.friend.pictureUrl,
+                )
+              : null,
+          },
+        })),
+      );
+
       return {
-        friends,
+        friends: friendsWithViewablePictureUrl,
         total,
         page,
         totalPages: Math.ceil(total / limit),
         limit,
       };
     } catch (error) {
-      return handleServiceErrorCatching(error)
+      return handleServiceErrorCatching(error);
     }
   }
 
@@ -295,15 +313,29 @@ export class FriendService {
         }),
       ]);
 
+      const requestsWithViewablePictureUrl = await Promise.all(
+        requests.map(async (request) => ({
+          ...request,
+          sender: {
+            ...request.sender,
+            pictureUrl: request.sender.pictureUrl
+              ? await this.imageService.getImageViewUrl(
+                  request.sender.pictureUrl,
+                )
+              : null,
+          },
+        })),
+      );
+
       return {
-        requests,
+        requests: requestsWithViewablePictureUrl,
         total,
         page,
         totalPages: Math.ceil(total / limit),
         limit,
       };
     } catch (error) {
-      return handleServiceErrorCatching(error)
+      return handleServiceErrorCatching(error);
     }
   }
 
@@ -331,7 +363,7 @@ export class FriendService {
 
       return { success: true, message: 'Friend removed successfully' };
     } catch (error) {
-      return handleServiceErrorCatching(error)
+      return handleServiceErrorCatching(error);
     }
   }
 }
