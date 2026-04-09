@@ -84,10 +84,10 @@ export class OpeningHourDto {
   dayOfWeek: number;
 
   @ApiProperty({ description: 'Opening time', example: '08:00:00' })
-  openTime: Date | null;
+  openTime: string | null;
 
   @ApiProperty({ description: 'Closing time', example: '22:00:00' })
-  closeTime: Date | null;
+  closeTime: string | null;
 }
 
 export class PlaceCategoryDto {
