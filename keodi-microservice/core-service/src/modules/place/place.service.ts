@@ -1,13 +1,18 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ClientKafka, RpcException } from '@nestjs/microservices';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
-import { firstValueFrom, timeout } from 'rxjs';
 import { PrismaService } from 'src/database/prisma.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { GeoConstants } from 'src/shared/constants/place.constant';
+import {
+  IntelligenceTopics,
+  SearchTopics,
+} from 'src/shared/constants/topic.constant';
 import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
 import { SearchMode } from 'src/shared/enums/search.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { formatTimeOnly } from 'src/shared/helpers/time.helper';
 import {
   PlaceDetailResponse,
   PlacePaginatedResponse,
@@ -15,8 +20,6 @@ import {
   RawPlace,
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
-import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class PlaceService {
@@ -24,7 +27,7 @@ export class PlaceService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
-  ) { }
+  ) {}
 
   private calculateGeoDeltas(latitude: number, radius: number) {
     const latDelta = radius / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
@@ -162,7 +165,12 @@ export class PlaceService {
           featureImageUrl: place.featureImageUrl
             ? await this.imageService.getImageViewUrl(place.featureImageUrl)
             : null,
-          openingHours: relations?.openingHours ?? [],
+          openingHours:
+            relations?.openingHours.map((oh) => ({
+              ...oh,
+              openTime: oh.openTime ? formatTimeOnly(oh.openTime) : null,
+              closeTime: oh.closeTime ? formatTimeOnly(oh.closeTime) : null,
+            })) ?? [],
           categories:
             relations?.placeCategories.map((pc) => ({
               id: pc.category.id,
@@ -526,7 +534,11 @@ export class PlaceService {
         featureImageUrl: placeData.featureImageUrl
           ? await this.imageService.getImageViewUrl(placeData.featureImageUrl)
           : null,
-        openingHours: placeData.openingHours,
+        openingHours: placeData.openingHours.map((oh) => ({
+          ...oh,
+          openTime: oh.openTime ? formatTimeOnly(oh.openTime) : null,
+          closeTime: oh.closeTime ? formatTimeOnly(oh.closeTime) : null,
+        })),
         categories: placeCategories.map((pc) => ({
           id: pc.category.id,
           name: pc.category.name,
