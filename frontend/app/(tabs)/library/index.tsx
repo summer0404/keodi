@@ -270,7 +270,7 @@ export default function FavoriteScreen() {
           <Typography variant="h4">{t('library.title')}</Typography>
         </View>
 
-        <View className="mt-4 flex-row rounded-xl bg-[#EBEBEE] p-1">
+        <View className="mt-4 flex-row rounded-xl bg-gray-200 p-1">
           <Pressable
             className={`flex-1 items-center rounded-lg py-2 ${
               activeSegment === 'favorite' ? 'bg-white' : 'bg-transparent'
