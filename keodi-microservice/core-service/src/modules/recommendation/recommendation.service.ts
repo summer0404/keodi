@@ -10,15 +10,16 @@ import {
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { RecommendationHelper } from './recommendation.helper';
 // import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
-import { UserActionType, Prisma } from '@prisma/client';
+import { Prisma, UserActionType } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
+import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
 import { PlaceRecommendationResponseDto } from 'src/shared/dtos/recommendation.dto';
+import { SortOrder } from 'src/shared/enums/sort.enum';
+import { formatTimeOnly } from 'src/shared/helpers/time.helper';
 import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
-import { SortOrder } from 'src/shared/enums/sort.enum';
-import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
-import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class RecommendationService {
@@ -31,10 +32,13 @@ export class RecommendationService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
-  ) { }
+  ) {}
 
   private async enrichPlacesWithRelations(
-    places: Omit<PlaceRecommendationResponseDto, 'openingHours' | 'categories'>[],
+    places: Omit<
+      PlaceRecommendationResponseDto,
+      'openingHours' | 'categories'
+    >[],
   ): Promise<PlaceRecommendationResponseDto[]> {
     const placeIds = places.map((p) => p.id);
 
@@ -64,7 +68,12 @@ export class RecommendationService {
           featureImageUrl: place.featureImageUrl
             ? await this.imageService.getImageViewUrl(place.featureImageUrl)
             : null,
-          openingHours: relations?.openingHours ?? [],
+          openingHours:
+            relations?.openingHours.map((oh) => ({
+              ...oh,
+              openTime: oh.openTime ? formatTimeOnly(oh.openTime) : null,
+              closeTime: oh.closeTime ? formatTimeOnly(oh.closeTime) : null,
+            })) ?? [],
           categories:
             relations?.placeCategories.map((pc) => ({
               id: pc.category.id,
@@ -76,41 +85,53 @@ export class RecommendationService {
     );
   }
 
-  private async getContentBasedPlaceCandidates(userId: string, latitude: number, longitude: number) {
+  private async getContentBasedPlaceCandidates(
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ) {
     try {
       return this.prismaService.place.findMany({
         where: {
-          ...this.recommendationHelper.getBoundingBoxCondition(latitude, longitude, MAX_RECOMMENDATIONS_BOUNDING_KM),
+          ...this.recommendationHelper.getBoundingBoxCondition(
+            latitude,
+            longitude,
+            MAX_RECOMMENDATIONS_BOUNDING_KM,
+          ),
           placeCategories: {
             some: {
               category: {
                 userCategories: {
                   some: {
                     userId: userId,
-                    isOnboardSelected: true
-                  }
-                }
-              }
-            }
-          }
+                    isOnboardSelected: true,
+                  },
+                },
+              },
+            },
+          },
         },
         take: MAX_CANDINDATE_PLACES,
         orderBy: {
-          rating: SortOrder.DESC
-        }
+          rating: SortOrder.DESC,
+        },
       });
     } catch (error) {
-      return []
+      return [];
     }
   }
 
-  private async getRecentlyInteractedPlaceCandidates(userId: string, latitude: number, longitude: number) {
+  private async getRecentlyInteractedPlaceCandidates(
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ) {
     try {
       const recentSearches = await this.prismaService.search.findMany({
         where: { userId },
         orderBy: { createdAt: SortOrder.DESC },
         take: MAX_RECENT_SEARCHES_PER_USER,
-      })
+      });
 
       const searchTerms = recentSearches.map(search => search.extractedTerm).filter((term): term is string => term !== null);
 
@@ -120,38 +141,48 @@ export class RecommendationService {
         take: MAX_RECENT_SEARCHES_PER_USER,
       });
 
-      const categoryIds = recentCategories.map(uc => uc.categoryId);
+      const categoryIds = recentCategories.map((uc) => uc.categoryId);
 
-      const textSearchConditions = searchTerms.map(term => ({
-        name: { contains: term, mode: Prisma.QueryMode.insensitive }
+      const textSearchConditions = searchTerms.map((term) => ({
+        name: { contains: term, mode: Prisma.QueryMode.insensitive },
       }));
 
       return this.prismaService.place.findMany({
         where: {
-          ...this.recommendationHelper.getBoundingBoxCondition(latitude, longitude, MAX_RECOMMENDATIONS_BOUNDING_KM),
+          ...this.recommendationHelper.getBoundingBoxCondition(
+            latitude,
+            longitude,
+            MAX_RECOMMENDATIONS_BOUNDING_KM,
+          ),
           OR: [
             { placeCategories: { some: { categoryId: { in: categoryIds } } } },
-            ...(textSearchConditions.length > 0 ? [{ OR: textSearchConditions }] : [])
-          ]
+            ...(textSearchConditions.length > 0
+              ? [{ OR: textSearchConditions }]
+              : []),
+          ],
         },
         take: MAX_CANDINDATE_PLACES,
         orderBy: {
-          rating: SortOrder.DESC
-        }
+          rating: SortOrder.DESC,
+        },
       });
     } catch (error) {
-      return []
+      return [];
     }
   }
 
-  private async getNetworkBasedPlaceCandidates(userId: string, latitude: number, longitude: number) {
+  private async getNetworkBasedPlaceCandidates(
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ) {
     try {
       const friendships = await this.prismaService.friendship.findMany({
         where: { userId },
         select: { friendId: true },
       });
 
-      const friendIds = friendships.map(f => f.friendId);
+      const friendIds = friendships.map((f) => f.friendId);
 
       const userNetworkIds = [userId, ...friendIds];
 
@@ -160,34 +191,40 @@ export class RecommendationService {
           OR: [
             {
               favorites: {
-                some: { userId: { in: friendIds } }
+                some: { userId: { in: friendIds } },
               },
-              ...this.recommendationHelper.getBoundingBoxCondition(latitude, longitude, MAX_RECOMMENDATIONS_BOUNDING_KM)
+              ...this.recommendationHelper.getBoundingBoxCondition(
+                latitude,
+                longitude,
+                MAX_RECOMMENDATIONS_BOUNDING_KM,
+              ),
             },
             {
               wonGroupSessions: {
                 some: {
                   members: {
                     some: {
-                      userId: { in: userNetworkIds }
-                    }
-                  }
-                }
-              }
-            }
-          ]
+                      userId: { in: userNetworkIds },
+                    },
+                  },
+                },
+              },
+            },
+          ],
         },
         take: MAX_CANDINDATE_PLACES,
-        orderBy: { rating: SortOrder.DESC }
+        orderBy: { rating: SortOrder.DESC },
       });
     } catch (error) {
-      return []
+      return [];
     }
   }
 
   async getPlacesFromSearchTerms(searchTerms: string[]) {
     try {
-      const allPlaces = await this.prismaService.$queryRaw<PlaceRecommendationResponseDto[]>`
+      const allPlaces = await this.prismaService.$queryRaw<
+        PlaceRecommendationResponseDto[]
+      >`
       SELECT DISTINCT ON (p.id)
         p.id,
         p.name,
@@ -318,16 +355,22 @@ export class RecommendationService {
       rawCachedPlacesFromSearchTerms = await this.redisService.get(
         RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
       );
-    } catch (error: any) {
-      this.logger.error('Error fetching trending places from search terms from Redis', error.stack);
+    } catch (error) {
+      this.logger.error(
+        'Error fetching trending places from search terms from Redis',
+        error.stack,
+      );
     }
 
     try {
       rawCachedPlacesFromActions = await this.redisService.get(
         RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
       );
-    } catch (error: any) {
-      this.logger.error('Error fetching trending places from user actions from Redis', error.stack);
+    } catch (error) {
+      this.logger.error(
+        'Error fetching trending places from user actions from Redis',
+        error.stack,
+      );
     }
 
     let cachedPlacesFromSearchTerms = rawCachedPlacesFromSearchTerms
@@ -351,8 +394,11 @@ export class RecommendationService {
       if (cachedPlacesFromActions.length === 0) {
         cachedPlacesFromActions = await this.getTopPlacesFromUserActions();
       }
-    } catch (error: any) {
-      this.logger.error('Error fetching trending places from database', error.stack);
+    } catch (error) {
+      this.logger.error(
+        'Error fetching trending places from database',
+        error.stack,
+      );
     }
 
     const trendingPlaces = this.recommendationHelper.deduplicatePlaces([
@@ -368,46 +414,61 @@ export class RecommendationService {
 
   async getForYou(userId: string, latitude: number, longitude: number) {
     try {
-      const [contentBased, recentlyInteracted, networkBased] = await Promise.all([
-        this.getContentBasedPlaceCandidates(userId, latitude, longitude),
-        this.getRecentlyInteractedPlaceCandidates(userId, latitude, longitude),
-        this.getNetworkBasedPlaceCandidates(userId, latitude, longitude)
-      ]);
+      const [contentBased, recentlyInteracted, networkBased] =
+        await Promise.all([
+          this.getContentBasedPlaceCandidates(userId, latitude, longitude),
+          this.getRecentlyInteractedPlaceCandidates(
+            userId,
+            latitude,
+            longitude,
+          ),
+          this.getNetworkBasedPlaceCandidates(userId, latitude, longitude),
+        ]);
 
       const allCandidates = [
         ...recentlyInteracted,
         ...contentBased,
-        ...networkBased
+        ...networkBased,
       ];
 
-      const enrichedCandidates = await this.enrichPlacesWithRelations(allCandidates);
+      const enrichedCandidates =
+        await this.enrichPlacesWithRelations(allCandidates);
 
-      const deduplicatedCandidates = this.recommendationHelper.deduplicatePlaces(enrichedCandidates);
+      const deduplicatedCandidates =
+        this.recommendationHelper.deduplicatePlaces(enrichedCandidates);
 
       try {
         const rankingResults = await this.kafkaService.sendWithTimeout(
           IntelligenceTopics.Ranking,
-          { userId, placeIds: deduplicatedCandidates.map(place => place.id) },
-        )
+          { userId, placeIds: deduplicatedCandidates.map((place) => place.id) },
+        );
 
-        return rankingResults.map((result: { place_id: string, ranking_score: number }) => {
-          const place = deduplicatedCandidates.find(p => p.id === result.place_id);
-          return {
-            ...place,
-            rankingScore: result.ranking_score
-          }
-        });
-      } catch (error: any) {
+        return rankingResults.map(
+          (result: { place_id: string; ranking_score: number }) => {
+            const place = deduplicatedCandidates.find(
+              (p) => p.id === result.place_id,
+            );
+            return {
+              ...place,
+              rankingScore: result.ranking_score,
+            };
+          },
+        );
+      } catch (error) {
         return this.recommendationHelper.shufflePlaces(deduplicatedCandidates);
       }
-
-    } catch (error: any) {
-      this.logger.error('Error fetching personalized recommendations', error.stack);
+    } catch (error) {
+      this.logger.error(
+        'Error fetching personalized recommendations',
+        error.stack,
+      );
       handleServiceErrorCatching(error);
     }
   }
 
   async trainRankingModel() {
-    return this.kafkaService.getClient().emit(IntelligenceTopics.TrainRankingModel, {});
+    return this.kafkaService
+      .getClient()
+      .emit(IntelligenceTopics.TrainRankingModel, {});
   }
 }

@@ -19,6 +19,7 @@ import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
+import { ImageService } from '../image/image.service';
 
 @Injectable()
 export class GroupSessionService {
@@ -27,7 +28,45 @@ export class GroupSessionService {
     private readonly configService: ConfigService,
     private readonly groupSessionHelper: GroupSessionHelper,
     private readonly kafkaService: KafkaService,
+    private readonly imageService: ImageService,
   ) {}
+
+  private async mapUserPictureUrl<T extends { pictureUrl: string | null }>(
+    user: T,
+  ): Promise<T> {
+    return {
+      ...user,
+      pictureUrl: user.pictureUrl
+        ? await this.imageService.getImageViewUrl(user.pictureUrl)
+        : null,
+    };
+  }
+
+  private async mapMemberPictureUrl<
+    T extends { user: { pictureUrl: string | null } | null },
+  >(member: T): Promise<T> {
+    if (!member.user) return member;
+    return { ...member, user: await this.mapUserPictureUrl(member.user) };
+  }
+
+  private async mapMembersPictureUrl<
+    T extends { user: { pictureUrl: string | null } | null },
+  >(members: T[]): Promise<T[]> {
+    return Promise.all(
+      members.map((member) => this.mapMemberPictureUrl(member)),
+    );
+  }
+
+  private async mapVotesMemberPictureUrl<
+    T extends { member: { user: { pictureUrl: string | null } | null } },
+  >(votes: T[]): Promise<T[]> {
+    return Promise.all(
+      votes.map(async (vote) => ({
+        ...vote,
+        member: await this.mapMemberPictureUrl(vote.member),
+      })),
+    );
+  }
 
   private async notifySessionMembers(
     sessionId: string,
@@ -199,6 +238,13 @@ export class GroupSessionService {
         },
       });
 
+      const creatorWithPictureUrl = session?.creator
+        ? await this.mapUserPictureUrl(session.creator)
+        : null;
+      const membersWithPictureUrl = session
+        ? await this.mapMembersPictureUrl(session.members)
+        : [];
+
       if (!session) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
@@ -234,10 +280,15 @@ export class GroupSessionService {
         // Check if user is already a member of this session
         const existingMember = session.members.find((m) => m.userId === userId);
         if (existingMember) {
+          const existingMemberWithPictureUrl =
+            await this.mapMemberPictureUrl(existingMember);
+
           return {
             ...session,
+            creator: creatorWithPictureUrl,
+            members: membersWithPictureUrl,
             memberCount: session.members.length,
-            member: existingMember,
+            member: existingMemberWithPictureUrl,
             alreadyJoined: true,
           };
         }
@@ -257,10 +308,15 @@ export class GroupSessionService {
           (m) => m.guestId === existingGuestId,
         );
         if (existingMember) {
+          const existingMemberWithPictureUrl =
+            await this.mapMemberPictureUrl(existingMember);
+
           return {
             ...session,
+            creator: creatorWithPictureUrl,
+            members: membersWithPictureUrl,
             memberCount: session.members.length,
-            member: existingMember,
+            member: existingMemberWithPictureUrl,
             alreadyJoined: true,
           };
         }
@@ -287,16 +343,18 @@ export class GroupSessionService {
         },
       });
 
+      const memberWithPictureUrl = await this.mapMemberPictureUrl(member);
+
       return {
         sessionId: session.sessionId,
         shareCode: session.shareCode,
         createdBy: session.createdBy,
-        creator: session.creator,
+        creator: creatorWithPictureUrl,
         createdAt: session.createdAt,
         status: session.status,
         memberCount: session.members.length + 1,
-        members: [...session.members, member],
-        member: member,
+        members: [...membersWithPictureUrl, memberWithPictureUrl],
+        member: memberWithPictureUrl,
         alreadyJoined: false,
       };
     } catch (error) {
@@ -776,7 +834,7 @@ export class GroupSessionService {
       }
 
       const voteResults = this.groupSessionHelper.buildVoteResults(
-        session.votes,
+        await this.mapVotesMemberPictureUrl(session.votes),
       );
       const winningPlaceId = voteResults[0]?.place?.id ?? null;
       const finalizedAt = new Date();
@@ -871,7 +929,18 @@ export class GroupSessionService {
         });
       }
 
-      return session;
+      const creatorWithPictureUrl = session.creator
+        ? await this.mapUserPictureUrl(session.creator)
+        : null;
+      const membersWithPictureUrl = await this.mapMembersPictureUrl(
+        session.members,
+      );
+
+      return {
+        ...session,
+        creator: creatorWithPictureUrl,
+        members: membersWithPictureUrl,
+      };
     } catch (error) {
       handleServiceErrorCatching(error);
     }
@@ -937,17 +1006,23 @@ export class GroupSessionService {
         });
       }
 
-      const voteResults = this.groupSessionHelper.buildVoteResults(
+      const membersWithPictureUrl = await this.mapMembersPictureUrl(
+        session.members,
+      );
+      const votesWithPictureUrl = await this.mapVotesMemberPictureUrl(
         session.votes,
       );
+
+      const voteResults =
+        this.groupSessionHelper.buildVoteResults(votesWithPictureUrl);
 
       return {
         sessionId,
         voteStatus: session.voteStatus,
-        totalMembers: session.members.length,
-        totalVotes: session.votes.length,
-        finalizedCount: session.votes.filter((v) => v.isFinalized).length,
-        votes: session.votes,
+        totalMembers: membersWithPictureUrl.length,
+        totalVotes: votesWithPictureUrl.length,
+        finalizedCount: votesWithPictureUrl.filter((v) => v.isFinalized).length,
+        votes: votesWithPictureUrl,
         results: voteResults,
       };
     } catch (error) {
