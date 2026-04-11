@@ -178,13 +178,15 @@ export default function LoginScreen() {
             return;
           }
 
-          Alert.alert('Login failed', 'Unable to resend verification email2.');
+          Alert.alert('Login failed', 'Unable to resend verification email.');
           return;
         }
         router.replace({
           pathname: '/check-email',
           params: { userId },
         });
+
+        return;
       }
 
       const message =

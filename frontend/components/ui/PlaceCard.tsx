@@ -192,21 +192,23 @@ export default function PlaceCard({
           </View>
         </View>
 
-        <View className="mt-3 pr-5 flex-row items-start gap-2">
-          <MapPin size={18} color={Palette.black} strokeWidth={2} />
-          <Typography variant="caption" className="flex-1">
-            {addressText}
-          </Typography>
-        </View>
+        {addressText && (
+          <View className="mt-3 pr-5 flex-row items-start gap-2">
+            <MapPin size={18} color={Palette.black} strokeWidth={2} />
+            <Typography variant="caption" className="flex-1">
+              {addressText}
+            </Typography>
+          </View>
+        )}
 
-        {openingHours ? (
+        {openingHours && (
           <View className="mt-3 pr-5 flex-row items-start gap-2">
             <Clock3 size={18} color={Palette.black} strokeWidth={2} />
             <Typography variant="caption" className="flex-1">
               {openingHours}
             </Typography>
           </View>
-        ) : null}
+        )}
 
         {description && (
           <Typography className="mt-4" numberOfLines={2}>

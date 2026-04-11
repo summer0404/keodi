@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
   FlatList,
   Linking,
   Platform,
@@ -32,6 +35,7 @@ import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import { Palette } from '@/constants/theme';
 import { favoriteService } from '@/api/favorite';
+import { groupSessionsService } from '@/api/groupSessions';
 import { placesService } from '@/api/places';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import {
@@ -39,8 +43,8 @@ import {
   getLocalizedLocation,
   formatDistance,
   formatDateMonthYear,
-  getDayOfWeekLabel,
   groupOpeningHoursByRange,
+  formatOpeningHoursGroupLabel,
   isPlaceOpenNow,
   DEFAULT_PAGE,
   DEFAULT_LIMIT,
@@ -176,7 +180,11 @@ function PlaceDetailScreen() {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isDescriptionOverflowing, setIsDescriptionOverflowing] = useState(false);
   const [isTopImageFailed, setIsTopImageFailed] = useState(false);
+  const [isVotingToGroup, setIsVotingToGroup] = useState(false);
+  const [isVoteSuccess, setIsVoteSuccess] = useState(false);
   const hasTriedRefetchRef = useRef(false);
+  const voteSuccessScale = useRef(new Animated.Value(1)).current;
+  const voteSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Review state & refs
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -285,6 +293,22 @@ function PlaceDetailScreen() {
   useEffect(() => {
     setIsTopImageFailed(false);
   }, [place?.featureImageUrl, placeId]);
+
+  const resetVoteFeedback = useCallback(() => {
+    if (voteSuccessTimeoutRef.current) {
+      clearTimeout(voteSuccessTimeoutRef.current);
+      voteSuccessTimeoutRef.current = null;
+    }
+    voteSuccessScale.stopAnimation();
+    voteSuccessScale.setValue(1);
+    setIsVoteSuccess(false);
+  }, [voteSuccessScale]);
+
+  useEffect(() => {
+    return () => {
+      resetVoteFeedback();
+    };
+  }, [resetVoteFeedback]);
 
   useEffect(() => {
     // Load reviews when place is loaded
@@ -425,6 +449,47 @@ function PlaceDetailScreen() {
     }
   };
 
+  const handleAddToGroup = useCallback(async () => {
+    if (!placeId || isVotingToGroup || isVoteSuccess) return;
+
+    setIsVotingToGroup(true);
+    try {
+      const sessions = await groupSessionsService.getGroupSessions();
+      const activeSession = sessions.find((session) => session.status === 'ACTIVE') ?? sessions[0];
+
+      if (!activeSession?.sessionId) {
+        Alert.alert(t('home.groupSessionNotFoundTitle'), t('home.groupSessionNotFoundDesc'));
+        return;
+      }
+
+      await groupSessionsService.votePlace(activeSession.sessionId, { placeId });
+
+      setIsVoteSuccess(true);
+      Animated.sequence([
+        Animated.timing(voteSuccessScale, {
+          toValue: 1.06,
+          duration: 180,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(voteSuccessScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      voteSuccessTimeoutRef.current = setTimeout(() => {
+        resetVoteFeedback();
+      }, 1000);
+    } catch {
+      Alert.alert(t('home.addToGroupFailedTitle'), t('home.addToGroupFailedDesc'));
+    } finally {
+      setIsVotingToGroup(false);
+    }
+  }, [isVoteSuccess, isVotingToGroup, placeId, resetVoteFeedback, t, voteSuccessScale]);
+
   const renderOverview = (target: PlaceItem) => (
     <View className="mt-5">
       {target.description?.trim() && (
@@ -485,10 +550,7 @@ function PlaceDetailScreen() {
 
           <View className="mt-2 gap-2 mb-5">
             {groupOpeningHoursByRange(target.openingHours).map((group) => {
-              const dayLabel =
-                group.startDay === group.endDay
-                  ? getDayOfWeekLabel(group.startDay, t)
-                  : `${getDayOfWeekLabel(group.startDay, t)} - ${getDayOfWeekLabel(group.endDay, t)}`;
+              const dayLabel = formatOpeningHoursGroupLabel(group, t);
 
               return (
                 <View
@@ -806,14 +868,24 @@ function PlaceDetailScreen() {
               ))}
           </View>
 
-          <Pressable className="mt-4 h-11 rounded-xl bg-black items-center justify-center">
-            <View className="flex-row items-center gap-5">
-              <UserPlus size={24} color={Palette.white} strokeWidth={2} />
-              <Typography variant="h5" className="text-white">
-                {t('home.addToGroup')}
-              </Typography>
-            </View>
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: voteSuccessScale }] }}>
+            <Button
+              className={`mt-4 ${isVoteSuccess ? 'bg-green-500' : ''}`}
+              onPress={handleAddToGroup}
+              disabled={isVotingToGroup || isVoteSuccess}
+            >
+              <View className="flex-row items-center gap-5">
+                <UserPlus size={24} color={Palette.white} strokeWidth={2} />
+                <Typography variant="h5" className="text-white">
+                  {isVoteSuccess
+                    ? t('home.addToGroupSuccess')
+                    : isVotingToGroup
+                      ? t('home.addingToGroup')
+                      : t('home.addToGroup')}
+                </Typography>
+              </View>
+            </Button>
+          </Animated.View>
 
           <View className="mt-4 rounded-xl bg-[#ECECF1] p-1 flex-row">
             <DetailTabButton

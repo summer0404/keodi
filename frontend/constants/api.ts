@@ -3,6 +3,8 @@ export const API_BASE_PATHS = {
   CATEGORIES: '/api/v1/categories',
   PLACES: '/api/v1/places',
   FAVORITES: '/api/v1/favorites',
+  FRIENDS: '/api/v1/friends',
+  GROUP_SESSIONS: '/api/v1/group-sessions',
   USERS: '/api/v1/users',
 } as const;
 
@@ -20,6 +22,8 @@ export const API_ENDPOINTS = {
   PLACES_SEARCH: `${API_BASE_PATHS.PLACES}/search`,
   PLACES_TRENDING: `${API_BASE_PATHS.PLACES}/trending`,
   FAVORITES: API_BASE_PATHS.FAVORITES,
+  FRIENDS: API_BASE_PATHS.FRIENDS,
+  GROUP_SESSIONS: API_BASE_PATHS.GROUP_SESSIONS,
   ONBOARDING_CATEGORIES: `${API_BASE_PATHS.CATEGORIES}/onboarding`,
   SUBMIT_ONBOARDING: `${API_BASE_PATHS.USERS}/onboarding`,
   UPDATE_USERNAME: `${API_BASE_PATHS.USERS}/username`,
