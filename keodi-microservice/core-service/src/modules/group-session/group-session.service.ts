@@ -220,6 +220,7 @@ export class GroupSessionService {
               user: {
                 select: {
                   id: true,
+                  username: true,
                   firstName: true,
                   lastName: true,
                   pictureUrl: true,
@@ -230,6 +231,7 @@ export class GroupSessionService {
           creator: {
             select: {
               id: true,
+              username: true,
               firstName: true,
               lastName: true,
               pictureUrl: true,
@@ -335,6 +337,7 @@ export class GroupSessionService {
           user: {
             select: {
               id: true,
+              username: true,
               firstName: true,
               lastName: true,
               pictureUrl: true,
@@ -793,6 +796,7 @@ export class GroupSessionService {
                   user: {
                     select: {
                       id: true,
+                      username: true,
                       firstName: true,
                       lastName: true,
                       pictureUrl: true,
@@ -893,6 +897,7 @@ export class GroupSessionService {
           creator: {
             select: {
               id: true,
+              username: true,
               firstName: true,
               lastName: true,
               pictureUrl: true,
@@ -903,6 +908,7 @@ export class GroupSessionService {
               user: {
                 select: {
                   id: true,
+                  username: true,
                   firstName: true,
                   lastName: true,
                   pictureUrl: true,
@@ -960,6 +966,7 @@ export class GroupSessionService {
               user: {
                 select: {
                   id: true,
+                  username: true,
                   firstName: true,
                   lastName: true,
                   pictureUrl: true,
@@ -987,6 +994,7 @@ export class GroupSessionService {
                   user: {
                     select: {
                       id: true,
+                      username: true,
                       firstName: true,
                       lastName: true,
                       pictureUrl: true,

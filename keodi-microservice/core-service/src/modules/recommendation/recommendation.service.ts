@@ -133,7 +133,9 @@ export class RecommendationService {
         take: MAX_RECENT_SEARCHES_PER_USER,
       });
 
-      const searchTerms = recentSearches.map(search => search.extractedTerm).filter((term): term is string => term !== null);
+      const searchTerms = recentSearches
+        .map((search) => search.extractedTerm?.trim())
+        .filter((term): term is string => !!term);
 
       const recentCategories = await this.prismaService.userCategory.findMany({
         where: { userId },
