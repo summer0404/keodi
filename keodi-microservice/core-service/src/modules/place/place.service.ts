@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
@@ -16,9 +16,12 @@ import { ImageService } from '../image/image.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
 import { VECTOR_SIMILARITY_THRESHOLD } from 'src/shared/constants/search.constant';
+import { ExtractedIntent, SearchQueryConfig } from 'src/shared/types/search.type';
 
 @Injectable()
 export class PlaceService {
+  private readonly logger = new Logger(PlaceService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
@@ -62,7 +65,7 @@ export class PlaceService {
     return { offset, orderByClause };
   }
 
-  private buildVectorSearchCondition(embedding?: number[]) {
+  private buildEmbeddingSearchCondition(embedding?: number[]) {
     if (!embedding || embedding.length === 0) {
       return Prisma.empty;
     }
@@ -74,6 +77,73 @@ export class PlaceService {
                 + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
             ) >= ${VECTOR_SIMILARITY_THRESHOLD}
         `;
+  }
+
+  private buildKeywordSearchCondition(keywords?: string) {
+    if (!keywords?.trim()) {
+      return Prisma.empty;
+    }
+
+    return Prisma.sql`
+            AND p.fts_search_vector @@ websearch_to_tsquery('simple', f_unaccent(${keywords}))
+        `;
+  }
+
+  private buildSearchCondition(embedding?: number[], keywords?: string) {
+    if (keywords?.trim()) {
+      return this.buildKeywordSearchCondition(keywords);
+    }
+
+    return this.buildEmbeddingSearchCondition(embedding);
+  }
+
+  private buildEmbeddingQueryConfig(
+    embedding: number[] | undefined,
+    orderByClause: string,
+  ): SearchQueryConfig {
+    const hasEmbedding = embedding && embedding.length > 0;
+    const searchOrderBy = hasEmbedding
+      ? 'ORDER BY similarity_score DESC, distance ASC'
+      : orderByClause;
+
+    const vectorStr = hasEmbedding ? `[${embedding.join(',')}]` : null;
+    const similarityColumn = vectorStr ? Prisma.sql`,
+                    (
+                        0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
+                        + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
+                    ) AS similarity_score` : Prisma.sql`, NULL AS similarity_score`;
+
+    return {
+      searchCondition: this.buildEmbeddingSearchCondition(embedding),
+      similarityColumn,
+      searchOrderBy,
+    };
+  }
+
+  private buildKeywordQueryConfig(keywords: string): SearchQueryConfig {
+    const keywordRank = Prisma.sql`,
+                    ts_rank_cd(
+                        p.fts_search_vector,
+                        websearch_to_tsquery('simple', f_unaccent(${keywords}))
+                    ) AS similarity_score`;
+
+    return {
+      searchCondition: this.buildKeywordSearchCondition(keywords),
+      similarityColumn: keywordRank,
+      searchOrderBy: 'ORDER BY similarity_score DESC, distance ASC',
+    };
+  }
+
+  private buildSearchQueryConfig(
+    embedding: number[] | undefined,
+    keywords: string | undefined,
+    orderByClause: string,
+  ): SearchQueryConfig {
+    if (keywords?.trim()) {
+      return this.buildKeywordQueryConfig(keywords);
+    }
+
+    return this.buildEmbeddingQueryConfig(embedding, orderByClause);
   }
 
   private async enrichPlacesWithFavoriteAndImage(
@@ -143,20 +213,10 @@ export class PlaceService {
     limit: number,
     offset: number,
     embedding?: number[],
+    keywords?: string,
   ): Promise<(RawPlace & { distance: number; similarity_score?: number })[]> {
-    const vectorCondition = this.buildVectorSearchCondition(embedding);
-    const hasEmbedding = embedding && embedding.length > 0;
-    
-    const searchOrderBy = hasEmbedding 
-      ? 'ORDER BY similarity_score DESC, distance ASC' 
-      : orderByClause;
-
-    const vectorStr = hasEmbedding ? `[${embedding.join(',')}]` : null;
-    const similarityColumn = vectorStr ? Prisma.sql`,
-                    (
-                        0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
-                        + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
-                    ) AS similarity_score` : Prisma.sql`, NULL AS similarity_score`;
+    const { searchCondition, similarityColumn, searchOrderBy } =
+      this.buildSearchQueryConfig(embedding, keywords, orderByClause);
 
     return await this.prismaService.$queryRaw<
       (RawPlace & { distance: number; similarity_score?: number })[]
@@ -195,7 +255,7 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
-                    ${vectorCondition}
+                  ${searchCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
             ${Prisma.raw(searchOrderBy)}
@@ -211,8 +271,9 @@ export class PlaceService {
     longDelta: number,
     radius: number,
     embedding?: number[],
+    keywords?: string,
   ): Promise<number> {
-    const vectorCondition = this.buildVectorSearchCondition(embedding);
+    const searchCondition = this.buildSearchCondition(embedding, keywords);
 
     const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(*) as count
@@ -230,12 +291,63 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
-                    ${vectorCondition}
+                  ${searchCondition}
             ) as places_with_distance
             WHERE distance <= ${radius}
         `;
 
     return Number(totalResult[0].count);
+  }
+
+  private async queryPlacesByIntent(params: {
+    latitude: number;
+    longitude: number;
+    latDelta: number;
+    longDelta: number;
+    radius: number;
+    orderByClause: string;
+    limit: number;
+    offset: number;
+    extractedIntent: ExtractedIntent;
+  }): Promise<[
+      (RawPlace & { distance: number; similarity_score?: number })[],
+      number,
+    ]> {
+    const {
+      latitude,
+      longitude,
+      latDelta,
+      longDelta,
+      radius,
+      orderByClause,
+      limit,
+      offset,
+      extractedIntent,
+    } = params;
+
+    return Promise.all([
+      this.queryPlacesInRadiusWithDistance(
+        latitude,
+        longitude,
+        latDelta,
+        longDelta,
+        radius,
+        orderByClause,
+        limit,
+        offset,
+        extractedIntent.embedding,
+        extractedIntent.keywords,
+      ),
+      this.countPlacesInRadius(
+        latitude,
+        longitude,
+        latDelta,
+        longDelta,
+        radius,
+        extractedIntent.embedding,
+        extractedIntent.keywords,
+      ),
+    ]);
   }
 
   async findNearby(nearMeDto: NearMeDto): Promise<PlacePaginatedResponse> {
@@ -321,10 +433,7 @@ export class PlaceService {
     );
 
     try {
-      let extractedIntent: {
-        keywords?: string;
-        embedding?: number[];
-      } = {};
+      let extractedIntent: ExtractedIntent = {};
 
       try {
         extractedIntent = await this.kafkaService.sendWithTimeout(
@@ -332,6 +441,11 @@ export class PlaceService {
           { search },
         );
       } catch (error: any) {
+        const errorMessage = error?.message ?? 'Unknown error when extracting user intent';
+        this.logger.warn(
+          `ExtractUserIntent failed. Falling back to empty intent. reason=${errorMessage}`,
+        );
+
         if (error?.message?.includes('EMBEDDING_FAILED')) {
           throw new RpcException({
             status: HttpStatus.SERVICE_UNAVAILABLE,
@@ -340,33 +454,32 @@ export class PlaceService {
         }
       }
 
+      if (
+        !extractedIntent.keywords?.trim() &&
+        (!extractedIntent.embedding || extractedIntent.embedding.length === 0)
+      ) {
+        this.logger.warn(
+          'ExtractUserIntent returned empty payload (keywords and embedding are empty).',
+        );
+      }
+
       this.kafkaService.getClient().emit(SearchTopics.Create, {
         userId,
         rawQuery: search,
         extractedTerm: extractedIntent.keywords,
       });
-      
-      const [rawPlaces, total] = await Promise.all([
-        this.queryPlacesInRadiusWithDistance(
-          latitude,
-          longitude,
-          latDelta,
-          longDelta,
-          radius,
-          orderByClause,
-          limit,
-          offset,
-          extractedIntent.embedding,
-        ),
-        this.countPlacesInRadius(
-          latitude,
-          longitude,
-          latDelta,
-          longDelta,
-          radius,
-          extractedIntent.embedding,
-        ),
-      ]);
+
+      const [rawPlaces, total] = await this.queryPlacesByIntent({
+        latitude,
+        longitude,
+        latDelta,
+        longDelta,
+        radius,
+        orderByClause,
+        limit,
+        offset,
+        extractedIntent,
+      });
 
       const places = await this.enrichPlacesWithFavoriteAndImage(
         rawPlaces,

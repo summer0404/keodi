@@ -12,10 +12,13 @@ class Prompts(BasePromptTemplate):
 
     [EXAMPLES]
     Input: "Tìm quán cà phê yên tĩnh"
-    Output: 
+    Output: cà phê
 
     Input: "Quán phở ngon gần đây có wifi"
     Output: phở
+
+    Input: "Tìm những công viên gần đây"
+    Output: công viên
 
     Input: "Chỗ nào bán trà sữa Tiger Sugar"
     Output: trà sữa Tiger Sugar
