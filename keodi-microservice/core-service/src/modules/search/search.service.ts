@@ -10,7 +10,7 @@ export class SearchService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly redisService: RedisService,
-    ){}
+    ) { }
     async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
         try {
             await this.redisService.zadd(SearchRedisKeys.TRENDING, trendingSearches.flatMap(search => [search.score, search.extractedTerm]));
@@ -23,10 +23,15 @@ export class SearchService {
     async create(createSearchDto: CreateSearchDto) {
         try {
             return await this.prismaService.search.create({
-                data: createSearchDto
+                data: {
+                    ...createSearchDto,
+                    extractedTerm: createSearchDto.extractedTerm && createSearchDto.extractedTerm.trim() !== '' ?
+                        createSearchDto.extractedTerm.trim().toLowerCase() :
+                        null
+                }
             });
         } catch (error) {
-            return await handleServiceErrorCatching(error)
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -48,7 +53,8 @@ export class SearchService {
                             END
                         ) as decay_score
                     FROM searches
-                    -- WHERE created_at > NOW() - INTERVAL '24 hour'
+                    WHERE extracted_term IS NOT NULL 
+                        -- AND created_at > NOW() - INTERVAL '24 hour'
                     GROUP BY extracted_term
                     -- HAVING COUNT(*) > 0
                 )

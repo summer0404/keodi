@@ -355,7 +355,7 @@ export class RecommendationService {
       rawCachedPlacesFromSearchTerms = await this.redisService.get(
         RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         'Error fetching trending places from search terms from Redis',
         error.stack,
@@ -366,7 +366,7 @@ export class RecommendationService {
       rawCachedPlacesFromActions = await this.redisService.get(
         RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         'Error fetching trending places from user actions from Redis',
         error.stack,
@@ -394,7 +394,7 @@ export class RecommendationService {
       if (cachedPlacesFromActions.length === 0) {
         cachedPlacesFromActions = await this.getTopPlacesFromUserActions();
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         'Error fetching trending places from database',
         error.stack,
@@ -457,7 +457,7 @@ export class RecommendationService {
       } catch (error) {
         return this.recommendationHelper.shufflePlaces(deduplicatedCandidates);
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         'Error fetching personalized recommendations',
         error.stack,

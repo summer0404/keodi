@@ -16,7 +16,7 @@ import {
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
 import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
-import { VECTOR_SIMILARITY_THRESHOLD } from 'src/shared/constants/search.constant';
+import { LLM_THINKING_TAG, VECTOR_SIMILARITY_THRESHOLD } from 'src/shared/constants/search.constant';
 import { ExtractedIntent, SearchQueryConfig } from 'src/shared/types/search.type';
 
 @Injectable()
@@ -460,13 +460,11 @@ export class PlaceService {
         }
       }
 
-      if (
-        !extractedIntent.keywords?.trim() &&
-        (!extractedIntent.embedding || extractedIntent.embedding.length === 0)
-      ) {
+      if (extractedIntent.keywords?.includes(LLM_THINKING_TAG)) {
         this.logger.warn(
-          'ExtractUserIntent returned empty payload (keywords and embedding are empty).',
+          `Extracted keywords contain llm thinking step. Falling back to using embedding`,
         );
+        extractedIntent.keywords = undefined;
       }
 
       this.kafkaService.getClient().emit(SearchTopics.Create, {
