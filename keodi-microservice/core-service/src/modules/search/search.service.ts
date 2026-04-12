@@ -1,9 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import {
-  CreateSearchDto,
-  SearchTrendingScoreDto,
-} from 'src/shared/dtos/search.dto';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import {
@@ -11,6 +6,11 @@ import {
   SEARCH_TRENDING_TTL_SECONDS,
   SearchRedisKeys,
 } from 'src/shared/constants/search.constant';
+import {
+  CreateSearchDto,
+  SearchTrendingScoreDto,
+} from 'src/shared/dtos/search.dto';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 
 @Injectable()
 export class SearchService {
@@ -18,27 +18,7 @@ export class SearchService {
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
   ) {}
-  async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
-    try {
-      await this.redisService.zadd(
-        SearchRedisKeys.TRENDING,
-        trendingSearches.flatMap((search) => [
-          search.score,
-          search.extractedTerm,
-        ]),
-      );
-      await this.redisService.expire(
-        SearchRedisKeys.TRENDING,
-        SEARCH_TRENDING_TTL_SECONDS,
-      );
-    } catch (error) {
-      return handleServiceErrorCatching(error);
-    }
-  }
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly redisService: RedisService,
-  ) {}
+
   async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
     try {
       await this.redisService.zadd(
@@ -58,15 +38,25 @@ export class SearchService {
   }
 
   async create(createSearchDto: CreateSearchDto) {
+    const {
+      rawQuery: rawQueryInput,
+      extractedTerm,
+      userId,
+    } = createSearchDto as {
+      rawQuery: string;
+      extractedTerm?: string;
+      userId?: string;
+    };
+
+    const rawQuery = rawQueryInput.trim();
+    const normalizedTerm = extractedTerm?.trim().toLowerCase();
+
     try {
       return await this.prismaService.search.create({
         data: {
-          ...createSearchDto,
-          extractedTerm:
-            createSearchDto.extractedTerm &&
-            createSearchDto.extractedTerm.trim() !== ''
-              ? createSearchDto.extractedTerm.trim().toLowerCase()
-              : null,
+          rawQuery,
+          extractedTerm: normalizedTerm || null,
+          ...(userId ? { user: { connect: { id: userId } } } : {}),
         },
       });
     } catch (error) {
