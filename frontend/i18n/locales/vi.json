@@ -271,5 +271,15 @@
     "done": "Xong",
     "join": "Tham gia",
     "joining": "Đang tham gia..."
+  },
+  "notification": {
+    "groupInviteTitle": "Bạn có một nhóm mới!",
+    "defaultTitle": "Thông báo",
+    "someone": "Một người bạn",
+    "defaultBody": "Bạn có một thông báo mới!",
+    "dismiss": "Bỏ qua",
+    "joinNow": "Tham gia ngay",
+    "openNow": "Mở ngay",
+    "groupInviteBody": "{{name}} đã mời bạn tham gia nhóm. Tham gia ngay nhé!"
   }
 }

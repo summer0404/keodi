@@ -455,7 +455,7 @@ function PlaceDetailScreen() {
     setIsVotingToGroup(true);
     try {
       const sessions = await groupSessionsService.getGroupSessions();
-      const activeSession = sessions.find((session) => session.status === 'ACTIVE') ?? sessions[0];
+      const activeSession = sessions.find((session) => session.status === 'ACTIVE');
 
       if (!activeSession?.sessionId) {
         Alert.alert(t('home.groupSessionNotFoundTitle'), t('home.groupSessionNotFoundDesc'));

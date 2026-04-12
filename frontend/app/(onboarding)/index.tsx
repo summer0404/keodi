@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import { useSettingStore } from '@/store/useSettingStore';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   ImageBackground,
@@ -43,7 +43,21 @@ export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList<number> | null>(null);
-  const { setHasSeenOnboarding } = useSettingStore();
+  const { hasSeenOnboarding, setHasSeenOnboarding, _hasHydrated } = useSettingStore();
+
+  useEffect(() => {
+    if (!_hasHydrated) {
+      return;
+    }
+
+    if (hasSeenOnboarding) {
+      router.replace('/login');
+    }
+  }, [_hasHydrated, hasSeenOnboarding, router]);
+
+  if (!_hasHydrated || hasSeenOnboarding) {
+    return <View className="flex-1 bg-black" />;
+  }
 
   const completeOnboarding = () => {
     setHasSeenOnboarding(true);

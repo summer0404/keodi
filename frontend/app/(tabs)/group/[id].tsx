@@ -91,9 +91,14 @@ const GroupSessionCard = ({
                 shadowRadius: 6,
                 elevation: 3,
               }}
+              disabled={item.status !== 'ACTIVE'}
               onPress={() => onShare(item)}
             >
-              <Share2 size={16} color={Palette.black} strokeWidth={2} />
+              <Share2
+                size={16}
+                color={item.status !== 'ACTIVE' ? '#9CA3AF' : Palette.black}
+                strokeWidth={2}
+              />
             </Pressable>
           </View>
         </View>
