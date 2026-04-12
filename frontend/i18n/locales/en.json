@@ -271,5 +271,15 @@
     "done": "Done",
     "join": "Join",
     "joining": "Joining..."
+  },
+  "notification": {
+    "groupInviteTitle": "You have a new group!",
+    "defaultTitle": "Notification",
+    "someone": "Someone",
+    "defaultBody": "You have a new notification!",
+    "dismiss": "Dismiss",
+    "joinNow": "Join Now",
+    "openNow": "Open Now",
+    "groupInviteBody": "{{name}} has invited you to join a group. Join now!"
   }
 }

@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { API_ENDPOINTS } from '@/constants/api';
 import { router } from 'expo-router';
 
-const resolveApiBaseUrl = () => {
+export const resolveApiBaseUrl = () => {
   const configuredBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 
   if (configuredBaseUrl) {
@@ -18,7 +18,7 @@ const resolveApiBaseUrl = () => {
   return 'http://localhost:3000';
 };
 
-const API_BASE_URL = resolveApiBaseUrl();
+export const API_BASE_URL = resolveApiBaseUrl();
 
 const AUTH_BYPASS_REFRESH_ENDPOINTS = [
   API_ENDPOINTS.LOGIN,

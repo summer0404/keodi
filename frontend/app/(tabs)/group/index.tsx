@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -23,13 +23,16 @@ import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
 import { ResizeMode, Video } from 'expo-av';
 import { usePinnedGroupSessionStore } from '@/store/usePinnedGroupSessionStore';
 import { Button } from '@/components/ui/Button';
+import { authService } from '@/api/auth';
 
 const DETAIL_BATCH_SIZE = 10;
+const REALTIME_REFRESH_INTERVAL_MS = 5000;
 
 type GroupSessionCardProps = {
   item: GroupSessionItem;
   isPinned: boolean;
   isClosing: boolean;
+  currentUserId: string | null;
   onShare: (session: GroupSessionItem) => void;
   onTogglePin: (sessionId: string) => void;
   onClose: (session: GroupSessionItem) => void;
@@ -57,9 +60,18 @@ const resolveJoinErrorMessage = (
   const translatedMessage = translate(`errors.${message}`);
   return translatedMessage === `errors.${message}` ? message : translatedMessage;
 };
+resolveJoinErrorMessage.displayName = 'resolveJoinErrorMessage';
 
 const GroupSessionCard = React.memo(
-  ({ item, isPinned, isClosing, onShare, onTogglePin, onClose }: GroupSessionCardProps) => {
+  ({
+    item,
+    isPinned,
+    isClosing,
+    currentUserId,
+    onShare,
+    onTogglePin,
+    onClose,
+  }: GroupSessionCardProps) => {
     const router = useRouter();
 
     return (
@@ -117,6 +129,7 @@ const GroupSessionCard = React.memo(
                   shadowRadius: 6,
                   elevation: 3,
                 }}
+                disabled={item.status !== 'ACTIVE' || isClosing}
                 onPress={() => onShare(item)}
               >
                 <Share2
@@ -144,28 +157,30 @@ const GroupSessionCard = React.memo(
                 <Pin size={16} color={isPinned ? Palette.white : Palette.black} strokeWidth={2} />
               </Pressable>
 
-              <Pressable
-                accessibilityRole="button"
-                className={clsx('h-10 w-10 items-center justify-center rounded-full', {
-                  'bg-gray-200': item.status !== 'ACTIVE',
-                  'bg-white': item.status === 'ACTIVE',
-                })}
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.18,
-                  shadowRadius: 6,
-                  elevation: 3,
-                }}
-                disabled={item.status !== 'ACTIVE' || isClosing}
-                onPress={() => onClose(item)}
-              >
-                <X
-                  size={16}
-                  color={item.status !== 'ACTIVE' ? '#9CA3AF' : Palette.black}
-                  strokeWidth={2}
-                />
-              </Pressable>
+              {currentUserId === item.creator?.id && (
+                <Pressable
+                  accessibilityRole="button"
+                  className={clsx('h-10 w-10 items-center justify-center rounded-full', {
+                    'bg-gray-200': item.status !== 'ACTIVE',
+                    'bg-white': item.status === 'ACTIVE',
+                  })}
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.18,
+                    shadowRadius: 6,
+                    elevation: 3,
+                  }}
+                  disabled={item.status !== 'ACTIVE' || isClosing}
+                  onPress={() => onClose(item)}
+                >
+                  <X
+                    size={16}
+                    color={item.status !== 'ACTIVE' ? '#9CA3AF' : Palette.black}
+                    strokeWidth={2}
+                  />
+                </Pressable>
+              )}
             </View>
           </View>
         </Pressable>
@@ -173,6 +188,7 @@ const GroupSessionCard = React.memo(
     );
   }
 );
+GroupSessionCard.displayName = 'GroupSessionCard';
 
 export default function GroupScreen() {
   const router = useRouter();
@@ -193,9 +209,16 @@ export default function GroupScreen() {
   const [sessionToClose, setSessionToClose] = useState<GroupSessionItem | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [blockedAction, setBlockedAction] = useState<'create' | 'join' | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const isRealtimeRefreshingRef = useRef(false);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (options?: { silent?: boolean }) => {
+    const isSilent = options?.silent ?? false;
+
+    if (!isSilent) {
+      setIsLoading(true);
+    }
+
     try {
       const sessionList = await groupSessionsService.getGroupSessions();
       if (!Array.isArray(sessionList) || sessionList.length === 0) {
@@ -224,15 +247,47 @@ export default function GroupScreen() {
     } catch {
       setSessions([]);
     } finally {
-      setIsLoading(false);
+      if (!isSilent) {
+        setIsLoading(false);
+      }
       setHasLoadedInitialData(true);
     }
   }, []);
 
+  const refreshSessionsRealtime = useCallback(async () => {
+    if (isRealtimeRefreshingRef.current || isJoining || isCreating || isClosing) {
+      return;
+    }
+
+    isRealtimeRefreshingRef.current = true;
+    try {
+      await loadData({ silent: true });
+    } finally {
+      isRealtimeRefreshingRef.current = false;
+    }
+  }, [isClosing, isCreating, isJoining, loadData]);
+
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      void loadData();
+      // Load current user ID
+      void (async () => {
+        try {
+          const user = await authService.getMe();
+          setCurrentUserId(user.id);
+        } catch {
+          setCurrentUserId(null);
+        }
+      })();
+
+      const intervalId = setInterval(() => {
+        void refreshSessionsRealtime();
+      }, REALTIME_REFRESH_INTERVAL_MS);
+
+      return () => {
+        clearInterval(intervalId);
+      };
+    }, [loadData, refreshSessionsRealtime])
   );
 
   const activeSession = useMemo(
@@ -486,6 +541,7 @@ export default function GroupScreen() {
           item={item}
           isPinned={pinnedSessionIds.includes(item.sessionId)}
           isClosing={isClosing && sessionToClose?.sessionId === item.sessionId}
+          currentUserId={currentUserId}
           onShare={handleShare}
           onTogglePin={handleTogglePin}
           onClose={openCloseConfirm}
@@ -493,6 +549,7 @@ export default function GroupScreen() {
       );
     },
     [
+      currentUserId,
       handleShare,
       handleTogglePin,
       isClosing,
