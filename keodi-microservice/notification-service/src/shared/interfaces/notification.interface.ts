@@ -1,4 +1,4 @@
-import { NotificationPreferredChannel, NotificationType } from "../constants/notification.constant";
+import { NotificationPreferredChannel, NotificationType } from "../enums/notification.enum";
 
 export interface DispatchNotificationEvent {
   eventId: string;

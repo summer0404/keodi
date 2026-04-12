@@ -80,3 +80,12 @@ export const IntelligenceTopics = {
   SentimentAnalysis: 'intelligence.sentiment-analysis',
   TrainRankingModel: 'intelligence.train-ranking-model',
 } as const;
+
+export const NotificationTopics = {
+  Dispatch: 'notification.dispatch',
+  PersistInbox: 'notification.persist-inbox',
+  RealtimePush: 'notification.realtime.push',
+  GetActiveTokens: 'device-token.get-active',
+  UpsertToken: 'device-token.upsert',
+  DeactivateToken: 'device-token.deactivate',
+} as const;

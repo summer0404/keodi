@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateSearchDto, SearchTrendingScoreDto } from 'src/shared/dtos/search.dto';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
@@ -10,7 +10,7 @@ export class SearchService {
     constructor(
         private readonly prismaService: PrismaService,
         private readonly redisService: RedisService,
-    ){}
+    ) { }
     async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
         try {
             await this.redisService.zadd(SearchRedisKeys.TRENDING, trendingSearches.flatMap(search => [search.score, search.extractedTerm]));
@@ -21,28 +21,17 @@ export class SearchService {
     }
 
     async create(createSearchDto: CreateSearchDto) {
-        const { extractedTerm, userId } = createSearchDto;
-
-        try {            
-            if (userId) {
-
-                const existingUser = await this.prismaService.user.findUnique({
-                    where: { id: userId },
-                });
-
-                if (!existingUser) {
-                    throw new NotFoundException(`User not found`)
-                }
-            }
-
+        try {
             return await this.prismaService.search.create({
                 data: {
-                    extractedTerm: extractedTerm.toLowerCase().trim(),
-                    userId,
+                    ...createSearchDto,
+                    extractedTerm: createSearchDto.extractedTerm && createSearchDto.extractedTerm.trim() !== '' ?
+                        createSearchDto.extractedTerm.trim().toLowerCase() :
+                        null
                 }
             });
         } catch (error) {
-            return await handleServiceErrorCatching(error)
+            return handleServiceErrorCatching(error)
         }
     }
 
@@ -64,7 +53,8 @@ export class SearchService {
                             END
                         ) as decay_score
                     FROM searches
-                    -- WHERE created_at > NOW() - INTERVAL '24 hour'
+                    WHERE extracted_term IS NOT NULL 
+                        -- AND created_at > NOW() - INTERVAL '24 hour'
                     GROUP BY extracted_term
                     -- HAVING COUNT(*) > 0
                 )

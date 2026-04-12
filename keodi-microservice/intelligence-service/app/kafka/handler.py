@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 from typing import Optional
 from app.kafka.consumer import KafkaConsumerService, get_consumer_service
 from app.services.llm.llm_service import LLMService, get_llm_service
+from app.services.embedding.embedding_service import EmbeddingService, get_embedding_service
 from app.services.ranking.ranking_service import RankingService, get_ranking_service
 from app.kafka.topic import Topics
 from app.kafka.decorators import request_response
@@ -26,6 +27,7 @@ from app.common.helper import clip
 class Handlers:
     consumer_service: Optional[KafkaConsumerService] = None
     llm_service: Optional[LLMService] = None
+    embedding_service: Optional[EmbeddingService] = None
     ranking_service: Optional[RankingService] = None
     place_repository: Optional[PlaceRepository] = None
     attribute_repository: Optional[AttributeRepository] = None
@@ -43,6 +45,7 @@ class Handlers:
         
     async def start(self):
         self.llm_service = await get_llm_service()
+        self.embedding_service = get_embedding_service()
         self.ranking_service = await get_ranking_service()
         self.place_repository = await PlaceRepository.start()
         self.attribute_repository = await AttributeRepository.start()
@@ -85,14 +88,27 @@ class Handlers:
 
         return current_score * decay + contribution
 
-    @request_response(topic=Topics.EXTRACT_USER_INTENT_REPLY, error_code="EXTRACT_INTENT_FAILED")
+    @request_response(topic=Topics.EXTRACT_USER_INTENT_REPLY, error_code="EMBEDDING_FAILED")
     async def extract_user_intent(self, message: dict, headers: dict):
         search = message.get("search", "")
-        try:
-            return await self.llm_service.extract_user_intent(search=search)
-        except Exception as e:
-            logger.exception("LLM extract_user_intent failed for search '%s'", e)
-            return json.dumps({"keywords": search, "categories": [], "attributes": []})
+
+        async def _embed():
+            return await asyncio.to_thread(self.embedding_service.get_embedding, search)
+
+        async def _extract_keyword():
+            try:
+                return (await self.llm_service.extract_user_intent(search=search)).strip()
+            except Exception as e:
+                logger.exception("LLM extract_user_intent failed: %s", e)
+                return None
+
+        embedding, keyword = await asyncio.gather(_embed(), _extract_keyword())
+
+        return {
+            "keywords": keyword,
+            "embedding": embedding,
+        }
+
     
     async def sentiment_analysis(self, message: dict, headers: dict):
         text = message.get("text", "")
