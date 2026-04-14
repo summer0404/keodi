@@ -225,7 +225,10 @@ export const groupOpeningHoursByRange = (
   return groups;
 };
 
-export const formatOpeningHoursGroupLabel = (group: OpeningHoursGroup, t?: (key: string) => string) => {
+export const formatOpeningHoursGroupLabel = (
+  group: OpeningHoursGroup,
+  t?: (key: string) => string
+) => {
   if (group.isAllWeek) {
     return t?.('home.allWeek') ?? 'Cả tuần';
   }
@@ -432,6 +435,40 @@ export const normalizeCityLabel = (cityValue: string) => {
   ]);
 
   return hcmAliases.has(normalized) ? 'TPHCM' : cityValue;
+};
+
+const COUNTRY_NAME_ALIASES = new Set(['viet nam', 'vietnam', 'vn']);
+
+export const extractWardCityFromFormattedAddress = (
+  formattedAddress: string | null | undefined
+) => {
+  const raw = formattedAddress?.trim();
+  if (!raw) {
+    return { ward: '', city: '' };
+  }
+
+  const parts = raw
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return { ward: '', city: '' };
+  }
+
+  const meaningfulParts = parts.filter((part) => {
+    const normalized = toAsciiLower(part).replace(/[.]/g, '').trim();
+    return !COUNTRY_NAME_ALIASES.has(normalized);
+  });
+
+  if (meaningfulParts.length === 0) {
+    return { ward: '', city: '' };
+  }
+
+  const city = meaningfulParts[meaningfulParts.length - 1] ?? '';
+  const ward = meaningfulParts.length >= 2 ? meaningfulParts[meaningfulParts.length - 2] : '';
+
+  return { ward, city };
 };
 
 export const buildSortOrder = (value: 'distance' | 'rating' | 'name' | 'createdAt') =>

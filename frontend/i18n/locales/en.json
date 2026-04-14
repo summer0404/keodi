@@ -93,7 +93,8 @@
     "resendEmail": "Resend verification email",
     "resetPassword": "Reset password",
     "logOut": "Log Out",
-    "resendSuccess": "Verification email has been resent. Please check your email inbox"
+    "resendSuccess": "Verification email has been resent. Please check your email inbox",
+    "usernameChangedReloginNotice": "Profile updated successfully. Your username was changed, so please log in again."
   },
   "errors": {
     "usernameRequired": "Username is required",
@@ -159,6 +160,10 @@
     "addToGroupSuccess": "Added to group",
     "groupSessionNotFoundTitle": "No active group",
     "groupSessionNotFoundDesc": "Create or join a group session first.",
+    "groupAlreadyFinalizedTitle": "This group is finalized",
+    "groupAlreadyFinalizedDesc": "You already finalized, so you cannot add more places.",
+    "memberVoteFinalizedTitle": "Your vote is already finalized",
+    "memberVoteFinalizedDesc": "You already finalized your vote, so you cannot add new places.",
     "addToGroupFailedTitle": "Unable to add",
     "addToGroupFailedDesc": "Failed to vote this place to group. Please try again.",
     "call": "Call",
@@ -239,9 +244,14 @@
     "totalVotes": "{{count}} votes",
     "vote": "Vote",
     "voted": "Voted",
+    "submit": "Submit",
+    "submitConfirmTitle": "Confirm submit vote?",
+    "submitConfirmMessage": "Are you sure you want to finalize your vote?",
+    "confirmSubmit": "Confirm",
+    "submittingVote": "Submitting...",
     "rank1": "#1",
     "noPlacesYet": "No places in this group yet",
-    "noPlacesTitle": "No place candidates yet",
+    "noPlacesTitle": "No place yet",
     "noPlacesDesc": "Add places from search to start voting together.",
     "goToSearch": "Go to Search",
     "noMembersTitle": "No members yet",
@@ -259,7 +269,28 @@
     "joinBlockedMessage": "To join a new session, please close your current active session first.",
     "ok": "OK",
     "joinQuickly": "Join a group quickly",
-    "inviteByLink": "Invite friends by link/QR code"
+    "inviteByLink": "Invite friends by link/QR code",
+    "finalizeGroupResult": "Finalize group result",
+    "finalizingGroupResult": "FINALIZING...",
+    "finalizeCreatorOnlyTitle": "Only the group creator can finalize",
+    "finalizeCreatorOnlyMessage": "You don't have permission to finalize this group's result."
+  },
+  "notification": {
+    "groupInviteTitle": "Group invite",
+    "groupInviteBody": "{{name}} invited you to join a group. Join now!",
+    "groupVoteReminderTitle": "New vote update",
+    "groupVoteReminderBody": "{{name}} just voted in the group. Open it to see the update.",
+    "memberVoteFinalizedTitle": "Member vote finalized",
+    "memberVoteFinalizedBody": "{{name}} finalized their vote. Check the results!",
+    "groupVoteFinalizedTitle": "Group vote finalized",
+    "groupVoteFinalizedBody": "The group vote has been finalized! See the winning place.",
+    "defaultTitle": "Notification",
+    "defaultBody": "You have a new notification.",
+    "someone": "A friend",
+    "dismiss": "Dismiss",
+    "joinNow": "Join now",
+    "openNow": "Open now",
+    "viewNow": "View now"
   },
   "button": {
     "update": "Update",
@@ -271,15 +302,5 @@
     "done": "Done",
     "join": "Join",
     "joining": "Joining..."
-  },
-  "notification": {
-    "groupInviteTitle": "You have a new group!",
-    "defaultTitle": "Notification",
-    "someone": "Someone",
-    "defaultBody": "You have a new notification!",
-    "dismiss": "Dismiss",
-    "joinNow": "Join Now",
-    "openNow": "Open Now",
-    "groupInviteBody": "{{name}} has invited you to join a group. Join now!"
   }
 }

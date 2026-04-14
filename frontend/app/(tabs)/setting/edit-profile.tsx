@@ -21,7 +21,16 @@ import { Button } from '@/components/ui/Button';
 import { ThreadsDatePicker } from '@/components/ui/DatePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette } from '@/constants/theme';
-import { sanitizeUsername, DEFAULT_AVATAR_SOURCE, MAX_AVATAR_FILE_BYTES, toApiDate, parseDateForPicker, toDisplayDate, toComparableDate, normalizeNullable } from '@/constants/helper';
+import {
+  sanitizeUsername,
+  DEFAULT_AVATAR_SOURCE,
+  MAX_AVATAR_FILE_BYTES,
+  toApiDate,
+  parseDateForPicker,
+  toDisplayDate,
+  toComparableDate,
+  normalizeNullable,
+} from '@/constants/helper';
 import { authService } from '@/api/auth';
 import { userService } from '@/api/user';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -123,7 +132,12 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const horizontalPadding = 16;
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const accessToken = useAuthStore(
+    (state: ReturnType<typeof useAuthStore.getState>) => state.accessToken
+  );
+  const setPostLogoutNoticeKey = useAuthStore(
+    (state: ReturnType<typeof useAuthStore.getState>) => state.setPostLogoutNoticeKey
+  );
   const successScale = useRef(new Animated.Value(1)).current;
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -353,10 +367,6 @@ export default function EditProfileScreen() {
 
     try {
       // Sequential update keeps errors easier to trace and avoids partial race conditions.
-      if (shouldUpdateUsername) {
-        await userService.updateUsername({ username: trimmedUsername });
-      }
-
       if (shouldUpdateProfile) {
         await userService.updateProfile(profilePayload);
       }
@@ -374,8 +384,13 @@ export default function EditProfileScreen() {
         await authService.resetPassword({ newPassword: nextPassword }, accessToken);
       }
 
+      if (shouldUpdateUsername) {
+        await userService.updateUsername({ username: trimmedUsername });
+        setPostLogoutNoticeKey('auth.usernameChangedReloginNotice');
+      }
+
       // Only refresh profile if there were actual changes
-      if (didUpdate) {
+      if (didUpdate && !shouldUpdateUsername) {
         const refreshedProfile = await authService.getMe();
         // console.log('[editProfile] refreshedProfile after update:', {
         //   pictureUrl: refreshedProfile.pictureUrl,
@@ -413,6 +428,10 @@ export default function EditProfileScreen() {
 
       successTimeoutRef.current = setTimeout(() => {
         resetSubmitFeedback();
+        if (shouldUpdateUsername) {
+          router.replace('/(auth)/login');
+          return;
+        }
         router.replace('/(tabs)');
       }, 1000);
     } catch (error) {
@@ -678,9 +697,7 @@ export default function EditProfileScreen() {
             </View>
 
             {submitError ? (
-              <Typography className="mt-2 text-red-500 mb-2 leading-4">
-                {submitError}
-              </Typography>
+              <Typography className="mt-2 text-red-500 mb-2 leading-4">{submitError}</Typography>
             ) : null}
 
             <Animated.View

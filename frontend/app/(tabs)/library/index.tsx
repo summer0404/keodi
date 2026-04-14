@@ -48,6 +48,7 @@ export default function FavoriteScreen() {
 
   const requestVersionRef = useRef(0);
   const inFlightPageRef = useRef<number | null>(null);
+  const flatListRef = useRef<FlatList<FavoriteItem>>(null);
 
   const sortByRef = useRef(sortBy);
   const currentPageRef = useRef(currentPage);
@@ -163,6 +164,11 @@ export default function FavoriteScreen() {
       reloadFavorites();
     }, [reloadFavorites])
   );
+
+  // Scroll to top when sortBy or categoryFilter changes for better UX
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [sortBy, categoryFilter]);
 
   const handleLoadMore = useCallback(() => {
     if (
@@ -341,6 +347,7 @@ export default function FavoriteScreen() {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={favoritePlaces}
           keyExtractor={keyExtractor}
           renderItem={renderItem}

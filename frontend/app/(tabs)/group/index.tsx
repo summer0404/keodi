@@ -96,9 +96,7 @@ const GroupSessionCard = React.memo(
           onPress={() => router.push(`/(tabs)/group/${item.sessionId}`)}
         >
           <View className="flex-row items-center gap-3">
-            <Typography variant="h5" className="text-xl">
-              {item.shareCode}
-            </Typography>
+            <Typography variant="h5">{item.shareCode}</Typography>
             <Pressable
               accessibilityRole="button"
               hitSlop={8}
@@ -509,14 +507,16 @@ export default function GroupScreen() {
   const emptyState = useMemo(() => {
     if (isLoading || !hasLoadedInitialData) {
       return (
-        <Video
-          source={require('@/assets/images/loading.mp4')}
-          style={{ width: 800, height: 800 }}
-          shouldPlay
-          isLooping
-          isMuted
-          resizeMode={ResizeMode.CONTAIN}
-        />
+        <View className="flex-1 items-center justify-center">
+          <Video
+            source={require('@/assets/images/loading.mp4')}
+            style={{ width: '100%', maxWidth: 700, height: 700, alignSelf: 'center' }}
+            shouldPlay
+            isLooping
+            isMuted
+            resizeMode={ResizeMode.CONTAIN}
+          />
+        </View>
       );
     }
 

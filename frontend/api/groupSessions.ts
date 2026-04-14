@@ -1,13 +1,16 @@
 import { API_ENDPOINTS } from '@/constants/api';
 import type {
   CreateGroupSessionResponse,
+  FinalizeMemberVoteRequest,
+  FinalizeMemberVoteResponse,
+  FinalizeSessionVoteResponse,
   GroupSessionItem,
   InviteFriendResponse,
   JoinGroupSessionRequest,
   JoinGroupSessionResponse,
   VotePlaceSessionRequest,
   VotePlaceSessionResponse,
-  GroupVoteItem
+  GroupVoteItem,
 } from '@/types/api';
 import { apiClient } from './client';
 
@@ -65,8 +68,28 @@ export const groupSessionsService = {
     return response.data;
   },
 
-  getVotes: async (sessionId: string) => {
-    const response = await apiClient.get<GroupVoteItem>(`${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/votes`);
+  finalizeMemberVote: async (
+    sessionId: string,
+    request: FinalizeMemberVoteRequest = {}
+  ): Promise<FinalizeMemberVoteResponse> => {
+    const response = await apiClient.post<FinalizeMemberVoteResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/vote/finalize-member`,
+      request
+    );
     return response.data;
-  }
+  },
+
+  finalizeSessionVote: async (sessionId: string): Promise<FinalizeSessionVoteResponse> => {
+    const response = await apiClient.post<FinalizeSessionVoteResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/vote/finalize-session`
+    );
+    return response.data;
+  },
+
+  getVotes: async (sessionId: string) => {
+    const response = await apiClient.get<GroupVoteItem>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/votes`
+    );
+    return response.data;
+  },
 };

@@ -1,13 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import {
-  ArrowLeft,
-  Clock,
-  TrendingUp,
-  X,
-} from 'lucide-react-native';
+import { ArrowLeft, Clock, TrendingUp, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,6 +12,7 @@ import AlertScreen from '@/components/ui/AlertScreen';
 import { Palette } from '@/constants/theme';
 import { placesService } from '@/api/places';
 import { usePlacesStore } from '@/store/usePlacesStore';
+import { useLocationStore } from '@/store/useLocationStore';
 import type { PlaceSortBy, TrendingPlaceItem } from '@/types/api';
 import { useTranslation } from 'react-i18next';
 import {
@@ -55,6 +50,10 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const upsertPlace = usePlacesStore((s) => s.upsertPlace);
+  const coords = useLocationStore((s) => s.coords);
+  const isLocationLoading = useLocationStore((s) => s.isLocationLoading);
+  const locationPermissionDenied = useLocationStore((s) => s.locationPermissionDenied);
+  const ensureLocation = useLocationStore((s) => s.ensureLocation);
   const sortOptions = useMemo(() => getSortOptions(t), [t]);
   const radiusOptions = useMemo(() => getRadiusOptions(t), [t]);
 
@@ -64,42 +63,13 @@ export default function SearchScreen() {
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
   const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
 
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [isLocationLoading, setIsLocationLoading] = useState(false);
-  const [locationError, setLocationError] = useState(false);
-
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [trendingPlaces, setTrendingPlaces] = useState<TrendingPlaceItem[]>([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState(false);
 
-  const fetchLocation = useCallback(async () => {
-    setIsLocationLoading(true);
-    setLocationError(false);
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== 'granted') {
-        setLocationError(true);
-        setCoords(null);
-        return;
-      }
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setCoords({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-    } catch {
-      setLocationError(true);
-      setCoords(null);
-    } finally {
-      setIsLocationLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchLocation();
-  }, [fetchLocation]);
+    void ensureLocation();
+  }, [ensureLocation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -205,7 +175,7 @@ export default function SearchScreen() {
     [router, upsertPlace]
   );
 
-  if (locationError && !coords) {
+  if (locationPermissionDenied && !coords) {
     return (
       <View className="flex-1 bg-white" style={{ paddingTop: insets.top + 12 }}>
         <View className="px-4">
@@ -225,7 +195,9 @@ export default function SearchScreen() {
             heading="search.locationRequired"
             description="search.locationRequiredDesc"
             primaryButtonText="button.retry"
-            primaryButtonAction={fetchLocation}
+            primaryButtonAction={() => {
+              void ensureLocation({ force: true });
+            }}
           />
         </View>
       </View>
