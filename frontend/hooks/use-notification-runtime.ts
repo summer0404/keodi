@@ -349,26 +349,41 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   const toBannerModel = useCallback(
     (parsed: ParsedNotification): NotificationBanner => {
       const isGroupInvite = parsed.type === 'GROUP_INVITE';
-
-      const title = isGroupInvite
-        ? t('notification.groupInviteTitle')
-        : parsed.title || t('notification.defaultTitle');
+      const isGroupVoteReminder = parsed.type === 'vote.cast';
+      const isMemberVoteFinalized = parsed.type === 'vote.member_finalized';
+      const isGroupVoteFinalized = parsed.type === 'GROUP_VOTE_FINALIZED';
 
       const senderName = parsed.senderName || t('notification.someone');
 
-      const message = isGroupInvite
-        ? t('notification.groupInviteBody', { name: senderName })
-        : parsed.body || t('notification.defaultBody');
+      let title: string;
+      let message: string;
+      let primaryLabel: string | undefined;
+
+      if (isGroupInvite) {
+        title = t('notification.groupInviteTitle');
+        message = t('notification.groupInviteBody', { name: senderName });
+        primaryLabel = parsed.primaryLabel || t('notification.joinNow');
+      } else if (isGroupVoteReminder) {
+        title = t('notification.groupVoteReminderTitle');
+        message = t('notification.groupVoteReminderBody', { name: senderName });
+        primaryLabel = parsed.primaryLabel || t('notification.viewNow');
+      } else if (isMemberVoteFinalized) {
+        title = t('notification.memberVoteFinalizedTitle');
+        message = t('notification.memberVoteFinalizedBody', { name: senderName });
+        primaryLabel = parsed.primaryLabel || t('notification.viewNow');
+      } else if (isGroupVoteFinalized) {
+        title = t('notification.groupVoteFinalizedTitle');
+        message = t('notification.groupVoteFinalizedBody');
+        primaryLabel = parsed.primaryLabel || t('notification.openNow');
+      } else {
+        title = parsed.title || t('notification.defaultTitle');
+        message = parsed.body || t('notification.defaultBody');
+        primaryLabel =
+          parsed.primaryLabel ||
+          (parsed.actionKind === 'navigate' ? t('notification.openNow') : undefined);
+      }
 
       const dismissLabel = t('notification.dismiss');
-
-      const primaryLabel =
-        parsed.primaryLabel ||
-        (parsed.actionKind === 'join-group-by-sharecode'
-          ? t('notification.joinNow')
-          : parsed.actionKind === 'navigate'
-            ? t('notification.openNow')
-            : undefined);
 
       const now = new Date();
       const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;

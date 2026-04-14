@@ -33,16 +33,20 @@ const debugToken = (token: string | null) => {
 interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
+  postLogoutNoticeKey: string | null;
   _hasHydrated: boolean;
 
   setTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   clearTokens: () => Promise<void>;
+  setPostLogoutNoticeKey: (noticeKey: string | null) => void;
+  consumePostLogoutNoticeKey: () => string | null;
   hydrate: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
   accessToken: null,
   refreshToken: null,
+  postLogoutNoticeKey: null,
   _hasHydrated: false,
 
   setTokens: async (accessToken: string, refreshToken: string) => {
@@ -62,7 +66,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
       await SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH_TOKEN);
     }
 
-    set({ accessToken: accessToken || null, refreshToken: refreshToken || null });
+    set({
+      accessToken: accessToken || null,
+      refreshToken: refreshToken || null,
+      postLogoutNoticeKey: null,
+    });
     // logAuthStore('setTokens', {
     //   hasAccessToken: Boolean(accessToken),
     //   accessToken: debugToken(accessToken || null),
@@ -83,6 +91,28 @@ export const useAuthStore = create<AuthState>()((set) => ({
     //   hasAccessToken: false,
     //   hasRefreshToken: false,
     // });
+  },
+
+  setPostLogoutNoticeKey: (noticeKey) => {
+    set({ postLogoutNoticeKey: noticeKey });
+  },
+
+  consumePostLogoutNoticeKey: (): string | null => {
+    let current: string | null = null;
+
+    set((state) => {
+      current = state.postLogoutNoticeKey;
+      if (!current) {
+        return state;
+      }
+
+      return {
+        ...state,
+        postLogoutNoticeKey: null,
+      };
+    });
+
+    return current;
   },
 
   hydrate: async () => {

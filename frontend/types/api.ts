@@ -375,6 +375,24 @@ export interface VotePlaceSessionResponse {
   };
 }
 
+export interface FinalizeMemberVoteRequest {
+  guestId?: string;
+}
+
+export interface FinalizeMemberVoteResponse {
+  vote: VotePlaceSessionResponse;
+  voteAutoFinalized: boolean;
+}
+
+export interface FinalizeSessionVoteResponse {
+  sessionId: string;
+  voteStatus: string;
+  totalMembers: number;
+  totalVotes: number;
+  winningPlaceId: string | null;
+  results: GroupVoteResult[];
+}
+
 export interface GroupVoteMember {
   id: string;
   userId: string | null;

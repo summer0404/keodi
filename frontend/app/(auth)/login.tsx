@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import { Eye, EyeClosed, CheckSquare, Square } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Palette } from '@/constants/theme';
@@ -29,11 +29,20 @@ export default function LoginScreen() {
   const [identifierError, setIdentifierError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [credentialError, setCredentialError] = useState('');
+  const [postLogoutNotice, setPostLogoutNotice] = useState('');
   const { t } = useTranslation();
   const setTokens = useAuthStore((state) => state.setTokens);
+  const consumePostLogoutNoticeKey = useAuthStore((state) => state.consumePostLogoutNoticeKey);
   const hasCompletedCategoryOnboarding = useSettingStore(
     (state) => state.hasCompletedCategoryOnboarding
   );
+
+  useEffect(() => {
+    const noticeKey = consumePostLogoutNoticeKey();
+    if (noticeKey) {
+      setPostLogoutNotice(t(noticeKey));
+    }
+  }, [consumePostLogoutNoticeKey, t]);
 
   const loginMutation = useMutation({
     mutationFn: authService.login,
@@ -92,6 +101,7 @@ export default function LoginScreen() {
     setIdentifierError('');
     setPasswordError('');
     setCredentialError('');
+    setPostLogoutNotice('');
 
     if (!normalizedIdentifier) {
       setIdentifierError(t('errors.identifierRequired'));
@@ -255,6 +265,13 @@ export default function LoginScreen() {
             <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
               {passwordError}
             </Typography>
+          )}
+          {!!postLogoutNotice && (
+            <View className="mt-2">
+              <Typography className="text-emerald-700 text-[12px] ml-1 leading-4">
+                {postLogoutNotice}
+              </Typography>
+            </View>
           )}
           {!!credentialError && (
             <View className="mt-2">

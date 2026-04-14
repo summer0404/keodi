@@ -93,7 +93,8 @@
     "resendEmail": "Gửi lại email xác minh",
     "resetPassword": "Đặt lại mật khẩu",
     "logOut": "Đăng xuất",
-    "resendSuccess": "Email xác minh đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn"
+    "resendSuccess": "Email xác minh đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn",
+    "usernameChangedReloginNotice": "Cập nhật hồ sơ thành công. Bạn đã đổi tên người dùng nên vui lòng đăng nhập lại."
   },
   "errors": {
     "usernameRequired": "Bạn phải nhập tên người dùng",
@@ -157,8 +158,12 @@
     "addToGroup": "Thêm vào nhóm",
     "addingToGroup": "Đang thêm vào nhóm...",
     "addToGroupSuccess": "Đã thêm vào nhóm",
-    "groupSessionNotFoundTitle": "Không có nhóm đang hoạt động",
+    "groupSessionNotFoundTitle": "Không có nhóm hoạt động",
     "groupSessionNotFoundDesc": "Vui lòng tạo hoặc tham gia nhóm trước.",
+    "groupAlreadyFinalizedTitle": "Phiên nhóm đã chốt",
+    "groupAlreadyFinalizedDesc": "Bạn đã chốt rồi, không thể thêm được nữa.",
+    "memberVoteFinalizedTitle": "Bạn đã chốt vote cá nhân",
+    "memberVoteFinalizedDesc": "Bạn đã tự chốt rồi nên không thể thêm địa điểm mới nữa.",
     "addToGroupFailedTitle": "Không thể thêm",
     "addToGroupFailedDesc": "Vote địa điểm vào nhóm thất bại. Vui lòng thử lại.",
     "call": "Gọi",
@@ -239,9 +244,15 @@
     "totalVotes": "{{count}} lượt vote",
     "vote": "Vote",
     "voted": "Đã vote",
+    "submit": "Chốt kèo",
+    "submitConfirmTitle": "Xác nhận chốt vote?",
+    "submitConfirmMessage": "Bạn có chắc chắn muốn chốt vote của mình không?",
+    "confirmSubmit": "Xác nhận",
+    "submittingVote": "Đang chốt...",
+    "clickToDeal": "Nhấn để Chốt kèo!",
     "rank1": "#1",
     "noPlacesYet": "Chưa có địa điểm nào trong nhóm này",
-    "noPlacesTitle": "Chưa có địa điểm đề cử",
+    "noPlacesTitle": "Chưa có địa điểm nào",
     "noPlacesDesc": "Hãy thêm địa điểm từ trang tìm kiếm để bắt đầu vote cùng nhau.",
     "goToSearch": "Đi tới tìm kiếm",
     "noMembersTitle": "Chưa có thành viên",
@@ -259,7 +270,28 @@
     "joinBlockedMessage": "Muốn gia nhập session mới thì hãy đóng session đang hoạt động hiện tại.",
     "ok": "Đồng ý",
     "joinQuickly": "Tham gia nhóm nhanh chóng",
-    "inviteByLink": "Mời bạn bè bằng link/QR code"
+    "inviteByLink": "Mời bạn bè bằng link/QR code",
+    "finalizeGroupResult": "Chốt kết quả nhóm",
+    "finalizingGroupResult": "ĐANG CHỐT...",
+    "finalizeCreatorOnlyTitle": "Chỉ người lập nhóm mới được chốt",
+    "finalizeCreatorOnlyMessage": "Bạn không có quyền chốt kết quả nhóm này."
+  },
+  "notification": {
+    "groupInviteTitle": "Mời tham gia nhóm",
+    "groupInviteBody": "{{name}} đã mời bạn tham gia nhóm. Tham gia ngay nhé!",
+    "groupVoteReminderTitle": "Có cập nhật vote mới",
+    "groupVoteReminderBody": "{{name}} vừa vote trong nhóm. Mở ngay để xem thay đổi.",
+    "memberVoteFinalizedTitle": "Thành viên đã chốt vote",
+    "memberVoteFinalizedBody": "{{name}} vừa chốt vote cá nhân. Xem kết quả ngay nhé!",
+    "groupVoteFinalizedTitle": "Nhóm đã chốt vote",
+    "groupVoteFinalizedBody": "Nhóm vừa chốt vote! Xem địa điểm chiến thắng.",
+    "defaultTitle": "Thông báo",
+    "defaultBody": "Bạn có thông báo mới.",
+    "someone": "Một người bạn",
+    "dismiss": "Bỏ qua",
+    "joinNow": "Tham gia ngay",
+    "openNow": "Mở ngay",
+    "viewNow": "Xem ngay"
   },
   "button": {
     "update": "Cập nhật",
@@ -271,15 +303,5 @@
     "done": "Xong",
     "join": "Tham gia",
     "joining": "Đang tham gia..."
-  },
-  "notification": {
-    "groupInviteTitle": "Bạn có một nhóm mới!",
-    "defaultTitle": "Thông báo",
-    "someone": "Một người bạn",
-    "defaultBody": "Bạn có một thông báo mới!",
-    "dismiss": "Bỏ qua",
-    "joinNow": "Tham gia ngay",
-    "openNow": "Mở ngay",
-    "groupInviteBody": "{{name}} đã mời bạn tham gia nhóm. Tham gia ngay nhé!"
   }
 }

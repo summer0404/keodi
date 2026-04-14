@@ -39,6 +39,8 @@ export default function SearchResultsScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t } = useTranslation();
+  const cacheNearbyPlaces = usePlacesStore((s) => s.cacheNearbyPlaces);
+  const upsertPlace = usePlacesStore((s) => s.upsertPlace);
   const setPlaceFavorite = usePlacesStore((s) => s.setPlaceFavorite);
   const horizontalPadding = 16;
   const cardWidth = width - horizontalPadding * 2;
@@ -126,6 +128,7 @@ export default function SearchResultsScreen() {
         if (requestVersion !== requestVersionRef.current) return;
 
         const received = response.places ?? [];
+        cacheNearbyPlaces(received);
         const totalPages = response.totalPages ?? page;
         const nextHasMore = page < totalPages && received.length > 0;
 
@@ -209,7 +212,12 @@ export default function SearchResultsScreen() {
       };
 
       return (
-        <Pressable onPress={() => router.push(`/place/${item.id}` as any)}>
+        <Pressable
+          onPress={() => {
+            upsertPlace(item);
+            router.push(`/place/${item.id}` as any);
+          }}
+        >
           <PlaceCard
             style={{ width: cardWidth, elevation: 0 }}
             imageSource={primaryImageUrl ? { uri: primaryImageUrl } : DEFAULT_PLACE_IMAGE}
@@ -231,7 +239,7 @@ export default function SearchResultsScreen() {
         </Pressable>
       );
     },
-    [cardWidth, router, setPlaceFavorite, t]
+    [cardWidth, router, setPlaceFavorite, t, upsertPlace]
   );
 
   const itemSeparator = useCallback(() => <View style={{ height: 16 }} />, []);
