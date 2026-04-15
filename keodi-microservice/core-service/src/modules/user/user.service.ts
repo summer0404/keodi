@@ -45,7 +45,7 @@ export class UserService {
 
   async create(
     userId: string,
-    username?: string,
+    username: string,
     firstName?: string,
     lastName?: string,
     picture?: string,

@@ -42,12 +42,8 @@ export class SearchService {
       rawQuery: rawQueryInput,
       extractedTerm,
       userId,
-    } = createSearchDto as {
-      rawQuery: string;
-      extractedTerm?: string;
-      userId?: string;
-    };
-
+    } = createSearchDto;
+    
     const rawQuery = rawQueryInput.trim();
     const normalizedTerm = extractedTerm?.trim().toLowerCase();
 
@@ -56,7 +52,7 @@ export class SearchService {
         data: {
           rawQuery,
           extractedTerm: normalizedTerm || null,
-          ...(userId ? { user: { connect: { id: userId } } } : {}),
+          userId,
         },
       });
     } catch (error) {
