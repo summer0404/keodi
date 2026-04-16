@@ -5,7 +5,6 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { UserTopics } from 'src/shared/constants/topic.constant';
-import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class UserService {
@@ -13,7 +12,7 @@ export class UserService {
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
-  ) {}
+  ) { }
 
   async unverifyUser(userId: string) {
     try {
@@ -77,18 +76,14 @@ export class UserService {
         },
       });
       try {
-        const kafka = this.kafkaService.getClient();
-
-        await lastValueFrom(
-          kafka.send(UserTopics.UsernameSynced, {
+        await this.kafkaService.sendWithTimeout(UserTopics.UsernameSynced, {
             userId: existingUser.id,
             username: newUsername,
           })
-        );
       } catch (error) {
         await this.prismaService.user.update({
           where: { id: existingUser.id },
-          data: {username: existingUser.username},
+          data: { username: existingUser.username },
         });
 
         throw new RpcException({
@@ -126,17 +121,13 @@ export class UserService {
           message: 'User not found',
         });
 
-      const kafka = this.kafkaService.getClient();
-
-      await lastValueFrom(
-        kafka.send(UserTopics.Create, {
-          userId: existingUser.id,
-          username: existingUser.username ?? username,
-          firstName,
-          lastName,
-          picture,
-        })
-      );
+      await this.kafkaService.sendWithTimeout(UserTopics.Create, {
+        userId: existingUser.id,
+        username: existingUser.username ?? username,
+        firstName,
+        lastName,
+        picture,
+      })
     } catch (error) {
       handleServiceErrorCatching(error);
     }

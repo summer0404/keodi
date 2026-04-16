@@ -17,7 +17,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
 import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
-import { PlaceRecommendationResponseDto } from 'src/shared/dtos/recommendation.dto';
+import { PlaceRecommendationResponseDto, RecommendationPlaceRow } from 'src/shared/dtos/recommendation.dto';
 import { SortOrder } from 'src/shared/enums/sort.enum';
 import { formatTimeOnly } from 'src/shared/helpers/time.helper';
 import {
@@ -30,20 +30,6 @@ import { SessionLocation } from 'src/shared/types/group-session.type';
 import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
 
-type RecommendationPlaceRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  rating: number | null;
-  fullAddress: string | null;
-  latitude: number;
-  longitude: number;
-  featureImageUrl: string | null;
-  googleMapLink: string | null;
-  phoneNumber: string | null;
-  website: string | null;
-};
-
 @Injectable()
 export class RecommendationService {
   private readonly logger = new Logger(RecommendationService.name);
@@ -55,52 +41,11 @@ export class RecommendationService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
-  ) {}
+  ) { }
 
-  private mapRecommendationRowsToPlaces(
-    places: RecommendationPlaceRow[],
-  ): PlaceRecommendationResponseDto[] {
-    return places.map((place) => ({
-      ...place,
-      openingHours: [],
-      categories: [],
-    }));
-  }
-
-  private mapPlaceEntitiesToRecommendationPlaces(
-    places: Array<{
-      id: string;
-      name: string;
-      description: string | null;
-      rating: number | null;
-      fullAddress: string | null;
-      latitude: number;
-      longitude: number;
-      featureImageUrl: string | null;
-      googleMapLink: string | null;
-      phoneNumber: string | null;
-      website: string | null;
-    }>,
-  ): PlaceRecommendationResponseDto[] {
-    return this.mapRecommendationRowsToPlaces(
-      places.map((place) => ({
-        id: place.id,
-        name: place.name,
-        description: place.description,
-        rating: place.rating,
-        fullAddress: place.fullAddress,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        featureImageUrl: place.featureImageUrl,
-        googleMapLink: place.googleMapLink,
-        phoneNumber: place.phoneNumber,
-        website: place.website,
-      })),
-    );
-  }
 
   private async enrichPlacesWithRelations(
-    places: PlaceRecommendationResponseDto[],
+    places: RecommendationPlaceRow[],
   ): Promise<PlaceRecommendationResponseDto[]> {
     if (places.length === 0) {
       return [];
@@ -315,8 +260,7 @@ export class RecommendationService {
       LIMIT ${GROUP_SESSION_MAX_RECOMMENDATION_PLACES}
     `;
 
-    const places = this.mapRecommendationRowsToPlaces(placeRows);
-    return await this.enrichPlacesWithRelations(places);
+    return await this.enrichPlacesWithRelations(placeRows);
   }
 
   private async getContentBasedPlaceCandidates(
@@ -486,8 +430,7 @@ export class RecommendationService {
       ORDER BY p.id; 
     `;
 
-      const allPlaces = this.mapRecommendationRowsToPlaces(placeRows);
-      const enhancedPlaces = await this.enrichPlacesWithRelations(allPlaces);
+      const enhancedPlaces = await this.enrichPlacesWithRelations(placeRows);
 
       return enhancedPlaces;
     } catch (error) {
@@ -556,8 +499,7 @@ export class RecommendationService {
         LIMIT 10
       `;
 
-      const places = this.mapRecommendationRowsToPlaces(placeRows);
-      const enrichedPlaces = await this.enrichPlacesWithRelations(places);
+      const enrichedPlaces = await this.enrichPlacesWithRelations(placeRows);
 
       return enrichedPlaces;
     } catch (error) {
@@ -640,10 +582,7 @@ export class RecommendationService {
       ...cachedPlacesFromActions,
     ]);
 
-    const shuffledTrendingPlaces =
-      this.recommendationHelper.shufflePlaces(trendingPlaces);
-
-    return shuffledTrendingPlaces;
+    return this.recommendationHelper.shufflePlaces(trendingPlaces);
   }
 
   async getForYou(userId: string, latitude: number, longitude: number) {
@@ -666,9 +605,7 @@ export class RecommendationService {
       ];
 
       const enrichedCandidates =
-        await this.enrichPlacesWithRelations(
-          this.mapPlaceEntitiesToRecommendationPlaces(allCandidates),
-        );
+        await this.enrichPlacesWithRelations(allCandidates);
 
       const deduplicatedCandidates =
         this.recommendationHelper.deduplicatePlaces(enrichedCandidates);
@@ -769,11 +706,11 @@ export class RecommendationService {
         centroid.latitude === null || centroid.longitude === null
           ? []
           : await this.fetchGroupSessionRecommendationPlaces({
-              latitude: centroid.latitude,
-              longitude: centroid.longitude,
-              searchRadius: session.searchRadius,
-              categoryIds,
-            });
+            latitude: centroid.latitude,
+            longitude: centroid.longitude,
+            searchRadius: session.searchRadius,
+            categoryIds,
+          });
 
       await this.redisService.setEx(
         cacheKey,

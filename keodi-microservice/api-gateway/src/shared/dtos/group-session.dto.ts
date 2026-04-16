@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { SessionStatus } from '../enums/group-session.enum';
 import { PlaceRecommendationResponseDto } from './place.dto';
+import { PlaceConstants } from '../constants/place.constant';
 
 export class GroupSessionResponseDto {
   @ApiProperty({
@@ -285,7 +286,7 @@ export class GroupSessionRecommendationsResponseDto {
     description: 'Recommendation search radius in kilometers',
     example: 5,
   })
-  searchRadius: number;
+  searchRadius: number = PlaceConstants.DEFAULT_RADIUS;
 
   @ApiProperty({
     description: 'Selected category IDs used for group recommendations',
