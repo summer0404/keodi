@@ -220,6 +220,7 @@ export class GroupSessionService {
               user: {
                 select: {
                   id: true,
+                  username: true,
                   firstName: true,
                   lastName: true,
                   pictureUrl: true,
@@ -230,6 +231,7 @@ export class GroupSessionService {
           creator: {
             select: {
               id: true,
+              username: true,
               firstName: true,
               lastName: true,
               pictureUrl: true,
@@ -335,6 +337,7 @@ export class GroupSessionService {
           user: {
             select: {
               id: true,
+              username: true,
               firstName: true,
               lastName: true,
               pictureUrl: true,
@@ -568,11 +571,22 @@ export class GroupSessionService {
                 userId: true,
                 guestId: true,
                 nickname: true,
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    pictureUrl: true,
+                  },
+                },
               },
             },
           },
         });
       });
+
+      const memberWithPictureUrl = await this.mapMemberPictureUrl(vote.member);
 
       // Notify all session members about the new/updated vote in real time
       void this.notifySessionMembers(sessionId, 'vote.cast', {
@@ -585,7 +599,10 @@ export class GroupSessionService {
         },
       });
 
-      return vote;
+      return {
+        ...vote,
+        member: memberWithPictureUrl,
+      };
     } catch (error) {
       if (
         error &&
@@ -793,6 +810,7 @@ export class GroupSessionService {
                   user: {
                     select: {
                       id: true,
+                      username: true,
                       firstName: true,
                       lastName: true,
                       pictureUrl: true,
@@ -893,6 +911,7 @@ export class GroupSessionService {
           creator: {
             select: {
               id: true,
+              username: true,
               firstName: true,
               lastName: true,
               pictureUrl: true,
@@ -903,6 +922,7 @@ export class GroupSessionService {
               user: {
                 select: {
                   id: true,
+                  username: true,
                   firstName: true,
                   lastName: true,
                   pictureUrl: true,
@@ -960,6 +980,7 @@ export class GroupSessionService {
               user: {
                 select: {
                   id: true,
+                  username: true,
                   firstName: true,
                   lastName: true,
                   pictureUrl: true,
@@ -987,6 +1008,7 @@ export class GroupSessionService {
                   user: {
                     select: {
                       id: true,
+                      username: true,
                       firstName: true,
                       lastName: true,
                       pictureUrl: true,

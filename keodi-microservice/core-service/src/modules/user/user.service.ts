@@ -1,11 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { FriendRequestStatus } from '@prisma/client';
+import { FriendRequestStatus, ProfileVisibility } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
-import { ProfileVisibility } from 'src/shared/enums/setting.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 
 @Injectable()
@@ -23,6 +22,7 @@ export class UserService {
       const users = await this.prismaService.user.findMany({
         select: {
           id: true,
+          username: true,
           firstName: true,
           lastName: true,
           phoneNumber: true,
@@ -43,10 +43,22 @@ export class UserService {
     }
   }
 
-  async create(userId: string) {
+  async create(
+    userId: string,
+    username: string,
+    firstName?: string,
+    lastName?: string,
+    picture?: string,
+  ) {
     try {
       await this.prismaService.user.create({
-        data: { id: userId },
+        data: {
+          id: userId,
+          username,
+          firstName,
+          lastName,
+          pictureUrl: picture,
+        },
       });
     } catch (error) {
       return handleServiceErrorCatching(error);
@@ -118,6 +130,7 @@ export class UserService {
         where: { id: targetUserId },
         select: {
           id: true,
+          username: true,
           firstName: true,
           lastName: true,
           phoneNumber: true,
@@ -280,5 +293,18 @@ export class UserService {
         updatedAt: new Date().toISOString(),
       }),
     );
+  }
+
+  async syncUsername(userId: string, username: string) {
+    try {
+      await this.prismaService.user.upsert({
+        where: { id: userId },
+        create: { id: userId, username },
+        update: { username },
+      });
+      return { message: 'USERNAME_SYNCED' };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
   }
 }

@@ -16,6 +16,7 @@ export const UserTopics = {
   Create: 'user.create',
   Unverify: 'user.unverify',
   UpdateUsername: 'user.update-username',
+  UsernameSynced: 'user.username-synced',
 } as const;
 
 export const NotificationTopics = {
