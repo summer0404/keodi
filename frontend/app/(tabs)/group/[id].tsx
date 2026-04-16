@@ -17,7 +17,6 @@ import { useTranslation } from 'react-i18next';
 import Typography from '@/components/ui/Typography';
 import { groupSessionsService } from '@/api/groupSessions';
 import { favoriteService } from '@/api/favorite';
-import { authService } from '@/api/auth';
 import { Palette } from '@/constants/theme';
 import { DEFAULT_PLACE_IMAGE, getPrimaryImageUrl } from '@/constants/helper';
 import type {
@@ -30,6 +29,8 @@ import { Card } from '@/components/ui/Card';
 import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
 import AlertScreen from '@/components/ui/AlertScreen';
 import { usePlacesStore } from '@/store/usePlacesStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useGroupSessionStore } from '@/store/useGroupSessionStore';
 import clsx from 'clsx';
 import { Button } from '@/components/ui/Button';
 
@@ -52,6 +53,10 @@ const GroupSessionCard = ({
   finalizeLabel,
   finalizingLabel,
   hasMembers,
+  currentUserId,
+  currentUserPictureUrl,
+  currentUserAvatarVersion,
+  avatarCacheEpoch,
 }: {
   item: GroupSessionItem;
   onShare: (session: GroupSessionItem) => void;
@@ -60,7 +65,42 @@ const GroupSessionCard = ({
   finalizeLabel: string;
   finalizingLabel: string;
   hasMembers: boolean;
+  currentUserId: string | null;
+  currentUserPictureUrl: string | null;
+  currentUserAvatarVersion: number;
+  avatarCacheEpoch: number;
 }) => {
+  const membersForDisplay = useMemo(() => {
+    const members = item.members ?? [];
+
+    if (!currentUserId || !currentUserPictureUrl) {
+      return members;
+    }
+
+    let hasAvatarOverride = false;
+    const nextMembers = members.map((member) => {
+      if (member.userId !== currentUserId || !member.user) {
+        return member;
+      }
+
+      const existingPictureUrl = member.user.pictureUrl?.trim() ?? null;
+      if (existingPictureUrl === currentUserPictureUrl) {
+        return member;
+      }
+
+      hasAvatarOverride = true;
+      return {
+        ...member,
+        user: {
+          ...member.user,
+          pictureUrl: currentUserPictureUrl,
+        },
+      };
+    });
+
+    return hasAvatarOverride ? nextMembers : members;
+  }, [currentUserId, currentUserPictureUrl, item.members]);
+
   return (
     <Card
       className={clsx('overflow-hidden self-center w-full bg-white')}
@@ -123,7 +163,12 @@ const GroupSessionCard = ({
         </View>
 
         <View className="mt-3 justify-between items-center flex-row gap-2">
-          <GroupSessionAvatarStack members={item.members} />
+          <GroupSessionAvatarStack
+            members={membersForDisplay}
+            currentUserId={currentUserId}
+            currentUserAvatarVersion={currentUserAvatarVersion}
+            avatarCacheEpoch={avatarCacheEpoch}
+          />
           {item.voteStatus !== 'FINALIZED' && hasMembers ? (
             <Pressable
               className="h-10 min-w-[168px] items-center justify-center overflow-hidden rounded-full px-5"
@@ -292,12 +337,18 @@ export default function GroupDetailScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const currentUserId = useAuthStore((state) => state.me?.id ?? null);
+  const currentUserPictureUrl = useAuthStore((state) => state.me?.pictureUrl?.trim() ?? null);
+  const currentUserAvatarVersion = useAuthStore((state) => state.meFetchedAt);
+  const avatarCacheEpoch = useAuthStore((state) => state.avatarCacheEpoch);
+  const fetchMe = useAuthStore((state) => state.fetchMe);
+  const fetchSessionById = useGroupSessionStore((state) => state.fetchSessionById);
+  const upsertSession = useGroupSessionStore((state) => state.upsertSession);
+  const session = useGroupSessionStore((state) => (id ? (state.sessionsById[id] ?? null) : null));
 
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingVotes, setIsLoadingVotes] = useState(true);
-  const [session, setSession] = useState<GroupSessionItem | null>(null);
   const [voteData, setVoteData] = useState<GroupVoteItem | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isVotingPlaceId, setIsVotingPlaceId] = useState<string | null>(null);
   const [isFinalizingVote, setIsFinalizingVote] = useState(false);
   const [isFinalizingSession, setIsFinalizingSession] = useState(false);
@@ -312,6 +363,40 @@ export default function GroupDetailScreen() {
 
   const hasMembers = useMemo(() => (session?.members?.length ?? 0) > 1, [session?.members?.length]);
 
+  const mergeCurrentUserAvatar = useCallback(
+    (members: GroupSessionMember[] | undefined) => {
+      const safeMembers = members ?? [];
+
+      if (!currentUserId || !currentUserPictureUrl) {
+        return safeMembers;
+      }
+
+      let hasAvatarOverride = false;
+      const nextMembers = safeMembers.map((member) => {
+        if (member.userId !== currentUserId || !member.user) {
+          return member;
+        }
+
+        const existingPictureUrl = member.user.pictureUrl?.trim() ?? null;
+        if (existingPictureUrl === currentUserPictureUrl) {
+          return member;
+        }
+
+        hasAvatarOverride = true;
+        return {
+          ...member,
+          user: {
+            ...member.user,
+            pictureUrl: currentUserPictureUrl,
+          },
+        };
+      });
+
+      return hasAvatarOverride ? nextMembers : safeMembers;
+    },
+    [currentUserId, currentUserPictureUrl]
+  );
+
   const loadData = useCallback(
     async (isActiveRef: { current: boolean }) => {
       setIsLoading(true);
@@ -319,22 +404,19 @@ export default function GroupDetailScreen() {
 
       try {
         if (id) {
-          const [detail, votes] = await Promise.all([
-            groupSessionsService.getGroupSessionById(id),
+          const [, votes] = await Promise.all([
+            fetchSessionById(id, { force: true }),
             groupSessionsService.getVotes(id),
           ]);
 
           if (isActiveRef.current) {
-            setSession(detail);
             setVoteData(votes);
           }
         } else if (isActiveRef.current) {
-          setSession(null);
           setVoteData(null);
         }
       } catch {
         if (isActiveRef.current) {
-          setSession(null);
           setVoteData(null);
         }
       } finally {
@@ -344,7 +426,7 @@ export default function GroupDetailScreen() {
         }
       }
     },
-    [id]
+    [fetchSessionById, id]
   );
 
   useFocusEffect(
@@ -359,27 +441,8 @@ export default function GroupDetailScreen() {
   );
 
   useEffect(() => {
-    let active = true;
-
-    const loadCurrentUser = async () => {
-      try {
-        const me = await authService.getMe();
-        if (active) {
-          setCurrentUserId(me.id);
-        }
-      } catch {
-        if (active) {
-          setCurrentUserId(null);
-        }
-      }
-    };
-
-    loadCurrentUser();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+    void fetchMe();
+  }, [fetchMe]);
 
   const sortedResults = useMemo(() => {
     const sorted = [...(voteData?.results ?? [])].sort((a, b) => b.count - a.count);
@@ -525,15 +588,11 @@ export default function GroupDetailScreen() {
       try {
         const response = await groupSessionsService.finalizeSessionVote(currentSession.sessionId);
 
-        setSession((prev) =>
-          prev
-            ? {
-                ...prev,
-                voteStatus: response.voteStatus,
-                winningPlaceId: response.winningPlaceId,
-              }
-            : prev
-        );
+        upsertSession({
+          ...currentSession,
+          voteStatus: response.voteStatus,
+          winningPlaceId: response.winningPlaceId,
+        });
 
         setVoteData((prev) => {
           if (!prev) {
@@ -559,7 +618,7 @@ export default function GroupDetailScreen() {
         setIsFinalizingSession(false);
       }
     },
-    [currentUserId, isFinalizingSession]
+    [currentUserId, isFinalizingSession, upsertSession]
   );
 
   const handleFavoriteToggle = useCallback(
@@ -637,6 +696,10 @@ export default function GroupDetailScreen() {
               finalizeLabel={t('group.finalizeGroupResult')}
               finalizingLabel={t('group.finalizingGroupResult')}
               hasMembers={hasMembers}
+              currentUserId={currentUserId}
+              currentUserPictureUrl={currentUserPictureUrl}
+              currentUserAvatarVersion={currentUserAvatarVersion}
+              avatarCacheEpoch={avatarCacheEpoch}
             />
 
             {hasMembers ? (
@@ -691,7 +754,9 @@ export default function GroupDetailScreen() {
                       const isVotedFinalized = isVoted && isCurrentUserVoteFinalized;
                       const isWinningPlace = session.winningPlaceId === result.place.id;
                       const isWinnerCelebrating = celebratingWinnerPlaceId === result.place.id;
-                      const voters = toAvatarMembers(session.sessionId, result.voters);
+                      const voters = mergeCurrentUserAvatar(
+                        toAvatarMembers(session.sessionId, result.voters)
+                      );
                       const isFavorite = favoriteMap[result.place.id] ?? false;
 
                       return (
@@ -778,7 +843,13 @@ export default function GroupDetailScreen() {
                                 ) : null}
 
                                 <View className="mt-2 flex-row items-center justify-between gap-2">
-                                  <GroupSessionAvatarStack members={voters} size={24} />
+                                  <GroupSessionAvatarStack
+                                    members={voters}
+                                    size={24}
+                                    currentUserId={currentUserId}
+                                    currentUserAvatarVersion={currentUserAvatarVersion}
+                                    avatarCacheEpoch={avatarCacheEpoch}
+                                  />
 
                                   <Pressable
                                     className={clsx(

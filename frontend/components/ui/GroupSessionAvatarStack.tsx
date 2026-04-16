@@ -8,21 +8,41 @@ import type { GroupSessionMember } from '@/types/api';
 type GroupSessionAvatarStackProps = {
   members?: GroupSessionMember[];
   size?: number;
+  currentUserId?: string | null;
+  currentUserAvatarVersion?: number;
+  avatarCacheEpoch?: number;
 };
 
-const getAvatarSource = (pictureUrl?: string | null) => {
+const withVersionQuery = (url: string, versions: Array<number | undefined | null>) => {
+  const validVersions = versions.filter((version): version is number => Boolean(version));
+
+  if (validVersions.length === 0) {
+    return url;
+  }
+
+  const versionParam = validVersions.join('-');
+  return url.includes('?') ? `${url}&v=${versionParam}` : `${url}?v=${versionParam}`;
+};
+
+const getAvatarSource = (
+  pictureUrl?: string | null,
+  versions: Array<number | undefined | null> = []
+) => {
   const rawUrl = pictureUrl?.trim();
 
   if (!rawUrl) {
     return DEFAULT_AVATAR_SOURCE;
   }
 
-  return { uri: rawUrl };
+  return { uri: withVersionQuery(rawUrl, versions) };
 };
 
 export const GroupSessionAvatarStack = ({
   members = [],
   size = 28,
+  currentUserId,
+  currentUserAvatarVersion,
+  avatarCacheEpoch,
 }: GroupSessionAvatarStackProps) => {
   const visibleMembers = useMemo(() => members.slice(0, 4), [members]);
   const extraCount = Math.max(members.length - visibleMembers.length, 0);
@@ -31,7 +51,14 @@ export const GroupSessionAvatarStack = ({
     <View className="flex-row items-center">
       <View className="flex-row items-center">
         {visibleMembers.map((member, index) => {
-          const avatarSource = getAvatarSource(member.user?.pictureUrl);
+          const isCurrentUser = Boolean(currentUserId && member.userId === currentUserId);
+          const avatarSource = getAvatarSource(member.user?.pictureUrl, [
+            avatarCacheEpoch,
+            isCurrentUser ? currentUserAvatarVersion : undefined,
+          ]);
+          const imageKey = `${member.id}-${avatarCacheEpoch ?? 'session'}-${
+            isCurrentUser ? (currentUserAvatarVersion ?? 'static') : 'peer'
+          }`;
 
           return (
             <View
@@ -44,6 +71,7 @@ export const GroupSessionAvatarStack = ({
               }}
             >
               <Image
+                key={imageKey}
                 source={avatarSource}
                 style={{ width: size, height: size }}
                 contentFit="cover"

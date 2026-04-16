@@ -135,6 +135,8 @@ export default function EditProfileScreen() {
   const accessToken = useAuthStore(
     (state: ReturnType<typeof useAuthStore.getState>) => state.accessToken
   );
+  const fetchMe = useAuthStore((state: ReturnType<typeof useAuthStore.getState>) => state.fetchMe);
+  const setMe = useAuthStore((state: ReturnType<typeof useAuthStore.getState>) => state.setMe);
   const setPostLogoutNoticeKey = useAuthStore(
     (state: ReturnType<typeof useAuthStore.getState>) => state.setPostLogoutNoticeKey
   );
@@ -190,8 +192,8 @@ export default function EditProfileScreen() {
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const profile = await authService.getMe();
-        if (!mounted) return;
+        const profile = await fetchMe({ force: true });
+        if (!mounted || !profile) return;
 
         setInitialProfile(profile);
         setUsername(profile.username ?? '');
@@ -217,7 +219,7 @@ export default function EditProfileScreen() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [fetchMe]);
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -391,7 +393,11 @@ export default function EditProfileScreen() {
 
       // Only refresh profile if there were actual changes
       if (didUpdate && !shouldUpdateUsername) {
-        const refreshedProfile = await authService.getMe();
+        const refreshedProfile = await fetchMe({ force: true });
+        if (!refreshedProfile) {
+          setSubmitError(t('errors.unableToUpdateProfile'));
+          return;
+        }
         // console.log('[editProfile] refreshedProfile after update:', {
         //   pictureUrl: refreshedProfile.pictureUrl,
         //   username: refreshedProfile.username,
@@ -408,6 +414,7 @@ export default function EditProfileScreen() {
           refreshedProfile.pictureUrl ? { uri: refreshedProfile.pictureUrl } : DEFAULT_AVATAR_SOURCE
         );
         setAvatarFile(null);
+        setMe(refreshedProfile);
       }
 
       setIsSubmitSuccess(true);

@@ -128,7 +128,8 @@
     "imageTooLarge": "Hình ảnh quá lớn. Vui lòng chọn hình ảnh nhỏ hơn",
     "invalidImageFormat": "Chỉ hỗ trợ tệp JPG, JPEG, PNG, và WEBP",
     "unableToUpdateProfile": "Không thể cập nhật hồ sơ. Vui lòng thử lại",
-    "SESSION_NOT_FOUND": "Không tìm thấy phiên nhóm. Vui lòng kiểm tra lại mã chia sẻ"
+    "SESSION_NOT_FOUND": "Không tìm thấy phiên nhóm. Vui lòng kiểm tra lại mã chia sẻ",
+    "SESSION_NOT_ACTIVE": "Phiên nhóm không hoạt động. Vui lòng kiểm tra lại mã chia sẻ"
   },
   "home": {
     "greeting": "Hi @{{username}},",

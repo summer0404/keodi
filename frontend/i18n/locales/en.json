@@ -128,7 +128,8 @@
     "imageTooLarge": "Image is too large. Please choose a smaller image",
     "invalidImageFormat": "Only JPG, JPEG, PNG, and WEBP files are supported",
     "unableToUpdateProfile": "Unable to update profile. Please try again",
-    "SESSION_NOT_FOUND": "Group session not found. Please check the share code and try again"
+    "SESSION_NOT_FOUND": "Group session not found. Please check the share code and try again",
+    "SESSION_NOT_ACTIVE": "Group session is not active. Please check the share code and try again"
   },
   "home": {
     "greeting": "Hi @{{username}},",

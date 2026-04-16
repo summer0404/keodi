@@ -38,8 +38,8 @@ import { Palette } from '@/constants/theme';
 import { favoriteService } from '@/api/favorite';
 import { groupSessionsService } from '@/api/groupSessions';
 import { placesService } from '@/api/places';
-import { authService } from '@/api/auth';
 import { usePlacesStore } from '@/store/usePlacesStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   extractImageUrls,
   getLocalizedLocation,
@@ -180,13 +180,14 @@ function PlaceDetailScreen() {
   const cacheNearbyPlaces = usePlacesStore((state) => state.cacheNearbyPlaces);
   const upsertPlace = usePlacesStore((state) => state.upsertPlace);
   const setPlaceFavorite = usePlacesStore((state) => state.setPlaceFavorite);
+  const currentUserId = useAuthStore((state) => state.me?.id ?? null);
+  const fetchMe = useAuthStore((state) => state.fetchMe);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [isRefreshingPlace, setIsRefreshingPlace] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const [localFavorite, setLocalFavorite] = useState(!!place?.isFavorite);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isDescriptionOverflowing, setIsDescriptionOverflowing] = useState(false);
   const [isTopImageFailed, setIsTopImageFailed] = useState(false);
   const [isVotingToGroup, setIsVotingToGroup] = useState(false);
@@ -306,27 +307,8 @@ function PlaceDetailScreen() {
   }, [place?.featureImageUrl, placeId]);
 
   useEffect(() => {
-    let active = true;
-
-    const loadCurrentUser = async () => {
-      try {
-        const me = await authService.getMe();
-        if (active) {
-          setCurrentUserId(me.id);
-        }
-      } catch {
-        if (active) {
-          setCurrentUserId(null);
-        }
-      }
-    };
-
-    void loadCurrentUser();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+    void fetchMe();
+  }, [fetchMe]);
 
   const resetVoteFeedback = useCallback(() => {
     if (voteSuccessTimeoutRef.current) {
@@ -512,13 +494,8 @@ function PlaceDetailScreen() {
 
       let nextCurrentUserId = currentUserId;
       if (!nextCurrentUserId) {
-        try {
-          const me = await authService.getMe();
-          nextCurrentUserId = me.id;
-          setCurrentUserId(me.id);
-        } catch {
-          nextCurrentUserId = null;
-        }
+        const me = await fetchMe({ force: true });
+        nextCurrentUserId = me?.id ?? null;
       }
 
       if (nextCurrentUserId) {
@@ -560,6 +537,7 @@ function PlaceDetailScreen() {
     }
   }, [
     currentUserId,
+    fetchMe,
     isVoteSuccess,
     isVotingToGroup,
     placeId,
@@ -659,6 +637,7 @@ function PlaceDetailScreen() {
       i18n.language,
       t
     );
+    const hasOpeningHours = groupOpeningHoursByRange(target.openingHours).length > 0;
 
     return (
       <View className="mt-5 gap-2">
@@ -672,15 +651,17 @@ function PlaceDetailScreen() {
               </Typography>
             </View>
           </View>
-          <View className="flex-1 pl-3">
-            <Typography>{t('home.status')}:</Typography>
-            <Typography
-              variant="h5"
-              className={`mt-1 ${isPlaceOpenNow(target.openingHours) ? 'text-green-600' : 'text-red-600'}`}
-            >
-              {isPlaceOpenNow(target.openingHours) ? t('home.open') : t('home.close')}
-            </Typography>
-          </View>
+          {hasOpeningHours ? (
+            <View className="flex-1 pl-3">
+              <Typography>{t('home.status')}:</Typography>
+              <Typography
+                variant="h5"
+                className={`mt-1 ${isPlaceOpenNow(target.openingHours) ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {isPlaceOpenNow(target.openingHours) ? t('home.open') : t('home.close')}
+              </Typography>
+            </View>
+          ) : null}
         </View>
 
         <View>
