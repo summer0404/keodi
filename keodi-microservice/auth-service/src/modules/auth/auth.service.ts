@@ -202,8 +202,9 @@ export class AuthService {
           },
         });
 
-        this.userService.createUserInfomation(
+        await this.userService.createUserInfomation(
           googleUser.id,
+          googleUser.username,
           user.firstName,
           user.lastName,
           user.picture,

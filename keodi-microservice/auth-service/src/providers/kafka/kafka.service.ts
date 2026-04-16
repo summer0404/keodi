@@ -1,5 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
+import { UserTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
@@ -8,6 +9,8 @@ export class KafkaService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    this.kafkaClient.subscribeToResponseOf(UserTopics.UsernameSynced);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.Create);
     await this.kafkaClient.connect();
   }
 

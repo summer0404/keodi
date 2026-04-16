@@ -10,7 +10,6 @@ import {
   Min,
 } from 'class-validator';
 import { PlaceConstants } from '../constants/place.constant';
-import { SearchMode } from '../enums/search.enum';
 import { PlaceSortBy } from '../enums/sort.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 
@@ -63,17 +62,6 @@ export class SearchDto extends NearMeQueryDto {
   })
   @IsNotEmpty()
   search: string;
-
-  @ApiProperty({
-    description: 'Search mode',
-    enum: SearchMode,
-    example: SearchMode.KEYWORD,
-    required: false,
-    default: SearchMode.KEYWORD,
-  })
-  @IsOptional()
-  @IsEnum(SearchMode)
-  mode?: SearchMode = SearchMode.KEYWORD;
 }
 
 export class OpeningHourDto {

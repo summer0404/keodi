@@ -5,31 +5,23 @@ class Prompts(BasePromptTemplate):
     [ROLE]
     You are a Search Query Parser.
 
-    [ALLOWED DEFINITIONS]
-    1. Categories: {categories}
-    2. Attributes: {attributes}
-
     [RULES]
-    1. Map user intent to categories and attributes from ALLOWED DEFINITIONS above.
-    2. Extract specific keywords (dish names, product names, place names) that are NOT in categories/attributes.
-    3. Output strictly in JSON format: {{"categories": [], "attributes": [], "keywords": ""}}
-    4. Context Inference:
-    - "làm việc/học bài" → implies attributes: ["WIFI", "QUIET"]
-    - "sống ảo/check-in" → implies attributes: ["DECOR"]
-    5. Keywords extraction:
-    - Extract specific items: dish names, drinks, products, brand names
-    - If no specific item mentioned, keywords should be empty string ""
-    6. No explanation, thinking or additional text.
+    1. Extract specific keywords (dish names, drinks, product names, brand names, place names).
+    2. If no specific item mentioned, output empty string.
+    3. Output ONLY the keyword string, no JSON, no explanation, no additional text.
 
     [EXAMPLES]
-    Input: "Tìm quán nước nào yên tĩnh"
-    Output: {{"categories": ["COFFEE"], "attributes": ["QUIET"], "keywords": ""}}
+    Input: "Tìm quán cà phê yên tĩnh"
+    Output: cà phê
 
     Input: "Quán phở ngon gần đây có wifi"
-    Output: {{"categories": ["RESTAURANT", "VIETNAMESE_RESTAURANT", "BISTRO"], "attributes": ["WIFI"], "keywords": "phở"}}
+    Output: phở
+
+    Input: "Tìm những công viên gần đây"
+    Output: công viên
 
     Input: "Chỗ nào bán trà sữa Tiger Sugar"
-    Output: {{"categories": ["COFFEE", "DESSERT"], "attributes": [], "keywords": "trà sữa Tiger Sugar"}}
+    Output: trà sữa Tiger Sugar
 
     [INPUT]
     Input: {search}

@@ -1,15 +1,10 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { GeoConstants } from 'src/shared/constants/place.constant';
-import {
-  IntelligenceTopics,
-  SearchTopics,
-} from 'src/shared/constants/topic.constant';
 import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
-import { SearchMode } from 'src/shared/enums/search.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { formatTimeOnly } from 'src/shared/helpers/time.helper';
@@ -20,9 +15,14 @@ import {
   RawPlace,
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
+import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
+import { LLM_THINKING_TAG, VECTOR_SIMILARITY_THRESHOLD } from 'src/shared/constants/search.constant';
+import { ExtractedIntent, SearchQueryConfig } from 'src/shared/types/search.type';
 
 @Injectable()
 export class PlaceService {
+  private readonly logger = new Logger(PlaceService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
@@ -66,58 +66,85 @@ export class PlaceService {
     return { offset, orderByClause };
   }
 
-  private buildSearchCondition(searchPattern?: string) {
-    if (!searchPattern) {
+  private buildEmbeddingSearchCondition(embedding?: number[]) {
+    if (!embedding || embedding.length === 0) {
       return Prisma.empty;
     }
+    const vectorStr = `[${embedding.join(',')}]`;
     return Prisma.sql`
+            AND p.embedding_title IS NOT NULL
             AND (
-                LOWER(p.name) LIKE LOWER(${searchPattern})
-                OR LOWER(p.full_address) LIKE LOWER(${searchPattern})
-                OR LOWER(p.street) LIKE LOWER(${searchPattern})
-                OR LOWER(p.ward) LIKE LOWER(${searchPattern})
-                OR LOWER(p.city) LIKE LOWER(${searchPattern})
-            )
+                0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
+                + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
+            ) >= ${VECTOR_SIMILARITY_THRESHOLD}
         `;
   }
 
-  private buildCategoryCondition(categories?: string[]) {
-    if (!categories || categories.length === 0) {
+  private buildKeywordSearchCondition(keywords?: string) {
+    if (!keywords?.trim()) {
       return Prisma.empty;
     }
 
-    const categoryConditions = categories.map(
-      (category) => Prisma.sql`UPPER(c.name) = UPPER(${category})`,
-    );
-
     return Prisma.sql`
-            AND p.id IN (
-                SELECT pc.place_id
-                FROM place_categories pc
-                JOIN categories c ON pc.category_id = c.id
-                WHERE ${Prisma.join(categoryConditions, ' OR ')}
-            )
+            AND p.fts_search_vector @@ websearch_to_tsquery('simple', f_unaccent(${keywords}))
         `;
   }
 
-  private buildHasAttributeSelect(attributes?: string[]) {
-    if (!attributes || attributes.length === 0) {
-      return Prisma.sql`0 AS has_attributes`;
+  private buildSearchCondition(embedding?: number[], keywords?: string) {
+    if (keywords?.trim()) {
+      return this.buildKeywordSearchCondition(keywords);
     }
 
-    const attributeConditions = attributes.map(
-      (attr) => Prisma.sql`a.name = ${attr}`,
-    );
+    return this.buildEmbeddingSearchCondition(embedding);
+  }
 
-    return Prisma.sql`
-            CASE WHEN EXISTS (
-                SELECT 1
-                FROM place_attributes pa
-                JOIN attributes a ON pa.attribute_id = a.id
-                WHERE pa.place_id = p.id
-                    AND (${Prisma.join(attributeConditions, ' OR ')})
-            ) THEN 1 ELSE 0 END AS has_attributes
-        `;
+  private buildEmbeddingQueryConfig(
+    embedding: number[] | undefined,
+    orderByClause: string,
+  ): SearchQueryConfig {
+    const hasEmbedding = embedding && embedding.length > 0;
+    const searchOrderBy = hasEmbedding
+      ? 'ORDER BY similarity_score DESC, distance ASC'
+      : orderByClause;
+
+    const vectorStr = hasEmbedding ? `[${embedding.join(',')}]` : null;
+    const similarityColumn = vectorStr ? Prisma.sql`,
+                    (
+                        0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
+                        + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
+                    ) AS similarity_score` : Prisma.sql`, NULL AS similarity_score`;
+
+    return {
+      searchCondition: this.buildEmbeddingSearchCondition(embedding),
+      similarityColumn,
+      searchOrderBy,
+    };
+  }
+
+  private buildKeywordQueryConfig(keywords: string): SearchQueryConfig {
+    const keywordRank = Prisma.sql`,
+                    ts_rank_cd(
+                        p.fts_search_vector,
+                        websearch_to_tsquery('simple', f_unaccent(${keywords}))
+                    ) AS similarity_score`;
+
+    return {
+      searchCondition: this.buildKeywordSearchCondition(keywords),
+      similarityColumn: keywordRank,
+      searchOrderBy: 'ORDER BY similarity_score DESC, distance ASC',
+    };
+  }
+
+  private buildSearchQueryConfig(
+    embedding: number[] | undefined,
+    keywords: string | undefined,
+    orderByClause: string,
+  ): SearchQueryConfig {
+    if (keywords?.trim()) {
+      return this.buildKeywordQueryConfig(keywords);
+    }
+
+    return this.buildEmbeddingQueryConfig(embedding, orderByClause);
   }
 
   private async enrichPlacesWithFavoriteAndImage(
@@ -191,21 +218,14 @@ export class PlaceService {
     orderByClause: string,
     limit: number,
     offset: number,
-    searchPattern?: string,
-    categories?: string[],
-    attributes?: string[],
-  ): Promise<(RawPlace & { distance: number })[]> {
-    const searchCondition = this.buildSearchCondition(searchPattern);
-    const categoryCondition = this.buildCategoryCondition(categories);
-    const hasAttributeSelect = this.buildHasAttributeSelect(attributes);
-
-    const finalOrderBy =
-      attributes && attributes.length > 0
-        ? Prisma.raw('ORDER BY has_attributes DESC, distance ASC')
-        : Prisma.raw(orderByClause);
+    embedding?: number[],
+    keywords?: string,
+  ): Promise<(RawPlace & { distance: number; similarity_score?: number })[]> {
+    const { searchCondition, similarityColumn, searchOrderBy } =
+      this.buildSearchQueryConfig(embedding, keywords, orderByClause);
 
     return await this.prismaService.$queryRaw<
-      (RawPlace & { distance: number })[]
+      (RawPlace & { distance: number; similarity_score?: number })[]
     >`
             SELECT * FROM (
                 SELECT
@@ -236,16 +256,15 @@ export class PlaceService {
                             + sin(radians(${latitude})) 
                             * sin(radians(p.latitude))
                         )))
-                    ) AS distance,
-                    ${hasAttributeSelect}
+                    ) AS distance
+                    ${similarityColumn}
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
-                    ${searchCondition}
-                    ${categoryCondition}
+                  ${searchCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
-            ${finalOrderBy}
+            ${Prisma.raw(searchOrderBy)}
             LIMIT ${limit}
             OFFSET ${offset}
         `;
@@ -257,11 +276,10 @@ export class PlaceService {
     latDelta: number,
     longDelta: number,
     radius: number,
-    searchPattern?: string,
-    categories?: string[],
+    embedding?: number[],
+    keywords?: string,
   ): Promise<number> {
-    const searchCondition = this.buildSearchCondition(searchPattern);
-    const categoryCondition = this.buildCategoryCondition(categories);
+    const searchCondition = this.buildSearchCondition(embedding, keywords);
 
     const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(*) as count
@@ -279,13 +297,63 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
-                    ${searchCondition}
-                    ${categoryCondition}
+                  ${searchCondition}
             ) as places_with_distance
             WHERE distance <= ${radius}
         `;
 
     return Number(totalResult[0].count);
+  }
+
+  private async queryPlacesByIntent(params: {
+    latitude: number;
+    longitude: number;
+    latDelta: number;
+    longDelta: number;
+    radius: number;
+    orderByClause: string;
+    limit: number;
+    offset: number;
+    extractedIntent: ExtractedIntent;
+  }): Promise<[
+      (RawPlace & { distance: number; similarity_score?: number })[],
+      number,
+    ]> {
+    const {
+      latitude,
+      longitude,
+      latDelta,
+      longDelta,
+      radius,
+      orderByClause,
+      limit,
+      offset,
+      extractedIntent,
+    } = params;
+
+    return Promise.all([
+      this.queryPlacesInRadiusWithDistance(
+        latitude,
+        longitude,
+        latDelta,
+        longDelta,
+        radius,
+        orderByClause,
+        limit,
+        offset,
+        extractedIntent.embedding,
+        extractedIntent.keywords,
+      ),
+      this.countPlacesInRadius(
+        latitude,
+        longitude,
+        latDelta,
+        longDelta,
+        radius,
+        extractedIntent.embedding,
+        extractedIntent.keywords,
+      ),
+    ]);
   }
 
   async findNearby(nearMeDto: NearMeDto): Promise<PlacePaginatedResponse> {
@@ -351,7 +419,6 @@ export class PlaceService {
   async search(searchDto: SearchDto): Promise<PlacePaginatedResponse> {
     const {
       search,
-      mode,
       userId,
       latitude,
       longitude,
@@ -372,120 +439,65 @@ export class PlaceService {
     );
 
     try {
-      if (mode === SearchMode.KEYWORD) {
-        const searchPattern = `%${search}%`;
+      let extractedIntent: ExtractedIntent = {};
 
-        const [rawPlaces, total] = await Promise.all([
-          this.queryPlacesInRadiusWithDistance(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            orderByClause,
-            limit,
-            offset,
-            searchPattern,
-          ),
-          this.countPlacesInRadius(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            searchPattern,
-          ),
-        ]);
-
-        const places = await this.enrichPlacesWithFavoriteAndImage(
-          rawPlaces,
-          userId,
+      try {
+        extractedIntent = await this.kafkaService.sendWithTimeout(
+          IntelligenceTopics.ExtractUserIntent,
+          { search },
         );
-        const totalPages = Math.ceil(total / limit);
+      } catch (error: any) {
+        const errorMessage = error?.message ?? 'Unknown error when extracting user intent';
+        this.logger.warn(
+          `ExtractUserIntent failed. Falling back to empty intent. reason=${errorMessage}`,
+        );
 
-        return {
-          places,
-          total,
-          page,
-          totalPages,
-          limit,
-        };
-      } else if (mode === SearchMode.CONTEXTUAL) {
-        let extractedIntent: {
-          keywords?: string;
-          categories?: string[];
-          attributes?: string[];
-        };
-
-        try {
-          extractedIntent = await this.kafkaService.sendWithTimeout(
-            IntelligenceTopics.ExtractUserIntent,
-            { search },
-          );
-        } catch (error: any) {
-          extractedIntent = {
-            keywords: search,
-            categories: [],
-            attributes: [],
-          };
-        }
-
-        const keywordPattern = extractedIntent.keywords
-          ? `%${extractedIntent.keywords}%`
-          : undefined;
-
-        if (keywordPattern) {
-          this.kafkaService.getClient().emit(SearchTopics.Create, {
-            userId,
-            extractedTerm: extractedIntent.keywords,
+        if (error?.message?.includes('EMBEDDING_FAILED')) {
+          throw new RpcException({
+            status: HttpStatus.SERVICE_UNAVAILABLE,
+            message: 'Embedding service is unavailable',
           });
         }
-        // Ưu tiên keyword hơn là categories
-        const categoriesToUse = extractedIntent.keywords
-          ? undefined
-          : extractedIntent.categories;
-
-        const [rawPlaces, total] = await Promise.all([
-          this.queryPlacesInRadiusWithDistance(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            orderByClause,
-            limit,
-            offset,
-            keywordPattern,
-            categoriesToUse,
-            extractedIntent.attributes,
-          ),
-          this.countPlacesInRadius(
-            latitude,
-            longitude,
-            latDelta,
-            longDelta,
-            radius,
-            keywordPattern,
-            categoriesToUse,
-          ),
-        ]);
-
-        const places = await this.enrichPlacesWithFavoriteAndImage(
-          rawPlaces,
-          userId,
-        );
-        const totalPages = Math.ceil(total / limit);
-
-        return {
-          places,
-          total,
-          page,
-          totalPages,
-          limit,
-        };
       }
 
-      return { places: [], total: 0, page, totalPages: 0, limit };
+      if (extractedIntent.keywords?.includes(LLM_THINKING_TAG)) {
+        this.logger.warn(
+          `Extracted keywords contain llm thinking step. Falling back to using embedding`,
+        );
+        extractedIntent.keywords = undefined;
+      }
+
+      this.kafkaService.getClient().emit(SearchTopics.Create, {
+        userId,
+        rawQuery: search,
+        extractedTerm: extractedIntent.keywords,
+      });
+
+      const [rawPlaces, total] = await this.queryPlacesByIntent({
+        latitude,
+        longitude,
+        latDelta,
+        longDelta,
+        radius,
+        orderByClause,
+        limit,
+        offset,
+        extractedIntent,
+      });
+
+      const places = await this.enrichPlacesWithFavoriteAndImage(
+        rawPlaces,
+        userId,
+      );
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        places,
+        total,
+        page,
+        totalPages,
+        limit,
+      };
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -506,7 +518,7 @@ export class PlaceService {
               openTime: true,
               closeTime: true,
             },
-            orderBy: { dayOfWeek: 'asc' },
+            orderBy: { dayOfWeek: SortOrder.ASC },
           },
           placeCategories: {
             select: {
