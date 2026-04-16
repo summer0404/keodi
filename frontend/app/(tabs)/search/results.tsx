@@ -54,7 +54,6 @@ export default function SearchResultsScreen() {
     sortOrder: string;
     mode: string;
     minRating: string;
-    openFilter: string;
   }>();
 
   const searchTerm = params.search ?? '';
@@ -65,7 +64,6 @@ export default function SearchResultsScreen() {
   const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'asc';
   const searchMode = params.mode === 'contextual' ? 'contextual' : 'keyword';
   const minRating = Number(params.minRating) || 0;
-  const openFilter = params.openFilter ?? 'all';
 
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,20 +83,6 @@ export default function SearchResultsScreen() {
   hasMoreRef.current = hasMore;
   isLoadingRef.current = isLoading;
   isLoadingMoreRef.current = isLoadingMore;
-
-  const applyClientFilters = useCallback(
-    (items: PlaceItem[]) => {
-      let filtered = items;
-      if (minRating > 0) {
-        filtered = filtered.filter((p) => p.rating >= minRating);
-      }
-      if (openFilter === 'open') {
-        filtered = filtered.filter((p) => isPlaceOpenNow(p.openingHours));
-      }
-      return filtered;
-    },
-    [minRating, openFilter]
-  );
 
   const fetchPage = useCallback(
     async (page: number, mode: 'replace' | 'append', requestVersion: number) => {
@@ -179,11 +163,13 @@ export default function SearchResultsScreen() {
     fetchPage(currentPageRef.current + 1, 'append', requestVersionRef.current);
   }, [fetchPage]);
 
-  const displayedPlaces = applyClientFilters(places);
+  // I want to show all results as they are without filtering/sorting
+  const displayedPlaces = places;
 
   const renderItem = useCallback(
     ({ item }: { item: PlaceItem }) => {
       const openingHoursLabel = formatOpeningHoursLabel(item.openingHours, t);
+      const hasOpeningHours = (item.openingHours?.length ?? 0) > 0;
       const isOpen = isPlaceOpenNow(item.openingHours);
       const primaryImageUrl = getPrimaryImageUrl(item.featureImageUrl);
       const tags = (item.categories ?? []).slice(0, 4).map((c) => ({
@@ -232,6 +218,7 @@ export default function SearchResultsScreen() {
             description={item.description?.trim()}
             statusLabel={isOpen ? t('home.open') : t('home.close')}
             isOpen={isOpen}
+            showStatusChip={hasOpeningHours}
             tags={tags}
             defaultFavorite={!!item.isFavorite}
             onFavoriteChange={handleFavoriteChange}

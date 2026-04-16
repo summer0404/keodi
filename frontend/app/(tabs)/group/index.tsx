@@ -23,9 +23,9 @@ import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
 import { ResizeMode, Video } from 'expo-av';
 import { usePinnedGroupSessionStore } from '@/store/usePinnedGroupSessionStore';
 import { Button } from '@/components/ui/Button';
-import { authService } from '@/api/auth';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useGroupSessionStore } from '@/store/useGroupSessionStore';
 
-const DETAIL_BATCH_SIZE = 10;
 const REALTIME_REFRESH_INTERVAL_MS = 5000;
 
 type GroupSessionCardProps = {
@@ -33,6 +33,9 @@ type GroupSessionCardProps = {
   isPinned: boolean;
   isClosing: boolean;
   currentUserId: string | null;
+  currentUserPictureUrl: string | null;
+  currentUserAvatarVersion: number;
+  avatarCacheEpoch: number;
   onShare: (session: GroupSessionItem) => void;
   onTogglePin: (sessionId: string) => void;
   onClose: (session: GroupSessionItem) => void;
@@ -68,11 +71,44 @@ const GroupSessionCard = React.memo(
     isPinned,
     isClosing,
     currentUserId,
+    currentUserPictureUrl,
+    currentUserAvatarVersion,
+    avatarCacheEpoch,
     onShare,
     onTogglePin,
     onClose,
   }: GroupSessionCardProps) => {
     const router = useRouter();
+    const membersForDisplay = useMemo(() => {
+      const members = item.members ?? [];
+
+      if (!currentUserId || !currentUserPictureUrl) {
+        return members;
+      }
+
+      let hasAvatarOverride = false;
+      const nextMembers = members.map((member) => {
+        if (member.userId !== currentUserId || !member.user) {
+          return member;
+        }
+
+        const existingPictureUrl = member.user.pictureUrl?.trim() ?? null;
+        if (existingPictureUrl === currentUserPictureUrl) {
+          return member;
+        }
+
+        hasAvatarOverride = true;
+        return {
+          ...member,
+          user: {
+            ...member.user,
+            pictureUrl: currentUserPictureUrl,
+          },
+        };
+      });
+
+      return hasAvatarOverride ? nextMembers : members;
+    }, [currentUserId, currentUserPictureUrl, item.members]);
 
     return (
       <Card
@@ -111,7 +147,12 @@ const GroupSessionCard = React.memo(
           </View>
 
           <View className="mt-1 flex-row items-center justify-between">
-            <GroupSessionAvatarStack members={item.members} />
+            <GroupSessionAvatarStack
+              members={membersForDisplay}
+              currentUserId={currentUserId}
+              currentUserAvatarVersion={currentUserAvatarVersion}
+              avatarCacheEpoch={avatarCacheEpoch}
+            />
 
             <View className="flex-row items-center gap-3">
               <Pressable
@@ -196,10 +237,17 @@ export default function GroupScreen() {
   const pinnedSessionIds = usePinnedGroupSessionStore((state) => state.pinnedSessionIds);
   const togglePinnedSessionId = usePinnedGroupSessionStore((state) => state.togglePinnedSessionId);
   const removePinnedSessionId = usePinnedGroupSessionStore((state) => state.removePinnedSessionId);
+  const currentUserId = useAuthStore((state) => state.me?.id ?? null);
+  const currentUserPictureUrl = useAuthStore((state) => state.me?.pictureUrl?.trim() ?? null);
+  const currentUserAvatarVersion = useAuthStore((state) => state.meFetchedAt);
+  const avatarCacheEpoch = useAuthStore((state) => state.avatarCacheEpoch);
+  const fetchMe = useAuthStore((state) => state.fetchMe);
+  const sessionsById = useGroupSessionStore((state) => state.sessionsById);
+  const sessionIds = useGroupSessionStore((state) => state.sessionIds);
+  const isLoading = useGroupSessionStore((state) => state.isLoadingList);
+  const hasLoadedInitialData = useGroupSessionStore((state) => state.hasLoadedInitialData);
+  const fetchList = useGroupSessionStore((state) => state.fetchList);
 
-  const [sessions, setSessions] = useState<GroupSessionItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinShareCode, setJoinShareCode] = useState('');
@@ -207,50 +255,12 @@ export default function GroupScreen() {
   const [sessionToClose, setSessionToClose] = useState<GroupSessionItem | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [blockedAction, setBlockedAction] = useState<'create' | 'join' | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const isRealtimeRefreshingRef = useRef(false);
 
-  const loadData = useCallback(async (options?: { silent?: boolean }) => {
-    const isSilent = options?.silent ?? false;
-
-    if (!isSilent) {
-      setIsLoading(true);
-    }
-
-    try {
-      const sessionList = await groupSessionsService.getGroupSessions();
-      if (!Array.isArray(sessionList) || sessionList.length === 0) {
-        setSessions([]);
-        return;
-      }
-
-      const detailedSessions: GroupSessionItem[] = [];
-
-      for (let index = 0; index < sessionList.length; index += DETAIL_BATCH_SIZE) {
-        const batch = sessionList.slice(index, index + DETAIL_BATCH_SIZE);
-        const batchResults = await Promise.all(
-          batch.map(async (session) => {
-            try {
-              return await groupSessionsService.getGroupSessionById(session.sessionId);
-            } catch {
-              return session;
-            }
-          })
-        );
-
-        detailedSessions.push(...batchResults);
-      }
-
-      setSessions(detailedSessions);
-    } catch {
-      setSessions([]);
-    } finally {
-      if (!isSilent) {
-        setIsLoading(false);
-      }
-      setHasLoadedInitialData(true);
-    }
-  }, []);
+  const sessions = useMemo(
+    () => sessionIds.map((sessionId) => sessionsById[sessionId]).filter(Boolean),
+    [sessionIds, sessionsById]
+  );
 
   const refreshSessionsRealtime = useCallback(async () => {
     if (isRealtimeRefreshingRef.current || isJoining || isCreating || isClosing) {
@@ -259,24 +269,16 @@ export default function GroupScreen() {
 
     isRealtimeRefreshingRef.current = true;
     try {
-      await loadData({ silent: true });
+      await fetchList({ force: true, silent: true });
     } finally {
       isRealtimeRefreshingRef.current = false;
     }
-  }, [isClosing, isCreating, isJoining, loadData]);
+  }, [fetchList, isClosing, isCreating, isJoining]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadData();
-      // Load current user ID
-      void (async () => {
-        try {
-          const user = await authService.getMe();
-          setCurrentUserId(user.id);
-        } catch {
-          setCurrentUserId(null);
-        }
-      })();
+      void fetchList({ force: true });
+      void fetchMe();
 
       const intervalId = setInterval(() => {
         void refreshSessionsRealtime();
@@ -285,7 +287,7 @@ export default function GroupScreen() {
       return () => {
         clearInterval(intervalId);
       };
-    }, [loadData, refreshSessionsRealtime])
+    }, [fetchList, fetchMe, refreshSessionsRealtime])
   );
 
   const activeSession = useMemo(
@@ -413,7 +415,7 @@ export default function GroupScreen() {
         shareCode: normalizedShareCode,
       });
       setJoinShareCode('');
-      await loadData();
+      await fetchList({ force: true });
       router.push(`/(tabs)/group/${joinedSession.sessionId}` as any);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -429,7 +431,7 @@ export default function GroupScreen() {
     } finally {
       setIsJoining(false);
     }
-  }, [activeSession, isJoining, joinShareCode, loadData, router, t]);
+  }, [activeSession, fetchList, isJoining, joinShareCode, router, t]);
 
   const joinInput = (
     <View className="mt-6 px-1">
@@ -498,11 +500,11 @@ export default function GroupScreen() {
         removePinnedSessionId(sessionToClose.sessionId);
       }
       setSessionToClose(null);
-      await loadData();
+      await fetchList({ force: true });
     } finally {
       setIsClosing(false);
     }
-  }, [removePinnedSessionId, isClosing, loadData, pinnedSessionIds, sessionToClose]);
+  }, [fetchList, removePinnedSessionId, isClosing, pinnedSessionIds, sessionToClose]);
 
   const emptyState = useMemo(() => {
     if (isLoading || !hasLoadedInitialData) {
@@ -542,6 +544,9 @@ export default function GroupScreen() {
           isPinned={pinnedSessionIds.includes(item.sessionId)}
           isClosing={isClosing && sessionToClose?.sessionId === item.sessionId}
           currentUserId={currentUserId}
+          currentUserPictureUrl={currentUserPictureUrl}
+          currentUserAvatarVersion={currentUserAvatarVersion}
+          avatarCacheEpoch={avatarCacheEpoch}
           onShare={handleShare}
           onTogglePin={handleTogglePin}
           onClose={openCloseConfirm}
@@ -550,6 +555,9 @@ export default function GroupScreen() {
     },
     [
       currentUserId,
+      currentUserPictureUrl,
+      currentUserAvatarVersion,
+      avatarCacheEpoch,
       handleShare,
       handleTogglePin,
       isClosing,

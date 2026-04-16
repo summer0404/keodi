@@ -27,6 +27,7 @@ export default function RootLayout() {
   const authHydrated = useAuthStore((s) => s._hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const hydrateAuth = useAuthStore((s) => s.hydrate);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
 
   const { banner, dismissBanner, openBanner, isPrimaryLoading } = useNotificationRuntime({
     accessToken,
@@ -48,6 +49,14 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, settingsHydrated, authHydrated, language]);
+
+  useEffect(() => {
+    if (!authHydrated || !accessToken) {
+      return;
+    }
+
+    void fetchMe();
+  }, [accessToken, authHydrated, fetchMe]);
 
   // If fonts or settings or auth are not loaded yet, don't render anything
   if (!fontsLoaded || !settingsHydrated || !authHydrated) return null;

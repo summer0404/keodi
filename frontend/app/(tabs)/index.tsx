@@ -2,12 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { MapPin, MoveDiagonal, ArrowUpDown } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import PlaceCard from '@/components/ui/PlaceCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authService } from '@/api/auth';
 import { placesService } from '@/api/places';
 import { Select } from '@/components/ui/Select';
 import type { PlaceItem, PlaceSortBy } from '@/types/api';
@@ -35,6 +34,7 @@ import AlertScreen from '@/components/ui/AlertScreen';
 import { favoriteService } from '@/api/favorite';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import { useLocationStore } from '@/store/useLocationStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { isAxiosError } from 'axios';
 
 const appendUniquePlaces = (prev: PlaceItem[], next: PlaceItem[]) => {
@@ -60,14 +60,17 @@ export default function HomeScreen() {
   const isLocationLoading = useLocationStore((s) => s.isLocationLoading);
   const locationPermissionDenied = useLocationStore((s) => s.locationPermissionDenied);
   const ensureLocation = useLocationStore((s) => s.ensureLocation);
+  const me = useAuthStore((s) => s.me);
+  const meFetchedAt = useAuthStore((s) => s.meFetchedAt);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
   const sortOptions = useMemo(() => getSortOptions(t), [t]);
   const radiusOptions = useMemo(() => getRadiusOptions(t), [t]);
   const horizontalPadding = 20;
   const cardWidth = width - horizontalPadding * 2;
+  const username = me?.username?.trim() || 'bạn';
+  const avatarUri = me?.pictureUrl?.trim();
 
   const [locationLabel, setLocationLabel] = useState(t('home.loadingLocation'));
-  const [username, setUsername] = useState('bạn');
-  const [avatarSource, setAvatarSource] = useState<any>(DEFAULT_AVATAR_SOURCE);
   const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
   const [radius, setRadius] = useState(DEFAULT_RADIUS);
   const [nearbyPlaces, setNearbyPlaces] = useState<PlaceItem[]>([]);
@@ -243,32 +246,9 @@ export default function HomeScreen() {
     [ensureLocation, locationPermissionDenied, t]
   );
 
-  // Fetch avatar on screen focus to catch updates from edit-profile
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-
-      const fetchMe = async () => {
-        try {
-          const profile = await authService.getMe();
-          if (!active) return;
-          if (profile.username?.trim()) setUsername(profile.username.trim());
-          setAvatarSource(
-            profile.pictureUrl ? { uri: profile.pictureUrl.trim() } : DEFAULT_AVATAR_SOURCE
-          );
-        } catch {
-          if (active) {
-            setAvatarSource(DEFAULT_AVATAR_SOURCE);
-          }
-        }
-      };
-
-      fetchMe();
-      return () => {
-        active = false;
-      };
-    }, [])
-  );
+  useEffect(() => {
+    void fetchMe();
+  }, [fetchMe]);
 
   useEffect(() => {
     void fetchCurrentLocation();
@@ -301,6 +281,7 @@ export default function HomeScreen() {
   const renderItem = useCallback(
     ({ item }: { item: PlaceItem }) => {
       const openingHoursLabel = formatOpeningHoursLabel(item.openingHours, t);
+      const hasOpeningHours = (item.openingHours?.length ?? 0) > 0;
       const isOpen = isPlaceOpenNow(item.openingHours);
       const primaryImageUrl = getPrimaryImageUrl(item.featureImageUrl);
       const tags = (item.categories ?? []).slice(0, 4).map((category) => ({
@@ -348,6 +329,7 @@ export default function HomeScreen() {
             description={item.description?.trim()}
             statusLabel={isOpen ? t('home.open') : t('home.close')}
             isOpen={isOpen}
+            showStatusChip={hasOpeningHours}
             tags={tags}
             defaultFavorite={!!item.isFavorite}
             onFavoriteChange={handleFavoriteChange}
@@ -406,9 +388,9 @@ export default function HomeScreen() {
               <View className="h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">
                 <Image
                   source={
-                    avatarSource && typeof avatarSource === 'object' && 'uri' in avatarSource
-                      ? { uri: `${avatarSource.uri}?t=${Date.now()}` }
-                      : avatarSource
+                    avatarUri
+                      ? { uri: `${avatarUri}?t=${meFetchedAt || 0}` }
+                      : DEFAULT_AVATAR_SOURCE
                   }
                   style={{ width: '100%', height: '100%' }}
                   contentFit="cover"
