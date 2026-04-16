@@ -235,6 +235,7 @@ export class FriendService {
             friend: {
               select: {
                 id: true,
+                username: true,
                 firstName: true,
                 lastName: true,
                 pictureUrl: true,
@@ -301,6 +302,7 @@ export class FriendService {
             sender: {
               select: {
                 id: true,
+                username: true,
                 firstName: true,
                 lastName: true,
                 pictureUrl: true,

@@ -7,6 +7,7 @@ export const UserTopics = {
   UpdateLocation: 'user.update-location',
   Onboarding: 'user.onboarding',
   GetOtherProfile: 'user.get-other-profile',
+  UsernameSynced: 'user.username-synced',
 } as const;
 
 export const PlaceTopics = {

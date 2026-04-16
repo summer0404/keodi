@@ -39,7 +39,7 @@ enum UserActionType {
 
 model User {
   id          String    @id
-  username    String?   @unique @db.VarChar(20)
+  username    String   @unique @db.VarChar(20)
   phoneNumber String?   @unique @map("phone_number") @db.VarChar(12)
   firstName   String?   @map("first_name") @db.VarChar(50)
   lastName    String?   @map("last_name") @db.VarChar(50)
