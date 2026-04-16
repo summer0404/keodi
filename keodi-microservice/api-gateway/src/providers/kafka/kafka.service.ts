@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
@@ -19,6 +19,8 @@ import {
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
+  private readonly logger = new Logger(KafkaService.name);
+
   constructor(
     @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
   ) {}
@@ -55,6 +57,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Search);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);
+    this.kafkaClient.subscribeToResponseOf(
+      RecommendationTopics.GroupSessionGetRecommendations,
+    );
 
     //favorite topic
     this.kafkaClient.subscribeToResponseOf(FavoriteTopics.Add);
@@ -120,5 +125,16 @@ export class KafkaService implements OnModuleInit {
     return firstValueFrom(
       this.kafkaClient.send(topic, data).pipe(timeout(timeoutMs)),
     );
+  }
+
+  emit(topic: string, data: unknown): void {
+    this.kafkaClient.emit(topic, data).subscribe({
+      error: (error: any) => {
+        this.logger.error(
+          `Failed to emit Kafka event ${topic}`,
+          error?.stack ?? error?.message ?? String(error),
+        );
+      },
+    });
   }
 }

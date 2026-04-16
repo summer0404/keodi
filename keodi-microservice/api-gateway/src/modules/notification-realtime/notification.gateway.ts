@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   OnGatewayConnection,
@@ -11,11 +11,15 @@ import * as jwt from 'jsonwebtoken';
 import { Server, Socket } from 'socket.io';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import { GroupSessionTopics, SettingTopics } from 'src/shared/constants/topic.constant';
+import {
+  GroupSessionTopics,
+  RecommendationTopics,
+  SettingTopics,
+} from 'src/shared/constants/topic.constant';
 
 @WebSocketGateway({ namespace: '/notifications', cors: { origin: '*' } })
 export class NotificationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit
 {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(NotificationGateway.name);
@@ -25,6 +29,29 @@ export class NotificationGateway
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
   ) {}
+
+  async onModuleInit() {
+    await this.redisService.subscribeToExpiredKeys((key) => {
+      const matchedLocationKey = key.match(/^session:([^:]+):location:[^:]+$/);
+      if (!matchedLocationKey) {
+        return;
+      }
+
+      this.emitGroupSessionRecommendationInvalidation({
+        sessionId: matchedLocationKey[1],
+        reason: 'LOCATION_EXPIRED',
+      });
+    });
+  }
+
+  private emitGroupSessionRecommendationInvalidation(data: {
+    sessionId: string;
+    reason: string;
+    userId?: string;
+    guestId?: string;
+  }) {
+    this.kafkaService.emit(RecommendationTopics.GroupSessionInvalidateCache, data);
+  }
 
   async handleConnection(client: Socket) {
     try {
@@ -68,6 +95,11 @@ export class NotificationGateway
           await this.redisService.del(
             `session:${sessionId}:location:${userId}`,
           );
+          this.emitGroupSessionRecommendationInvalidation({
+            sessionId,
+            userId,
+            reason: 'LOCATION_REMOVED',
+          });
           this.server.to(room).emit('location.offline', { userId });
         }
       }
@@ -173,6 +205,12 @@ export class NotificationGateway
       }),
       30,
     );
+
+    this.emitGroupSessionRecommendationInvalidation({
+      sessionId: payload.sessionId,
+      userId,
+      reason: 'LOCATION_CREATED',
+    });
 
     client.to(`session:${payload.sessionId}`).emit('location.updated', {
       userId,

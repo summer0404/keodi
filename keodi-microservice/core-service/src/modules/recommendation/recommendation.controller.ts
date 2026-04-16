@@ -1,14 +1,12 @@
 import { Controller } from '@nestjs/common';
 import { RecommendationService } from './recommendation.service';
-import { MessagePattern } from '@nestjs/microservices';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { CoordinateDto } from 'src/shared/dtos/place.dto';
 import { RecommendationTopics } from 'src/shared/constants/topic.constant';
 
 @Controller()
 export class RecommendationController {
-  constructor(
-    private readonly recommendationService: RecommendationService
-  ) {}
+  constructor(private readonly recommendationService: RecommendationService) {}
 
   @MessagePattern(RecommendationTopics.Trending)
   async getTrending() {
@@ -16,12 +14,34 @@ export class RecommendationController {
   }
 
   @MessagePattern(RecommendationTopics.ForYou)
-  async getForYou(data: { userId: string, coordinateDto: CoordinateDto }) {
+  async getForYou(@Payload() data: { userId: string; coordinateDto: CoordinateDto }) {
     const { userId, coordinateDto } = data;
     return await this.recommendationService.getForYou(
-      userId, 
-      coordinateDto.latitude, 
-      coordinateDto.longitude
+      userId,
+      coordinateDto.latitude,
+      coordinateDto.longitude,
+    );
+  }
+
+  @MessagePattern(RecommendationTopics.GroupSessionGetRecommendations)
+  async getGroupSessionRecommendations(
+    @Payload()
+    data: {
+      sessionId: string;
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.recommendationService.getGroupSessionRecommendations(data);
+  }
+
+  @EventPattern(RecommendationTopics.GroupSessionInvalidateCache)
+  async invalidateGroupSessionRecommendationCache(
+    @Payload()
+    data: { sessionId: string },
+  ) {
+    await this.recommendationService.handleGroupSessionRecommendationCacheInvalidationEvent(
+      data,
     );
   }
 }

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -13,6 +14,9 @@ import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
 import {
   CastVoteDto,
   FinalizeMemberVoteDto,
+  GroupSessionRecommendationAccessDto,
+  GroupSessionRecommendationRefreshResponseDto,
+  GroupSessionRecommendationsResponseDto,
   GroupSessionResponseDto,
   InviteFriendToSessionDto,
   JoinGroupSessionDto,
@@ -27,10 +31,12 @@ import {
   ApiFinalizeMemberVote,
   ApiFinalizeSessionVote,
   ApiGetAllSessions,
+  ApiGetGroupSessionRecommendations,
   ApiGetSession,
   ApiGetVotes,
   ApiInviteFriendToSession,
   ApiJoinGroupSession,
+  ApiRefreshGroupSessionRecommendations,
   GroupSessionApiTags,
 } from './group-session.swagger';
 
@@ -147,5 +153,36 @@ export class GroupSessionController {
   @ApiGetAllSessions()
   async getAll(@CurrentUser() user: CurrentUserDto) {
     return await this.groupSessionService.getAll(user.id);
+  }
+
+  @Get(':sessionId/recommendations')
+  @OptionalAuth()
+  @ApiGetGroupSessionRecommendations()
+  async getRecommendations(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Query() accessDto: GroupSessionRecommendationAccessDto,
+  ): Promise<GroupSessionRecommendationsResponseDto> {
+    return await this.groupSessionService.getRecommendations(
+      sessionId,
+      user?.id,
+      accessDto,
+    );
+  }
+
+  @Post(':sessionId/recommendations/refresh')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiRefreshGroupSessionRecommendations()
+  async refreshRecommendations(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() accessDto: GroupSessionRecommendationAccessDto,
+  ): Promise<GroupSessionRecommendationRefreshResponseDto> {
+    return await this.groupSessionService.refreshRecommendations(
+      sessionId,
+      user?.id,
+      accessDto,
+    );
   }
 }

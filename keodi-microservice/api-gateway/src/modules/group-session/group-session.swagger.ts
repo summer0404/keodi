@@ -1,5 +1,6 @@
 import { applyDecorators } from '@nestjs/common';
 import {
+  ApiBody,
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -9,9 +10,13 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiQuery,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
+  GroupSessionRecommendationAccessDto,
+  GroupSessionRecommendationRefreshResponseDto,
+  GroupSessionRecommendationsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
 } from 'src/shared/dtos/group-session.dto';
@@ -20,8 +25,7 @@ export const ApiCreateGroupSession = () => {
   return applyDecorators(
     ApiOperation({
       summary: 'Create a new group session',
-      description:
-        'Creates a new group study session for the authenticated user. The user will be automatically added as the creator and initial participant of the session.',
+      description: 'Creates a new group session for the authenticated user.',
     }),
     ApiCreatedResponse({
       description: 'Group session created successfully',
@@ -172,6 +176,46 @@ export const ApiGetAllSessions = (): MethodDecorator => {
       description: 'Unauthorized - Invalid or missing authentication token',
     }),
   ) as MethodDecorator;
+};
+
+export const ApiGetGroupSessionRecommendations = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get group session place recommendations',
+      description:
+        'Returns recommended places around the group centroid, filtered by selected categories and session search radius. Returns cached data when still valid.',
+    }),
+    ApiOkResponse({
+      description: 'Group session recommendations retrieved successfully',
+      type: GroupSessionRecommendationsResponseDto,
+    }),
+    ApiQuery({
+      name: 'guestId',
+      required: false,
+      description:
+        'Guest identifier for anonymous members when no auth token is provided',
+      example: 'mws0v9cjcm3nuj5y8gochuu1',
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
+};
+
+export const ApiRefreshGroupSessionRecommendations = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Manually refresh group recommendations',
+      description:
+        'Publishes a cache-invalidation event for this session. The next recommendation fetch will be recalculated.',
+    }),
+    ApiBody({ type: GroupSessionRecommendationAccessDto, required: false }),
+    ApiOkResponse({
+      description: 'Refresh request accepted',
+      type: GroupSessionRecommendationRefreshResponseDto,
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+  );
 };
 
 export const GroupSessionApiTags = () => {

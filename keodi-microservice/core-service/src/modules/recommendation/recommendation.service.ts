@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { RedisService } from 'src/providers/redis/redis.service';
 import {
   MAX_CANDINDATE_PLACES,
@@ -7,10 +8,11 @@ import {
   RecommendationRedisKeys,
   TIME_DECAY,
 } from 'src/shared/constants/recommendation.constant';
+import { GeoConstants } from 'src/shared/constants/place.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { RecommendationHelper } from './recommendation.helper';
 // import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
-import { Prisma, UserActionType } from '@prisma/client';
+import { GroupSessionStatus, Prisma, UserActionType } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
@@ -18,8 +20,29 @@ import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
 import { PlaceRecommendationResponseDto } from 'src/shared/dtos/recommendation.dto';
 import { SortOrder } from 'src/shared/enums/sort.enum';
 import { formatTimeOnly } from 'src/shared/helpers/time.helper';
+import {
+  GROUP_SESSION_MAX_RECOMMENDATION_PLACES,
+  GROUP_SESSION_RECOMMENDATION_EMPTY_STATE_MESSAGE,
+  GROUP_SESSION_RECOMMENDATION_TTL_SECONDS,
+  GroupSessionMessages,
+} from 'src/shared/constants/group-session.constant';
+import { SessionLocation } from 'src/shared/types/group-session.type';
 import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
+
+type RecommendationPlaceRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  rating: number | null;
+  fullAddress: string | null;
+  latitude: number;
+  longitude: number;
+  featureImageUrl: string | null;
+  googleMapLink: string | null;
+  phoneNumber: string | null;
+  website: string | null;
+};
 
 @Injectable()
 export class RecommendationService {
@@ -34,12 +57,55 @@ export class RecommendationService {
     private readonly kafkaService: KafkaService,
   ) {}
 
+  private mapRecommendationRowsToPlaces(
+    places: RecommendationPlaceRow[],
+  ): PlaceRecommendationResponseDto[] {
+    return places.map((place) => ({
+      ...place,
+      openingHours: [],
+      categories: [],
+    }));
+  }
+
+  private mapPlaceEntitiesToRecommendationPlaces(
+    places: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      rating: number | null;
+      fullAddress: string | null;
+      latitude: number;
+      longitude: number;
+      featureImageUrl: string | null;
+      googleMapLink: string | null;
+      phoneNumber: string | null;
+      website: string | null;
+    }>,
+  ): PlaceRecommendationResponseDto[] {
+    return this.mapRecommendationRowsToPlaces(
+      places.map((place) => ({
+        id: place.id,
+        name: place.name,
+        description: place.description,
+        rating: place.rating,
+        fullAddress: place.fullAddress,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        featureImageUrl: place.featureImageUrl,
+        googleMapLink: place.googleMapLink,
+        phoneNumber: place.phoneNumber,
+        website: place.website,
+      })),
+    );
+  }
+
   private async enrichPlacesWithRelations(
-    places: Omit<
-      PlaceRecommendationResponseDto,
-      'openingHours' | 'categories'
-    >[],
+    places: PlaceRecommendationResponseDto[],
   ): Promise<PlaceRecommendationResponseDto[]> {
+    if (places.length === 0) {
+      return [];
+    }
+
     const placeIds = places.map((p) => p.id);
 
     const placesWithRelations = await this.prismaService.place.findMany({
@@ -83,6 +149,174 @@ export class RecommendationService {
         };
       }),
     );
+  }
+
+  private async assertGroupSessionMember(params: {
+    sessionId: string;
+    userId?: string;
+    guestId?: string;
+  }): Promise<void> {
+    const { sessionId, userId, guestId } = params;
+
+    if (!userId && !guestId) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: GroupSessionMessages.NOT_A_MEMBER,
+      });
+    }
+
+    const member = await this.prismaService.groupSessionMember.findFirst({
+      where: userId ? { sessionId, userId } : { sessionId, guestId },
+      select: { id: true },
+    });
+
+    if (!member) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: GroupSessionMessages.NOT_A_MEMBER,
+      });
+    }
+  }
+
+  private async getActiveSessionLocations(
+    sessionId: string,
+  ): Promise<SessionLocation[]> {
+    const keys = await this.redisService.keys(
+      this.recommendationHelper.getSessionLocationPattern(sessionId),
+    );
+
+    if (keys.length === 0) {
+      return [];
+    }
+
+    const locations: SessionLocation[] = [];
+
+    for (const key of keys) {
+      const rawLocation = await this.redisService.get(key);
+      if (!rawLocation) {
+        continue;
+      }
+
+      const parsedLocation = this.recommendationHelper.parseSessionLocation(
+        key,
+        rawLocation,
+      );
+
+      if (!parsedLocation) {
+        continue;
+      }
+
+      locations.push(parsedLocation);
+    }
+
+    return locations;
+  }
+
+  private async invalidateSessionRecommendationCache(
+    sessionId: string,
+  ): Promise<void> {
+    await this.redisService.del(this.getGroupSessionRecommendationCacheKey(sessionId));
+  }
+
+  private getGroupSessionRecommendationCacheKey(sessionId: string): string {
+    return this.recommendationHelper.getSessionRecommendationCacheKey(sessionId);
+  }
+
+  private buildGroupSessionRecommendationResponse(params: {
+    sessionId: string;
+    centroid: { latitude: number | null; longitude: number | null };
+    searchRadius: number;
+    categoryIds: string[];
+    places: PlaceRecommendationResponseDto[];
+    isCached: boolean;
+  }) {
+    const { sessionId, centroid, searchRadius, categoryIds, places, isCached } =
+      params;
+
+    return {
+      sessionId,
+      centroid,
+      searchRadius,
+      categoryIds,
+      places,
+      emptyStateMessage:
+        places.length > 0 ? null : GROUP_SESSION_RECOMMENDATION_EMPTY_STATE_MESSAGE,
+      isCached,
+    };
+  }
+
+  private async fetchGroupSessionRecommendationPlaces(params: {
+    latitude: number;
+    longitude: number;
+    searchRadius: number;
+    categoryIds: string[];
+  }): Promise<PlaceRecommendationResponseDto[]> {
+    const { latitude, longitude, searchRadius, categoryIds } = params;
+    const boundingBox = this.recommendationHelper.getBoundingBoxCondition(
+      latitude,
+      longitude,
+      searchRadius,
+    );
+
+    const categoryFilter =
+      categoryIds.length > 0
+        ? Prisma.sql`
+          AND EXISTS (
+            SELECT 1
+            FROM place_categories pc
+            WHERE pc.place_id = p.id
+              AND pc.category_id IN (${Prisma.join(categoryIds)})
+          )
+        `
+        : Prisma.empty;
+
+    const placeRows = await this.prismaService.$queryRaw<RecommendationPlaceRow[]>`
+      SELECT
+        id,
+        name,
+        description,
+        rating,
+        "fullAddress",
+        latitude,
+        longitude,
+        "featureImageUrl",
+        "googleMapLink",
+        "phoneNumber",
+        website
+      FROM (
+        SELECT
+          p.id,
+          p.name,
+          p.description,
+          p.rating,
+          p.full_address AS "fullAddress",
+          p.latitude,
+          p.longitude,
+          p.feature_image_url AS "featureImageUrl",
+          p.google_map_link AS "googleMapLink",
+          p.phone_number AS "phoneNumber",
+          p.website,
+          (
+            ${GeoConstants.EARTH_RADIUS_IN_KILOMETERS} * acos(LEAST(1, GREATEST(-1,
+              cos(radians(${latitude}))
+              * cos(radians(p.latitude))
+              * cos(radians(p.longitude) - radians(${longitude}))
+              + sin(radians(${latitude}))
+              * sin(radians(p.latitude))
+            )))
+          ) AS distance
+        FROM places p
+        WHERE p.latitude BETWEEN ${boundingBox.latitude.gte} AND ${boundingBox.latitude.lte}
+          AND p.longitude BETWEEN ${boundingBox.longitude.gte} AND ${boundingBox.longitude.lte}
+          ${categoryFilter}
+      ) AS places_with_distance
+      WHERE distance <= ${searchRadius}
+      ORDER BY distance ASC, rating DESC
+      LIMIT ${GROUP_SESSION_MAX_RECOMMENDATION_PLACES}
+    `;
+
+    const places = this.mapRecommendationRowsToPlaces(placeRows);
+    return await this.enrichPlacesWithRelations(places);
   }
 
   private async getContentBasedPlaceCandidates(
@@ -224,9 +458,7 @@ export class RecommendationService {
 
   async getPlacesFromSearchTerms(searchTerms: string[]) {
     try {
-      const allPlaces = await this.prismaService.$queryRaw<
-        PlaceRecommendationResponseDto[]
-      >`
+      const placeRows = await this.prismaService.$queryRaw<RecommendationPlaceRow[]>`
       SELECT DISTINCT ON (p.id)
         p.id,
         p.name,
@@ -254,6 +486,7 @@ export class RecommendationService {
       ORDER BY p.id; 
     `;
 
+      const allPlaces = this.mapRecommendationRowsToPlaces(placeRows);
       const enhancedPlaces = await this.enrichPlacesWithRelations(allPlaces);
 
       return enhancedPlaces;
@@ -281,9 +514,7 @@ export class RecommendationService {
 
   async getTopPlacesFromUserActions() {
     try {
-      const places = await this.prismaService.$queryRaw<
-        PlaceRecommendationResponseDto[]
-      >`
+      const placeRows = await this.prismaService.$queryRaw<RecommendationPlaceRow[]>`
         WITH constants AS (
           SELECT NOW() AS current_time, ${TIME_DECAY}::float AS decay_rate
         ),
@@ -325,6 +556,7 @@ export class RecommendationService {
         LIMIT 10
       `;
 
+      const places = this.mapRecommendationRowsToPlaces(placeRows);
       const enrichedPlaces = await this.enrichPlacesWithRelations(places);
 
       return enrichedPlaces;
@@ -434,7 +666,9 @@ export class RecommendationService {
       ];
 
       const enrichedCandidates =
-        await this.enrichPlacesWithRelations(allCandidates);
+        await this.enrichPlacesWithRelations(
+          this.mapPlaceEntitiesToRecommendationPlaces(allCandidates),
+        );
 
       const deduplicatedCandidates =
         this.recommendationHelper.deduplicatePlaces(enrichedCandidates);
@@ -464,6 +698,108 @@ export class RecommendationService {
         'Error fetching personalized recommendations',
         error.stack,
       );
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async getGroupSessionRecommendations(data: {
+    sessionId: string;
+    userId?: string;
+    guestId?: string;
+  }) {
+    try {
+      const { sessionId, userId, guestId } = data;
+      const session = await this.prismaService.groupSession.findUnique({
+        where: { sessionId },
+        include: {
+          selectedCategories: {
+            select: { categoryId: true },
+          },
+        },
+      });
+
+      if (!session) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
+        });
+      }
+
+      if (session.status !== GroupSessionStatus.ACTIVE) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
+        });
+      }
+
+      await this.assertGroupSessionMember({ sessionId, userId, guestId });
+
+      const categoryIds = session.selectedCategories.map(
+        (category) => category.categoryId,
+      );
+      const activeLocations = await this.getActiveSessionLocations(sessionId);
+      const centroid =
+        this.recommendationHelper.calculateCentroid(activeLocations);
+      const cacheKey = this.getGroupSessionRecommendationCacheKey(sessionId);
+      const rawCachedPlaces = await this.redisService.get(cacheKey);
+
+      let cachedPlaces: PlaceRecommendationResponseDto[] | null = null;
+      if (rawCachedPlaces) {
+        try {
+          cachedPlaces = JSON.parse(
+            rawCachedPlaces,
+          ) as PlaceRecommendationResponseDto[];
+        } catch {
+          cachedPlaces = null;
+        }
+      }
+
+      if (cachedPlaces) {
+        return this.buildGroupSessionRecommendationResponse({
+          sessionId,
+          centroid,
+          searchRadius: session.searchRadius,
+          categoryIds,
+          places: cachedPlaces,
+          isCached: true,
+        });
+      }
+
+      const places =
+        centroid.latitude === null || centroid.longitude === null
+          ? []
+          : await this.fetchGroupSessionRecommendationPlaces({
+              latitude: centroid.latitude,
+              longitude: centroid.longitude,
+              searchRadius: session.searchRadius,
+              categoryIds,
+            });
+
+      await this.redisService.setEx(
+        cacheKey,
+        JSON.stringify(places),
+        GROUP_SESSION_RECOMMENDATION_TTL_SECONDS,
+      );
+
+      return this.buildGroupSessionRecommendationResponse({
+        sessionId,
+        centroid,
+        searchRadius: session.searchRadius,
+        categoryIds,
+        places,
+        isCached: false,
+      });
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async handleGroupSessionRecommendationCacheInvalidationEvent(data: {
+    sessionId: string;
+  }) {
+    try {
+      await this.invalidateSessionRecommendationCache(data.sessionId);
+    } catch (error) {
       handleServiceErrorCatching(error);
     }
   }

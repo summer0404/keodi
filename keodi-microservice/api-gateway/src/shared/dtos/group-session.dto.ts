@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { SessionStatus } from '../enums/group-session.enum';
+import { PlaceRecommendationResponseDto } from './place.dto';
 
 export class GroupSessionResponseDto {
   @ApiProperty({
@@ -33,6 +39,7 @@ export class GroupSessionResponseDto {
     enum: SessionStatus,
   })
   status: SessionStatus;
+
   @ApiProperty({
     description: 'Current vote status of the session',
     example: 'OPEN',
@@ -224,4 +231,87 @@ export class FinalizeMemberVoteDto {
     required: false,
   })
   guestId?: string;
+}
+
+export class GroupSessionRecommendationAccessDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying anonymous members (required when no auth token is provided)',
+    required: false,
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+  })
+  guestId?: string;
+}
+
+export class GroupSessionRecommendationRefreshResponseDto {
+  @ApiProperty({
+    description: 'Indicates the refresh request was accepted',
+    example: true,
+  })
+  accepted: boolean;
+}
+
+export class GroupSessionRecommendationCentroidDto {
+  @ApiProperty({
+    description: "Latitude of the group's meeting centroid",
+    nullable: true,
+    example: 10.77311,
+  })
+  latitude: number | null;
+
+  @ApiProperty({
+    description: "Longitude of the group's meeting centroid",
+    nullable: true,
+    example: 106.69873,
+  })
+  longitude: number | null;
+}
+
+export class GroupSessionRecommendationsResponseDto {
+  @ApiProperty({
+    description: 'Group session ID',
+    example: 'cm5x1y2z3a4b5c6d7e8f',
+  })
+  sessionId: string;
+
+  @ApiProperty({
+    type: GroupSessionRecommendationCentroidDto,
+  })
+  centroid: GroupSessionRecommendationCentroidDto;
+
+  @ApiProperty({
+    description: 'Recommendation search radius in kilometers',
+    example: 5,
+  })
+  searchRadius: number;
+
+  @ApiProperty({
+    description: 'Selected category IDs used for group recommendations',
+    isArray: true,
+    example: ['cm5x1y2z3a4b5c6d7e8f'],
+  })
+  categoryIds: string[];
+
+  @ApiProperty({
+    type: [PlaceRecommendationResponseDto],
+  })
+  places: PlaceRecommendationResponseDto[];
+
+  @ApiProperty({
+    description:
+      'Empty-state guidance when no places are found for the current centroid/category filters',
+    nullable: true,
+    example:
+      "No places found near your group's meeting point for these categories. Try adding more categories, broadening the search radius, or adjusting your search.",
+  })
+  emptyStateMessage: string | null;
+
+  @ApiProperty({
+    description:
+      'Indicates whether recommendations were served from Redis cache',
+    example: true,
+  })
+  isCached: boolean;
 }

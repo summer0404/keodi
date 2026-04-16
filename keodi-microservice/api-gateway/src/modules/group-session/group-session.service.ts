@@ -1,33 +1,50 @@
 import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
+  GroupSessionRecommendationAccessDto,
+  GroupSessionRecommendationRefreshResponseDto,
+  GroupSessionRecommendationsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
 } from 'src/shared/dtos/group-session.dto';
-import { GroupSessionTopics } from 'src/shared/constants/topic.constant';
+import {
+  GroupSessionTopics,
+  RecommendationTopics,
+} from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class GroupSessionService {
   constructor(private readonly kafkaService: KafkaService) {}
 
   async create(userId: string): Promise<GroupSessionResponseDto> {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Create, { userId });
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Create, {
+      userId,
+    });
   }
 
   async join(
     joinGroupSessionDto: JoinGroupSessionDto,
     userId?: string,
   ): Promise<JoinGroupSessionResponseDto> {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Join, { ...joinGroupSessionDto, userId });
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Join, {
+      ...joinGroupSessionDto,
+      userId,
+    });
   }
 
   async inviteFriend(sessionId: string, inviterId: string, friendId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.InviteFriend, { sessionId, inviterId, friendId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.InviteFriend,
+      { sessionId, inviterId, friendId },
+    );
   }
 
   async close(sessionId: string, userId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Close, { sessionId, userId });
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Close, {
+      sessionId,
+      userId,
+    });
   }
 
   async castVote(
@@ -36,7 +53,10 @@ export class GroupSessionService {
     userId?: string,
     guestId?: string,
   ) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.CastVote, { sessionId, placeId, userId, guestId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.CastVote,
+      { sessionId, placeId, userId, guestId },
+    );
   }
 
   async finalizeMemberVote(
@@ -44,22 +64,66 @@ export class GroupSessionService {
     userId?: string,
     guestId?: string,
   ) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.FinalizeMemberVote, { sessionId, userId, guestId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.FinalizeMemberVote,
+      { sessionId, userId, guestId },
+    );
   }
 
   async finalizeSessionVote(sessionId: string, userId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.FinalizeSessionVote, { sessionId, userId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.FinalizeSessionVote,
+      { sessionId, userId },
+    );
   }
 
   async getVotes(sessionId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetVotes, { sessionId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.GetVotes,
+      { sessionId },
+    );
   }
 
   async getSession(sessionId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetSession, { sessionId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.GetSession,
+      { sessionId },
+    );
   }
 
   async getAll(userId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetAll, { userId });
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetAll, {
+      userId,
+    });
+  }
+
+  async getRecommendations(
+    sessionId: string,
+    userId?: string,
+    accessDto?: GroupSessionRecommendationAccessDto,
+  ): Promise<GroupSessionRecommendationsResponseDto> {
+    return await this.kafkaService.sendWithTimeout(
+      RecommendationTopics.GroupSessionGetRecommendations,
+      {
+        sessionId,
+        userId,
+        guestId: accessDto?.guestId,
+      },
+    );
+  }
+
+  async refreshRecommendations(
+    sessionId: string,
+    userId?: string,
+    accessDto?: GroupSessionRecommendationAccessDto,
+  ): Promise<GroupSessionRecommendationRefreshResponseDto> {
+    this.kafkaService.emit(RecommendationTopics.GroupSessionInvalidateCache, {
+      sessionId,
+      userId,
+      guestId: accessDto?.guestId,
+      reason: 'MANUAL_REFRESH',
+    });
+
+    return { accepted: true };
   }
 }
