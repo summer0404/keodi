@@ -16,7 +16,10 @@ import {
   GroupSessionMessages,
 } from 'src/shared/constants/group-session.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
-import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
+import {
+  NotificationPreferredChannel,
+  NotificationType,
+} from 'src/shared/enums/notification.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
 import { ImageService } from '../image/image.service';
@@ -348,6 +351,15 @@ export class GroupSessionService {
 
       const memberWithPictureUrl = await this.mapMemberPictureUrl(member);
 
+      void this.notifySessionMembers(
+        session.sessionId,
+        'session.member_joined',
+        {
+          sessionId: session.sessionId,
+          member: memberWithPictureUrl as unknown as Record<string, unknown>,
+        },
+      );
+
       return {
         sessionId: session.sessionId,
         shareCode: session.shareCode,
@@ -418,14 +430,17 @@ export class GroupSessionService {
         });
       }
 
-      // Fetch inviter name for notification body
+      // Fetch inviter info for notification
       const inviter = await this.prismaService.user.findUnique({
         where: { id: inviterId },
-        select: { firstName: true, lastName: true },
+        select: { firstName: true, lastName: true, pictureUrl: true },
       });
       const inviterName =
         [inviter?.firstName, inviter?.lastName].filter(Boolean).join(' ') ||
         'Someone';
+      const inviterPictureUrl = inviter?.pictureUrl
+        ? await this.imageService.getImageViewUrl(inviter.pictureUrl)
+        : null;
 
       this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
         eventId: createId(),
@@ -433,7 +448,13 @@ export class GroupSessionService {
         type: NotificationType.GROUP_INVITE,
         title: 'Group Session Invite',
         body: `${inviterName} invited you to join a group session. Use code: ${session.shareCode}`,
-        data: { sessionId, shareCode: session.shareCode, inviterId },
+        data: {
+          sessionId,
+          shareCode: session.shareCode,
+          inviterId,
+          inviterName,
+          inviterPictureUrl,
+        },
         preferredChannel: NotificationPreferredChannel.BOTH,
         createdAt: new Date().toISOString(),
       });
@@ -478,10 +499,16 @@ export class GroupSessionService {
         });
       }
 
-      return await this.prismaService.groupSession.update({
+      const updatedSession = await this.prismaService.groupSession.update({
         where: { sessionId },
         data: { status: GroupSessionStatus.CLOSED, closeAt: null },
       });
+
+      void this.notifySessionMembers(sessionId, 'session.closed', {
+        sessionId,
+      });
+
+      return updatedSession;
     } catch (error) {
       handleServiceErrorCatching(error);
     }
@@ -890,6 +917,11 @@ export class GroupSessionService {
         });
       }
 
+      void this.notifySessionMembers(sessionId, 'vote.session_finalized', {
+        sessionId,
+        winningPlaceId,
+      });
+
       return {
         sessionId,
         voteStatus: VoteStatus.FINALIZED,
@@ -1054,18 +1086,43 @@ export class GroupSessionService {
 
   async getAll(userId: string) {
     try {
-      return await this.prismaService.groupSession.findMany({
+      const sessions = await this.prismaService.groupSession.findMany({
         where: {
           members: {
-            some: {
-              userId,
+            some: { userId },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          _count: { select: { members: true } },
+          members: {
+            take: 4,
+            select: {
+              id: true,
+              userId: true,
+              guestId: true,
+              nickname: true,
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  pictureUrl: true,
+                },
+              },
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
       });
+
+      return Promise.all(
+        sessions.map(async (session) => ({
+          ...session,
+          memberCount: session._count.members,
+          members: await this.mapMembersPictureUrl(session.members),
+        })),
+      );
     } catch (error) {
       handleServiceErrorCatching(error);
     }
@@ -1086,5 +1143,313 @@ export class GroupSessionService {
         status: GroupSessionStatus.CLOSED,
       },
     });
+  }
+
+  async addCandidate(data: {
+    sessionId: string;
+    placeId: string;
+    userId?: string;
+    guestId?: string;
+  }) {
+    try {
+      const { sessionId, placeId, userId, guestId } = data;
+
+      const session = await this.prismaService.groupSession.findUnique({
+        where: { sessionId },
+      });
+
+      if (!session) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
+        });
+      }
+
+      if (session.status !== GroupSessionStatus.ACTIVE) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
+        });
+      }
+
+      const member = await this.prismaService.groupSessionMember.findFirst({
+        where: userId ? { userId, sessionId } : { guestId, sessionId },
+      });
+
+      if (!member) {
+        throw new RpcException({
+          status: HttpStatus.FORBIDDEN,
+          message: GroupSessionMessages.NOT_A_MEMBER,
+        });
+      }
+
+      try {
+        const existingCandidate =
+          await this.prismaService.groupSessionCandidate.findUnique({
+            where: { sessionId_placeId: { sessionId, placeId } },
+            include: {
+              place: {
+                select: {
+                  id: true,
+                  name: true,
+                  featureImageUrl: true,
+                  rating: true,
+                  fullAddress: true,
+                },
+              },
+            },
+          });
+
+        if (existingCandidate) {
+          return existingCandidate;
+        }
+
+        const candidate = await this.prismaService.groupSessionCandidate.create(
+          {
+            data: {
+              sessionId,
+              placeId,
+              addedBy: member.id,
+            },
+            include: {
+              place: {
+                select: {
+                  id: true,
+                  name: true,
+                  featureImageUrl: true,
+                  rating: true,
+                  fullAddress: true,
+                },
+              },
+            },
+          },
+        );
+
+        void this.notifySessionMembers(sessionId, 'candidate.added', {
+          sessionId,
+          candidate: {
+            placeId: candidate.placeId,
+            place: candidate.place,
+            addedBy: member.id,
+          },
+        });
+
+        return candidate;
+      } catch (error) {
+        if (
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          (error as { code?: string }).code === 'P2003'
+        ) {
+          throw new RpcException({
+            status: HttpStatus.NOT_FOUND,
+            message: GroupSessionMessages.PLACE_NOT_FOUND,
+          });
+        }
+        throw error;
+      }
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async deleteCandidate(data: {
+    sessionId: string;
+    placeId: string;
+    userId?: string;
+    guestId?: string;
+  }) {
+    try {
+      const { sessionId, placeId, userId, guestId } = data;
+
+      const session = await this.prismaService.groupSession.findUnique({
+        where: { sessionId },
+      });
+
+      if (!session) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
+        });
+      }
+
+      if (session.status !== GroupSessionStatus.ACTIVE) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
+        });
+      }
+
+      const member = await this.prismaService.groupSessionMember.findFirst({
+        where: userId ? { userId, sessionId } : { guestId, sessionId },
+      });
+
+      if (!member) {
+        throw new RpcException({
+          status: HttpStatus.FORBIDDEN,
+          message: GroupSessionMessages.NOT_A_MEMBER,
+        });
+      }
+
+      const candidate =
+        await this.prismaService.groupSessionCandidate.findUnique({
+          where: { sessionId_placeId: { sessionId, placeId } },
+        });
+
+      if (!candidate) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.CANDIDATE_NOT_FOUND,
+        });
+      }
+
+      if (candidate.addedBy !== member.id) {
+        throw new RpcException({
+          status: HttpStatus.FORBIDDEN,
+          message: GroupSessionMessages.NOT_CANDIDATE_OWNER,
+        });
+      }
+
+      await this.prismaService.groupSessionCandidate.delete({
+        where: { sessionId_placeId: { sessionId, placeId } },
+      });
+
+      void this.notifySessionMembers(sessionId, 'candidate.removed', {
+        sessionId,
+        candidate: {
+          placeId,
+          removedBy: member.id,
+        },
+      });
+
+      return { sessionId, placeId };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async leaveSession(data: {
+    sessionId: string;
+    userId?: string;
+    guestId?: string;
+  }) {
+    try {
+      const { sessionId, userId, guestId } = data;
+
+      const session = await this.prismaService.groupSession.findUnique({
+        where: { sessionId },
+      });
+
+      if (!session) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
+        });
+      }
+
+      if (session.status !== GroupSessionStatus.ACTIVE) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: GroupSessionMessages.SESSION_NOT_ACTIVE,
+        });
+      }
+
+      if (userId && session.createdBy === userId) {
+        throw new RpcException({
+          status: HttpStatus.FORBIDDEN,
+          message: GroupSessionMessages.CANNOT_LEAVE_AS_CREATOR,
+        });
+      }
+
+      const member = await this.prismaService.groupSessionMember.findFirst({
+        where: userId ? { userId, sessionId } : { guestId, sessionId },
+      });
+
+      if (!member) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.NOT_A_MEMBER,
+        });
+      }
+
+      await this.prismaService.groupSessionMember.delete({
+        where: { id: member.id },
+      });
+
+      void this.notifySessionMembers(sessionId, 'session.member_left', {
+        sessionId,
+        memberId: member.id,
+        userId: member.userId,
+      });
+
+      return { sessionId, memberId: member.id };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async getCandidates(sessionId: string) {
+    try {
+      const session = await this.prismaService.groupSession.findUnique({
+        where: { sessionId },
+      });
+
+      if (!session) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
+        });
+      }
+
+      const candidates =
+        await this.prismaService.groupSessionCandidate.findMany({
+          where: { sessionId },
+          include: {
+            place: {
+              select: {
+                id: true,
+                name: true,
+                featureImageUrl: true,
+                rating: true,
+                fullAddress: true,
+              },
+            },
+            member: {
+              select: {
+                id: true,
+                userId: true,
+                guestId: true,
+                nickname: true,
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    pictureUrl: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        });
+
+      const candidatesWithPictureUrl = await Promise.all(
+        candidates.map(async (c) => ({
+          ...c,
+          member: await this.mapMemberPictureUrl(c.member),
+        })),
+      );
+
+      return {
+        sessionId,
+        candidates: candidatesWithPictureUrl,
+        total: candidatesWithPictureUrl.length,
+      };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
   }
 }

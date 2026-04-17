@@ -12,6 +12,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
+  GetAllSessionsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
 } from 'src/shared/dtos/group-session.dto';
@@ -161,17 +162,71 @@ export const ApiGetAllSessions = (): MethodDecorator => {
     ApiOperation({
       summary: 'Get all sessions of current user',
       description:
-        'Retrieve all group sessions where the authenticated user is a participant.',
+        'Retrieve all group sessions where the authenticated user is a participant. Each item includes a memberCount (true total) and up to 4 member previews with resolved picture URLs for avatar display.',
     }),
     ApiOkResponse({
       description: 'User sessions retrieved successfully',
-      type: GroupSessionResponseDto,
+      type: GetAllSessionsResponseDto,
       isArray: true,
     }),
     ApiUnauthorizedResponse({
       description: 'Unauthorized - Invalid or missing authentication token',
     }),
   ) as MethodDecorator;
+};
+
+export const ApiAddCandidate = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Add a place as a candidate',
+      description:
+        'Add a place to the candidate pool for a group session. If the place is already a candidate, the request silently succeeds.',
+    }),
+    ApiOkResponse({ description: 'Candidate added successfully' }),
+    ApiNotFoundResponse({ description: 'Session or place not found' }),
+    ApiBadRequestResponse({ description: 'Session is not active' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+  );
+};
+
+export const ApiGetCandidates = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get candidate places for a session',
+      description:
+        'Retrieve all places that have been added to the candidate pool for a group session.',
+    }),
+    ApiOkResponse({ description: 'Candidates retrieved successfully' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
+};
+
+export const ApiDeleteCandidate = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Remove a candidate place from a session',
+      description:
+        'Remove a place from the candidate pool. Only the member who added the candidate can remove it.',
+    }),
+    ApiOkResponse({ description: 'Candidate removed successfully' }),
+    ApiNotFoundResponse({ description: 'Session or candidate not found' }),
+    ApiBadRequestResponse({ description: 'Session is not active' }),
+    ApiForbiddenResponse({ description: 'Not a member or not the candidate owner', }),
+  );
+};
+
+export const ApiLeaveSession = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Leave a group session',
+      description:
+        'Remove yourself from a group session. The session creator cannot leave; they must close the session instead.',
+    }),
+    ApiOkResponse({ description: 'Left session successfully' }),
+    ApiNotFoundResponse({ description: 'Session or member not found' }),
+    ApiBadRequestResponse({ description: 'Session is not active' }),
+    ApiForbiddenResponse({ description: 'Session creator cannot leave the session' }),
+  );
 };
 
 export const GroupSessionApiTags = () => {
