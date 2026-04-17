@@ -1084,45 +1084,64 @@ export class GroupSessionService {
     }
   }
 
-  async getAll(userId: string) {
+  async getAll(userId: string, page: number, limit: number) {
     try {
-      const sessions = await this.prismaService.groupSession.findMany({
-        where: {
-          members: {
-            some: { userId },
+      const offset = (page - 1) * limit;
+
+      const [sessions, total] = await Promise.all([
+        this.prismaService.groupSession.findMany({
+          where: {
+            members: {
+              some: { userId },
+            },
           },
-        },
-        orderBy: { createdAt: 'desc' },
-        include: {
-          _count: { select: { members: true } },
-          members: {
-            take: 4,
-            select: {
-              id: true,
-              userId: true,
-              guestId: true,
-              nickname: true,
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  firstName: true,
-                  lastName: true,
-                  pictureUrl: true,
+          orderBy: { createdAt: 'desc' },
+          skip: offset,
+          take: limit,
+          include: {
+            _count: { select: { members: true } },
+            members: {
+              take: 4,
+              select: {
+                id: true,
+                userId: true,
+                guestId: true,
+                nickname: true,
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    pictureUrl: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        }),
+        this.prismaService.groupSession.count({
+          where: {
+            members: {
+              some: { userId },
+            },
+          },
+        }),
+      ]);
 
-      return Promise.all(
-        sessions.map(async (session) => ({
-          ...session,
-          memberCount: session._count.members,
-          members: await this.mapMembersPictureUrl(session.members),
-        })),
-      );
+      return {
+        sessions: await Promise.all(
+          sessions.map(async (session) => ({
+            ...session,
+            memberCount: session._count.members,
+            members: await this.mapMembersPictureUrl(session.members),
+          })),
+        ),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+        limit,
+      };
     } catch (error) {
       handleServiceErrorCatching(error);
     }

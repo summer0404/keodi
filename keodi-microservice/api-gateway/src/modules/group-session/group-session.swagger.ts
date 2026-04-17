@@ -12,7 +12,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
-  GetAllSessionsResponseDto,
+  PaginatedGetAllSessionsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
 } from 'src/shared/dtos/group-session.dto';
@@ -162,12 +162,11 @@ export const ApiGetAllSessions = (): MethodDecorator => {
     ApiOperation({
       summary: 'Get all sessions of current user',
       description:
-        'Retrieve all group sessions where the authenticated user is a participant. Each item includes a memberCount (true total) and up to 4 member previews with resolved picture URLs for avatar display.',
+        'Retrieve a paginated list of group sessions where the authenticated user is a participant. Each item includes a memberCount (true total) and up to 4 member previews with resolved picture URLs for avatar display.',
     }),
     ApiOkResponse({
       description: 'User sessions retrieved successfully',
-      type: GetAllSessionsResponseDto,
-      isArray: true,
+      type: PaginatedGetAllSessionsResponseDto,
     }),
     ApiUnauthorizedResponse({
       description: 'Unauthorized - Invalid or missing authentication token',

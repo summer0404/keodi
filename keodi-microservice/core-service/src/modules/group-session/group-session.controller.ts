@@ -96,8 +96,12 @@ export class GroupSessionController {
   }
 
   @MessagePattern(GroupSessionTopics.GetAll)
-  async getAll(@Payload() data: { userId: string }) {
-    return await this.groupSessionService.getAll(data.userId);
+  async getAll(@Payload() data: { userId: string; page: number; limit: number }) {
+    return await this.groupSessionService.getAll(
+      data.userId,
+      data.page,
+      data.limit,
+    );
   }
 
   @MessagePattern(GroupSessionTopics.AddCandidate)

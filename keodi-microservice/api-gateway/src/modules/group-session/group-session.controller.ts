@@ -7,15 +7,18 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
+import { PaginationConstants } from 'src/shared/constants/pagination.constants';
 import {
-  CastVoteDto,
   AddCandidateDto,
+  CastVoteDto,
   DeleteCandidateDto,
   FinalizeMemberVoteDto,
+  GetAllSessionsQueryDto,
   GroupSessionResponseDto,
   InviteFriendToSessionDto,
   JoinGroupSessionDto,
@@ -25,19 +28,19 @@ import {
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { GroupSessionService } from './group-session.service';
 import {
+  ApiAddCandidate,
   ApiCastVote,
   ApiCloseGroupSession,
   ApiCreateGroupSession,
+  ApiDeleteCandidate,
   ApiFinalizeMemberVote,
   ApiFinalizeSessionVote,
   ApiGetAllSessions,
+  ApiGetCandidates,
   ApiGetSession,
   ApiGetVotes,
   ApiInviteFriendToSession,
   ApiJoinGroupSession,
-  ApiAddCandidate,
-  ApiGetCandidates,
-  ApiDeleteCandidate,
   ApiLeaveSession,
   GroupSessionApiTags,
 } from './group-session.swagger';
@@ -153,8 +156,15 @@ export class GroupSessionController {
 
   @Get()
   @ApiGetAllSessions()
-  async getAll(@CurrentUser() user: CurrentUserDto) {
-    return await this.groupSessionService.getAll(user.id);
+  async getAll(
+    @CurrentUser() user: CurrentUserDto,
+    @Query() query: GetAllSessionsQueryDto,
+  ) {
+    return await this.groupSessionService.getAll(
+      user.id,
+      query.page || PaginationConstants.DEFAULT_PAGE,
+      query.limit || PaginationConstants.DEFAULT_LIMIT,
+    );
   }
 
   @Post(':sessionId/candidates')

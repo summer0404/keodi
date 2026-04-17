@@ -1,6 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { SessionStatus } from '../enums/group-session.enum';
+import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 
 export class GroupSessionResponseDto {
   @ApiProperty({
@@ -174,6 +175,18 @@ export class GetAllSessionsResponseDto extends GroupSessionResponseDto {
     type: [GroupSessionMemberDto],
   })
   members: GroupSessionMemberDto[];
+}
+
+export class GetAllSessionsQueryDto extends OmitType(PaginationQueryDto, [
+  'sortOrder',
+] as const) {}
+
+export class PaginatedGetAllSessionsResponseDto extends PaginationResponseDto {
+  @ApiProperty({
+    description: 'Paginated list of group sessions for the current user',
+    type: [GetAllSessionsResponseDto],
+  })
+  sessions: GetAllSessionsResponseDto[];
 }
 
 export class JoinGroupSessionResponseDto {

@@ -59,8 +59,12 @@ export class GroupSessionService {
     return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetSession, { sessionId });
   }
 
-  async getAll(userId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetAll, { userId });
+  async getAll(userId: string, page: number, limit: number) {
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetAll, {
+      userId,
+      page,
+      limit,
+    });
   }
 
   async addCandidate(
