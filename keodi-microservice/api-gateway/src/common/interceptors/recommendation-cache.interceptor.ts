@@ -12,12 +12,17 @@ export class RecommendationCacheInterceptor extends CacheInterceptor {
 
         const path = request.route.path;
 
-        if(path.includes('for-you')) {
-            return `foryou:${request.user.id}`;
+        if(path.includes('places/for-you')) {
+            return `place:foryou:${request.user.id}`;
         }
 
-        if(path.includes('trending')) {
-            return `trending:${request.user.id}`;
+        if(path.includes('places/trending')) {
+            return `place:trending:${request.user.id}`;
+        }
+
+        if(path.includes('group-sessions') && path.includes('recommendations')) {
+            const sessionId = request.params.sessionId;
+            return `group-session:${sessionId}:recommendations`;
         }
 
         return undefined

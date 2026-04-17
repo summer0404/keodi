@@ -38,22 +38,10 @@ export class RecommendationHelper {
     return shuffled;
   }
 
-  getSessionRecommendationCacheKey(sessionId: string): string {
-    return `session:${sessionId}:recommendations`;
-  }
-
-  getSessionLocationPattern(sessionId: string): string {
-    return `session:${sessionId}:location:*`;
-  }
-
   calculateCentroid(locations: SessionLocation[]): {
-    latitude: number | null;
-    longitude: number | null;
+    latitude: number;
+    longitude: number;
   } {
-    if (locations.length === 0) {
-      return { latitude: null, longitude: null };
-    }
-
     const locationTotals = locations.reduce(
       (totals, location) => ({
         latitude: totals.latitude + location.latitude,

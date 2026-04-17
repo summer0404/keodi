@@ -15,9 +15,17 @@ export const GroupSessionMessages = {
   CATEGORY_LIMIT_EXCEEDED: 'CATEGORY_LIMIT_EXCEEDED',
   INVALID_SEARCH_RADIUS: 'INVALID_SEARCH_RADIUS',
   CATEGORY_NOT_FOUND: 'CATEGORY_NOT_FOUND',
+  NOT_ENOUGH_MEMBERS_FOR_RECOMMENDATION: 'NOT_ENOUGH_MEMBERS_FOR_RECOMMENDATION',
+  RECOMMENDATION_EMPTY: 'RECOMMENDATION_EMPTY',
 } as const;
 
+export const GroupSessionRedisKeys = {
+  ACTIVE_LOCATIONS: (sessionId: string) => `group-session:${sessionId}:active-locations`,
+  MEMBER_VOTES: (sessionId: string) => `group-session:${sessionId}:member-votes`,
+}
+
 export const GROUP_SESSION_SHARE_CODE_LENGTH = 6;
+export const GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS = 3;
 export const GROUP_SESSION_DEFAULT_AUTO_CLOSE_DELAY_MINUTES = 10;
 export const GROUP_SESSION_DEFAULT_SEARCH_RADIUS_KM = 5;
 export const GROUP_SESSION_MIN_SEARCH_RADIUS_KM = 0.1;
@@ -25,5 +33,3 @@ export const GROUP_SESSION_MAX_SEARCH_RADIUS_KM = 100;
 export const GROUP_SESSION_MAX_CATEGORY_COUNT = 5;
 export const GROUP_SESSION_MAX_RECOMMENDATION_PLACES = 20;
 export const GROUP_SESSION_RECOMMENDATION_TTL_SECONDS = 300;
-export const GROUP_SESSION_RECOMMENDATION_EMPTY_STATE_MESSAGE =
-  "No places found near your group's meeting point for these categories. Try adding more categories, broadening the search radius, or adjusting your search.";

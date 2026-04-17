@@ -22,9 +22,10 @@ import { SortOrder } from 'src/shared/enums/sort.enum';
 import { formatTimeOnly } from 'src/shared/helpers/time.helper';
 import {
   GROUP_SESSION_MAX_RECOMMENDATION_PLACES,
-  GROUP_SESSION_RECOMMENDATION_EMPTY_STATE_MESSAGE,
+  GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS,
   GROUP_SESSION_RECOMMENDATION_TTL_SECONDS,
   GroupSessionMessages,
+  GroupSessionRedisKeys,
 } from 'src/shared/constants/group-session.constant';
 import { SessionLocation } from 'src/shared/types/group-session.type';
 import { ImageService } from '../image/image.service';
@@ -127,7 +128,7 @@ export class RecommendationService {
     sessionId: string,
   ): Promise<SessionLocation[]> {
     const keys = await this.redisService.keys(
-      this.recommendationHelper.getSessionLocationPattern(sessionId),
+      GroupSessionRedisKeys.ACTIVE_LOCATIONS(sessionId)
     );
 
     if (keys.length === 0) {
@@ -155,39 +156,6 @@ export class RecommendationService {
     }
 
     return locations;
-  }
-
-  private async invalidateSessionRecommendationCache(
-    sessionId: string,
-  ): Promise<void> {
-    await this.redisService.del(this.getGroupSessionRecommendationCacheKey(sessionId));
-  }
-
-  private getGroupSessionRecommendationCacheKey(sessionId: string): string {
-    return this.recommendationHelper.getSessionRecommendationCacheKey(sessionId);
-  }
-
-  private buildGroupSessionRecommendationResponse(params: {
-    sessionId: string;
-    centroid: { latitude: number | null; longitude: number | null };
-    searchRadius: number;
-    categoryIds: string[];
-    places: PlaceRecommendationResponseDto[];
-    isCached: boolean;
-  }) {
-    const { sessionId, centroid, searchRadius, categoryIds, places, isCached } =
-      params;
-
-    return {
-      sessionId,
-      centroid,
-      searchRadius,
-      categoryIds,
-      places,
-      emptyStateMessage:
-        places.length > 0 ? null : GROUP_SESSION_RECOMMENDATION_EMPTY_STATE_MESSAGE,
-      isCached,
-    };
   }
 
   private async fetchGroupSessionRecommendationPlaces(params: {
@@ -671,13 +639,16 @@ export class RecommendationService {
 
       await this.assertGroupSessionMember({ sessionId, userId, guestId });
 
-      const categoryIds = session.selectedCategories.map(
-        (category) => category.categoryId,
-      );
       const activeLocations = await this.getActiveSessionLocations(sessionId);
-      const centroid =
-        this.recommendationHelper.calculateCentroid(activeLocations);
-      const cacheKey = this.getGroupSessionRecommendationCacheKey(sessionId);
+
+      if (activeLocations.length < GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS) {
+        throw new RpcException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          message: GroupSessionMessages.NOT_ENOUGH_MEMBERS_FOR_RECOMMENDATION,
+        });
+      }
+
+      const cacheKey = RecommendationRedisKeys.GROUP_SESSION_RECOMMENDATIONS(sessionId);
       const rawCachedPlaces = await this.redisService.get(cacheKey);
 
       let cachedPlaces: PlaceRecommendationResponseDto[] | null = null;
@@ -692,15 +663,14 @@ export class RecommendationService {
       }
 
       if (cachedPlaces) {
-        return this.buildGroupSessionRecommendationResponse({
-          sessionId,
-          centroid,
-          searchRadius: session.searchRadius,
-          categoryIds,
-          places: cachedPlaces,
-          isCached: true,
-        });
+        return cachedPlaces
       }
+
+      const categoryIds = session.selectedCategories.map(
+        (category) => category.categoryId,
+      );
+
+      const centroid = this.recommendationHelper.calculateCentroid(activeLocations);
 
       const places =
         centroid.latitude === null || centroid.longitude === null
@@ -712,20 +682,20 @@ export class RecommendationService {
             categoryIds,
           });
 
+      if (places.length === 0) {
+        throw new RpcException({
+          status: HttpStatus.OK,
+          message: GroupSessionMessages.RECOMMENDATION_EMPTY,
+        });
+      }
+
       await this.redisService.setEx(
         cacheKey,
         JSON.stringify(places),
         GROUP_SESSION_RECOMMENDATION_TTL_SECONDS,
       );
 
-      return this.buildGroupSessionRecommendationResponse({
-        sessionId,
-        centroid,
-        searchRadius: session.searchRadius,
-        categoryIds,
-        places,
-        isCached: false,
-      });
+      return places;
     } catch (error) {
       handleServiceErrorCatching(error);
     }
@@ -735,7 +705,7 @@ export class RecommendationService {
     sessionId: string;
   }) {
     try {
-      await this.invalidateSessionRecommendationCache(data.sessionId);
+      await this.redisService.del(RecommendationRedisKeys.GROUP_SESSION_RECOMMENDATIONS(data.sessionId));
     } catch (error) {
       handleServiceErrorCatching(error);
     }
