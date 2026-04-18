@@ -14,10 +14,8 @@ import {
 } from 'class-validator';
 import { SessionStatus } from '../enums/group-session.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
+import { GROUP_SESSION_MAX_CATEGORY_COUNT, GROUP_SESSION_MAX_SEARCH_RADIUS_KM, GROUP_SESSION_MIN_SEARCH_RADIUS_KM } from '../constants/group-session.constant';
 
-const GROUP_SESSION_MIN_SEARCH_RADIUS_KM = 0.1;
-const GROUP_SESSION_MAX_SEARCH_RADIUS_KM = 100;
-const GROUP_SESSION_MAX_CATEGORY_COUNT = 5;
 
 export class GroupSessionResponseDto {
   @ApiProperty({
