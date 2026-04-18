@@ -15,7 +15,11 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import {
+  GroupSessionRecommendationCategoriesResponseDto,
+  GroupSessionRecommendationRadiusResponseDto,
   GroupSessionRecommendationRefreshResponseDto,
+  UpdateGroupSessionRecommendationCategoriesDto,
+  UpdateGroupSessionRecommendationRadiusDto,
   PaginatedGetAllSessionsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
@@ -269,6 +273,48 @@ export const ApiRefreshGroupSessionRecommendations = () => {
     }),
     ApiUnauthorizedResponse({ description: 'Unauthorized' }),
    );
+};
+
+export const ApiUpdateGroupSessionRecommendationRadius = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Update group recommendation search radius',
+      description:
+        'Updates the group session recommendation radius. This invalidates existing recommendation cache so the next recommendation fetch is recalculated.',
+    }),
+    ApiBody({ type: UpdateGroupSessionRecommendationRadiusDto }),
+    ApiOkResponse({
+      description: 'Recommendation radius updated successfully',
+      type: GroupSessionRecommendationRadiusResponseDto,
+    }),
+    ApiBadRequestResponse({
+      description: 'Invalid search radius value or session state',
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
+};
+
+export const ApiUpdateGroupSessionRecommendationCategories = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Update group recommendation categories',
+      description:
+        'Replaces the selected recommendation categories for this session (max 5). This invalidates recommendation cache so the next recommendation fetch is recalculated.',
+    }),
+    ApiBody({ type: UpdateGroupSessionRecommendationCategoriesDto }),
+    ApiOkResponse({
+      description: 'Recommendation categories updated successfully',
+      type: GroupSessionRecommendationCategoriesResponseDto,
+    }),
+    ApiBadRequestResponse({
+      description: 'Category limit exceeded, invalid category IDs, or invalid session state',
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
 };
   
 export const GroupSessionApiTags = () => {

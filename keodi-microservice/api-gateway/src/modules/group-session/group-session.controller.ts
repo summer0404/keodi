@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Param,
   Post,
   Query,
@@ -21,6 +22,8 @@ import {
   DeleteCandidateDto,
   FinalizeMemberVoteDto,
   GroupSessionRecommendationAccessDto,
+  GroupSessionRecommendationCategoriesResponseDto,
+  GroupSessionRecommendationRadiusResponseDto,
   GroupSessionRecommendationRefreshResponseDto,
   GetAllSessionsQueryDto,
   GroupSessionResponseDto,
@@ -28,6 +31,8 @@ import {
   JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
   LeaveSessionDto,
+  UpdateGroupSessionRecommendationCategoriesDto,
+  UpdateGroupSessionRecommendationRadiusDto,
 } from 'src/shared/dtos/group-session.dto';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { GroupSessionService } from './group-session.service';
@@ -46,6 +51,8 @@ import {
   ApiGetVotes,
   ApiInviteFriendToSession,
   ApiJoinGroupSession,
+  ApiUpdateGroupSessionRecommendationCategories,
+  ApiUpdateGroupSessionRecommendationRadius,
   ApiRefreshGroupSessionRecommendations,
   ApiLeaveSession,
   GroupSessionApiTags,
@@ -263,6 +270,40 @@ export class GroupSessionController {
       sessionId,
       user?.id,
       groupSessionRecommendationAccessDto,
+    );
+  }
+
+  @Patch(':sessionId/recommendations/radius')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiUpdateGroupSessionRecommendationRadius()
+  async updateRecommendationRadius(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body()
+    updateRecommendationRadiusDto: UpdateGroupSessionRecommendationRadiusDto,
+  ): Promise<GroupSessionRecommendationRadiusResponseDto> {
+    return await this.groupSessionService.updateRecommendationRadius(
+      sessionId,
+      user?.id,
+      updateRecommendationRadiusDto,
+    );
+  }
+
+  @Patch(':sessionId/recommendations/categories')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiUpdateGroupSessionRecommendationCategories()
+  async updateRecommendationCategories(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body()
+    updateRecommendationCategoriesDto: UpdateGroupSessionRecommendationCategoriesDto,
+  ): Promise<GroupSessionRecommendationCategoriesResponseDto> {
+    return await this.groupSessionService.updateRecommendationCategories(
+      sessionId,
+      user?.id,
+      updateRecommendationCategoriesDto,
     );
   }
 }

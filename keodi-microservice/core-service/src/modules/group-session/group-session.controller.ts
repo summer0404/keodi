@@ -146,4 +146,30 @@ export class GroupSessionController {
   ) {
     return await this.groupSessionService.leaveSession(data);
   }
+
+  @MessagePattern(GroupSessionTopics.UpdateRecommendationRadius)
+  async updateRecommendationRadius(
+    @Payload()
+    data: {
+      sessionId: string;
+      searchRadius: number;
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.groupSessionService.updateRecommendationSearchRadius(data);
+  }
+
+  @MessagePattern(GroupSessionTopics.UpdateRecommendationCategories)
+  async updateRecommendationCategories(
+    @Payload()
+    data: {
+      sessionId: string;
+      categoryIds: string[];
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.groupSessionService.updateRecommendationCategories(data);
+  }
 }

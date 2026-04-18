@@ -61,6 +61,9 @@ export const GroupSessionTopics = {
   GetCandidates: 'group-session.get-candidates',
   DeleteCandidate: 'group-session.delete-candidate',
   LeaveSession: 'group-session.leave-session',
+  UpdateRecommendationRadius: 'group-session.update-recommendation-radius',
+  UpdateRecommendationCategories:
+    'group-session.update-recommendation-categories',
 } as const;
 
 export const SearchTopics = {

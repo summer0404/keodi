@@ -23,7 +23,8 @@ export const GroupSessionMessages = {
 } as const;
 
 export const GroupSessionRedisKeys = {
-  ACTIVE_LOCATIONS: (sessionId: string) => `group-session:${sessionId}:active-locations`,
+  MEMBER_LOCATION: (sessionId: string, userId: string) =>
+    `session:${sessionId}:location:${userId}`,
   MEMBER_VOTES: (sessionId: string) => `group-session:${sessionId}:member-votes`,
 }
 

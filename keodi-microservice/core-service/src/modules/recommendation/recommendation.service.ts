@@ -127,35 +127,41 @@ export class RecommendationService {
   private async getActiveSessionLocations(
     sessionId: string,
   ): Promise<SessionLocation[]> {
-    const keys = await this.redisService.keys(
-      GroupSessionRedisKeys.ACTIVE_LOCATIONS(sessionId)
-    );
+    const members = await this.prismaService.groupSessionMember.findMany({
+      where: { sessionId, userId: { not: null } },
+      select: { userId: true },
+    });
 
-    if (keys.length === 0) {
+    if (members.length === 0) {
       return [];
     }
 
-    const locations: SessionLocation[] = [];
+    const locationEntries = await Promise.all(
+      members.map(async ({ userId }) => {
+        if (!userId) {
+          return null;
+        }
 
-    for (const key of keys) {
-      const rawLocation = await this.redisService.get(key);
-      if (!rawLocation) {
-        continue;
-      }
+        const locationKey = GroupSessionRedisKeys.MEMBER_LOCATION(
+          sessionId,
+          userId,
+        );
+        const rawLocation = await this.redisService.get(locationKey);
 
-      const parsedLocation = this.recommendationHelper.parseSessionLocation(
-        key,
-        rawLocation,
-      );
+        if (!rawLocation) {
+          return null;
+        }
 
-      if (!parsedLocation) {
-        continue;
-      }
+        return this.recommendationHelper.parseSessionLocation(
+          locationKey,
+          rawLocation,
+        );
+      }),
+    );
 
-      locations.push(parsedLocation);
-    }
-
-    return locations;
+    return locationEntries.filter(
+      (location): location is SessionLocation => location !== null,
+    );
   }
 
   private async fetchGroupSessionRecommendationPlaces(params: {

@@ -4,10 +4,14 @@ import { Cache } from 'cache-manager';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   GroupSessionRecommendationAccessDto,
+  GroupSessionRecommendationCategoriesResponseDto,
+  GroupSessionRecommendationRadiusResponseDto,
   GroupSessionRecommendationRefreshResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
+  UpdateGroupSessionRecommendationCategoriesDto,
+  UpdateGroupSessionRecommendationRadiusDto,
 } from 'src/shared/dtos/group-session.dto';
 import {
   GroupSessionTopics,
@@ -19,7 +23,25 @@ export class GroupSessionService {
   constructor(
     private readonly kafkaService: KafkaService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) { }
+  ) {}
+
+  private async invalidateRecommendationCache(
+    sessionId: string,
+    userId?: string,
+    guestId?: string,
+    reason: string = 'MANUAL_REFRESH',
+  ): Promise<void> {
+    await this.cacheManager.del(`group-session:${sessionId}:recommendations`);
+
+    this.kafkaService
+      .getClient()
+      .emit(RecommendationTopics.GroupSessionInvalidateCache, {
+        sessionId,
+        userId,
+        guestId,
+        reason,
+      });
+  }
 
   async create(userId: string): Promise<GroupSessionResponseDto> {
     return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Create, {
@@ -109,11 +131,19 @@ export class GroupSessionService {
     userId?: string,
     guestId?: string,
   ) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.AddCandidate, { sessionId, placeId, userId, guestId });
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.AddCandidate, {
+      sessionId,
+      placeId,
+      userId,
+      guestId,
+    });
   }
 
   async getCandidates(sessionId: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetCandidates, { sessionId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.GetCandidates,
+      { sessionId },
+    );
   }
 
   async deleteCandidate(
@@ -122,14 +152,20 @@ export class GroupSessionService {
     userId?: string,
     guestId?: string,
   ) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.DeleteCandidate, { sessionId, placeId, userId, guestId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.DeleteCandidate,
+      { sessionId, placeId, userId, guestId },
+    );
   }
 
   async leaveSession(sessionId: string, userId?: string, guestId?: string) {
-    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.LeaveSession, { sessionId, userId, guestId });
+    return await this.kafkaService.sendWithTimeout(
+      GroupSessionTopics.LeaveSession,
+      { sessionId, userId, guestId },
+    );
   }
-  
-   async getRecommendations(
+
+  async getRecommendations(
     sessionId: string,
     userId?: string,
     accessDto?: GroupSessionRecommendationAccessDto,
@@ -144,21 +180,69 @@ export class GroupSessionService {
     );
   }
 
+  async updateRecommendationRadius(
+    sessionId: string,
+    userId: string | undefined,
+    updateRecommendationRadiusDto: UpdateGroupSessionRecommendationRadiusDto,
+  ): Promise<GroupSessionRecommendationRadiusResponseDto> {
+    const updatedRadius =
+      await this.kafkaService.sendWithTimeout(
+        GroupSessionTopics.UpdateRecommendationRadius,
+        {
+          sessionId,
+          userId,
+          guestId: updateRecommendationRadiusDto.guestId,
+          searchRadius: updateRecommendationRadiusDto.searchRadius,
+        },
+      );
+
+    await this.invalidateRecommendationCache(
+      sessionId,
+      userId,
+      updateRecommendationRadiusDto.guestId,
+      'SEARCH_RADIUS_UPDATED',
+    );
+
+    return updatedRadius;
+  }
+
+  async updateRecommendationCategories(
+    sessionId: string,
+    userId: string | undefined,
+    updateRecommendationCategoriesDto: UpdateGroupSessionRecommendationCategoriesDto,
+  ): Promise<GroupSessionRecommendationCategoriesResponseDto> {
+    const updatedCategories =
+      await this.kafkaService.sendWithTimeout(
+        GroupSessionTopics.UpdateRecommendationCategories,
+        {
+          sessionId,
+          userId,
+          guestId: updateRecommendationCategoriesDto.guestId,
+          categoryIds: updateRecommendationCategoriesDto.categoryIds,
+        },
+      );
+
+    await this.invalidateRecommendationCache(
+      sessionId,
+      userId,
+      updateRecommendationCategoriesDto.guestId,
+      'SELECTED_CATEGORIES_UPDATED',
+    );
+
+    return updatedCategories;
+  }
+
   async refreshRecommendations(
     sessionId: string,
     userId?: string,
     groupSessionRecommendationAccessDto?: GroupSessionRecommendationAccessDto,
   ): Promise<GroupSessionRecommendationRefreshResponseDto> {
-    this.cacheManager.del(
-      `group-session:${sessionId}:recommendations`,
-    );
-
-    this.kafkaService.getClient().emit(RecommendationTopics.GroupSessionInvalidateCache, {
+    await this.invalidateRecommendationCache(
       sessionId,
       userId,
-      guestId: groupSessionRecommendationAccessDto?.guestId,
-      reason: 'MANUAL_REFRESH',
-    });
+      groupSessionRecommendationAccessDto?.guestId,
+      'MANUAL_REFRESH',
+    );
 
     return { accepted: true };
   }
