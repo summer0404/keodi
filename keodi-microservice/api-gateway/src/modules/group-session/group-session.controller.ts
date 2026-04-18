@@ -22,7 +22,6 @@ import {
   FinalizeMemberVoteDto,
   GroupSessionRecommendationAccessDto,
   GroupSessionRecommendationRefreshResponseDto,
-  GroupSessionRecommendationsResponseDto,
   GetAllSessionsQueryDto,
   GroupSessionResponseDto,
   InviteFriendToSessionDto,
@@ -52,6 +51,7 @@ import {
   GroupSessionApiTags,
 } from './group-session.swagger';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
+import { PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 
 @Controller('group-sessions')
 @GroupSessionApiTags()
@@ -241,12 +241,12 @@ export class GroupSessionController {
   async getRecommendations(
     @CurrentUser() user: CurrentUserDto | undefined,
     @Param('sessionId') sessionId: string,
-    @Query() accessDto: GroupSessionRecommendationAccessDto,
-  ): Promise<GroupSessionRecommendationsResponseDto> {
+    @Query() groupSessionRecommendationAccessDto: GroupSessionRecommendationAccessDto,
+  ): Promise<PlaceRecommendationResponseDto[]> {
     return await this.groupSessionService.getRecommendations(
       sessionId,
       user?.id,
-      accessDto,
+      groupSessionRecommendationAccessDto,
     );
   }
 
@@ -257,12 +257,12 @@ export class GroupSessionController {
   async refreshRecommendations(
     @CurrentUser() user: CurrentUserDto | undefined,
     @Param('sessionId') sessionId: string,
-    @Body() accessDto: GroupSessionRecommendationAccessDto,
+    @Body() groupSessionRecommendationAccessDto: GroupSessionRecommendationAccessDto,
   ): Promise<GroupSessionRecommendationRefreshResponseDto> {
     return await this.groupSessionService.refreshRecommendations(
       sessionId,
       user?.id,
-      accessDto,
+      groupSessionRecommendationAccessDto,
     );
   }
 }

@@ -1,6 +1,5 @@
 import { applyDecorators } from '@nestjs/common';
 import {
-  ApiBody,
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -12,15 +11,17 @@ import {
   ApiTags,
   ApiQuery,
   ApiUnauthorizedResponse,
+  ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import {
-  GroupSessionRecommendationAccessDto,
   GroupSessionRecommendationRefreshResponseDto,
-  GroupSessionRecommendationsResponseDto,
   PaginatedGetAllSessionsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
+  GroupSessionRecommendationAccessDto,
 } from 'src/shared/dtos/group-session.dto';
+import { PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 
 export const ApiCreateGroupSession = () => {
   return applyDecorators(
@@ -239,16 +240,16 @@ export const ApiGetGroupSessionRecommendations = () => {
       description:
         'Returns recommended places around the group centroid, filtered by selected categories and session search radius. Returns cached data when still valid.',
     }),
-    ApiOkResponse({
-      description: 'Group session recommendations retrieved successfully',
-      type: GroupSessionRecommendationsResponseDto,
-    }),
     ApiQuery({
       name: 'guestId',
       required: false,
       description:
         'Guest identifier for anonymous members when no auth token is provided',
       example: 'mws0v9cjcm3nuj5y8gochuu1',
+    }),
+    ApiOkResponse({
+      description: 'Group session recommendations retrieved successfully',
+      type: [PlaceRecommendationResponseDto],
     }),
     ApiUnauthorizedResponse({ description: 'Unauthorized' }),
     ApiForbiddenResponse({ description: 'Not a member of this session' }),
@@ -262,10 +263,9 @@ export const ApiRefreshGroupSessionRecommendations = () => {
       description:
         'Publishes a cache-invalidation event for this session. The next recommendation fetch will be recalculated.',
     }),
-    ApiBody({ type: GroupSessionRecommendationAccessDto, required: false }),
     ApiOkResponse({
       description: 'Refresh request accepted',
-      type: GroupSessionRecommendationRefreshResponseDto,
+      type: [GroupSessionRecommendationRefreshResponseDto],
     }),
     ApiUnauthorizedResponse({ description: 'Unauthorized' }),
    );

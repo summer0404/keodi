@@ -5,7 +5,6 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   GroupSessionRecommendationAccessDto,
   GroupSessionRecommendationRefreshResponseDto,
-  GroupSessionRecommendationsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
@@ -134,7 +133,7 @@ export class GroupSessionService {
     sessionId: string,
     userId?: string,
     accessDto?: GroupSessionRecommendationAccessDto,
-  ): Promise<GroupSessionRecommendationsResponseDto> {
+  ) {
     return await this.kafkaService.sendWithTimeout(
       RecommendationTopics.GroupSessionGetRecommendations,
       {
@@ -148,7 +147,7 @@ export class GroupSessionService {
   async refreshRecommendations(
     sessionId: string,
     userId?: string,
-    accessDto?: GroupSessionRecommendationAccessDto,
+    groupSessionRecommendationAccessDto?: GroupSessionRecommendationAccessDto,
   ): Promise<GroupSessionRecommendationRefreshResponseDto> {
     this.cacheManager.del(
       `group-session:${sessionId}:recommendations`,
@@ -157,9 +156,10 @@ export class GroupSessionService {
     this.kafkaService.getClient().emit(RecommendationTopics.GroupSessionInvalidateCache, {
       sessionId,
       userId,
-      guestId: accessDto?.guestId,
+      guestId: groupSessionRecommendationAccessDto?.guestId,
       reason: 'MANUAL_REFRESH',
     });
 
     return { accepted: true };
+  }
 }

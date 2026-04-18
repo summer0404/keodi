@@ -8,8 +8,6 @@ import {
 } from 'class-validator';
 import { SessionStatus } from '../enums/group-session.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
-import { PlaceRecommendationResponseDto } from './place.dto';
-import { PlaceConstants } from '../constants/place.constant';
 
 export class GroupSessionResponseDto {
   @ApiProperty({
@@ -318,51 +316,18 @@ export class GroupSessionRecommendationRefreshResponseDto {
   accepted: boolean;
 }
 
-export class GroupSessionRecommendationsResponseDto {
-  @ApiProperty({
-    description: 'Group session ID',
-    example: 'cm5x1y2z3a4b5c6d7e8f',
-  })
-  sessionId: string;
-
-  @ApiProperty({
-    type: GroupSessionRecommendationCentroidDto,
-  })
-  centroid: GroupSessionRecommendationCentroidDto;
-
-  @ApiProperty({
-    description: 'Recommendation search radius in kilometers',
-    example: 5,
-  })
-  searchRadius: number = PlaceConstants.DEFAULT_RADIUS;
-
-  @ApiProperty({
-    description: 'Selected category IDs used for group recommendations',
-    isArray: true,
-    example: ['cm5x1y2z3a4b5c6d7e8f'],
-  })
-  categoryIds: string[];
-
-  @ApiProperty({
-    type: [PlaceRecommendationResponseDto],
-  })
-  places: PlaceRecommendationResponseDto[];
-
+export class GroupSessionRecommendationAccessDto {
+  @IsOptional()
+  @IsString()
   @ApiProperty({
     description:
-      'Empty-state guidance when no places are found for the current centroid/category filters',
-    nullable: true,
-    example:
-      "No places found near your group's meeting point for these categories. Try adding more categories, broadening the search radius, or adjusting your search.",
+      'Guest ID for identifying the member (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
   })
-  emptyStateMessage: string | null;
+  guestId?: string;
+}
 
-  @ApiProperty({
-    description:
-      'Indicates whether recommendations were served from Redis cache',
-    example: true,
-  })
-  isCached: boolean;
 export class DeleteCandidateDto {
   @IsOptional()
   @IsString()
