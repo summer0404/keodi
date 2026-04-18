@@ -96,7 +96,54 @@ export class GroupSessionController {
   }
 
   @MessagePattern(GroupSessionTopics.GetAll)
-  async getAll(@Payload() data: { userId: string }) {
-    return await this.groupSessionService.getAll(data.userId);
+  async getAll(@Payload() data: { userId: string; page: number; limit: number }) {
+    return await this.groupSessionService.getAll(
+      data.userId,
+      data.page,
+      data.limit,
+    );
+  }
+
+  @MessagePattern(GroupSessionTopics.AddCandidate)
+  async addCandidate(
+    @Payload()
+    data: {
+      sessionId: string;
+      placeId: string;
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.groupSessionService.addCandidate(data);
+  }
+
+  @MessagePattern(GroupSessionTopics.GetCandidates)
+  async getCandidates(@Payload() data: { sessionId: string }) {
+    return await this.groupSessionService.getCandidates(data.sessionId);
+  }
+
+  @MessagePattern(GroupSessionTopics.DeleteCandidate)
+  async deleteCandidate(
+    @Payload()
+    data: {
+      sessionId: string;
+      placeId: string;
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.groupSessionService.deleteCandidate(data);
+  }
+
+  @MessagePattern(GroupSessionTopics.LeaveSession)
+  async leaveSession(
+    @Payload()
+    data: {
+      sessionId: string;
+      userId?: string;
+      guestId?: string;
+    },
+  ) {
+    return await this.groupSessionService.leaveSession(data);
   }
 }
