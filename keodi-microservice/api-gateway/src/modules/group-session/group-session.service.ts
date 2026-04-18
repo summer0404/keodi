@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject, Injectable } from '@nestjs/common';
+import { Cache } from 'cache-manager';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   GroupSessionRecommendationAccessDto,
@@ -15,7 +17,10 @@ import {
 
 @Injectable()
 export class GroupSessionService {
-  constructor(private readonly kafkaService: KafkaService) {}
+  constructor(
+    private readonly kafkaService: KafkaService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+  ) { }
 
   async create(userId: string): Promise<GroupSessionResponseDto> {
     return await this.kafkaService.sendWithTimeout(GroupSessionTopics.Create, {
@@ -117,7 +122,11 @@ export class GroupSessionService {
     userId?: string,
     accessDto?: GroupSessionRecommendationAccessDto,
   ): Promise<GroupSessionRecommendationRefreshResponseDto> {
-    this.kafkaService.emit(RecommendationTopics.GroupSessionInvalidateCache, {
+    this.cacheManager.del(
+      `group-session:${sessionId}:recommendations`,
+    );
+
+    this.kafkaService.getClient().emit(RecommendationTopics.GroupSessionInvalidateCache, {
       sessionId,
       userId,
       guestId: accessDto?.guestId,

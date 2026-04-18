@@ -9,6 +9,7 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
@@ -40,7 +41,6 @@ import {
   ApiRefreshGroupSessionRecommendations,
   GroupSessionApiTags,
 } from './group-session.swagger';
-import { CacheInterceptor } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
 
 @Controller('group-sessions')
@@ -159,6 +159,7 @@ export class GroupSessionController {
   }
 
   @UseInterceptors(RecommendationCacheInterceptor)
+  @CacheTTL(5)
   @Get(':sessionId/recommendations')
   @OptionalAuth()
   @ApiGetGroupSessionRecommendations()

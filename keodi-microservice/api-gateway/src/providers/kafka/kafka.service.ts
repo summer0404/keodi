@@ -126,15 +126,4 @@ export class KafkaService implements OnModuleInit {
       this.kafkaClient.send(topic, data).pipe(timeout(timeoutMs)),
     );
   }
-
-  emit(topic: string, data: unknown): void {
-    this.kafkaClient.emit(topic, data).subscribe({
-      error: (error: any) => {
-        this.logger.error(
-          `Failed to emit Kafka event ${topic}`,
-          error?.stack ?? error?.message ?? String(error),
-        );
-      },
-    });
-  }
 }
