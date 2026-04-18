@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -13,32 +14,41 @@ import { CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
+import { PaginationConstants } from 'src/shared/constants/pagination.constants';
 import {
+  AddCandidateDto,
   CastVoteDto,
+  DeleteCandidateDto,
   FinalizeMemberVoteDto,
   GroupSessionRecommendationAccessDto,
   GroupSessionRecommendationRefreshResponseDto,
   GroupSessionRecommendationsResponseDto,
+  GetAllSessionsQueryDto,
   GroupSessionResponseDto,
   InviteFriendToSessionDto,
   JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
+  LeaveSessionDto,
 } from 'src/shared/dtos/group-session.dto';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { GroupSessionService } from './group-session.service';
 import {
+  ApiAddCandidate,
   ApiCastVote,
   ApiCloseGroupSession,
   ApiCreateGroupSession,
+  ApiDeleteCandidate,
   ApiFinalizeMemberVote,
   ApiFinalizeSessionVote,
   ApiGetAllSessions,
   ApiGetGroupSessionRecommendations,
+  ApiGetCandidates,
   ApiGetSession,
   ApiGetVotes,
   ApiInviteFriendToSession,
   ApiJoinGroupSession,
   ApiRefreshGroupSessionRecommendations,
+  ApiLeaveSession,
   GroupSessionApiTags,
 } from './group-session.swagger';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
@@ -154,8 +164,73 @@ export class GroupSessionController {
 
   @Get()
   @ApiGetAllSessions()
-  async getAll(@CurrentUser() user: CurrentUserDto) {
-    return await this.groupSessionService.getAll(user.id);
+  async getAll(
+    @CurrentUser() user: CurrentUserDto,
+    @Query() query: GetAllSessionsQueryDto,
+  ) {
+    return await this.groupSessionService.getAll(
+      user.id,
+      query.page || PaginationConstants.DEFAULT_PAGE,
+      query.limit || PaginationConstants.DEFAULT_LIMIT,
+    );
+  }
+
+  @Post(':sessionId/candidates')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiAddCandidate()
+  async addCandidate(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() addCandidateDto: AddCandidateDto,
+  ) {
+    return await this.groupSessionService.addCandidate(
+      sessionId,
+      addCandidateDto.placeId,
+      user?.id,
+      addCandidateDto.guestId,
+    );
+  }
+
+  @Get(':sessionId/candidates')
+  @OptionalAuth()
+  @ApiGetCandidates()
+  async getCandidates(@Param('sessionId') sessionId: string) {
+    return await this.groupSessionService.getCandidates(sessionId);
+  }
+
+  @Delete(':sessionId/candidates/:placeId')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiDeleteCandidate()
+  async deleteCandidate(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Param('placeId') placeId: string,
+    @Body() deleteCandidateDto: DeleteCandidateDto,
+  ) {
+    return await this.groupSessionService.deleteCandidate(
+      sessionId,
+      placeId,
+      user?.id,
+      deleteCandidateDto.guestId,
+    );
+  }
+
+  @Post(':sessionId/leave')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiLeaveSession()
+  async leaveSession(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() leaveSessionDto: LeaveSessionDto,
+  ) {
+    return await this.groupSessionService.leaveSession(
+      sessionId,
+      user?.id,
+      leaveSessionDto.guestId,
+    );
   }
 
   @UseInterceptors(RecommendationCacheInterceptor)

@@ -39,7 +39,7 @@ enum UserActionType {
 
 model User {
   id          String    @id
-  username    String   @unique @db.VarChar(20)
+  username    String    @unique @db.VarChar(20)
   phoneNumber String?   @unique @map("phone_number") @db.VarChar(12)
   firstName   String?   @map("first_name") @db.VarChar(50)
   lastName    String?   @map("last_name") @db.VarChar(50)
@@ -139,16 +139,17 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  placeAttributes  PlaceAttribute[]
-  userActions      UserAction[]
-  reviews          Review[]
-  placeImages      PlaceImage[]
-  openingHours     OpeningHour[]
-  placeCategories  PlaceCategory[]
-  owner            User?            @relation(fields: [ownerId], references: [id])
-  favorites        Favorite[]
-  sessionVotes     SessionVote[]
-  wonGroupSessions GroupSession[]   @relation("SessionWinningPlace")
+  placeAttributes        PlaceAttribute[]
+  userActions            UserAction[]
+  reviews                Review[]
+  placeImages            PlaceImage[]
+  openingHours           OpeningHour[]
+  placeCategories        PlaceCategory[]
+  owner                  User?                   @relation(fields: [ownerId], references: [id])
+  favorites              Favorite[]
+  sessionVotes           SessionVote[]
+  wonGroupSessions       GroupSession[]          @relation("SessionWinningPlace")
+  groupSessionCandidates GroupSessionCandidate[]
 
   @@index([latitude, longitude])
   @@index([ftsSearchVector], type: Gin, map: "places_fts_vector_idx")
@@ -361,6 +362,7 @@ model GroupSession {
   members            GroupSessionMember[]
   votes              SessionVote[]
   selectedCategories GroupSessionCategory[]
+  groupSessionCandidates GroupSessionCandidate[]
 
   @@map("group_sessions")
 }
@@ -393,7 +395,8 @@ model GroupSessionMember {
   session GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
   user    User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  vote SessionVote?
+  vote                   SessionVote?
+  groupSessionCandidates GroupSessionCandidate[]
 
   @@unique([sessionId, userId])
   @@unique([sessionId, guestId])
@@ -410,6 +413,20 @@ model Search {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("searches")
+}
+
+model GroupSessionCandidate {
+  sessionId String   @map("session_id")
+  placeId   String   @map("place_id")
+  addedBy   String   @map("added_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session GroupSession       @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  place   Place              @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  member  GroupSessionMember @relation(fields: [addedBy], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, placeId])
+  @@map("group_session_candidates")
 }
 
 model UserSetting {

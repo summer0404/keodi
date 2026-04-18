@@ -57,6 +57,10 @@ export const GroupSessionTopics = {
   GetVotes: 'group-session.get-votes',
   GetSession: 'group-session.get-session',
   GetAll: 'group-session.get-all',
+  AddCandidate: 'group-session.add-candidate',
+  GetCandidates: 'group-session.get-candidates',
+  DeleteCandidate: 'group-session.delete-candidate',
+  LeaveSession: 'group-session.leave-session',
 } as const;
 
 export const SearchTopics = {

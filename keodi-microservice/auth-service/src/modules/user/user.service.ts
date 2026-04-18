@@ -5,6 +5,7 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { UserTopics } from 'src/shared/constants/topic.constant';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class UserService {
@@ -12,7 +13,7 @@ export class UserService {
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
-  ) { }
+  ) {}
 
   async unverifyUser(userId: string) {
     try {

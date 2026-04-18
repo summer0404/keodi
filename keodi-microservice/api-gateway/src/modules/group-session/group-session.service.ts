@@ -96,13 +96,41 @@ export class GroupSessionService {
     );
   }
 
-  async getAll(userId: string) {
+  async getAll(userId: string, page: number, limit: number) {
     return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetAll, {
       userId,
+      page,
+      limit,
     });
   }
 
-  async getRecommendations(
+  async addCandidate(
+    sessionId: string,
+    placeId: string,
+    userId?: string,
+    guestId?: string,
+  ) {
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.AddCandidate, { sessionId, placeId, userId, guestId });
+  }
+
+  async getCandidates(sessionId: string) {
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetCandidates, { sessionId });
+  }
+
+  async deleteCandidate(
+    sessionId: string,
+    placeId: string,
+    userId?: string,
+    guestId?: string,
+  ) {
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.DeleteCandidate, { sessionId, placeId, userId, guestId });
+  }
+
+  async leaveSession(sessionId: string, userId?: string, guestId?: string) {
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.LeaveSession, { sessionId, userId, guestId });
+  }
+  
+   async getRecommendations(
     sessionId: string,
     userId?: string,
     accessDto?: GroupSessionRecommendationAccessDto,
@@ -134,5 +162,4 @@ export class GroupSessionService {
     });
 
     return { accepted: true };
-  }
 }
