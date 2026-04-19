@@ -1,27 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { SendOTPMailDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
+import { EmailPayloadDto } from 'src/shared/dtos/email.dto';
 import { EmailService } from 'src/providers/email/email.service';
 import { NotificationHelper } from './notification.helper';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { EmailPurpose } from 'src/shared/enums/email.enum';
 
 @Injectable()
 export class NotificationService {
   constructor(
     private readonly emailService: EmailService,
-    private readonly notificationHelper: NotificationHelper
-  ) { }
+    private readonly notificationHelper: NotificationHelper,
+  ) {}
 
-  async sendOTPByEmail(sendEmail: SendOTPMailDto, purpose: string) {
+  async sendHtmlEmail(
+    sendMailDto: EmailPayloadDto,
+    purpose: EmailPurpose,
+  ) {
     try {
-      return await this.emailService.sendOTPMail({ ...sendEmail, subject: this.notificationHelper.getEmailSubject(purpose) });
-    } catch (error) {
-      handleServiceErrorCatching(error);
-    }
-  }
-
-  async sendVerifyURLByEmail(sendEmail: SendVerifyURLDto, purpose: string) {
-    try {
-      return await this.emailService.sendVerifyURL({ ...sendEmail, subject: this.notificationHelper.getEmailSubject(purpose) });
+      return await this.emailService.sendTransactionalEmail({
+        to: sendMailDto.to,
+        subject: this.notificationHelper.getEmailSubject(purpose),
+        htmlContent: this.notificationHelper.getEmailContent(purpose, sendMailDto),
+      });
     } catch (error) {
       handleServiceErrorCatching(error);
     }

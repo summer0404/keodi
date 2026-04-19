@@ -34,6 +34,8 @@ import {
   MeResponseDto,
   RegisterDto,
   RegisterOkResponseDto,
+  RegisterOwnerDto,
+  RegisterOwnerOkResponseDto,
   ResetPasswordDto,
   ResetPasswordOTPDto,
   ResetPasswordOTPResponseDto,
@@ -63,6 +65,17 @@ export class AuthController {
   })
   async register(@Body() body: RegisterDto) {
     return await this.authService.register(body);
+  }
+
+  @SkipAuth()
+  @Post('register-owner')
+  @ApiOperation({ summary: 'Owner registration' })
+  @ApiOkResponse({
+    description: 'Owner registration and owner application submission successful',
+    type: RegisterOwnerOkResponseDto,
+  })
+  async registerOwner(@Body() body: RegisterOwnerDto) {
+    return await this.authService.registerOwner(body);
   }
 
   @SkipAuth()

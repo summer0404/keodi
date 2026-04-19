@@ -4,6 +4,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   LoginDto,
   RegisterDto,
+  RegisterOwnerDto,
   ResetPasswordDto,
 } from 'src/shared/dtos/auth.dto';
 import { ValidateOTPDto } from 'src/shared/dtos/otp.dto';
@@ -18,6 +19,11 @@ export class AuthController {
   @MessagePattern(AuthTopics.Register)
   async register(@Payload() data: RegisterDto) {
     return await this.authService.register(data);
+  }
+
+  @MessagePattern(AuthTopics.RegisterOwner)
+  async registerOwner(@Payload() data: RegisterOwnerDto) {
+    return await this.authService.registerOwner(data);
   }
 
   @MessagePattern(AuthTopics.Login)
@@ -80,5 +86,15 @@ export class AuthController {
   @MessagePattern(AuthTopics.Refresh)
   async refresh(@Payload() data: { refreshToken: string }) {
     return await this.authService.refresh(data.refreshToken);
+  }
+
+  @MessagePattern(AuthTopics.ApproveOwner)
+  async approveOwner(@Payload() data: { userId: string }) {
+    return await this.authService.approveOwner(data.userId);
+  }
+
+  @MessagePattern(AuthTopics.RejectOwner)
+  async rejectOwner(@Payload() data: { userId: string; reason: string }) {
+    return await this.authService.rejectOwner(data.userId, data.reason);
   }
 }

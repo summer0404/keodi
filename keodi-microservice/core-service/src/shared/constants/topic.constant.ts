@@ -10,6 +10,17 @@ export const UserTopics = {
   UsernameSynced: 'user.username-synced',
 } as const;
 
+export const AuthTopics = {
+  ApproveOwner: 'auth.approve-owner',
+  RejectOwner: 'auth.reject-owner',
+} as const;
+
+export const OwnerApplicationTopics = {
+  Create: 'owner-application.create',
+  Approve: 'owner-application.approve',
+  Reject: 'owner-application.reject',
+} as const;
+
 export const PlaceTopics = {
   GetById: 'place.get-by-id',
   NearMe: 'place.near-me',

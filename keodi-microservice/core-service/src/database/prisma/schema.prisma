@@ -37,6 +37,12 @@ enum UserActionType {
   GET_DIRECTION
 }
 
+enum OwnerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id          String    @id
   username    String    @unique @db.VarChar(20)
@@ -63,6 +69,24 @@ model User {
   setting            UserSetting?
 
   @@map("users")
+}
+
+model OwnerApplication {
+  id               String                 @id @default(cuid())
+  userId           String                 @unique @map("user_id")
+  businessName     String                 @map("business_name")
+  businessPhone    String                 @map("business_phone")
+  businessAddress  String                 @map("business_address")
+  taxId            String                 @map("tax_id")
+  businessWebsite  String?                @map("business_website")
+  proofDocumentUrls String[]              @map("proof_document_urls")
+  status           OwnerApplicationStatus @default(PENDING)
+  rejectionReason  String?                @map("rejection_reason")
+  reviewedAt       DateTime?              @map("reviewed_at")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  @@map("owner_applications")
 }
 
 model Image {

@@ -1,36 +1,69 @@
 import { Controller } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { SendOTPMailDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
-import { OtpPurpose } from 'src/shared/enums/otp.enum';
-import { VerifyUrlPurpose } from 'src/shared/enums/verifyUrl.enum';
+import {
+  OwnerApplicationApprovedDto,
+  OwnerApplicationReceivedDto,
+  OwnerApplicationRejectedDto,
+  SendOTPDto,
+  SendVerifyURLDto,
+} from 'src/shared/dtos/email.dto';
 import { NotificationTopics } from 'src/shared/constants/topic.contant';
+import { EmailPurpose } from 'src/shared/enums/email.enum';
 
 @Controller()
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
   @EventPattern(NotificationTopics.ForgotPassword)
-  async forgotPassword(@Payload() data: SendOTPMailDto) {
-    return await this.notificationService.sendOTPByEmail(
+  async forgotPassword(@Payload() data: SendOTPDto) {
+    return await this.notificationService.sendHtmlEmail(
       data,
-      OtpPurpose.FORGOT_PASSWORD,
+      EmailPurpose.FORGOT_PASSWORD,
     );
   }
 
   @EventPattern(NotificationTopics.ResetPassword)
-  async resetPassword(@Payload() data: SendOTPMailDto) {
-    return await this.notificationService.sendOTPByEmail(
+  async resetPassword(@Payload() data: SendOTPDto) {
+    return await this.notificationService.sendHtmlEmail(
       data,
-      OtpPurpose.RESET_PASSWORD,
+      EmailPurpose.RESET_PASSWORD,
     );
   }
 
   @EventPattern(NotificationTopics.VerifyEmail)
   async verifyEmail(@Payload() data: SendVerifyURLDto) {
-    return await this.notificationService.sendVerifyURLByEmail(
+    return await this.notificationService.sendHtmlEmail(
       data,
-      VerifyUrlPurpose.VERIFY_EMAIL,
+      EmailPurpose.VERIFY_EMAIL,
+    );
+  }
+
+  @EventPattern(NotificationTopics.OwnerApplicationReceived)
+  async ownerApplicationReceived(
+    @Payload() data: OwnerApplicationReceivedDto,
+  ) {
+    return await this.notificationService.sendHtmlEmail(
+      data,
+      EmailPurpose.OWNER_APPLICATION_RECEIVED,
+    );
+  }
+
+  @EventPattern(NotificationTopics.OwnerApplicationApproved)
+  async ownerApplicationApproved(@Payload() data: OwnerApplicationApprovedDto) {
+    return await this.notificationService.sendHtmlEmail(
+      data,
+      EmailPurpose.OWNER_APPLICATION_APPROVED,
+    );
+  }
+
+  @EventPattern(NotificationTopics.OwnerApplicationRejected)
+  async ownerApplicationRejected(
+    @Payload() data: OwnerApplicationRejectedDto,
+  ) {
+    return await this.notificationService.sendHtmlEmail(
+      data,
+      EmailPurpose.OWNER_APPLICATION_REJECTED,
     );
   }
 }

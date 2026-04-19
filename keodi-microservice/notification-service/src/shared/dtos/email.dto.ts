@@ -1,11 +1,28 @@
-import { OmitType } from "@nestjs/mapped-types"
-
-export class SendOTPMailDto {
+export class SendMailDto {
     to: string
-    code: string
-    subject?: string 
 }
 
-export class SendVerifyURLDto extends OmitType(SendOTPMailDto, ['code']) {
+export class SendOTPDto extends SendMailDto{
+    code: string
+}
+
+export class SendVerifyURLDto extends SendMailDto{
     url: string
 }
+
+export class OwnerApplicationReceivedDto extends SendMailDto {
+    businessDays: number
+}
+
+export class OwnerApplicationApprovedDto extends SendMailDto {}
+
+export class OwnerApplicationRejectedDto extends SendMailDto {
+    reason: string
+}
+
+export type EmailPayloadDto =
+    SendOTPDto |
+    SendVerifyURLDto |
+    OwnerApplicationReceivedDto |
+    OwnerApplicationApprovedDto |
+    OwnerApplicationRejectedDto;
