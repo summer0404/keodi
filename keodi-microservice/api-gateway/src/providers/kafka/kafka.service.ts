@@ -69,6 +69,7 @@ export class KafkaService implements OnModuleInit {
 
     //category topic
     this.kafkaClient.subscribeToResponseOf(CategoryTopics.GetListOnboarding);
+    this.kafkaClient.subscribeToResponseOf(CategoryTopics.Search);
 
     //friend topic
     this.kafkaClient.subscribeToResponseOf(FriendTopics.SendRequest);
