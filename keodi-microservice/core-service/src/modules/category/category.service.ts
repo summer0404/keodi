@@ -1,13 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
-import { PrismaService } from 'src/database/prisma.service';
+import { Category } from '@prisma/client';
 import Fuse from 'fuse.js';
+import { PrismaService } from 'src/database/prisma.service';
 import { CategoryConstant } from 'src/shared/constants/category.constant';
+import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+
+type CategoryWithCount = Category & { _count: { placeCategories: number } };
+type CategorySearchResult = Omit<Category, 'isSelectable'> & {
+  placeCount: number;
+  score?: number;
+};
 
 @Injectable()
 export class CategoryService {
-  private fuse: Fuse<any> | null = null;
-  private categoriesCache: any[] = [];
+  private fuse: Fuse<CategoryWithCount> | null = null;
+  private categoriesCache: CategoryWithCount[] = [];
 
   constructor(private readonly prismaService: PrismaService) {}
 
@@ -16,14 +23,22 @@ export class CategoryService {
   }
 
   private async loadCategories() {
-    this.categoriesCache = await this.prismaService.category.findMany();
+    const categories = await this.prismaService.category.findMany({
+      include: { _count: { select: { placeCategories: true } } },
+    });
+
+    // Pre-sort by popularity so Fuse.js uses this as tiebreaker
+    this.categoriesCache = categories.sort(
+      (a, b) => b._count.placeCategories - a._count.placeCategories,
+    );
+
     this.fuse = new Fuse(this.categoriesCache, {
       keys: ['name'],
-      threshold: 0.4, // typo tolerance
+      threshold: 0.4,
       distance: 100,
       includeScore: true,
-      useExtendedSearch: true, // enables ^prefix syntax
-      minMatchCharLength: 1, // match from first character
+      useExtendedSearch: true,
+      minMatchCharLength: 1,
       shouldSort: true,
     });
   }
@@ -40,22 +55,46 @@ export class CategoryService {
     }
   }
 
+  private toSearchResult(
+    category: CategoryWithCount,
+    score?: number,
+  ): CategorySearchResult {
+    const { id, name, _count } = category;
+
+    return {
+      id,
+      name,
+      placeCount: _count.placeCategories,
+      ...(score !== undefined ? { score } : {}),
+    };
+  }
+
   async search(query: string, limit = CategoryConstant.SEARCH_LIMIT) {
     if (!this.fuse) await this.loadCategories();
-    if (!query?.trim()) return this.categoriesCache.slice(0, limit);
+    const normalizedQuery = query?.trim() ?? '';
 
-    const prefixResults = this.fuse!.search(`^${query}`, { limit });
-    const fuzzyResults = this.fuse!.search(query, { limit });
+    if (!normalizedQuery) {
+      return this.categoriesCache
+        .slice(0, limit)
+        .map((category) => this.toSearchResult(category));
+    }
 
-    const seen = new Set<string>();
-    const combined = [];
+    const prefixResults = this.fuse!.search(`^${normalizedQuery}`, { limit });
+    const fuzzyResults = this.fuse!.search(normalizedQuery, { limit });
+
+    const combined = new Map<string, CategorySearchResult>();
     for (const r of [...prefixResults, ...fuzzyResults]) {
-      if (!seen.has(r.item.id)) {
-        seen.add(r.item.id);
-        combined.push({ ...r.item, score: r.score });
+      const current = combined.get(r.item.id);
+      const next = this.toSearchResult(r.item, r.score);
+
+      if (!current || (next.score ?? 1) < (current.score ?? 1)) {
+        combined.set(r.item.id, next);
       }
     }
-    return combined.slice(0, limit);
+
+    return [...combined.values()]
+      .sort((a, b) => (a.score ?? 1) - (b.score ?? 1))
+      .slice(0, limit);
   }
 
   async invalidateCache() {

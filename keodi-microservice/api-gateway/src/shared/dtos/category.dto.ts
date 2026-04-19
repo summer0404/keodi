@@ -3,16 +3,28 @@ import { IsArray } from 'class-validator';
 
 export class CategoryDto {
   @ApiProperty({ description: 'Category ID' })
-  id: string;
+  id!: string;
 
   @ApiProperty({ description: 'Category name' })
-  name: string;
+  name!: string;
 
   @ApiProperty({ description: 'Indicates if the category is selectable' })
-  isSelectable: boolean;
+  isSelectable!: boolean;
 }
 
-export class CategorySearchResultDto extends CategoryDto {
+export class CategorySearchResultDto {
+  @ApiProperty({ description: 'Category ID' })
+  id!: string;
+
+  @ApiProperty({ description: 'Category name' })
+  name!: string;
+
+  @ApiProperty({
+    description: 'Number of places associated with this category',
+    example: 42,
+  })
+  placeCount!: number;
+
   @ApiPropertyOptional({
     description: 'Fuzzy match score (0 = perfect match)',
     example: 0.2,
@@ -23,5 +35,5 @@ export class CategorySearchResultDto extends CategoryDto {
 export class CategoryOnboardingDto {
   @ApiProperty({ description: 'list category to onboard' })
   @IsArray()
-  categoryIds: string[];
+  categoryIds!: string[];
 }
