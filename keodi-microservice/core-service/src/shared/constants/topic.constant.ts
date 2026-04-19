@@ -34,6 +34,7 @@ export const FavoriteTopics = {
 
 export const CategoryTopics = {
   GetListOnboarding: 'category.get-list-onboarding',
+  Search: 'category.search',
 } as const;
 
 export const FriendTopics = {

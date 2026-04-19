@@ -36,8 +36,7 @@ export const RecommendationTopics = {
   ForYou: 'recommendation.for-you',
   GroupSessionGetRecommendations:
     'recommendation.group-session.get-recommendations',
-  GroupSessionInvalidateCache:
-    'recommendation.group-session.invalidate-cache',
+  GroupSessionInvalidateCache: 'recommendation.group-session.invalidate-cache',
 } as const;
 
 export const FavoriteTopics = {
@@ -49,6 +48,7 @@ export const FavoriteTopics = {
 
 export const CategoryTopics = {
   GetListOnboarding: 'category.get-list-onboarding',
+  Search: 'category.search',
 } as const;
 
 export const FriendTopics = {
