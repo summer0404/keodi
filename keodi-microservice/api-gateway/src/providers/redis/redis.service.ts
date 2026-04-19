@@ -41,6 +41,7 @@ export class RedisService {
   async keys(pattern: string): Promise<string[]> {
     return this.redis.keys(pattern);
   }
+
   async onModuleDestroy() {
     await this.redis.quit();
   }

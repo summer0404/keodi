@@ -4,7 +4,11 @@ import { FriendRequestStatus, ProfileVisibility } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
+import {
+  CreateUserDto,
+  SyncUsernameDto,
+  UpdateUserProfileDto,
+} from 'src/shared/dtos/user.dto';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 
 @Injectable()
@@ -43,13 +47,8 @@ export class UserService {
     }
   }
 
-  async create(
-    userId: string,
-    username: string,
-    firstName?: string,
-    lastName?: string,
-    picture?: string,
-  ) {
+  async create(createUserDto: CreateUserDto) {
+    const { userId, username, firstName, lastName, picture } = createUserDto;
     try {
       await this.prismaService.user.create({
         data: {
@@ -295,7 +294,8 @@ export class UserService {
     );
   }
 
-  async syncUsername(userId: string, username: string) {
+  async syncUsername(syncUsernameDto: SyncUsernameDto) {
+    const { userId, username } = syncUsernameDto;
     try {
       await this.prismaService.user.upsert({
         where: { id: userId },

@@ -11,7 +11,10 @@ import * as jwt from 'jsonwebtoken';
 import { Server, Socket } from 'socket.io';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import { GroupSessionTopics, SettingTopics } from 'src/shared/constants/topic.constant';
+import {
+  GroupSessionTopics,
+  SettingTopics,
+} from 'src/shared/constants/topic.constant';
 
 @WebSocketGateway({ namespace: '/notifications', cors: { origin: '*' } })
 export class NotificationGateway

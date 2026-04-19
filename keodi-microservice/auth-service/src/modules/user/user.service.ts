@@ -77,18 +77,14 @@ export class UserService {
         },
       });
       try {
-        const kafka = this.kafkaService.getClient();
-
-        await lastValueFrom(
-          kafka.send(UserTopics.UsernameSynced, {
+        await this.kafkaService.sendWithTimeout(UserTopics.UsernameSynced, {
             userId: existingUser.id,
             username: newUsername,
           })
-        );
       } catch (error) {
         await this.prismaService.user.update({
           where: { id: existingUser.id },
-          data: {username: existingUser.username},
+          data: { username: existingUser.username },
         });
 
         throw new RpcException({
@@ -126,17 +122,13 @@ export class UserService {
           message: 'User not found',
         });
 
-      const kafka = this.kafkaService.getClient();
-
-      await lastValueFrom(
-        kafka.send(UserTopics.Create, {
-          userId: existingUser.id,
-          username: existingUser.username ?? username,
-          firstName,
-          lastName,
-          picture,
-        })
-      );
+      await this.kafkaService.sendWithTimeout(UserTopics.Create, {
+        userId: existingUser.id,
+        username: existingUser.username ?? username,
+        firstName,
+        lastName,
+        picture,
+      })
     } catch (error) {
       handleServiceErrorCatching(error);
     }

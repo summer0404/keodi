@@ -183,8 +183,9 @@ model Category {
   name         String  @unique
   isSelectable Boolean @default(false) @map("is_selectable")
 
-  placeCategories PlaceCategory[]
-  userCategories  UserCategory[]
+  placeCategories       PlaceCategory[]
+  userCategories        UserCategory[]
+  groupSessionCategories GroupSessionCategory[]
 
   @@map("categories")
 }
@@ -348,6 +349,7 @@ model GroupSession {
   createdBy      String             @map("created_by")
   shareCode      String             @unique @map("share_code")
   createdAt      DateTime           @default(now()) @map("created_at")
+  searchRadius   Float              @default(5) @map("search_radius")
   status         GroupSessionStatus @default(ACTIVE)
   voteStatus     VoteStatus         @default(OPEN) @map("vote_status")
   finalizedAt    DateTime?          @map("finalized_at")
@@ -357,11 +359,24 @@ model GroupSession {
   creator      User   @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
   winningPlace Place? @relation("SessionWinningPlace", fields: [winningPlaceId], references: [id], onDelete: SetNull)
 
-  members                GroupSessionMember[]
-  votes                  SessionVote[]
+  members            GroupSessionMember[]
+  votes              SessionVote[]
+  selectedCategories GroupSessionCategory[]
   groupSessionCandidates GroupSessionCandidate[]
 
   @@map("group_sessions")
+}
+
+model GroupSessionCategory {
+  sessionId  String   @map("session_id")
+  categoryId String   @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session  GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  category Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, categoryId])
+  @@map("group_session_categories")
 }
 
 enum GroupSessionStatus {

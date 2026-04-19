@@ -12,6 +12,9 @@ import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
   GROUP_SESSION_DEFAULT_AUTO_CLOSE_DELAY_MINUTES,
+  GROUP_SESSION_MAX_CATEGORY_COUNT,
+  GROUP_SESSION_MAX_SEARCH_RADIUS_KM,
+  GROUP_SESSION_MIN_SEARCH_RADIUS_KM,
   GROUP_SESSION_SHARE_CODE_LENGTH,
   GroupSessionMessages,
 } from 'src/shared/constants/group-session.constant';
@@ -140,8 +143,119 @@ export class GroupSessionService {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
         message: GroupSessionMessages.SESSION_ALREADY_ACTIVE,
+        });
+    }
+  }
+
+  private async assertGroupSessionIsActive(sessionId: string): Promise<void> {
+    const session = await this.prismaService.groupSession.findUnique({
+      where: { sessionId },
+      select: { status: true },
+    });
+
+    if (!session) {
+      throw new RpcException({
+        status: HttpStatus.NOT_FOUND,
+        message: GroupSessionMessages.SESSION_NOT_FOUND,
       });
     }
+
+    if (session.status !== GroupSessionStatus.ACTIVE) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: GroupSessionMessages.SESSION_NOT_ACTIVE,
+      });
+    }
+  }
+
+  private async assertGroupSessionMember(params: {
+    sessionId: string;
+    userId?: string;
+    guestId?: string;
+  }): Promise<void> {
+    const { sessionId, userId, guestId } = params;
+
+    if (!userId && !guestId) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: GroupSessionMessages.NOT_A_MEMBER,
+      });
+    }
+
+    const member = await this.prismaService.groupSessionMember.findFirst({
+      where: userId ? { userId, sessionId } : { guestId, sessionId },
+      select: { id: true },
+    });
+
+    if (!member) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: GroupSessionMessages.NOT_A_MEMBER,
+      });
+    }
+  }
+
+  private assertRecommendationSearchRadius(searchRadius: number): void {
+    if (
+      typeof searchRadius !== 'number' ||
+      !Number.isFinite(searchRadius) ||
+      searchRadius < GROUP_SESSION_MIN_SEARCH_RADIUS_KM ||
+      searchRadius > GROUP_SESSION_MAX_SEARCH_RADIUS_KM
+    ) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: GroupSessionMessages.INVALID_SEARCH_RADIUS,
+      });
+    }
+  }
+
+  private async validateRecommendationCategoryIds(
+    categoryIds: string[],
+  ): Promise<string[]> {
+    if (!Array.isArray(categoryIds)) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: GroupSessionMessages.CATEGORY_NOT_FOUND,
+      });
+    }
+
+    const normalizedCategoryIds = categoryIds
+      .filter((categoryId): categoryId is string => typeof categoryId === 'string')
+      .map((categoryId) => categoryId.trim())
+      .filter((categoryId) => categoryId.length > 0);
+
+    if (normalizedCategoryIds.length !== categoryIds.length) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: GroupSessionMessages.CATEGORY_NOT_FOUND,
+      });
+    }
+
+    const uniqueCategoryIds = Array.from(new Set(normalizedCategoryIds));
+
+    if (uniqueCategoryIds.length > GROUP_SESSION_MAX_CATEGORY_COUNT) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: GroupSessionMessages.CATEGORY_LIMIT_EXCEEDED,
+      });
+    }
+
+    if (uniqueCategoryIds.length === 0) {
+      return [];
+    }
+
+    const existingCategoryCount = await this.prismaService.category.count({
+      where: { id: { in: uniqueCategoryIds } },
+    });
+
+    if (existingCategoryCount !== uniqueCategoryIds.length) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: GroupSessionMessages.CATEGORY_NOT_FOUND,
+      });
+    }
+
+    return uniqueCategoryIds;
   }
 
   async create(userId: string) {
@@ -1141,6 +1255,73 @@ export class GroupSessionService {
         page,
         totalPages: Math.ceil(total / limit),
         limit,
+      };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async updateRecommendationSearchRadius(data: {
+    sessionId: string;
+    searchRadius: number;
+    userId?: string;
+    guestId?: string;
+  }) {
+    try {
+      const { sessionId, searchRadius, userId, guestId } = data;
+
+      this.assertRecommendationSearchRadius(searchRadius);
+      await this.assertGroupSessionIsActive(sessionId);
+      await this.assertGroupSessionMember({ sessionId, userId, guestId });
+
+      const updatedSession = await this.prismaService.groupSession.update({
+        where: { sessionId },
+        data: { searchRadius },
+        select: {
+          sessionId: true,
+          searchRadius: true,
+        },
+      });
+
+      return updatedSession;
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async updateRecommendationCategories(data: {
+    sessionId: string;
+    categoryIds: string[];
+    userId?: string;
+    guestId?: string;
+  }) {
+    try {
+      const { sessionId, categoryIds, userId, guestId } = data;
+
+      await this.assertGroupSessionIsActive(sessionId);
+      await this.assertGroupSessionMember({ sessionId, userId, guestId });
+
+      const validCategoryIds =
+        await this.validateRecommendationCategoryIds(categoryIds);
+
+      await this.prismaService.$transaction(async (prisma) => {
+        await prisma.groupSessionCategory.deleteMany({
+          where: { sessionId },
+        });
+
+        if (validCategoryIds.length > 0) {
+          await prisma.groupSessionCategory.createMany({
+            data: validCategoryIds.map((categoryId) => ({
+              sessionId,
+              categoryId,
+            })),
+          });
+        }
+      });
+
+      return {
+        sessionId,
+        categoryIds: validCategoryIds,
       };
     } catch (error) {
       handleServiceErrorCatching(error);

@@ -1,43 +1,55 @@
-import { Injectable } from "@nestjs/common";
-import Redis from "ioredis";
+import { Injectable } from '@nestjs/common';
+import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService {
-    private readonly redis: Redis
+  private readonly redis: Redis;
 
-    constructor() {
-        this.redis = new Redis({
-            host: process.env.REDIS_HOST,
-            port: Number(process.env.REDIS_PORT),
-            password: process.env.REDIS_PASSWORD
-        })
-    }
+  constructor() {
+    this.redis = new Redis({
+      host: process.env.REDIS_HOST,
+      port: Number(process.env.REDIS_PORT),
+      password: process.env.REDIS_PASSWORD,
+    });
+  }
 
-    async set(key: string, value: string): Promise<void> {
-        await this.redis.set(key, value)
-    }
+  async set(key: string, value: string): Promise<void> {
+    await this.redis.set(key, value);
+  }
 
-    async get(key: string): Promise<string | null> {
-        return this.redis.get(key)
-    }
+  async setEx(key: string, value: string, ttlSeconds: number): Promise<void> {
+    await this.redis.set(key, value, 'EX', ttlSeconds);
+  }
 
-    async has(key: string): Promise<boolean> {
-        return await this.redis.exists(key) === 1
-    }
+  async get(key: string): Promise<string | null> {
+    return this.redis.get(key);
+  }
 
-    async zadd(key: string, coreMember: (string | number)[]): Promise<void> {
-        await this.redis.zadd(key, ...coreMember)
-    }
+  async del(key: string): Promise<void> {
+    await this.redis.del(key);
+  }
 
-    async expire(key: string, seconds: number): Promise<void> {
-        await this.redis.expire(key, seconds)
-    }
+  async keys(pattern: string): Promise<string[]> {
+    return this.redis.keys(pattern);
+  }
 
-    async hSet(key: string, field: string, value: string): Promise<void> {
-        await this.redis.hset(key, field, value);
-    }
+  async has(key: string): Promise<boolean> {
+    return (await this.redis.exists(key)) === 1;
+  }
 
-    async hGetAll(key: string): Promise<Record<string, string>> {
-        return this.redis.hgetall(key);
-    }
+  async zadd(key: string, coreMember: (string | number)[]): Promise<void> {
+    await this.redis.zadd(key, ...coreMember);
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    await this.redis.expire(key, seconds);
+  }
+
+  async hSet(key: string, field: string, value: string): Promise<void> {
+    await this.redis.hset(key, field, value);
+  }
+
+  async hGetAll(key: string): Promise<Record<string, string>> {
+    return this.redis.hgetall(key);
+  }
 }
