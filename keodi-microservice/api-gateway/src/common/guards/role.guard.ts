@@ -10,7 +10,7 @@ import { ApiErrorMessages } from 'src/shared/constants/error.constant';
 import { Role } from 'src/shared/enums/role.enum';
 
 @Injectable()
-export class RoleGuard implements CanActivate {
+export class  RoleGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {

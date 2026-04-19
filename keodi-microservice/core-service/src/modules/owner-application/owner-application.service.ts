@@ -34,15 +34,7 @@ export class OwnerApplicationService {
         });
 
       const ownerApplication = await this.prismaService.ownerApplication.create({
-        data: {
-          userId: createOwnerApplicationDto.userId,
-          businessName: createOwnerApplicationDto.businessName,
-          businessPhone: createOwnerApplicationDto.businessPhone,
-          businessAddress: createOwnerApplicationDto.businessAddress,
-          taxId: createOwnerApplicationDto.taxId,
-          businessWebsite: createOwnerApplicationDto.businessWebsite,
-          proofDocumentUrls: createOwnerApplicationDto.proofDocumentUrl,
-        },
+        data: createOwnerApplicationDto,
       });
 
       return {
