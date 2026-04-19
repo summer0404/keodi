@@ -9,19 +9,29 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiQuery,
   ApiUnauthorizedResponse,
+  ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import {
+  GroupSessionRecommendationCategoriesResponseDto,
+  GroupSessionRecommendationRadiusResponseDto,
+  GroupSessionRecommendationRefreshResponseDto,
+  UpdateGroupSessionRecommendationCategoriesDto,
+  UpdateGroupSessionRecommendationRadiusDto,
+  PaginatedGetAllSessionsResponseDto,
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
+  GroupSessionRecommendationAccessDto,
 } from 'src/shared/dtos/group-session.dto';
+import { PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 
 export const ApiCreateGroupSession = () => {
   return applyDecorators(
     ApiOperation({
       summary: 'Create a new group session',
-      description:
-        'Creates a new group study session for the authenticated user. The user will be automatically added as the creator and initial participant of the session.',
+      description: 'Creates a new group session for the authenticated user.',
     }),
     ApiCreatedResponse({
       description: 'Group session created successfully',
@@ -161,12 +171,11 @@ export const ApiGetAllSessions = (): MethodDecorator => {
     ApiOperation({
       summary: 'Get all sessions of current user',
       description:
-        'Retrieve all group sessions where the authenticated user is a participant.',
+        'Retrieve a paginated list of group sessions where the authenticated user is a participant. Each item includes a memberCount (true total) and up to 4 member previews with resolved picture URLs for avatar display.',
     }),
     ApiOkResponse({
       description: 'User sessions retrieved successfully',
-      type: GroupSessionResponseDto,
-      isArray: true,
+      type: PaginatedGetAllSessionsResponseDto,
     }),
     ApiUnauthorizedResponse({
       description: 'Unauthorized - Invalid or missing authentication token',
@@ -174,6 +183,140 @@ export const ApiGetAllSessions = (): MethodDecorator => {
   ) as MethodDecorator;
 };
 
+export const ApiAddCandidate = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Add a place as a candidate',
+      description:
+        'Add a place to the candidate pool for a group session. If the place is already a candidate, the request silently succeeds.',
+    }),
+    ApiOkResponse({ description: 'Candidate added successfully' }),
+    ApiNotFoundResponse({ description: 'Session or place not found' }),
+    ApiBadRequestResponse({ description: 'Session is not active' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+  );
+};
+
+export const ApiGetCandidates = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get candidate places for a session',
+      description:
+        'Retrieve all places that have been added to the candidate pool for a group session.',
+    }),
+    ApiOkResponse({ description: 'Candidates retrieved successfully' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
+};
+
+export const ApiDeleteCandidate = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Remove a candidate place from a session',
+      description:
+        'Remove a place from the candidate pool. Only the member who added the candidate can remove it.',
+    }),
+    ApiOkResponse({ description: 'Candidate removed successfully' }),
+    ApiNotFoundResponse({ description: 'Session or candidate not found' }),
+    ApiBadRequestResponse({ description: 'Session is not active' }),
+    ApiForbiddenResponse({ description: 'Not a member or not the candidate owner', }),
+  );
+};
+
+export const ApiLeaveSession = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Leave a group session',
+      description:
+        'Remove yourself from a group session. The session creator cannot leave; they must close the session instead.',
+    }),
+    ApiOkResponse({ description: 'Left session successfully' }),
+    ApiNotFoundResponse({ description: 'Session or member not found' }),
+    ApiBadRequestResponse({ description: 'Session is not active' }),
+    ApiForbiddenResponse({ description: 'Session creator cannot leave the session' }),
+  );
+};
+  
+export const ApiGetGroupSessionRecommendations = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get group session place recommendations',
+      description:
+        'Returns recommended places around the group centroid, filtered by selected categories and session search radius. Returns cached data when still valid.',
+    }),
+    ApiQuery({
+      name: 'guestId',
+      required: false,
+      description:
+        'Guest identifier for anonymous members when no auth token is provided',
+      example: 'mws0v9cjcm3nuj5y8gochuu1',
+    }),
+    ApiOkResponse({
+      description: 'Group session recommendations retrieved successfully',
+      type: [PlaceRecommendationResponseDto],
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+  );
+};
+
+export const ApiRefreshGroupSessionRecommendations = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Manually refresh group recommendations',
+      description:
+        'Publishes a cache-invalidation event for this session. The next recommendation fetch will be recalculated.',
+    }),
+    ApiOkResponse({
+      description: 'Refresh request accepted',
+      type: [GroupSessionRecommendationRefreshResponseDto],
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+   );
+};
+
+export const ApiUpdateGroupSessionRecommendationRadius = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Update group recommendation search radius',
+      description:
+        'Updates the group session recommendation radius. This invalidates existing recommendation cache so the next recommendation fetch is recalculated.',
+    }),
+    ApiBody({ type: UpdateGroupSessionRecommendationRadiusDto }),
+    ApiOkResponse({
+      description: 'Recommendation radius updated successfully',
+      type: GroupSessionRecommendationRadiusResponseDto,
+    }),
+    ApiBadRequestResponse({
+      description: 'Invalid search radius value or session state',
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
+};
+
+export const ApiUpdateGroupSessionRecommendationCategories = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Update group recommendation categories',
+      description:
+        'Replaces the selected recommendation categories for this session (max 5). This invalidates recommendation cache so the next recommendation fetch is recalculated.',
+    }),
+    ApiBody({ type: UpdateGroupSessionRecommendationCategoriesDto }),
+    ApiOkResponse({
+      description: 'Recommendation categories updated successfully',
+      type: GroupSessionRecommendationCategoriesResponseDto,
+    }),
+    ApiBadRequestResponse({
+      description: 'Category limit exceeded, invalid category IDs, or invalid session state',
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+    ApiForbiddenResponse({ description: 'Not a member of this session' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+  );
+};
+  
 export const GroupSessionApiTags = () => {
   return applyDecorators(ApiTags('Group Sessions'));
 };

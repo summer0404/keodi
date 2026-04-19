@@ -1,7 +1,13 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Controller,
+  DefaultValuePipe,
+  Get,
+  ParseIntPipe,
+  Query,
+} from '@nestjs/common';
 import { CategoryService } from './category.service';
-import { ApiBearerAuth, ApiOkResponse, ApiProperty } from '@nestjs/swagger';
-import { CategoryDto } from 'src/shared/dtos/category.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiGetListOnboarding, ApiSearchCategories } from './category.swagger';
 
 @ApiBearerAuth('access-token')
 @Controller('categories')
@@ -9,9 +15,17 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get('onboarding')
-  @ApiProperty({ description: 'Get list of onboarding categories' })
-  @ApiOkResponse({ description: 'List of onboarding categories', type: [CategoryDto] })
+  @ApiGetListOnboarding()
   async getListOnBoarding() {
     return await this.categoryService.getListOnBoarding();
+  }
+
+  @Get('search')
+  @ApiSearchCategories()
+  async search(
+    @Query('q') query: string = '',
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return await this.categoryService.search(query, limit);
   }
 }

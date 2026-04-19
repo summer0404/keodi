@@ -1,38 +1,64 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Param,
   Post,
+  Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
+import { PaginationConstants } from 'src/shared/constants/pagination.constants';
 import {
+  AddCandidateDto,
   CastVoteDto,
+  DeleteCandidateDto,
   FinalizeMemberVoteDto,
+  GroupSessionRecommendationAccessDto,
+  GroupSessionRecommendationCategoriesResponseDto,
+  GroupSessionRecommendationRadiusResponseDto,
+  GroupSessionRecommendationRefreshResponseDto,
+  GetAllSessionsQueryDto,
   GroupSessionResponseDto,
   InviteFriendToSessionDto,
   JoinGroupSessionDto,
   JoinGroupSessionResponseDto,
+  LeaveSessionDto,
+  UpdateGroupSessionRecommendationCategoriesDto,
+  UpdateGroupSessionRecommendationRadiusDto,
 } from 'src/shared/dtos/group-session.dto';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 import { GroupSessionService } from './group-session.service';
 import {
+  ApiAddCandidate,
   ApiCastVote,
   ApiCloseGroupSession,
   ApiCreateGroupSession,
+  ApiDeleteCandidate,
   ApiFinalizeMemberVote,
   ApiFinalizeSessionVote,
   ApiGetAllSessions,
+  ApiGetGroupSessionRecommendations,
+  ApiGetCandidates,
   ApiGetSession,
   ApiGetVotes,
   ApiInviteFriendToSession,
   ApiJoinGroupSession,
+  ApiUpdateGroupSessionRecommendationCategories,
+  ApiUpdateGroupSessionRecommendationRadius,
+  ApiRefreshGroupSessionRecommendations,
+  ApiLeaveSession,
   GroupSessionApiTags,
 } from './group-session.swagger';
+import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
+import { PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 
 @Controller('group-sessions')
 @GroupSessionApiTags()
@@ -145,7 +171,139 @@ export class GroupSessionController {
 
   @Get()
   @ApiGetAllSessions()
-  async getAll(@CurrentUser() user: CurrentUserDto) {
-    return await this.groupSessionService.getAll(user.id);
+  async getAll(
+    @CurrentUser() user: CurrentUserDto,
+    @Query() query: GetAllSessionsQueryDto,
+  ) {
+    return await this.groupSessionService.getAll(
+      user.id,
+      query.page || PaginationConstants.DEFAULT_PAGE,
+      query.limit || PaginationConstants.DEFAULT_LIMIT,
+    );
+  }
+
+  @Post(':sessionId/candidates')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiAddCandidate()
+  async addCandidate(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() addCandidateDto: AddCandidateDto,
+  ) {
+    return await this.groupSessionService.addCandidate(
+      sessionId,
+      addCandidateDto.placeId,
+      user?.id,
+      addCandidateDto.guestId,
+    );
+  }
+
+  @Get(':sessionId/candidates')
+  @OptionalAuth()
+  @ApiGetCandidates()
+  async getCandidates(@Param('sessionId') sessionId: string) {
+    return await this.groupSessionService.getCandidates(sessionId);
+  }
+
+  @Delete(':sessionId/candidates/:placeId')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiDeleteCandidate()
+  async deleteCandidate(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Param('placeId') placeId: string,
+    @Body() deleteCandidateDto: DeleteCandidateDto,
+  ) {
+    return await this.groupSessionService.deleteCandidate(
+      sessionId,
+      placeId,
+      user?.id,
+      deleteCandidateDto.guestId,
+    );
+  }
+
+  @Post(':sessionId/leave')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiLeaveSession()
+  async leaveSession(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() leaveSessionDto: LeaveSessionDto,
+  ) {
+    return await this.groupSessionService.leaveSession(
+      sessionId,
+      user?.id,
+      leaveSessionDto.guestId,
+    );
+  }
+
+  @UseInterceptors(RecommendationCacheInterceptor)
+  @CacheTTL(5)
+  @Get(':sessionId/recommendations')
+  @OptionalAuth()
+  @ApiGetGroupSessionRecommendations()
+  async getRecommendations(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Query() groupSessionRecommendationAccessDto: GroupSessionRecommendationAccessDto,
+  ): Promise<PlaceRecommendationResponseDto[]> {
+    return await this.groupSessionService.getRecommendations(
+      sessionId,
+      user?.id,
+      groupSessionRecommendationAccessDto,
+    );
+  }
+
+  @Post(':sessionId/recommendations/refresh')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiRefreshGroupSessionRecommendations()
+  async refreshRecommendations(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body() groupSessionRecommendationAccessDto: GroupSessionRecommendationAccessDto,
+  ): Promise<GroupSessionRecommendationRefreshResponseDto> {
+    return await this.groupSessionService.refreshRecommendations(
+      sessionId,
+      user?.id,
+      groupSessionRecommendationAccessDto,
+    );
+  }
+
+  @Patch(':sessionId/recommendations/radius')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiUpdateGroupSessionRecommendationRadius()
+  async updateRecommendationRadius(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body()
+    updateRecommendationRadiusDto: UpdateGroupSessionRecommendationRadiusDto,
+  ): Promise<GroupSessionRecommendationRadiusResponseDto> {
+    return await this.groupSessionService.updateRecommendationRadius(
+      sessionId,
+      user?.id,
+      updateRecommendationRadiusDto,
+    );
+  }
+
+  @Patch(':sessionId/recommendations/categories')
+  @HttpCode(HttpStatus.OK)
+  @OptionalAuth()
+  @ApiUpdateGroupSessionRecommendationCategories()
+  async updateRecommendationCategories(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Body()
+    updateRecommendationCategoriesDto: UpdateGroupSessionRecommendationCategoriesDto,
+  ): Promise<GroupSessionRecommendationCategoriesResponseDto> {
+    return await this.groupSessionService.updateRecommendationCategories(
+      sessionId,
+      user?.id,
+      updateRecommendationCategoriesDto,
+    );
   }
 }

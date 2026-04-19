@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
@@ -19,6 +19,8 @@ import {
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
+  private readonly logger = new Logger(KafkaService.name);
+
   constructor(
     @Inject('KAFKA_SERVICE') private readonly kafkaClient: ClientKafka,
   ) {}
@@ -55,6 +57,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Search);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);
+    this.kafkaClient.subscribeToResponseOf(
+      RecommendationTopics.GroupSessionGetRecommendations,
+    );
 
     //favorite topic
     this.kafkaClient.subscribeToResponseOf(FavoriteTopics.Add);
@@ -64,6 +69,7 @@ export class KafkaService implements OnModuleInit {
 
     //category topic
     this.kafkaClient.subscribeToResponseOf(CategoryTopics.GetListOnboarding);
+    this.kafkaClient.subscribeToResponseOf(CategoryTopics.Search);
 
     //friend topic
     this.kafkaClient.subscribeToResponseOf(FriendTopics.SendRequest);
@@ -97,6 +103,16 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetVotes);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetSession);
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetAll);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.AddCandidate);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetCandidates);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.DeleteCandidate);
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.LeaveSession);
+    this.kafkaClient.subscribeToResponseOf(
+      GroupSessionTopics.UpdateRecommendationRadius,
+    );
+    this.kafkaClient.subscribeToResponseOf(
+      GroupSessionTopics.UpdateRecommendationCategories,
+    );
 
     //search topic
     this.kafkaClient.subscribeToResponseOf(SearchTopics.Trending);

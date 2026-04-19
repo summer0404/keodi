@@ -5,19 +5,20 @@ import { ExecutionContext, Injectable } from "@nestjs/common";
 export class RecommendationCacheInterceptor extends CacheInterceptor {
     protected trackBy(context: ExecutionContext): string | undefined {
         const request = context.switchToHttp().getRequest();
+        const routePath = request?.route?.path ?? '';
+        const userId = request?.user?.id;
 
-        if (!request.user) {
-            return undefined
+        if(routePath.includes('for-you') && userId) {
+            return `place:foryou:${userId}`;
         }
 
-        const path = request.route.path;
-
-        if(path.includes('for-you')) {
-            return `foryou:${request.user.id}`;
+        if(routePath.includes('trending') && userId) {
+            return `place:trending:${userId}`;
         }
 
-        if(path.includes('trending')) {
-            return `trending:${request.user.id}`;
+        if(routePath.includes('recommendations')) {
+            const sessionId = request.params.sessionId;
+            return `group-session:${sessionId}:recommendations`;
         }
 
         return undefined

@@ -19,6 +19,10 @@ export const PlaceTopics = {
 export const RecommendationTopics = {
   Trending: 'recommendation.trending',
   ForYou: 'recommendation.for-you',
+  GroupSessionGetRecommendations:
+    'recommendation.group-session.get-recommendations',
+  GroupSessionInvalidateCache:
+    'recommendation.group-session.invalidate-cache',
 } as const;
 
 export const FavoriteTopics = {
@@ -30,6 +34,7 @@ export const FavoriteTopics = {
 
 export const CategoryTopics = {
   GetListOnboarding: 'category.get-list-onboarding',
+  Search: 'category.search',
 } as const;
 
 export const FriendTopics = {
@@ -53,6 +58,13 @@ export const GroupSessionTopics = {
   GetVotes: 'group-session.get-votes',
   GetSession: 'group-session.get-session',
   GetAll: 'group-session.get-all',
+  AddCandidate: 'group-session.add-candidate',
+  GetCandidates: 'group-session.get-candidates',
+  DeleteCandidate: 'group-session.delete-candidate',
+  LeaveSession: 'group-session.leave-session',
+  UpdateRecommendationRadius: 'group-session.update-recommendation-radius',
+  UpdateRecommendationCategories:
+    'group-session.update-recommendation-categories',
 } as const;
 
 export const SearchTopics = {

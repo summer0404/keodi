@@ -1,6 +1,21 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+
+import { ApiProperty, OmitType } from '@nestjs/swagger';
+import { 
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsNumber,
+  IsNotEmpty, 
+  Max,
+  MaxLength,
+  Min,
+  IsOptional, 
+  IsString, 
+} from 'class-validator';
 import { SessionStatus } from '../enums/group-session.enum';
+import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
+import { GROUP_SESSION_MAX_CATEGORY_COUNT, GROUP_SESSION_MAX_SEARCH_RADIUS_KM, GROUP_SESSION_MIN_SEARCH_RADIUS_KM } from '../constants/group-session.constant';
+
 
 export class GroupSessionResponseDto {
   @ApiProperty({
@@ -33,6 +48,7 @@ export class GroupSessionResponseDto {
     enum: SessionStatus,
   })
   status: SessionStatus;
+
   @ApiProperty({
     description: 'Current vote status of the session',
     example: 'OPEN',
@@ -93,6 +109,26 @@ export class InviteFriendToSessionDto {
   friendId: string;
 }
 
+export class UserPreviewDto {
+  @ApiProperty({ example: 'cm5g8h9j0k1l2m3n4o5p' })
+  id: string;
+
+  @ApiProperty({ example: 'johndoe' })
+  username: string;
+
+  @ApiProperty({ example: 'John', nullable: true })
+  firstName: string | null;
+
+  @ApiProperty({ example: 'Doe', nullable: true })
+  lastName: string | null;
+
+  @ApiProperty({
+    example: 'https://cdn.example.com/avatar.jpg',
+    nullable: true,
+  })
+  pictureUrl: string | null;
+}
+
 export class GroupSessionMemberDto {
   @ApiProperty({
     description: 'Unique member identifier',
@@ -132,6 +168,40 @@ export class GroupSessionMemberDto {
     example: '2026-02-13T17:53:55.095Z',
   })
   joinedAt: Date;
+
+  @ApiProperty({
+    description: 'User profile (null for guests)',
+    type: () => UserPreviewDto,
+    nullable: true,
+  })
+  user: UserPreviewDto | null;
+}
+
+export class GetAllSessionsResponseDto extends GroupSessionResponseDto {
+  @ApiProperty({
+    description: 'Total number of members in the session',
+    example: 6,
+  })
+  memberCount: number;
+
+  @ApiProperty({
+    description:
+      'Up to 4 member previews for avatar display. For the full member list call GET /group-sessions/:sessionId.',
+    type: [GroupSessionMemberDto],
+  })
+  members: GroupSessionMemberDto[];
+}
+
+export class GetAllSessionsQueryDto extends OmitType(PaginationQueryDto, [
+  'sortOrder',
+] as const) {}
+
+export class PaginatedGetAllSessionsResponseDto extends PaginationResponseDto {
+  @ApiProperty({
+    description: 'Paginated list of group sessions for the current user',
+    type: [GetAllSessionsResponseDto],
+  })
+  sessions: GetAllSessionsResponseDto[];
 }
 
 export class JoinGroupSessionResponseDto {
@@ -220,6 +290,147 @@ export class FinalizeMemberVoteDto {
   @ApiProperty({
     description:
       'Guest ID for identifying the voter (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+}
+
+export class AddCandidateDto {
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({
+    description: 'ID of the place to add as a candidate',
+    example: 'cm5x1y2z3a4b5c6d7e8f',
+  })
+  placeId: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the member (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+}
+
+export class GroupSessionRecommendationRefreshResponseDto {
+  @ApiProperty({
+    description: 'Indicates the refresh request was accepted',
+    example: true,
+  })
+  accepted: boolean;
+}
+
+export class UpdateGroupSessionRecommendationRadiusDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the member (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+
+  @IsNumber({ allowInfinity: false, allowNaN: false })
+  @Min(GROUP_SESSION_MIN_SEARCH_RADIUS_KM)
+  @Max(GROUP_SESSION_MAX_SEARCH_RADIUS_KM)
+  @ApiProperty({
+    description: 'Search radius in kilometers for group session recommendations',
+    example: 7.5,
+    minimum: GROUP_SESSION_MIN_SEARCH_RADIUS_KM,
+    maximum: GROUP_SESSION_MAX_SEARCH_RADIUS_KM,
+  })
+  searchRadius: number;
+}
+
+export class UpdateGroupSessionRecommendationCategoriesDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the member (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(GROUP_SESSION_MAX_CATEGORY_COUNT)
+  @IsString({ each: true })
+  @ApiProperty({
+    description:
+      'Selected category IDs for recommendation filtering. Send an empty array to clear all selected categories.',
+    type: [String],
+    maxItems: GROUP_SESSION_MAX_CATEGORY_COUNT,
+    example: ['cm5x1y2z3a4b5c6d7e8f', 'cm5a1b2c3d4e5f6g7h8i'],
+  })
+  categoryIds: string[];
+}
+
+export class GroupSessionRecommendationRadiusResponseDto {
+  @ApiProperty({
+    description: 'Group session identifier',
+    example: 'cm5x1y2z3a4b5c6d7e8f',
+  })
+  sessionId: string;
+
+  @ApiProperty({
+    description: 'Updated recommendation search radius in kilometers',
+    example: 7.5,
+  })
+  searchRadius: number;
+}
+
+export class GroupSessionRecommendationCategoriesResponseDto {
+  @ApiProperty({
+    description: 'Group session identifier',
+    example: 'cm5x1y2z3a4b5c6d7e8f',
+  })
+  sessionId: string;
+
+  @ApiProperty({
+    description: 'Currently selected category IDs',
+    type: [String],
+    example: ['cm5x1y2z3a4b5c6d7e8f', 'cm5a1b2c3d4e5f6g7h8i'],
+  })
+  categoryIds: string[];
+}
+
+export class GroupSessionRecommendationAccessDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the member (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+}
+
+export class DeleteCandidateDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the member (required for guests only, received on join)',
+    example: 'mws0v9cjcm3nuj5y8gochuu1',
+    required: false,
+  })
+  guestId?: string;
+}
+
+export class LeaveSessionDto {
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description:
+      'Guest ID for identifying the member (required for guests only, received on join)',
     example: 'mws0v9cjcm3nuj5y8gochuu1',
     required: false,
   })
