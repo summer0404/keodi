@@ -55,7 +55,7 @@ export class RegisterOwnerDto extends RegisterDto {
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })
-  proofDocumentUrl: string[];
+  proofDocumentUrls: string[];
 }
 
 export class LoginDto extends PickType(RegisterDto, ['password'] as const) {

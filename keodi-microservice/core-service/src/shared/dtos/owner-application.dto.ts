@@ -34,7 +34,7 @@ export class CreateOwnerApplicationDto {
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })
-  proofDocumentUrl: string[];
+  proofDocumentUrls: string[];
 }
 
 export class RejectOwnerApplicationDto {

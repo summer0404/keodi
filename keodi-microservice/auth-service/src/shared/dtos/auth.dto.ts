@@ -9,7 +9,7 @@ export class RegisterOwnerDto extends RegisterDto {
   businessAddress: string;
   taxId: string;
   businessWebsite?: string;
-  proofDocumentUrl: string[];
+  proofDocumentUrls: string[];
 }
 
 export class LoginDto extends PickType(RegisterDto, ['password'] as const) {

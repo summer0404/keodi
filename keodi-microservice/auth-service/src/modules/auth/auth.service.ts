@@ -179,7 +179,7 @@ export class AuthService {
             businessAddress: data.businessAddress,
             taxId: data.taxId,
             businessWebsite: data.businessWebsite,
-            proofDocumentUrl: data.proofDocumentUrl,
+            proofDocumentUrls: data.proofDocumentUrls,
           });
 
         ownerApplicationId = ownerApplication?.ownerApplicationId;

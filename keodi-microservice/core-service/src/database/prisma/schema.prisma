@@ -67,24 +67,27 @@ model User {
   friendsOf          Friendship[]         @relation("FriendFriendships")
   groupSessions      GroupSession[]       @relation("CreatedSessions")
   setting            UserSetting?
+  ownerApplication   OwnerApplication?
 
   @@map("users")
 }
 
 model OwnerApplication {
-  id               String                 @id @default(cuid())
-  userId           String                 @unique @map("user_id")
-  businessName     String                 @map("business_name")
-  businessPhone    String                 @map("business_phone")
-  businessAddress  String                 @map("business_address")
-  taxId            String                 @map("tax_id")
-  businessWebsite  String?                @map("business_website")
-  proofDocumentUrls String[]              @map("proof_document_urls")
-  status           OwnerApplicationStatus @default(PENDING)
-  rejectionReason  String?                @map("rejection_reason")
-  reviewedAt       DateTime?              @map("reviewed_at")
-  createdAt        DateTime               @default(now()) @map("created_at")
-  updatedAt        DateTime               @updatedAt @map("updated_at")
+  id                String                 @id @default(cuid())
+  userId            String                 @unique @map("user_id")
+  businessName      String                 @map("business_name")
+  businessPhone     String                 @map("business_phone")
+  businessAddress   String                 @map("business_address")
+  taxId             String                 @map("tax_id")
+  businessWebsite   String?                @map("business_website")
+  proofDocumentUrls String[]               @map("proof_document_urls")
+  status            OwnerApplicationStatus @default(PENDING)
+  rejectionReason   String?                @map("rejection_reason")
+  reviewedAt        DateTime?              @map("reviewed_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("owner_applications")
 }
@@ -207,8 +210,8 @@ model Category {
   name         String  @unique
   isSelectable Boolean @default(false) @map("is_selectable")
 
-  placeCategories       PlaceCategory[]
-  userCategories        UserCategory[]
+  placeCategories        PlaceCategory[]
+  userCategories         UserCategory[]
   groupSessionCategories GroupSessionCategory[]
 
   @@map("categories")
@@ -383,9 +386,9 @@ model GroupSession {
   creator      User   @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
   winningPlace Place? @relation("SessionWinningPlace", fields: [winningPlaceId], references: [id], onDelete: SetNull)
 
-  members            GroupSessionMember[]
-  votes              SessionVote[]
-  selectedCategories GroupSessionCategory[]
+  members                GroupSessionMember[]
+  votes                  SessionVote[]
+  selectedCategories     GroupSessionCategory[]
   groupSessionCandidates GroupSessionCandidate[]
 
   @@map("group_sessions")
