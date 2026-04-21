@@ -17,6 +17,7 @@ import { UserModule } from './modules/user/user.module';
 import { ProviderModule } from './providers/provider.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { SettingModule } from './modules/setting/setting.module';
+import { OwnerApplicationModule } from './modules/owner-application/owner-application.module';
 
 @Module({
   providers: [
@@ -48,6 +49,7 @@ import { SettingModule } from './modules/setting/setting.module';
     NotificationRealtimeModule,
     ProviderModule,
     SettingModule,
+    OwnerApplicationModule,
   ],
 })
 export class AppModule {}

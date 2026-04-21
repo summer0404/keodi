@@ -14,6 +14,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { ProfileVisibility } from '../enums/setting.enum';
+import { Role } from '../enums/role.enum';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: 'Username is required' })
@@ -67,6 +68,9 @@ export class CurrentUserDto {
 
   @ApiProperty({ example: '', description: 'Email' })
   email: string;
+
+  @ApiProperty({ enum: Role, example: Role.USER, description: 'User role' })
+  role: Role;
 }
 
 export class UpdateUserProfileDto {

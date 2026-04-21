@@ -1,9 +1,8 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import * as SibApiV3Sdk from "@getbrevo/brevo"
 import { RpcException } from "@nestjs/microservices";
-import { SendOTPMailDto, SendVerifyURLDto } from "src/shared/dtos/email.dto";
-import forgotPasswordTemplate from "src/shared/templates/forgot-password.template";
-import verifyAccountTemplate from "src/shared/templates/verify-account.template";
+import { NotificationErrorMessages } from "src/shared/constants/error.constant";
+import { SendMailDto } from "src/shared/dtos/email.dto";
 
 @Injectable()
 export class EmailService {
@@ -25,51 +24,37 @@ export class EmailService {
         this.apiInstance = apiInstance
     }
 
-    async sendOTPMail(sendMailDto: SendOTPMailDto) {
+    async sendTransactionalEmail(sendMailDto: SendMailDto & { subject: string, htmlContent: string }) {
         try {
-            const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-            sendSmtpEmail.sender = {
-                email: process.env.BREVO_SMTP_USER,
-                name: "Keodi Authentication"
+            if (!this.apiInstance) {
+                throw new RpcException({
+                    status: HttpStatus.INTERNAL_SERVER_ERROR,
+                    message: NotificationErrorMessages.EMAIL_SEND_FAILED,
+                });
             }
-            sendSmtpEmail.to = [{ email: sendMailDto.to }]
-            sendSmtpEmail.subject = sendMailDto.subject
-            sendSmtpEmail.htmlContent = forgotPasswordTemplate(sendMailDto.code)
 
-            await this.apiInstance.sendTransacEmail(sendSmtpEmail)
-
-            this.logger.log(`OTP sent to ${sendMailDto.to}`)
-        } catch (error) {
-            this.logger.log(`Failed to send OTP to ${sendMailDto.to}`)
-            this.logger.error(error.message ?? error, error.stack)
-            throw new RpcException({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: 'Error when sending OTP mail to user'
-            })
-        }
-    }
-
-    async sendVerifyURL(sendMailDto: SendVerifyURLDto) {
-        try {
             const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
             sendSmtpEmail.sender = {
                 name: "Keodi Authentication",
-                email: process.env.BREVO_SMTP_USER
+                email: process.env.BREVO_SMTP_USER,
             };
             sendSmtpEmail.to = [{ email: sendMailDto.to }];
             sendSmtpEmail.subject = sendMailDto.subject;
-            sendSmtpEmail.htmlContent = verifyAccountTemplate(sendMailDto.url);
+            sendSmtpEmail.htmlContent = sendMailDto.htmlContent;
 
             await this.apiInstance.sendTransacEmail(sendSmtpEmail);
 
-            this.logger.log(`Verification URL sent to ${sendMailDto.to}`)
+            this.logger.log(`Email sent to ${sendMailDto.to}`);
         } catch (error) {
-            this.logger.log(`Failed to send verification URL to ${sendMailDto.to}`)
-            this.logger.error(error.message ?? error, error.stack)
+            this.logger.log(`Failed to send email to ${sendMailDto.to}`);
+            this.logger.error(error.message ?? error, error.stack);
+            if (error instanceof RpcException) {
+                throw error;
+            }
             throw new RpcException({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: 'Error when sending verification URL mail to user'
-            })
+                message: NotificationErrorMessages.EMAIL_SEND_FAILED,
+            });
         }
     }
 }
