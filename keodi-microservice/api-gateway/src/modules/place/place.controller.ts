@@ -1,9 +1,12 @@
 /* eslint-disable prettier/prettier */
 import {
+  Body,
   Controller,
   Get,
   Param,
+  Post,
   Query,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -12,6 +15,8 @@ import {
 } from '@nestjs/swagger';
 import {
   CoordinateDto,
+  CreatePlaceDto,
+  CreatePlaceResponseDto,
   NearMePlacesResponseDto,
   NearMeQueryDto,
   SearchDto
@@ -19,16 +24,30 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiCreatePlace, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
+import { RoleGuard } from 'src/common/guards/role.guard';
+import { Roles } from 'src/common/decorators/role.decorator';
+import { Role } from 'src/shared/enums/role.enum';
 
 @ApiTags('Places')
 @Controller('places')
 @ApiBearerAuth('access-token')
 export class PlaceController {
   constructor(private readonly placeService: PlaceService) { }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.OWNER)
+  @Post()
+  @ApiCreatePlace()
+  async create(
+    @CurrentUser() user: CurrentUserDto,
+    @Body() createPlaceDto: CreatePlaceDto,
+  ): Promise<CreatePlaceResponseDto> {
+    return await this.placeService.create(user.id, createPlaceDto);
+  }
 
   @Get('near-me')
   @ApiNearMePlace()

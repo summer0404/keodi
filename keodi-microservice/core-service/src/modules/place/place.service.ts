@@ -1,11 +1,15 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { Prisma } from '@prisma/client';
+import { PlaceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { PlaceErrorMessages } from 'src/shared/constants/error.constant';
 import { GeoConstants } from 'src/shared/constants/place.constant';
-import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
+import {
+  CreatePlaceDto,
+  NearMeDto,
+  SearchDto,
+} from 'src/shared/dtos/place.dto';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { formatTimeOnly } from 'src/shared/helpers/time.helper';
@@ -16,9 +20,19 @@ import {
   RawPlace,
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
-import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
-import { LLM_THINKING_TAG, VECTOR_SIMILARITY_THRESHOLD } from 'src/shared/constants/search.constant';
-import { ExtractedIntent, SearchQueryConfig } from 'src/shared/types/search.type';
+import {
+  IntelligenceTopics,
+  SearchTopics,
+} from 'src/shared/constants/topic.constant';
+import {
+  LLM_THINKING_TAG,
+  VECTOR_SIMILARITY_THRESHOLD,
+} from 'src/shared/constants/search.constant';
+import {
+  ExtractedIntent,
+  SearchQueryConfig,
+} from 'src/shared/types/search.type';
+import { PlaceHelper } from './place.helper';
 
 @Injectable()
 export class PlaceService {
@@ -28,6 +42,7 @@ export class PlaceService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
+    private readonly placeHelper: PlaceHelper,
   ) {}
 
   private calculateGeoDeltas(latitude: number, radius: number) {
@@ -109,11 +124,13 @@ export class PlaceService {
       : orderByClause;
 
     const vectorStr = hasEmbedding ? `[${embedding.join(',')}]` : null;
-    const similarityColumn = vectorStr ? Prisma.sql`,
+    const similarityColumn = vectorStr
+      ? Prisma.sql`,
                     (
                         0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
                         + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
-                    ) AS similarity_score` : Prisma.sql`, NULL AS similarity_score`;
+                    ) AS similarity_score`
+      : Prisma.sql`, NULL AS similarity_score`;
 
     return {
       searchCondition: this.buildEmbeddingSearchCondition(embedding),
@@ -262,6 +279,7 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
+                    AND p.status = 'PUBLISHED'::"PlaceStatus"
                   ${searchCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
@@ -298,6 +316,7 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
+                    AND p.status = 'PUBLISHED'::"PlaceStatus"
                   ${searchCondition}
             ) as places_with_distance
             WHERE distance <= ${radius}
@@ -316,10 +335,9 @@ export class PlaceService {
     limit: number;
     offset: number;
     extractedIntent: ExtractedIntent;
-  }): Promise<[
-      (RawPlace & { distance: number; similarity_score?: number })[],
-      number,
-    ]> {
+  }): Promise<
+    [(RawPlace & { distance: number; similarity_score?: number })[], number]
+  > {
     const {
       latitude,
       longitude,
@@ -355,6 +373,129 @@ export class PlaceService {
         extractedIntent.keywords,
       ),
     ]);
+  }
+
+  async create(createPlaceDto: CreatePlaceDto) {
+    try {
+      const mainCategoryId = createPlaceDto.mainCategoryId.trim();
+      const categoryIds = Array.from(
+        new Set(
+          [
+            mainCategoryId,
+            ...(createPlaceDto.secondaryCategoryIds ?? []).map((id) =>
+              id.trim(),
+            ),
+          ].filter((id) => !!id),
+        ),
+      );
+      const attributeIds = Array.from(
+        new Set(
+          (createPlaceDto.attributeIds ?? [])
+            .map((id) => id.trim())
+            .filter((id) => !!id),
+        ),
+      );
+
+      const { featureImageUrl, placeImages } =
+        this.placeHelper.buildPlaceImageInputs(createPlaceDto);
+      const openingHours = this.placeHelper.normalizeOpeningHours(
+        createPlaceDto.openingHours,
+      );
+
+      const [existingCategories, existingAttributes] = await Promise.all([
+        this.prismaService.category.findMany({
+          where: {
+            id: { in: categoryIds },
+          },
+          select: { id: true },
+        }),
+        attributeIds.length > 0
+          ? this.prismaService.attribute.findMany({
+              where: {
+                id: { in: attributeIds },
+              },
+              select: { id: true },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      if (existingCategories.length !== categoryIds.length) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: PlaceErrorMessages.PLACE_CATEGORY_NOT_FOUND,
+        });
+      }
+
+      if (existingAttributes.length !== attributeIds.length) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: PlaceErrorMessages.PLACE_ATTRIBUTE_NOT_FOUND,
+        });
+      }
+
+      const createdPlace = await this.prismaService.place.create({
+        data: {
+          fromGoogle: false,
+          status: PlaceStatus.UNDER_REVIEW,
+          name: createPlaceDto.name.trim(),
+          description: this.placeHelper.trimToNull(createPlaceDto.description),
+          rating: 0,
+          googleMapLink: this.placeHelper.toGoogleMapLink(
+            createPlaceDto.latitude,
+            createPlaceDto.longitude,
+          ),
+          website: this.placeHelper.trimToNull(createPlaceDto.website),
+          phoneNumber: this.placeHelper.trimToNull(createPlaceDto.phoneNumber),
+          featureImageUrl,
+          ownerId: createPlaceDto.ownerId,
+          latitude: createPlaceDto.latitude,
+          longitude: createPlaceDto.longitude,
+          fullAddress: createPlaceDto.address.trim(),
+          placeCategories: {
+            create: categoryIds.map((categoryId) => ({
+              categoryId,
+              isMain: categoryId === mainCategoryId,
+            })),
+          },
+          placeAttributes:
+            attributeIds.length > 0
+              ? {
+                  create: attributeIds.map((attributeId) => ({
+                    attributeId,
+                  })),
+                }
+              : undefined,
+          openingHours:
+            openingHours.length > 0
+              ? {
+                  create: openingHours,
+                }
+              : undefined,
+          placeImages: {
+            create: placeImages.map((image) => ({
+              type: image.type,
+              image: {
+                create: {
+                  url: image.url,
+                },
+              },
+            })),
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      return {
+        message: 'Place created successfully and sent for review',
+        placeId: createdPlace.id,
+        status: createdPlace.status,
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
   }
 
   async findNearby(nearMeDto: NearMeDto): Promise<PlacePaginatedResponse> {
@@ -448,7 +589,8 @@ export class PlaceService {
           { search },
         );
       } catch (error: any) {
-        const errorMessage = error?.message ?? 'Unknown error when extracting user intent';
+        const errorMessage =
+          error?.message ?? 'Unknown error when extracting user intent';
         this.logger.warn(
           `ExtractUserIntent failed. Falling back to empty intent. reason=${errorMessage}`,
         );
@@ -506,8 +648,11 @@ export class PlaceService {
 
   async getById(id: string, userId: string): Promise<PlaceDetailResponse> {
     try {
-      const place = await this.prismaService.place.findUnique({
-        where: { id },
+      const place = await this.prismaService.place.findFirst({
+        where: {
+          id,
+          status: PlaceStatus.PUBLISHED,
+        },
         include: {
           favorites: {
             where: { userId },

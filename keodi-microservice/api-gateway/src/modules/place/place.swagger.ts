@@ -1,12 +1,16 @@
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBody,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
+  CreatePlaceDto,
+  CreatePlaceResponseDto,
   NearMePlacesResponseDto,
   PlaceRecommendationResponseDto,
 } from 'src/shared/dtos/place.dto';
@@ -137,6 +141,30 @@ export function ApiGetForYouPlaces() {
     }),
     ApiBadRequestResponse({
       description: 'Invalid request parameters',
+    }),
+  );
+}
+
+export function ApiCreatePlace() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Create a new place',
+      description:
+        'Create a new place as an owner. The place is created in UNDER_REVIEW status.',
+    }),
+    ApiBody({ type: CreatePlaceDto }),
+    ApiOkResponse({
+      description: 'Place created successfully and sent for review',
+      type: CreatePlaceResponseDto,
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiForbiddenResponse({
+      description: 'Forbidden - Owner role is required',
+    }),
+    ApiBadRequestResponse({
+      description: 'Invalid request payload',
     }),
   );
 }

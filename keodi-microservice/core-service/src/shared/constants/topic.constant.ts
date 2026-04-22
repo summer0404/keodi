@@ -26,6 +26,7 @@ export const PlaceTopics = {
   GetById: 'place.get-by-id',
   NearMe: 'place.near-me',
   Search: 'place.search',
+  Create: 'place.create',
 } as const;
 
 export const RecommendationTopics = {
@@ -33,8 +34,7 @@ export const RecommendationTopics = {
   ForYou: 'recommendation.for-you',
   GroupSessionGetRecommendations:
     'recommendation.group-session.get-recommendations',
-  GroupSessionInvalidateCache:
-    'recommendation.group-session.invalidate-cache',
+  GroupSessionInvalidateCache: 'recommendation.group-session.invalidate-cache',
 } as const;
 
 export const FavoriteTopics = {

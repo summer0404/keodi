@@ -33,7 +33,7 @@ export class SettingService {
       if (!user) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: UserErrorMessages.USER_NOT_FOUND_CODE,
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
       }
 

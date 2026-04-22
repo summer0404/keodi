@@ -2,12 +2,16 @@
 import { ApiProperty, IntersectionType, PickType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
+  IsInt,
   IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  IsString,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PlaceConstants } from '../constants/place.constant';
 import { PlaceSortBy } from '../enums/sort.enum';
@@ -62,6 +66,179 @@ export class SearchDto extends NearMeQueryDto {
   })
   @IsNotEmpty()
   search: string;
+}
+
+export class CreatePlaceOpeningHourDto {
+  @ApiProperty({
+    description: 'Day of week (0 = Sunday, 6 = Saturday)',
+    example: 1,
+  })
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  dayOfWeek: number;
+
+  @ApiProperty({
+    description: 'Opening time in HH:mm or HH:mm:ss',
+    example: '08:00',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  openTime?: string | null;
+
+  @ApiProperty({
+    description: 'Closing time in HH:mm or HH:mm:ss',
+    example: '22:00',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  closeTime?: string | null;
+}
+
+export class CreatePlaceDto {
+  @ApiProperty({ description: 'Place name', example: 'Sunset Coffee' })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @ApiProperty({
+    description: 'Place description',
+    example: 'Cozy cafe with parking and pet-friendly space',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({
+    description: 'Full address',
+    example: '255 Do Xuan Hop, Tan Phu Ward, Thu Duc City, Ho Chi Minh City',
+  })
+  @IsNotEmpty()
+  @IsString()
+  address: string;
+
+  @ApiProperty({ description: 'Place latitude', example: 10.76407 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude: number;
+
+  @ApiProperty({ description: 'Place longitude', example: 106.67838 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude: number;
+
+  @ApiProperty({
+    description: 'Main category ID',
+    example: 'clx123-main-category',
+  })
+  @IsNotEmpty()
+  @IsString()
+  mainCategoryId: string;
+
+  @ApiProperty({
+    description: 'Secondary category IDs',
+    required: false,
+    type: [String],
+    example: ['clx123-secondary-category'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  secondaryCategoryIds?: string[];
+
+  @ApiProperty({
+    description: 'Phone number',
+    example: '+84901234567',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
+
+  @ApiProperty({
+    description: 'Website',
+    example: 'https://sunsetcoffee.vn',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @ApiProperty({
+    description: 'Opening hours by day',
+    type: [CreatePlaceOpeningHourDto],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePlaceOpeningHourDto)
+  openingHours?: CreatePlaceOpeningHourDto[];
+
+  @ApiProperty({
+    description: 'Attribute IDs',
+    required: false,
+    type: [String],
+    example: ['clx123-attribute-parking', 'clx123-attribute-pet-friendly'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  attributeIds?: string[];
+
+  @ApiProperty({
+    description: 'Cover image URL or storage key',
+    example: 'https://cdn.example.com/place-cover.jpg',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string;
+
+  @ApiProperty({
+    description: 'Feature image URL or storage key',
+    example: 'https://cdn.example.com/place-feature.jpg',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  featureImageUrl?: string;
+
+  @ApiProperty({
+    description: 'Gallery image URLs or storage keys',
+    required: false,
+    type: [String],
+    example: ['https://cdn.example.com/place-gallery-1.jpg'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  galleryImageUrls?: string[];
+}
+
+export class CreatePlaceResponseDto {
+  @ApiProperty({ example: 'Place created successfully and sent for review' })
+  message: string;
+
+  @ApiProperty({ example: 'clx123-new-place-id' })
+  placeId: string;
+
+  @ApiProperty({ example: 'UNDER_REVIEW' })
+  status: string;
 }
 
 export class OpeningHourDto {

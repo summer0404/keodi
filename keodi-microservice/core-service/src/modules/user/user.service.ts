@@ -210,7 +210,7 @@ export class UserService {
       if (!targetUser) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: UserErrorMessages.USER_NOT_FOUND_CODE,
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
       }
 
