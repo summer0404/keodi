@@ -10,10 +10,7 @@ export class DeviceTokenService {
   upsert(userId: string, upsertDeviceTokenDto: UpsertDeviceTokenDto) {
     this.kafkaService.getClient().emit(DeviceTokenTopics.UpsertToken, {
       userId,
-      token: upsertDeviceTokenDto.token,
-      platform: upsertDeviceTokenDto.platform,
-      deviceId: upsertDeviceTokenDto.deviceId,
-      appVersion: upsertDeviceTokenDto.appVersion,
+      ...upsertDeviceTokenDto
     });
   }
 }
