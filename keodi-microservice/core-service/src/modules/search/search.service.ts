@@ -10,14 +10,14 @@ import {
   CreateSearchDto,
   SearchTrendingScoreDto,
 } from 'src/shared/dtos/search.dto';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
 @Injectable()
 export class SearchService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
-  ) {}
+  ) { }
 
   async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
     try {
@@ -43,7 +43,7 @@ export class SearchService {
       extractedTerm,
       userId,
     } = createSearchDto;
-    
+
     const rawQuery = rawQueryInput.trim();
     const normalizedTerm = extractedTerm?.trim().toLowerCase();
 

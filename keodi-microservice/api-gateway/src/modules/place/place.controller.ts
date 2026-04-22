@@ -2,13 +2,18 @@
 import {
   Body,
   Controller,
+  FileTypeValidator,
   Get,
+  HttpStatus,
   Param,
+  ParseFilePipe,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiTags
@@ -41,12 +46,28 @@ export class PlaceController {
   @UseGuards(RoleGuard)
   @Roles(Role.OWNER)
   @Post()
+  @UseInterceptors(FileInterceptor('featureImage'))
   @ApiCreatePlace()
   async create(
     @CurrentUser() user: CurrentUserDto,
     @Body() createPlaceDto: CreatePlaceDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: true,
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    featureImage: Express.Multer.File,
   ): Promise<CreatePlaceResponseDto> {
-    return await this.placeService.create(user.id, createPlaceDto);
+    return await this.placeService.create(
+      user.id,
+      createPlaceDto,
+      featureImage.buffer,
+      featureImage.mimetype,
+    );
   }
 
   @Get('near-me')

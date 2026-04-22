@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CreateAttributeDto } from 'src/shared/dtos/attribute.dto';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()

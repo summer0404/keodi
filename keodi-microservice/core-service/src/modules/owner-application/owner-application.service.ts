@@ -9,14 +9,14 @@ import {
   CreateOwnerApplicationDto,
   RejectOwnerApplicationDto,
 } from 'src/shared/dtos/owner-application.dto';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
 @Injectable()
 export class OwnerApplicationService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly kafkaService: KafkaService,
-  ) {}
+  ) { }
 
   async create(createOwnerApplicationDto: CreateOwnerApplicationDto) {
     try {

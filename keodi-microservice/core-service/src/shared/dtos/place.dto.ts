@@ -74,7 +74,19 @@ export class CreatePlaceDto {
 
   @IsNotEmpty()
   @IsString()
-  address: string;
+  street: string;
+
+  @IsNotEmpty()
+  @IsString()
+  ward: string;
+
+  @IsNotEmpty()
+  @IsString()
+  city: string;
+
+  @IsNotEmpty()
+  @IsString()
+  countryCode: string;
 
   @IsNotEmpty()
   @IsNumber()
@@ -115,16 +127,10 @@ export class CreatePlaceDto {
   @IsString({ each: true })
   attributeIds?: string[];
 
-  @IsOptional()
-  @IsString()
-  coverImageUrl?: string;
+  @IsNotEmpty()
+  featureImage: Buffer;
 
   @IsOptional()
   @IsString()
-  featureImageUrl?: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  galleryImageUrls?: string[];
+  featureImageType?: string;
 }

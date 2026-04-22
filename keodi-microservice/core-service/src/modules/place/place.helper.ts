@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { PlaceImageType } from '@prisma/client';
 import { PlaceErrorMessages } from 'src/shared/constants/error.constant';
+import { ImageConstants } from 'src/shared/constants/image.constant';
 import { CreatePlaceDto } from 'src/shared/dtos/place.dto';
 
 @Injectable()
@@ -94,45 +94,23 @@ export class PlaceHelper {
     });
   }
 
-  buildPlaceImageInputs(createPlaceDto: CreatePlaceDto): {
-    featureImageUrl: string | null;
-    placeImages: {
-      type: PlaceImageType;
-      url: string;
-    }[];
-  } {
-    const coverImageUrl = this.trimToNull(createPlaceDto.coverImageUrl);
-    const featureImageUrl = this.trimToNull(createPlaceDto.featureImageUrl);
-    const galleryImageUrls = (createPlaceDto.galleryImageUrls ?? [])
-      .map((url) => this.trimToNull(url))
-      .filter((url): url is string => !!url);
+  buildFullAddress(
+    street: string,
+    ward: string,
+    city: string,
+    countryCode: string,
+  ): string {
+    return [street, ward, city, countryCode].map((item) => item.trim()).join(', ');
+  }
 
-    const placeImages: {
-      type: PlaceImageType;
-      url: string;
-    }[] = [];
+  normalizeCountryCode(countryCode: string): string {
+    return countryCode.trim().toUpperCase();
+  }
 
-    if (coverImageUrl) {
-      placeImages.push({ type: PlaceImageType.COVER, url: coverImageUrl });
-    }
-    if (featureImageUrl) {
-      placeImages.push({ type: PlaceImageType.FEATURE, url: featureImageUrl });
-    }
-    for (const galleryImageUrl of galleryImageUrls) {
-      placeImages.push({ type: PlaceImageType.GALLERY, url: galleryImageUrl });
-    }
+  buildPlaceImageKey(contentType?: string): string {
+    const extension =
+      contentType === 'image/jpeg' ? 'jpg' : contentType?.split('/')[1] ?? 'jpg';
 
-    if (placeImages.length === 0) {
-      throw new RpcException({
-        status: HttpStatus.BAD_REQUEST,
-        message: PlaceErrorMessages.PLACE_IMAGE_REQUIRED,
-      });
-    }
-
-    return {
-      featureImageUrl:
-        featureImageUrl ?? coverImageUrl ?? galleryImageUrls[0] ?? null,
-      placeImages,
-    };
+    return `${ImageConstants.IMAGE_FOLDERS.PLACE_IMAGES}/${Date.now()}.${extension}`;
   }
 }

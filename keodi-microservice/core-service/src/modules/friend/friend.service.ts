@@ -5,7 +5,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { FriendErrorMessages } from 'src/shared/constants/error.constant';
 import { FriendPaginationDto } from 'src/shared/dtos/user.dto';
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { ImageService } from '../image/image.service';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class FriendService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
-  ) {}
+  ) { }
 
   async sendRequest(senderId: string, receiverId: string) {
     // Can't send invite to yourself
@@ -254,8 +254,8 @@ export class FriendService {
             ...friendship.friend,
             pictureUrl: friendship.friend.pictureUrl
               ? await this.imageService.getImageViewUrl(
-                  friendship.friend.pictureUrl,
-                )
+                friendship.friend.pictureUrl,
+              )
               : null,
           },
         })),
@@ -323,8 +323,8 @@ export class FriendService {
             ...request.sender,
             pictureUrl: request.sender.pictureUrl
               ? await this.imageService.getImageViewUrl(
-                  request.sender.pictureUrl,
-                )
+                request.sender.pictureUrl,
+              )
               : null,
           },
         })),

@@ -18,8 +18,18 @@ export class PlaceService {
         return await this.kafkaService.sendWithTimeout(PlaceTopics.NearMe, { ...query, userId });
     }
 
-    async create(ownerId: string, createPlaceDto: CreatePlaceDto): Promise<CreatePlaceResponseDto> {
-        return await this.kafkaService.sendWithTimeout(PlaceTopics.Create, { ownerId, ...createPlaceDto });
+    async create(
+        ownerId: string,
+        createPlaceDto: CreatePlaceDto,
+        featureImage: Buffer,
+        featureImageType: string,
+    ): Promise<CreatePlaceResponseDto> {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Create, {
+            ownerId,
+            ...createPlaceDto,
+            featureImage,
+            featureImageType,
+        });
     }
 
     async search(

@@ -3,11 +3,11 @@ import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { UserErrorMessages } from 'src/shared/constants/error.constant';
 import { UpdateUserSettingDto } from 'src/shared/dtos/setting.dto';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
 @Injectable()
 export class SettingService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async get(userId: string) {
     try {

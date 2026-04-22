@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty, IntersectionType, PickType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
@@ -16,6 +16,8 @@ import {
 import { PlaceConstants } from '../constants/place.constant';
 import { PlaceSortBy } from '../enums/sort.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
+import { parseArray, parseStringArray } from '../utils/type.util';
+
 
 export class CoordinateDto {
   @ApiProperty({ description: 'User latitude', example: 10.76407 })
@@ -116,12 +118,36 @@ export class CreatePlaceDto {
   description?: string;
 
   @ApiProperty({
-    description: 'Full address',
-    example: '255 Do Xuan Hop, Tan Phu Ward, Thu Duc City, Ho Chi Minh City',
+    description: 'Street address',
+    example: '255 Do Xuan Hop',
   })
   @IsNotEmpty()
   @IsString()
-  address: string;
+  street: string;
+
+  @ApiProperty({
+    description: 'Ward',
+    example: 'Tan Phu Ward',
+  })
+  @IsNotEmpty()
+  @IsString()
+  ward: string;
+
+  @ApiProperty({
+    description: 'City',
+    example: 'Thu Duc City',
+  })
+  @IsNotEmpty()
+  @IsString()
+  city: string;
+
+  @ApiProperty({
+    description: 'Country code',
+    example: 'VN',
+  })
+  @IsNotEmpty()
+  @IsString()
+  countryCode: string;
 
   @ApiProperty({ description: 'Place latitude', example: 10.76407 })
   @Type(() => Number)
@@ -151,6 +177,7 @@ export class CreatePlaceDto {
     type: [String],
     example: ['clx123-secondary-category'],
   })
+  @Transform(({ value }) => parseStringArray(value))
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -181,6 +208,7 @@ export class CreatePlaceDto {
     type: [CreatePlaceOpeningHourDto],
     required: false,
   })
+  @Transform(({ value }) => parseArray(value))
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -193,41 +221,11 @@ export class CreatePlaceDto {
     type: [String],
     example: ['clx123-attribute-parking', 'clx123-attribute-pet-friendly'],
   })
+  @Transform(({ value }) => parseStringArray(value))
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   attributeIds?: string[];
-
-  @ApiProperty({
-    description: 'Cover image URL or storage key',
-    example: 'https://cdn.example.com/place-cover.jpg',
-    required: false,
-    nullable: true,
-  })
-  @IsOptional()
-  @IsString()
-  coverImageUrl?: string;
-
-  @ApiProperty({
-    description: 'Feature image URL or storage key',
-    example: 'https://cdn.example.com/place-feature.jpg',
-    required: false,
-    nullable: true,
-  })
-  @IsOptional()
-  @IsString()
-  featureImageUrl?: string;
-
-  @ApiProperty({
-    description: 'Gallery image URLs or storage keys',
-    required: false,
-    type: [String],
-    example: ['https://cdn.example.com/place-gallery-1.jpg'],
-  })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  galleryImageUrls?: string[];
 }
 
 export class CreatePlaceResponseDto {

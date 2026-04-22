@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { CreateReviewDto, GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { PlaceErrorMessages, UserErrorMessages } from 'src/shared/constants/error.constant';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { PrismaService } from 'src/database/prisma.service';
 import { PlaceService } from '../place/place.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
@@ -42,7 +42,7 @@ export class ReviewService {
                 });
             }
 
-            
+
 
             const reviewId = await this.prismaService.$transaction(async (prisma) => {
                 const review = await prisma.review.create({
@@ -77,12 +77,12 @@ export class ReviewService {
     }
 
     async getByPlaceId(getReviewsDto: GetReviewsDto) {
-        const { 
+        const {
             placeId,
             limit,
             page,
-            sortBy, 
-            sortOrder 
+            sortBy,
+            sortOrder
         } = getReviewsDto;
 
         try {

@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { PlaceStatus, Prisma } from '@prisma/client';
+import { PlaceImageType, PlaceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { PlaceErrorMessages } from 'src/shared/constants/error.constant';
@@ -11,8 +11,8 @@ import {
   SearchDto,
 } from 'src/shared/dtos/place.dto';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
-import { formatTimeOnly } from 'src/shared/helpers/time.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
+import { formatTimeOnly } from 'src/shared/utils/time.helper';
 import {
   PlaceDetailResponse,
   PlacePaginatedResponse,
@@ -43,7 +43,7 @@ export class PlaceService {
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
     private readonly placeHelper: PlaceHelper,
-  ) {}
+  ) { }
 
   private calculateGeoDeltas(latitude: number, radius: number) {
     const latDelta = radius / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
@@ -378,6 +378,12 @@ export class PlaceService {
   async create(createPlaceDto: CreatePlaceDto) {
     try {
       const mainCategoryId = createPlaceDto.mainCategoryId.trim();
+      const street = createPlaceDto.street.trim();
+      const ward = createPlaceDto.ward.trim();
+      const city = createPlaceDto.city.trim();
+      const countryCode = this.placeHelper.normalizeCountryCode(
+        createPlaceDto.countryCode,
+      );
       const categoryIds = Array.from(
         new Set(
           [
@@ -396,8 +402,18 @@ export class PlaceService {
         ),
       );
 
-      const { featureImageUrl, placeImages } =
-        this.placeHelper.buildPlaceImageInputs(createPlaceDto);
+      if (!createPlaceDto.featureImage) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: PlaceErrorMessages.PLACE_IMAGE_REQUIRED,
+        });
+      }
+
+      const featureImage = await this.imageService.uploadImage(
+        this.placeHelper.buildPlaceImageKey(createPlaceDto.featureImageType),
+        createPlaceDto.featureImage,
+        createPlaceDto.featureImageType,
+      );
       const openingHours = this.placeHelper.normalizeOpeningHours(
         createPlaceDto.openingHours,
       );
@@ -411,11 +427,11 @@ export class PlaceService {
         }),
         attributeIds.length > 0
           ? this.prismaService.attribute.findMany({
-              where: {
-                id: { in: attributeIds },
-              },
-              select: { id: true },
-            })
+            where: {
+              id: { in: attributeIds },
+            },
+            select: { id: true },
+          })
           : Promise.resolve([]),
       ]);
 
@@ -446,11 +462,20 @@ export class PlaceService {
           ),
           website: this.placeHelper.trimToNull(createPlaceDto.website),
           phoneNumber: this.placeHelper.trimToNull(createPlaceDto.phoneNumber),
-          featureImageUrl,
+          featureImageUrl: featureImage.key,
           ownerId: createPlaceDto.ownerId,
           latitude: createPlaceDto.latitude,
           longitude: createPlaceDto.longitude,
-          fullAddress: createPlaceDto.address.trim(),
+          fullAddress: this.placeHelper.buildFullAddress(
+            street,
+            ward,
+            city,
+            countryCode,
+          ),
+          street,
+          ward,
+          city,
+          countryCode,
           placeCategories: {
             create: categoryIds.map((categoryId) => ({
               categoryId,
@@ -460,26 +485,22 @@ export class PlaceService {
           placeAttributes:
             attributeIds.length > 0
               ? {
-                  create: attributeIds.map((attributeId) => ({
-                    attributeId,
-                  })),
-                }
+                create: attributeIds.map((attributeId) => ({
+                  attributeId,
+                })),
+              }
               : undefined,
           openingHours:
             openingHours.length > 0
               ? {
-                  create: openingHours,
-                }
+                create: openingHours,
+              }
               : undefined,
           placeImages: {
-            create: placeImages.map((image) => ({
-              type: image.type,
-              image: {
-                create: {
-                  url: image.url,
-                },
-              },
-            })),
+            create: {
+              type: PlaceImageType.FEATURE,
+              imageId: featureImage.id,
+            },
           },
         },
         select: {
