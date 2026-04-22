@@ -8,6 +8,7 @@ import {
   ForgotPasswordOTPDto,
   LoginDto,
   RegisterDto,
+  RegisterOwnerDto,
   ResetPasswordDto,
   ResetPasswordOTPDto,
   ValidateOTPDto,
@@ -43,6 +44,14 @@ export class AuthService {
   async register(body: RegisterDto) {
     try {
       return await this.kafkaService.sendWithTimeout(AuthTopics.Register, body);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async registerOwner(body: RegisterOwnerDto) {
+    try {
+      return await this.kafkaService.sendWithTimeout(AuthTopics.RegisterOwner, body);
     } catch (error) {
       throw error;
     }

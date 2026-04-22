@@ -1,5 +1,6 @@
 export const AuthTopics = {
   Register: 'auth.register',
+  RegisterOwner: 'auth.register-owner',
   Login: 'auth.login',
   Google: 'auth.google',
   ForgotPasswordOtp: 'auth.forgot-password-otp',
@@ -10,6 +11,8 @@ export const AuthTopics = {
   ExternalResendVerifyEmail: 'auth.external-resend-verify-email',
   ResendVerifyEmail: 'auth.resend-verify-email',
   Refresh: 'auth.refresh',
+  ApproveOwner: 'auth.approve-owner',
+  RejectOwner: 'auth.reject-owner',
 } as const;
 
 export const UserTopics = {
@@ -24,6 +27,11 @@ export const UserTopics = {
   UpdateLocation: 'user.update-location',
   Onboarding: 'user.onboarding',
   GetOtherProfile: 'user.get-other-profile',
+} as const;
+
+export const OwnerApplicationTopics = {
+  Approve: 'owner-application.approve',
+  Reject: 'owner-application.reject',
 } as const;
 
 export const PlaceTopics = {

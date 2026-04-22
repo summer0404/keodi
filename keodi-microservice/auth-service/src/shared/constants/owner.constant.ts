@@ -1,0 +1,1 @@
+export const OWNER_APPLICATION_REVIEW_DAYS = 5;

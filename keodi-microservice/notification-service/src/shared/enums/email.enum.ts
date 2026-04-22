@@ -1,5 +1,17 @@
 export enum EmailSubject {
   FORGOT_PASSWORD = 'Keodi - Forgot Password OTP',
   RESET_PASSWORD = 'Keodi - Reset Password OTP',
-  VERIFY_EMAIL = 'Keodi - Verify Your Email Address'
+  VERIFY_EMAIL = 'Keodi - Verify Your Email Address',
+  OWNER_APPLICATION_RECEIVED = 'Keodi - Owner Application Received',
+  OWNER_APPLICATION_APPROVED = 'Keodi - Owner Application Approved',
+  OWNER_APPLICATION_REJECTED = 'Keodi - Owner Application Update',
+}
+
+export enum EmailPurpose {
+  FORGOT_PASSWORD = 'FORGOT_PASSWORD',
+  RESET_PASSWORD = 'RESET_PASSWORD',
+  VERIFY_EMAIL = 'VERIFY_EMAIL',
+  OWNER_APPLICATION_RECEIVED = 'OWNER_APPLICATION_RECEIVED',
+  OWNER_APPLICATION_APPROVED = 'OWNER_APPLICATION_APPROVED',
+  OWNER_APPLICATION_REJECTED = 'OWNER_APPLICATION_REJECTED',
 }

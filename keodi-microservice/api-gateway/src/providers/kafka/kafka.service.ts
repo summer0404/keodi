@@ -5,6 +5,8 @@ import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
 import {
   AttributeTopics,
   AuthTopics,
+  UserTopics,
+  OwnerApplicationTopics,
   CategoryTopics,
   FavoriteTopics,
   FriendTopics,
@@ -14,7 +16,6 @@ import {
   ReviewTopics,
   SearchTopics,
   SettingTopics,
-  UserTopics,
 } from 'src/shared/constants/topic.constant';
 
 @Injectable()
@@ -28,6 +29,7 @@ export class KafkaService implements OnModuleInit {
   async onModuleInit() {
     //auth topic
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Register);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.RegisterOwner);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Login);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Google);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ForgotPasswordOtp);
@@ -51,6 +53,8 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(UserTopics.Onboarding);
     this.kafkaClient.subscribeToResponseOf(UserTopics.GetOtherProfile);
     this.kafkaClient.subscribeToResponseOf(UserTopics.SearchOthers);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Approve);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Reject);
 
     //place topic
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetById);

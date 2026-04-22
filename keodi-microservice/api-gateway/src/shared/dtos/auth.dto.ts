@@ -1,16 +1,62 @@
 import { ApiProperty, PickType } from '@nestjs/swagger';
 import {
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
 import { CreateUserDto } from './user.dto';
+import { Role } from '../enums/role.enum';
 
 export class RegisterDto extends CreateUserDto {}
+
+export class RegisterOwnerDto extends RegisterDto {
+  @ApiProperty({ example: 'Keodi Cafe' })
+  @IsNotEmpty()
+  @IsString()
+  businessName: string;
+
+  @ApiProperty({ example: '+84901234567' })
+  @IsNotEmpty()
+  @IsString()
+  businessPhone: string;
+
+  @ApiProperty({ example: '123 Nguyen Trai, District 1, Ho Chi Minh City' })
+  @IsNotEmpty()
+  @IsString()
+  businessAddress: string;
+
+  @ApiProperty({ example: 'TAX-123-456-789' })
+  @IsNotEmpty()
+  @IsString()
+  taxId: string;
+
+  @ApiProperty({
+    example: 'https://keodi.vn',
+    required: false,
+  })
+  @IsOptional()
+  @IsUrl()
+  businessWebsite?: string;
+
+  @ApiProperty({
+    example: [
+      'https://cdn.example.com/proof/license.png',
+      'https://cdn.example.com/proof/certificate.png',
+    ],
+    type: [String],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  proofDocumentUrls: string[];
+}
 
 export class LoginDto extends PickType(RegisterDto, ['password'] as const) {
   @ApiProperty({
@@ -104,6 +150,11 @@ export class RegisterOkResponseDto {
   userId: string;
 }
 
+export class RegisterOwnerOkResponseDto extends RegisterOkResponseDto {
+  @ApiProperty({ example: 'cm9q1mew0000abf8h8f6zd0q' })
+  ownerApplicationId: string;
+}
+
 export class UnverifiedAccountResponse {
   @ApiProperty({ example: 'Your account has not verifed' })
   message: string;
@@ -165,6 +216,12 @@ export class MeResponseDto {
     nullable: true,
   })
   phoneNumber: string | null;
+
+  @ApiProperty({
+    enum: Role,
+    example: Role.USER,
+  })
+  role: Role;
 }
 
 export class GoogleLoginMobileDto {

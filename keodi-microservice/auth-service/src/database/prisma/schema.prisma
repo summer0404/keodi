@@ -17,6 +17,7 @@ model User {
   username     String   @unique @db.VarChar(20)
   password     String
   email        String   @unique
+  role         Role     @default(USER)
   isVerified   Boolean  @default(false) @map("is_verified")
   refreshToken String?  @map("refresh_token")
   createdAt    DateTime @default(now()) @map("created_at")
@@ -26,6 +27,13 @@ model User {
   notifications    Notification[]
 
   @@map("users")
+}
+
+enum Role {
+  USER
+  OWNER_PENDING
+  OWNER
+  ADMIN
 }
 
 enum DevicePlatform {

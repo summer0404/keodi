@@ -3,6 +3,15 @@ import { CreateUserDto } from './user.dto';
 
 export class RegisterDto extends CreateUserDto {}
 
+export class RegisterOwnerDto extends RegisterDto {
+  businessName: string;
+  businessPhone: string;
+  businessAddress: string;
+  taxId: string;
+  businessWebsite?: string;
+  proofDocumentUrls: string[];
+}
+
 export class LoginDto extends PickType(RegisterDto, ['password'] as const) {
   identifier: string;
   rememberMe?: boolean;
