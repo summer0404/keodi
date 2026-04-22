@@ -1,5 +1,6 @@
 import { CacheInterceptor } from "@nestjs/cache-manager";
 import { ExecutionContext, Injectable } from "@nestjs/common";
+import { RedisKeys } from "src/shared/constants/redis.constant";
 
 @Injectable()
 export class RecommendationCacheInterceptor extends CacheInterceptor {
@@ -9,16 +10,16 @@ export class RecommendationCacheInterceptor extends CacheInterceptor {
         const userId = request?.user?.id;
 
         if(routePath.includes('for-you') && userId) {
-            return `place:foryou:${userId}`;
+            return RedisKeys.RECOMMENDATION.FOR_YOU(userId);
         }
 
         if(routePath.includes('trending') && userId) {
-            return `place:trending:${userId}`;
+            return RedisKeys.RECOMMENDATION.TRENDING(userId);
         }
 
         if(routePath.includes('recommendations')) {
             const sessionId = request.params.sessionId;
-            return `group-session:${sessionId}:recommendations`;
+            return RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS(sessionId);
         }
 
         return undefined

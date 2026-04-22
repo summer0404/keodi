@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
+import { FriendErrorMessages } from 'src/shared/constants/error.constant';
 import { FriendPaginationDto } from 'src/shared/dtos/user.dto';
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
@@ -19,7 +20,7 @@ export class FriendService {
     if (senderId == receiverId) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Cannot send friend request to yourself',
+        message: FriendErrorMessages.CANNOT_SEND_REQUEST_TO_SELF,
       });
     }
 
@@ -30,7 +31,7 @@ export class FriendService {
     if (!receiver) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'User not found',
+        message: FriendErrorMessages.USER_NOT_FOUND,
       });
     }
 
@@ -41,7 +42,7 @@ export class FriendService {
     if (existingFriendship) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
-        message: 'Already friends with this user',
+        message: FriendErrorMessages.ALREADY_FRIENDS_WITH_USER,
       });
     }
 
@@ -60,7 +61,7 @@ export class FriendService {
     if (existingRequest) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
-        message: 'Friend request already exist',
+        message: FriendErrorMessages.FRIEND_REQUEST_ALREADY_EXISTS,
       });
     }
 
@@ -92,7 +93,7 @@ export class FriendService {
     if (!request) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friend request not found',
+        message: FriendErrorMessages.FRIEND_REQUEST_NOT_FOUND,
       });
     }
 
@@ -100,14 +101,14 @@ export class FriendService {
     if (request.receiverId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,
-        message: 'Not authorized to accept this request',
+        message: FriendErrorMessages.NOT_AUTHORIZED_TO_ACCEPT_REQUEST,
       });
     }
 
     if (request.status !== FriendRequestStatus.PENDING) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Request is no longer valid',
+        message: FriendErrorMessages.REQUEST_IS_NO_LONGER_VALID,
       });
     }
 
@@ -139,7 +140,7 @@ export class FriendService {
     if (!request) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friend request not found',
+        message: FriendErrorMessages.FRIEND_REQUEST_NOT_FOUND,
       });
     }
 
@@ -147,14 +148,14 @@ export class FriendService {
     if (request.receiverId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,
-        message: 'Not authorized to reject this request',
+        message: FriendErrorMessages.NOT_AUTHORIZED_TO_REJECT_REQUEST,
       });
     }
 
     if (request.status !== FriendRequestStatus.PENDING) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Request is no longer valid',
+        message: FriendErrorMessages.REQUEST_IS_NO_LONGER_VALID,
       });
     }
 
@@ -178,7 +179,7 @@ export class FriendService {
     if (!request) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friend request not found',
+        message: FriendErrorMessages.FRIEND_REQUEST_NOT_FOUND,
       });
     }
 
@@ -187,14 +188,14 @@ export class FriendService {
     if (request.senderId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,
-        message: 'Not authorized to cancel this request',
+        message: FriendErrorMessages.NOT_AUTHORIZED_TO_CANCEL_REQUEST,
       });
     }
 
     if (request.status !== FriendRequestStatus.PENDING) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Request is no longer valid',
+        message: FriendErrorMessages.REQUEST_IS_NO_LONGER_VALID,
       });
     }
     try {
@@ -349,7 +350,7 @@ export class FriendService {
     if (!friendship) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friendship not found',
+        message: FriendErrorMessages.FRIENDSHIP_NOT_FOUND,
       });
     }
 

@@ -19,6 +19,7 @@ export const UserTopics = {
   Create: 'user.create',
   Get: 'user.get',
   GetAll: 'user.get-all',
+  SearchOthers: 'user.search-others',
   Unverify: 'user.unverify',
   UpdateUsername: 'user.update-username',
   UpdatePicture: 'user.update-picture',

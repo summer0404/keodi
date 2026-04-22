@@ -11,7 +11,7 @@ export class PaginationQueryDto {
     @IsNumber()
     @IsOptional()
     @Min(1)
-    page?: number = PaginationConstants.DEFAULT_PAGE;
+    page: number = PaginationConstants.DEFAULT_PAGE;
 
     @ApiProperty({ description: 'Items per page', example: 10, default: PaginationConstants.DEFAULT_LIMIT, required: false })
     @Type(() => Number)
@@ -19,12 +19,12 @@ export class PaginationQueryDto {
     @IsOptional()
     @Min(1)
     @Max(100)
-    limit?: number = PaginationConstants.DEFAULT_LIMIT;
+    limit: number = PaginationConstants.DEFAULT_LIMIT;
 
     @ApiProperty({ description: 'Sort order', enum: SortOrder, default: SortOrder.ASC, required: false })
     @IsOptional()
     @IsEnum(SortOrder)
-    sortOrder?: SortOrder = SortOrder.ASC;
+    sortOrder: SortOrder = SortOrder.ASC;
 }
 
 export abstract class PaginationResponseDto {

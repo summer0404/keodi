@@ -5,7 +5,6 @@ import {
   MAX_CANDINDATE_PLACES,
   MAX_RECOMMENDATIONS_BOUNDING_KM,
   PLACES_PER_SEARCH_TERM,
-  RecommendationRedisKeys,
   TIME_DECAY,
 } from 'src/shared/constants/recommendation.constant';
 import { GeoConstants } from 'src/shared/constants/place.constant';
@@ -25,8 +24,8 @@ import {
   GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS,
   GROUP_SESSION_RECOMMENDATION_TTL_SECONDS,
   GroupSessionMessages,
-  GroupSessionRedisKeys,
 } from 'src/shared/constants/group-session.constant';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import { SessionLocation } from 'src/shared/types/group-session.type';
 import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
@@ -142,7 +141,7 @@ export class RecommendationService {
           return null;
         }
 
-        const locationKey = GroupSessionRedisKeys.MEMBER_LOCATION(
+        const locationKey = RedisKeys.GROUP_SESSION.MEMBER_LOCATION(
           sessionId,
           userId,
         );
@@ -416,12 +415,12 @@ export class RecommendationService {
     try {
       const places = await this.getPlacesFromSearchTerms(searchTerms);
       await this.redisService.set(
-        RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_SEARCH_TERMS,
         JSON.stringify(places),
       );
 
       // await this.redisService.expire(
-      //   RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
+      //   RedisKeys.RECOMMENDATION.PLACES_FROM_SEARCH_TERMS,
       //   SEARCH_TRENDING_TTL_SECONDS
       // );
     } catch (error) {
@@ -485,12 +484,12 @@ export class RecommendationService {
     try {
       const places = await this.getTopPlacesFromUserActions();
       await this.redisService.set(
-        RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_USER_ACTIONS,
         JSON.stringify(places),
       );
 
       // await this.redisService.expire(
-      //   RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
+      //   RedisKeys.RECOMMENDATION.PLACES_FROM_USER_ACTIONS,
       //   SEARCH_TRENDING_TTL_SECONDS
       // );
     } catch (error) {
@@ -503,7 +502,7 @@ export class RecommendationService {
     let rawCachedPlacesFromActions: string | null = null;
     try {
       rawCachedPlacesFromSearchTerms = await this.redisService.get(
-        RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_SEARCH_TERMS,
       );
     } catch (error: any) {
       this.logger.error(
@@ -514,7 +513,7 @@ export class RecommendationService {
 
     try {
       rawCachedPlacesFromActions = await this.redisService.get(
-        RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_USER_ACTIONS,
       );
     } catch (error: any) {
       this.logger.error(
@@ -654,7 +653,8 @@ export class RecommendationService {
         });
       }
 
-      const cacheKey = RecommendationRedisKeys.GROUP_SESSION_RECOMMENDATIONS(sessionId);
+      const cacheKey =
+        RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS(sessionId);
       const rawCachedPlaces = await this.redisService.get(cacheKey);
 
       let cachedPlaces: PlaceRecommendationResponseDto[] | null = null;
@@ -711,7 +711,9 @@ export class RecommendationService {
     sessionId: string;
   }) {
     try {
-      await this.redisService.del(RecommendationRedisKeys.GROUP_SESSION_RECOMMENDATIONS(data.sessionId));
+      await this.redisService.del(
+        RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS(data.sessionId),
+      );
     } catch (error) {
       handleServiceErrorCatching(error);
     }

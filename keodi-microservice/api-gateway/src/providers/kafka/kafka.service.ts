@@ -3,19 +3,19 @@ import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
 import {
+  AttributeTopics,
   AuthTopics,
   UserTopics,
   OwnerApplicationTopics,
-  PlaceTopics,
-  RecommendationTopics,
-  FavoriteTopics,
   CategoryTopics,
+  FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
+  PlaceTopics,
+  RecommendationTopics,
+  ReviewTopics,
   SearchTopics,
   SettingTopics,
-  AttributeTopics,
-  ReviewTopics,
 } from 'src/shared/constants/topic.constant';
 
 @Injectable()
@@ -52,6 +52,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(UserTopics.UpdateProfile);
     this.kafkaClient.subscribeToResponseOf(UserTopics.Onboarding);
     this.kafkaClient.subscribeToResponseOf(UserTopics.GetOtherProfile);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.SearchOthers);
     this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Approve);
     this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Reject);
 

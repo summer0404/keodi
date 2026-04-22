@@ -23,7 +23,7 @@ export class GetFavoritesQueryDto extends PaginationQueryDto {
   })
   @IsOptional()
   @IsEnum(SortOrder)
-  sortOrder?: SortOrder = SortOrder.DESC;
+  sortOrder: SortOrder = SortOrder.DESC;
 }
 
 export class FavoriteResponseDto {

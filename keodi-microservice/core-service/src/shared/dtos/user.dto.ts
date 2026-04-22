@@ -1,14 +1,15 @@
 import { PickType } from '@nestjs/mapped-types';
 import {
-  IsDate,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  MaxLength,
-  MinLength,
+    IsDate,
+    IsEnum,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    MaxLength,
+    MinLength,
 } from 'class-validator';
-import { PaginationQueryDto } from './pagination.dto';
 import { FriendSortBy, PlaceSortBy } from '../enums/sort.enum';
+import { PaginationQueryDto } from './pagination.dto';
 
 export class CreateUserDto {
   @IsNotEmpty()
@@ -65,6 +66,12 @@ export class UpdateUserProfileDto {
 export class UserCommonPaginationDto extends PaginationQueryDto {
   @IsNotEmpty()
   userId: string;
+}
+
+export class SearchOthersDto extends UserCommonPaginationDto {
+  @IsNotEmpty()
+  @IsString()
+  keyword!: string;
 }
 
 export class FriendPaginationDto extends UserCommonPaginationDto {

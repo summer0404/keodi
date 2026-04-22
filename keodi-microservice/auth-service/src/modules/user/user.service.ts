@@ -5,7 +5,6 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { UserTopics } from 'src/shared/constants/topic.constant';
-import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class UserService {
@@ -78,9 +77,9 @@ export class UserService {
       });
       try {
         await this.kafkaService.sendWithTimeout(UserTopics.UsernameSynced, {
-            userId: existingUser.id,
-            username: newUsername,
-          })
+          userId: existingUser.id,
+          username: newUsername,
+        });
       } catch (error) {
         await this.prismaService.user.update({
           where: { id: existingUser.id },
@@ -89,8 +88,9 @@ export class UserService {
 
         throw new RpcException({
           status: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'Failed to sync username across services, changes rolled back.',
-        })
+          message:
+            'Failed to sync username across services, changes rolled back.',
+        });
       }
 
       await this.redisService.set(
@@ -128,7 +128,7 @@ export class UserService {
         firstName,
         lastName,
         picture,
-      })
+      });
     } catch (error) {
       handleServiceErrorCatching(error);
     }

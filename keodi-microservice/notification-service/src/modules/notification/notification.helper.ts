@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import { EmailPayloadDto, OwnerApplicationReceivedDto, OwnerApplicationRejectedDto, SendOTPDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
 import { EmailPurpose, EmailSubject } from 'src/shared/enums/email.enum';
 import forgotPasswordTemplate from 'src/shared/templates/forgot-password.template';
@@ -16,7 +17,7 @@ export class NotificationHelper {
     async isOnline(
         userId: string,
     ): Promise<boolean> {
-        const val = await this.redisService.get(`presence:${userId}`);
+        const val = await this.redisService.get(RedisKeys.PRESENCE(userId));
         return val === 'online';
     }
 

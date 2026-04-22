@@ -1,22 +1,24 @@
 import { applyDecorators } from '@nestjs/common';
 import {
-    ApiBadRequestResponse,
-    ApiBody,
-    ApiConsumes,
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiConsumes,
   ApiNotFoundResponse,
-    ApiOkResponse,
-    ApiOperation,
-    ApiParam,
-    ApiUnauthorizedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CategoryOnboardingDto } from 'src/shared/dtos/category.dto';
 import {
   OtherUserProfileResponseDto,
+  SearchUsersResponseDto,
+  UpdateLocationDto,
+  UpdateUsernameDto,
+  UpdateUserProfileDto,
   UserBasicResponseDto,
   UserMessageResponseDto,
-    UpdateLocationDto,
-    UpdateUsernameDto,
-    UpdateUserProfileDto,
 } from 'src/shared/dtos/user.dto';
 
 export function ApiGetAllUsers() {
@@ -51,6 +53,24 @@ export function ApiGetOtherProfile() {
     }),
     ApiNotFoundResponse({
       description: 'USER_NOT_FOUND',
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+  );
+}
+
+export function ApiSearchUsers() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Search other users',
+      description:
+        'Search users by username, first name, or last name. The current authenticated user is excluded from results.',
+    }),
+    ApiQuery({ name: 'keyword', required: true, type: String }),
+    ApiOkResponse({
+      description: 'Paginated list of matched users',
+      type: SearchUsersResponseDto,
     }),
     ApiUnauthorizedResponse({
       description: 'Unauthorized - Invalid or missing authentication token',
