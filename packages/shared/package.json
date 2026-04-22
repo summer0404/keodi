@@ -1,0 +1,15 @@
+{
+  "name": "@keodi/shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "./index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo 'Shared library: No build needed (Vite will handle this)'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
