@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { CreateReviewDto, GetReviewsDto } from 'src/shared/dtos/review.dto';
+import { PlaceErrorMessages, UserErrorMessages } from 'src/shared/constants/error.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
 import { PlaceService } from '../place/place.service';
@@ -26,7 +27,7 @@ export class ReviewService {
             if (!existingUser) {
                 throw new RpcException({
                     status: HttpStatus.NOT_FOUND,
-                    message: 'User not found',
+                    message: UserErrorMessages.USER_NOT_FOUND,
                 });
             }
 
@@ -37,7 +38,7 @@ export class ReviewService {
             if (!existingPlace) {
                 throw new RpcException({
                     status: HttpStatus.NOT_FOUND,
-                    message: 'Place not found',
+                    message: PlaceErrorMessages.PLACE_NOT_FOUND,
                 });
             }
 
@@ -92,7 +93,7 @@ export class ReviewService {
             if (!existingPlace) {
                 throw new RpcException({
                     status: HttpStatus.NOT_FOUND,
-                    message: 'Place not found',
+                    message: PlaceErrorMessages.PLACE_NOT_FOUND,
                 });
             }
 

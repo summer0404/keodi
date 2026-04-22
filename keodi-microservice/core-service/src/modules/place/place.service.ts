@@ -3,6 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { PlaceErrorMessages } from 'src/shared/constants/error.constant';
 import { GeoConstants } from 'src/shared/constants/place.constant';
 import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
@@ -50,13 +51,13 @@ export class PlaceService {
     if (!allowedSortBy.includes(sortBy)) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: `Invalid sortBy value`,
+        message: PlaceErrorMessages.INVALID_SORT_BY,
       });
     }
     if (!allowedSortOrder.includes(sortOrder)) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: `Invalid sortOrder value`,
+        message: PlaceErrorMessages.INVALID_SORT_ORDER,
       });
     }
 
@@ -455,7 +456,7 @@ export class PlaceService {
         if (error?.message?.includes('EMBEDDING_FAILED')) {
           throw new RpcException({
             status: HttpStatus.SERVICE_UNAVAILABLE,
-            message: 'Embedding service is unavailable',
+            message: PlaceErrorMessages.EMBEDDING_SERVICE_UNAVAILABLE,
           });
         }
       }
@@ -534,7 +535,7 @@ export class PlaceService {
       if (!place) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: `Place not found`,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
         });
       }
 

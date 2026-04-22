@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { UserImageType } from '@prisma/client';
+import { ImageErrorMessages } from 'src/shared/constants/error.constant';
 import { ImageConstants } from 'src/shared/constants/image.constant';
 import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 import { PrismaService } from 'src/database/prisma.service';
@@ -17,7 +18,7 @@ export class ImageService {
         if (!ImageConstants.ALLOWED_MIME_TYPES.includes(mimetype)) {
             throw new RpcException({
                 status: HttpStatus.BAD_REQUEST,
-                message: `Invalid file type. Only ${ImageConstants.ALLOWED_MIME_TYPES.join(', ')} are allowed`
+                message: ImageErrorMessages.invalidFileType(ImageConstants.ALLOWED_MIME_TYPES),
             });
         }
     }

@@ -22,12 +22,6 @@ export const GroupSessionMessages = {
   CANNOT_LEAVE_AS_CREATOR: 'CANNOT_LEAVE_AS_CREATOR',
 } as const;
 
-export const GroupSessionRedisKeys = {
-  MEMBER_LOCATION: (sessionId: string, userId: string) =>
-    `session:${sessionId}:location:${userId}`,
-  MEMBER_VOTES: (sessionId: string) => `group-session:${sessionId}:member-votes`,
-}
-
 export const GROUP_SESSION_SHARE_CODE_LENGTH = 6;
 export const GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS = 3;
 export const GROUP_SESSION_DEFAULT_AUTO_CLOSE_DELAY_MINUTES = 10;

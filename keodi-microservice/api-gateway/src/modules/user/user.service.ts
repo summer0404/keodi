@@ -13,7 +13,7 @@ export class UserService {
     page: number,
     limit: number,
   ) {
-    const normalizedKeyword = keyword.trim().toLowerCase();
+    const normalizedKeyword = keyword.trim();
     if (!normalizedKeyword)
       return { users: [], total: 0, page, totalPages: 0, limit };
 

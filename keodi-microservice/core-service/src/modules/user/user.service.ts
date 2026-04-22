@@ -4,6 +4,8 @@ import { FriendRequestStatus, Prisma, ProfileVisibility } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { UserErrorMessages } from 'src/shared/constants/error.constant';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   CreateUserDto,
   SearchOthersDto,
@@ -14,8 +16,6 @@ import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
 
 @Injectable()
 export class UserService {
-  private static readonly USER_LOCATIONS_KEY = 'user:locations';
-
   constructor(
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
@@ -25,64 +25,58 @@ export class UserService {
   async searchOthers(dto: SearchOthersDto) {
     const { userId, keyword, limit, page } = dto;
     try {
-      if (!keyword) return { users: [], total: 0, page, totalPages: 0, limit };
+      const normalizedKeyword = keyword?.trim();
+      if (!normalizedKeyword)
+        return { users: [], total: 0, page, totalPages: 0, limit };
 
       const offset = (page - 1) * limit;
-      const tokens = keyword.split(/\s+/).filter(Boolean);
-      const keywordPattern = `%${keyword}%`;
 
-      const searchTarget = Prisma.sql`
-      unaccent(lower(concat_ws(' ', u.first_name, u.last_name, u.username)))
-    `;
-
-      const tokenConditions = tokens.map((token) => {
-        return Prisma.sql`${searchTarget} LIKE unaccent(${`%${token}%`})`;
-      });
-
-      const whereClause = Prisma.sql`
-        u.id <> ${userId}
-        AND (
-          ${searchTarget} LIKE unaccent(${keywordPattern})
-          ${
-            tokenConditions.length
-              ? Prisma.sql`OR (${Prisma.join(tokenConditions, ' AND ')})`
-              : Prisma.empty
-          }
+      const searchVector = Prisma.sql`
+        to_tsvector(
+          'simple',
+          f_unaccent(
+            COALESCE(u.username, '') || ' ' || COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')
+          )
         )
       `;
 
-      const [countResult, rawUsers] = await Promise.all([
-        this.prismaService.$queryRaw<[{ count: bigint }]>(
-          Prisma.sql`SELECT COUNT(*) as count FROM users u WHERE ${whereClause}`,
-        ),
-        this.prismaService.$queryRaw<
-          {
-            id: string;
-            username: string | null;
-            firstName: string | null;
-            lastName: string | null;
-            pictureUrl: string | null;
-          }[]
-        >(Prisma.sql`
-          SELECT
-            u.id,
-            u.username,
-            u.first_name AS "firstName",
-            u.last_name AS "lastName",
-            u.picture_url AS "pictureUrl"
-          FROM users u
-          WHERE ${whereClause}
-          ORDER BY u.first_name ASC NULLS LAST, u.last_name ASC NULLS LAST
-          LIMIT ${limit}
-          OFFSET ${offset}
-        `),
-      ]);
+      const searchQuery = Prisma.sql`
+        websearch_to_tsquery('simple', f_unaccent(${normalizedKeyword}))
+      `;
 
-      const total = Number(countResult[0].count);
+      const rawUsers = await this.prismaService.$queryRaw<
+        {
+          id: string;
+          username: string | null;
+          firstName: string | null;
+          lastName: string | null;
+          pictureUrl: string | null;
+          totalCount: bigint;
+        }[]
+      >(Prisma.sql`
+        SELECT
+          u.id,
+          u.username,
+          u.first_name AS "firstName",
+          u.last_name AS "lastName",
+          u.picture_url AS "pictureUrl",
+          COUNT(*) OVER() AS "totalCount"
+        FROM users u
+        WHERE u.id <> ${userId}
+          AND ${searchVector} @@ ${searchQuery}
+        ORDER BY
+          ts_rank_cd(${searchVector}, ${searchQuery}) DESC,
+          u.first_name ASC NULLS LAST,
+          u.last_name ASC NULLS LAST
+        LIMIT ${limit}
+        OFFSET ${offset}
+      `);
+
+      const total = rawUsers.length > 0 ? Number(rawUsers[0].totalCount) : 0;
       const totalPages = Math.ceil(total / limit);
 
       const users = await Promise.all(
-        rawUsers.map(async (user) => ({
+        rawUsers.map(async ({ totalCount, ...user }) => ({
           ...user,
           pictureUrl: user.pictureUrl
             ? await this.imageService.getImageViewUrl(user.pictureUrl)
@@ -148,7 +142,7 @@ export class UserService {
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'User not found',
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
 
       const image = await this.imageService.updateUserProfilePicture(
@@ -182,7 +176,7 @@ export class UserService {
       if (!user)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'User not found',
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
 
       const pictureUrl = user.pictureUrl
@@ -216,7 +210,7 @@ export class UserService {
       if (!targetUser) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: 'USER_NOT_FOUND',
+          message: UserErrorMessages.USER_NOT_FOUND_CODE,
         });
       }
 
@@ -302,7 +296,7 @@ export class UserService {
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'User not found',
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
 
       if (data.phoneNumber) {
@@ -313,7 +307,7 @@ export class UserService {
         if (userWithPhoneNumber && userWithPhoneNumber.id !== existingUser.id) {
           throw new RpcException({
             status: HttpStatus.BAD_REQUEST,
-            message: 'Phone number already in use',
+            message: UserErrorMessages.PHONE_NUMBER_ALREADY_IN_USE,
           });
         }
       }
@@ -339,7 +333,7 @@ export class UserService {
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'User not found',
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
 
       await this.prismaService.userCategory.createMany({
@@ -359,7 +353,7 @@ export class UserService {
 
   async updateLocation(userId: string, latitude: number, longitude: number) {
     await this.redisService.hSet(
-      UserService.USER_LOCATIONS_KEY,
+      RedisKeys.USER_LOCATIONS,
       userId,
       JSON.stringify({
         lat: latitude,

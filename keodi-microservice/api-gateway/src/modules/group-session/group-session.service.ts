@@ -2,6 +2,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   GroupSessionRecommendationAccessDto,
   GroupSessionRecommendationCategoriesResponseDto,
@@ -31,7 +32,9 @@ export class GroupSessionService {
     guestId?: string,
     reason: string = 'MANUAL_REFRESH',
   ): Promise<void> {
-    await this.cacheManager.del(`group-session:${sessionId}:recommendations`);
+    await this.cacheManager.del(
+      RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS(sessionId),
+    );
 
     this.kafkaService
       .getClient()

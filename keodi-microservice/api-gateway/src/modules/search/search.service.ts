@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import { SearchTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()
@@ -12,7 +13,11 @@ export class SearchService {
 
     async getTrending() {
         try {
-            const redisTrendingSearches = await this.redisService.zrevrange('search:trending', 0, 5);
+            const redisTrendingSearches = await this.redisService.zrevrange(
+                RedisKeys.SEARCH.TRENDING,
+                0,
+                5,
+            );
             if (redisTrendingSearches && redisTrendingSearches.length > 0) {
                 return redisTrendingSearches;
             }

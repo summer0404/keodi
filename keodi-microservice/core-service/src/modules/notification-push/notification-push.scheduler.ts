@@ -6,10 +6,11 @@ import { RecommendationService } from 'src/modules/recommendation/recommendation
 import { SettingService } from 'src/modules/setting/setting.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import { getSearchRadiusKm } from 'src/shared/constants/setting.constant';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
+import { getSearchRadiusKm } from 'src/shared/helpers/search.helper';
 
 interface UserLocation {
   lat: number;
@@ -25,7 +26,6 @@ interface SchedulerSettings {
 
 @Injectable()
 export class NotificationPushScheduler {
-  private static readonly USER_LOCATIONS_KEY = 'user:locations';
   private static readonly STALE_DAYS = 7;
   private readonly logger = new Logger(NotificationPushScheduler.name);
 
@@ -44,7 +44,7 @@ export class NotificationPushScheduler {
     );
 
     const allLocations = await this.redisService.hGetAll(
-      NotificationPushScheduler.USER_LOCATIONS_KEY,
+      RedisKeys.USER_LOCATIONS,
     );
 
     if (!allLocations || Object.keys(allLocations).length === 0) {
