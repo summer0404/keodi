@@ -4,7 +4,7 @@ import { FavoritePlacesPaginationDto, UserCommonPaginationDto } from "src/shared
 import { PlaceSortBy, SortBy, SortOrder } from "src/shared/enums/sort.enum";
 import { handleServiceErrorCatching } from "src/shared/utils/error.util";
 import { PrismaService } from "src/database/prisma.service";
-import { FavoriteErrorMessages } from "src/shared/constants/error.constant";
+import { FavoriteErrorMessages, PlaceErrorMessages } from "src/shared/constants/error.constant";
 
 @Injectable()
 export class FavoriteService {
@@ -19,7 +19,7 @@ export class FavoriteService {
             if (!place) {
                 throw new RpcException({
                     status: HttpStatus.NOT_FOUND,
-                    message: FavoriteErrorMessages.PLACE_NOT_FOUND,
+                    message: PlaceErrorMessages.PLACE_NOT_FOUND,
                 });
             }
 

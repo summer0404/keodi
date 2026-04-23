@@ -3,6 +3,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { OwnershipClaimTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnershipClaimDto,
+  GetOwnershipClaimsDto,
   RejectOwnershipClaimDto,
 } from 'src/shared/dtos/ownership-claim.dto';
 import { OwnershipClaimService } from './ownership-claim.service';
@@ -28,8 +29,8 @@ export class OwnershipClaimController {
     return await this.ownershipClaimService.reject(data.claimId, data.data);
   }
 
-  @MessagePattern(OwnershipClaimTopics.GetPending)
-  async getPendingClaims(@Payload() data: any) {
-    return await this.ownershipClaimService.getPendingClaims(data);
+  @MessagePattern(OwnershipClaimTopics.GetAll)
+  async getClaims(@Payload() data: GetOwnershipClaimsDto) {
+    return await this.ownershipClaimService.getClaims(data);
   }
 }

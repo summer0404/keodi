@@ -7,26 +7,27 @@ import { RoleGuard } from 'src/common/guards/role.guard';
 import { Role } from 'src/shared/enums/role.enum';
 import {
   CreateOwnershipClaimDto,
+  GetOwnershipClaimsDto,
   RejectOwnershipClaimDto,
 } from 'src/shared/dtos/ownership-claim.dto';
 import { OwnershipClaimService } from './ownership-claim.service';
 import {
   ApiApproveOwnershipClaim,
   ApiCreateOwnershipClaim,
-  ApiGetPendingOwnershipClaims,
+  ApiGetOwnershipClaims,
   ApiRejectOwnershipClaim,
 } from './ownership-claim.swagger';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
 
 @ApiTags('Ownership Claims')
 @ApiBearerAuth('access-token')
-@Controller()
+@Controller('ownership-claims')
 export class OwnershipClaimController {
   constructor(private readonly ownershipClaimService: OwnershipClaimService) {}
 
   @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles(Role.OWNER)
-  @Post('ownership-claims')
+  @Post()
   @ApiCreateOwnershipClaim()
   async create(
     @CurrentUser() user: CurrentUserDto,
@@ -37,7 +38,7 @@ export class OwnershipClaimController {
 
   @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles(Role.ADMIN)
-  @Post('admin/ownership-claims/:id/approve')
+  @Post(':id/approve')
   @ApiApproveOwnershipClaim()
   async approve(@Param('id') claimId: string) {
     return await this.ownershipClaimService.approve(claimId);
@@ -45,7 +46,7 @@ export class OwnershipClaimController {
 
   @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles(Role.ADMIN)
-  @Post('admin/ownership-claims/:id/reject')
+  @Post(':id/reject')
   @ApiRejectOwnershipClaim()
   async reject(
     @Param('id') claimId: string,
@@ -59,9 +60,9 @@ export class OwnershipClaimController {
 
   @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles(Role.ADMIN)
-  @Get('admin/ownership-claims')
-  @ApiGetPendingOwnershipClaims()
-  async getPendingClaims(@Query('status') status?: string) {
-    return await this.ownershipClaimService.getPendingClaims(status);
+  @Get()
+  @ApiGetOwnershipClaims()
+  async getAll(@Query() query: GetOwnershipClaimsDto) {
+    return await this.ownershipClaimService.getAll(query);
   }
 }

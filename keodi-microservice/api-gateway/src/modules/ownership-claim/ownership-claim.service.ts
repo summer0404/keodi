@@ -3,6 +3,7 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { OwnershipClaimTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnershipClaimDto,
+  GetOwnershipClaimsDto,
   RejectOwnershipClaimDto,
 } from 'src/shared/dtos/ownership-claim.dto';
 
@@ -31,10 +32,10 @@ export class OwnershipClaimService {
     );
   }
 
-  async getPendingClaims(status?: string) {
+  async getAll(query: GetOwnershipClaimsDto) {
     return await this.kafkaService.sendWithTimeout(
-      OwnershipClaimTopics.GetPending,
-      { status },
+      OwnershipClaimTopics.GetAll,
+      query,
     );
   }
 }

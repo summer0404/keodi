@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { FriendRequestStatus } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
-import { FriendErrorMessages } from 'src/shared/constants/error.constant';
+import { FriendErrorMessages, UserErrorMessages } from 'src/shared/constants/error.constant';
 import { FriendPaginationDto } from 'src/shared/dtos/user.dto';
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
@@ -16,7 +16,6 @@ export class FriendService {
   ) { }
 
   async sendRequest(senderId: string, receiverId: string) {
-    // Can't send invite to yourself
     if (senderId == receiverId) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
@@ -24,18 +23,16 @@ export class FriendService {
       });
     }
 
-    // Check if receiver exists
     const receiver = await this.prismaService.user.findUnique({
       where: { id: receiverId },
     });
     if (!receiver) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: FriendErrorMessages.USER_NOT_FOUND,
+        message: UserErrorMessages.USER_NOT_FOUND,
       });
     }
 
-    //Check if already friends
     const existingFriendship = await this.prismaService.friendship.findUnique({
       where: { userId_friendId: { userId: senderId, friendId: receiverId } },
     });
@@ -66,7 +63,6 @@ export class FriendService {
     }
 
     try {
-      // Delete any old rejected/accepted requests to allow resending
       await this.prismaService.friendRequest.deleteMany({
         where: {
           senderId,
@@ -97,7 +93,6 @@ export class FriendService {
       });
     }
 
-    // Only receiver can accept
     if (request.receiverId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,
@@ -144,7 +139,6 @@ export class FriendService {
       });
     }
 
-    // Only receiver can reject
     if (request.receiverId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,

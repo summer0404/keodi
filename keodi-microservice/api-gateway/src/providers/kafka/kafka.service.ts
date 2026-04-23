@@ -16,6 +16,7 @@ import {
   ReviewTopics,
   SearchTopics,
   SettingTopics,
+  OwnershipClaimTopics,
 } from 'src/shared/constants/topic.constant';
 
 @Injectable()
@@ -53,8 +54,16 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(UserTopics.Onboarding);
     this.kafkaClient.subscribeToResponseOf(UserTopics.GetOtherProfile);
     this.kafkaClient.subscribeToResponseOf(UserTopics.SearchOthers);
+
+    // owner application topic
     this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Approve);
     this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Reject);
+
+    // owner ship claim topic
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Approve);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Reject);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.GetAll);
 
     //place topic
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetById);

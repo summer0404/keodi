@@ -1,22 +1,25 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { OwnershipClaimStatus } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { OwnershipClaimErrorMessages } from 'src/shared/constants/error.constant';
+import { OwnershipClaimErrorMessages, PlaceErrorMessages } from 'src/shared/constants/error.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnershipClaimDto,
+  GetOwnershipClaimsDto,
   RejectOwnershipClaimDto,
 } from 'src/shared/dtos/ownership-claim.dto';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
 @Injectable()
 export class OwnershipClaimService {
+  private readonly logger = new Logger(OwnershipClaimService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly kafkaService: KafkaService,
-  ) {}
+  ) { }
 
   async create(createOwnershipClaimDto: CreateOwnershipClaimDto) {
     try {
@@ -27,7 +30,7 @@ export class OwnershipClaimService {
       if (!place) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: OwnershipClaimErrorMessages.PLACE_NOT_FOUND,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
         });
       }
 
@@ -46,18 +49,14 @@ export class OwnershipClaimService {
         });
       }
 
-      const initialStatus = place.ownerId 
-        ? OwnershipClaimStatus.DISPUTED 
+      const initialStatus = place.ownerId
+        ? OwnershipClaimStatus.DISPUTED
         : OwnershipClaimStatus.PENDING;
 
       const claim = await this.prismaService.ownershipClaim.create({
         data: {
-          userId: createOwnershipClaimDto.userId,
-          placeId: createOwnershipClaimDto.placeId,
-          relationship: createOwnershipClaimDto.relationship,
-          proofDocumentUrls: createOwnershipClaimDto.proofDocumentUrls,
-          note: createOwnershipClaimDto.note,
-          status: initialStatus,
+          ...createOwnershipClaimDto,
+          status: initialStatus
         },
       });
 
@@ -92,7 +91,6 @@ export class OwnershipClaimService {
       }
 
       await this.prismaService.$transaction(async (prisma) => {
-        // Update the claim
         await prisma.ownershipClaim.update({
           where: { id: claim.id },
           data: {
@@ -102,21 +100,15 @@ export class OwnershipClaimService {
           },
         });
 
-        // Set the owner of the place
         await prisma.place.update({
           where: { id: claim.placeId },
           data: { ownerId: claim.userId },
         });
       });
 
-      try {
-        await this.kafkaService.sendWithTimeout(NotificationTopics.OwnershipClaimApproved, {
-          userId: claim.userId,
-          placeId: claim.placeId,
-        });
-      } catch (err) {
-        console.error('Failed to send approve notification', err);
-      }
+      this.kafkaService.getClient().emit(NotificationTopics.OwnershipClaimApproved, {
+        to: claim.userId,
+      });
 
       return {
         message: 'Ownership claim approved successfully',
@@ -155,15 +147,10 @@ export class OwnershipClaimService {
         },
       });
 
-      try {
-        await this.kafkaService.sendWithTimeout(NotificationTopics.OwnershipClaimRejected, {
-          userId: claim.userId,
-          placeId: claim.placeId,
-          reason: data.reason,
-        });
-      } catch (err) {
-        console.error('Failed to send reject notification', err);
-      }
+      this.kafkaService.getClient().emit(NotificationTopics.OwnershipClaimRejected, {
+        to: claim.userId,
+        reason: data.reason
+      });
 
       return {
         message: 'Ownership claim rejected successfully',
@@ -173,34 +160,47 @@ export class OwnershipClaimService {
     }
   }
 
-  async getPendingClaims(data: any) {
+  async getClaims(data: GetOwnershipClaimsDto) {
     try {
-      const status = data?.status as OwnershipClaimStatus || OwnershipClaimStatus.PENDING;
-      const claims = await this.prismaService.ownershipClaim.findMany({
-        where: { status },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              username: true,
+      const { page, limit, sortOrder, status } = data;
+      const skip = (page - 1) * limit;
+
+      const where = status ? { status } : {};
+
+      const [claims, total] = await Promise.all([
+        this.prismaService.ownershipClaim.findMany({
+          where,
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+              }
+            },
+            place: {
+              select: {
+                id: true,
+                name: true,
+              }
             }
           },
-          place: {
-            select: {
-              id: true,
-              name: true,
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'asc',
-        }
-      });
+          orderBy: {
+            createdAt: sortOrder,
+          },
+          skip,
+          take: limit,
+        }),
+        this.prismaService.ownershipClaim.count({ where }),
+      ]);
 
       return {
         data: claims,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
       return handleServiceErrorCatching(error);

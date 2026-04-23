@@ -11,6 +11,7 @@ import {
 import {
   CreateOwnershipClaimDto,
   OwnershipClaimActionResponseDto,
+  PaginatedOwnershipClaimResponseDto,
   RejectOwnershipClaimDto,
 } from 'src/shared/dtos/ownership-claim.dto';
 
@@ -62,15 +63,15 @@ export function ApiRejectOwnershipClaim() {
   );
 }
 
-export function ApiGetPendingOwnershipClaims() {
+export function ApiGetOwnershipClaims() {
   return applyDecorators(
     ApiOperation({
-      summary: 'Get pending ownership claims',
-      description: 'Retrieve a list of pending ownership claims.',
+      summary: 'Get ownership claims',
+      description: 'Retrieve a list of ownership claims with optional status filtering and pagination.',
     }),
-    ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'APPROVED', 'REJECTED', 'DISPUTED'] }),
     ApiOkResponse({
-      description: 'Pending ownership claims retrieved successfully',
+      description: 'Ownership claims retrieved successfully',
+      type: PaginatedOwnershipClaimResponseDto,
     }),
     ApiUnauthorizedResponse({ description: 'Unauthorized' }),
   );

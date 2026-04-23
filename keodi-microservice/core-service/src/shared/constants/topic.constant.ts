@@ -26,7 +26,7 @@ export const OwnershipClaimTopics = {
   Create: 'ownership-claim.create',
   Approve: 'ownership-claim.approve',
   Reject: 'ownership-claim.reject',
-  GetPending: 'ownership-claim.get-pending',
+  GetAll: 'ownership-claim.get-all',
 } as const;
 
 export const PlaceTopics = {
