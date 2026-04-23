@@ -2,9 +2,6 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GroupSessionHelper {
-  /**
-   * Aggregate votes by place, sorted descending by count.
-   */
   buildVoteResults(votes: any[]) {
     const placeVoteMap = new Map<
       string,

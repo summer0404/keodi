@@ -13,7 +13,7 @@ import {
 } from 'src/shared/constants/topic.constant';
 import { AuthErrorMessages } from 'src/shared/constants/error.constant';
 import { OWNER_APPLICATION_REVIEW_DAYS } from 'src/shared/constants/owner.constant';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.helper';
 import {
   LoginDto,
   RegisterDto,

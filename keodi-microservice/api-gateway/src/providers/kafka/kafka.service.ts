@@ -60,6 +60,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetById);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.NearMe);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Search);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Create);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);
     this.kafkaClient.subscribeToResponseOf(

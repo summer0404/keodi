@@ -23,9 +23,9 @@ import {
   NotificationPreferredChannel,
   NotificationType,
 } from 'src/shared/enums/notification.enum';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
-import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { ImageService } from '../image/image.service';
+import { GroupSessionHelper } from './group-session.helper';
 
 @Injectable()
 export class GroupSessionService {
@@ -35,7 +35,7 @@ export class GroupSessionService {
     private readonly groupSessionHelper: GroupSessionHelper,
     private readonly kafkaService: KafkaService,
     private readonly imageService: ImageService,
-  ) {}
+  ) { }
 
   private async mapUserPictureUrl<T extends { pictureUrl: string | null }>(
     user: T,
@@ -143,7 +143,7 @@ export class GroupSessionService {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
         message: GroupSessionMessages.SESSION_ALREADY_ACTIVE,
-        });
+      });
     }
   }
 

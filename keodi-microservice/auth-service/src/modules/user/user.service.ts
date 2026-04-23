@@ -3,7 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.helper';
 import { UserTopics } from 'src/shared/constants/topic.constant';
 
 @Injectable()

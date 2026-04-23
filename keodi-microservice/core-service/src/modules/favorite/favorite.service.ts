@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { FavoritePlacesPaginationDto, UserCommonPaginationDto } from "src/shared/dtos/user.dto";
 import { PlaceSortBy, SortBy, SortOrder } from "src/shared/enums/sort.enum";
-import { handleServiceErrorCatching } from "src/shared/helpers/error.helper";
+import { handleServiceErrorCatching } from "src/shared/utils/error.util";
 import { PrismaService } from "src/database/prisma.service";
 import { FavoriteErrorMessages } from "src/shared/constants/error.constant";
 

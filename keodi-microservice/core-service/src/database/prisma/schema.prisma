@@ -37,6 +37,12 @@ enum UserActionType {
   GET_DIRECTION
 }
 
+enum PlaceStatus {
+  UNDER_REVIEW
+  PUBLISHED
+  SUSPENDED
+}
+
 enum OwnerApplicationStatus {
   PENDING
   APPROVED
@@ -145,6 +151,7 @@ model Place {
   fromGoogle      Boolean @default(false) @map("from_google")
   name            String
   description     String?
+  status          PlaceStatus @default(PUBLISHED)
   rating          Float
   googleMapLink   String  @map("google_map_link")
   website         String?

@@ -38,6 +38,7 @@ export const PlaceTopics = {
   GetById: 'place.get-by-id',
   NearMe: 'place.near-me',
   Search: 'place.search',
+  Create: 'place.create',
 } as const;
 
 export const RecommendationTopics = {

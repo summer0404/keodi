@@ -1,9 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { UserImageType } from '@prisma/client';
 import { ImageErrorMessages } from 'src/shared/constants/error.constant';
 import { ImageConstants } from 'src/shared/constants/image.constant';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { PrismaService } from 'src/database/prisma.service';
 import { S3Service } from 'src/providers/s3/s3.service';
 
@@ -25,7 +24,10 @@ export class ImageService {
 
     async getImageViewUrl(key: string): Promise<string> {
         try {
-            if (key.startsWith('http://') || key.startsWith('https://')) {
+            if (
+                key.startsWith(ImageConstants.PREFIX_URL.HTTP) ||
+                key.startsWith(ImageConstants.PREFIX_URL.HTTPS)
+            ) {
                 return key;
             }
 
@@ -35,46 +37,43 @@ export class ImageService {
         }
     }
 
-    async updateUserProfilePicture(
-        userId: string,
-        file: Buffer,
-        type?: string
-    ) {
+    async uploadImage(
+        key: string,
+        file: Buffer | string | { data?: number[] },
+        type?: string,
+        imageId?: string
+    ): Promise<{ id: string; key: string }> {
         if (type) {
             this.validateImageFile(type);
         }
-        try {
-            const key = `${ImageConstants.IMAGE_FOLDERS.USER_IMAGES}/user_${userId}_picture.jpg`;
 
-            const fileBuffer = Buffer.isBuffer(file) ? file : Buffer.from(file, 'base64');
+        try {
+            const fileBuffer = Buffer.isBuffer(file)
+                ? file
+                : typeof file === 'string'
+                    ? Buffer.from(file, 'base64')
+                    : Array.isArray(file.data)
+                        ? Buffer.from(file.data)
+                        : Buffer.from([]);
 
             await this.s3Service.uploadImage(fileBuffer, key, type);
 
-            const existingPictureUrl = await this.prismaService.userImage.findFirst({
-                where: {
-                    userId,
-                    type: UserImageType.PICTURE
-                }
-            })
+            const resolvedImageId = imageId?.trim();
 
-            if (existingPictureUrl) {
-                return await this.prismaService.image.update({
-                    where: { id: existingPictureUrl.imageId },
-                    data: { url: key },
-                });
-            } else {
-                return await this.prismaService.image.create({
-                    data: {
-                        url: key,
-                        userImages: {
-                            create: {
-                                userId,
-                                type: UserImageType.PICTURE
-                            }
-                        }
-                    }
-                });
-            }
+            const image = resolvedImageId
+                ? await this.prismaService.image.update({
+                      where: { id: resolvedImageId },
+                      data: { url: key },
+                  })
+                : await this.prismaService.image.create({
+                      data: { url: key },
+                      select: { id: true, url: true },
+                  });
+
+            return {
+                id: image.id,
+                key: image.url,
+            };
         } catch (error) {
             return handleServiceErrorCatching(error)
         }

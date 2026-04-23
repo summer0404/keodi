@@ -8,7 +8,7 @@ import {
   TIME_DECAY,
 } from 'src/shared/constants/recommendation.constant';
 import { GeoConstants } from 'src/shared/constants/place.constant';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { RecommendationHelper } from './recommendation.helper';
 // import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
 import { GroupSessionStatus, Prisma, UserActionType } from '@prisma/client';
@@ -18,7 +18,7 @@ import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.consta
 import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
 import { PlaceRecommendationResponseDto, RecommendationPlaceRow } from 'src/shared/dtos/recommendation.dto';
 import { SortOrder } from 'src/shared/enums/sort.enum';
-import { formatTimeOnly } from 'src/shared/helpers/time.helper';
+import { formatTimeOnly } from 'src/shared/utils/time.utils';
 import {
   GROUP_SESSION_MAX_RECOMMENDATION_PLACES,
   GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS,

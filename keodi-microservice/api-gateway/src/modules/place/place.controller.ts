@@ -1,17 +1,27 @@
 /* eslint-disable prettier/prettier */
 import {
+  Body,
   Controller,
+  FileTypeValidator,
   Get,
+  HttpStatus,
   Param,
+  ParseFilePipe,
+  Post,
   Query,
+  UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiTags
 } from '@nestjs/swagger';
 import {
   CoordinateDto,
+  CreatePlaceDto,
+  CreatePlaceResponseDto,
   NearMePlacesResponseDto,
   NearMeQueryDto,
   SearchDto
@@ -19,16 +29,46 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiCreatePlace, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
+import { RoleGuard } from 'src/common/guards/role.guard';
+import { Roles } from 'src/common/decorators/role.decorator';
+import { Role } from 'src/shared/enums/role.enum';
 
 @ApiTags('Places')
 @Controller('places')
 @ApiBearerAuth('access-token')
 export class PlaceController {
   constructor(private readonly placeService: PlaceService) { }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.OWNER)
+  @Post()
+  @UseInterceptors(FileInterceptor('featureImage'))
+  @ApiCreatePlace()
+  async create(
+    @CurrentUser() user: CurrentUserDto,
+    @Body() createPlaceDto: CreatePlaceDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: true,
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    featureImage: Express.Multer.File,
+  ): Promise<CreatePlaceResponseDto> {
+    return await this.placeService.create(
+      user.id,
+      createPlaceDto,
+      featureImage.buffer,
+      featureImage.mimetype,
+    );
+  }
 
   @Get('near-me')
   @ApiNearMePlace()
