@@ -10,7 +10,7 @@ import { RedisKeys } from 'src/shared/constants/redis.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
-import { getSearchRadiusKm } from 'src/shared/utils/search.helper';
+import { getSearchRadiusKm } from 'src/shared/utils/search.utils';
 
 interface UserLocation {
   lat: number;

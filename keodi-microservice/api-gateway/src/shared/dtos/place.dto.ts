@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty, IntersectionType, PickType } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
@@ -208,7 +208,10 @@ export class CreatePlaceDto {
     type: [CreatePlaceOpeningHourDto],
     required: false,
   })
-  @Transform(({ value }) => parseArray(value))
+  @Transform(({ value }) => {
+    const arr = parseArray(value);
+    return arr ? plainToInstance(CreatePlaceOpeningHourDto, arr) : arr;
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

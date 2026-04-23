@@ -1,56 +1,20 @@
-export function parseStringArray(value: unknown): string[] | undefined {
-    if (value === undefined || value === null || value === '') {
-        return undefined;
-    }
+export function parseArray(value: any): any[] | undefined {
+  if (!value || value === 'undefined' || value === 'null') return undefined;
+  
+  if (Array.isArray(value)) return value;
 
-    if (Array.isArray(value)) {
-        return value;
-    }
-
+  try {
+    const p = JSON.parse(typeof value === 'string' ? value.replace(/'/g, '"') : value);
+    return Array.isArray(p) ? p : [p];
+  } catch {
     if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (!trimmed) {
-            return undefined;
-        }
-
-        try {
-            const parsed = JSON.parse(trimmed);
-            if (Array.isArray(parsed)) {
-                return parsed;
-            }
-        } catch {
-            return trimmed
-                .split(',')
-                .map((item) => item.trim())
-                .filter((item) => !!item);
-        }
+      return value.split(',').map(s => s.trim()).filter(Boolean);
     }
-
-    return undefined;
+    return [value];
+  }
 }
 
-export function parseArray(value: unknown): unknown[] | undefined {
-    if (value === undefined || value === null || value === '') {
-        return undefined;
-    }
-
-    if (Array.isArray(value)) {
-        return value;
-    }
-
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (!trimmed) {
-            return undefined;
-        }
-
-        try {
-            const parsed = JSON.parse(trimmed);
-            return Array.isArray(parsed) ? parsed : (value as unknown[]);
-        } catch {
-            return value as unknown[];
-        }
-    }
-
-    return undefined;
+export function parseStringArray(value: any): string[] | undefined {
+  const arr = parseArray(value);
+  return arr?.length ? arr.map(String) : undefined;
 }

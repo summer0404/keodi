@@ -12,7 +12,7 @@ import {
 } from 'src/shared/dtos/place.dto';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
-import { formatTimeOnly } from 'src/shared/utils/time.helper';
+import { formatTimeOnly } from 'src/shared/utils/time.utils';
 import {
   PlaceDetailResponse,
   PlacePaginatedResponse,
@@ -377,17 +377,10 @@ export class PlaceService {
 
   async create(createPlaceDto: CreatePlaceDto) {
     try {
-      const mainCategoryId = createPlaceDto.mainCategoryId.trim();
-      const street = createPlaceDto.street.trim();
-      const ward = createPlaceDto.ward.trim();
-      const city = createPlaceDto.city.trim();
-      const countryCode = this.placeHelper.normalizeCountryCode(
-        createPlaceDto.countryCode,
-      );
       const categoryIds = Array.from(
         new Set(
           [
-            mainCategoryId,
+            createPlaceDto.mainCategoryId,
             ...(createPlaceDto.secondaryCategoryIds ?? []).map((id) =>
               id.trim(),
             ),
@@ -454,32 +447,32 @@ export class PlaceService {
           fromGoogle: false,
           status: PlaceStatus.UNDER_REVIEW,
           name: createPlaceDto.name.trim(),
-          description: this.placeHelper.trimToNull(createPlaceDto.description),
+          description: createPlaceDto.description,
           rating: 0,
           googleMapLink: this.placeHelper.toGoogleMapLink(
             createPlaceDto.latitude,
             createPlaceDto.longitude,
           ),
-          website: this.placeHelper.trimToNull(createPlaceDto.website),
-          phoneNumber: this.placeHelper.trimToNull(createPlaceDto.phoneNumber),
+          website: createPlaceDto.website,
+          phoneNumber: createPlaceDto.phoneNumber,
           featureImageUrl: featureImage.key,
           ownerId: createPlaceDto.ownerId,
           latitude: createPlaceDto.latitude,
           longitude: createPlaceDto.longitude,
           fullAddress: this.placeHelper.buildFullAddress(
-            street,
-            ward,
-            city,
-            countryCode,
+            createPlaceDto.street,
+            createPlaceDto.ward,
+            createPlaceDto.city,
+            createPlaceDto.countryCode,
           ),
-          street,
-          ward,
-          city,
-          countryCode,
+          street: createPlaceDto.street,
+          ward: createPlaceDto.ward,
+          city: createPlaceDto.city,
+          countryCode: createPlaceDto.countryCode,
           placeCategories: {
             create: categoryIds.map((categoryId) => ({
               categoryId,
-              isMain: categoryId === mainCategoryId,
+              isMain: categoryId === createPlaceDto.mainCategoryId,
             })),
           },
           placeAttributes:

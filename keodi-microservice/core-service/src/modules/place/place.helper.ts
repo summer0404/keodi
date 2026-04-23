@@ -6,11 +6,6 @@ import { CreatePlaceDto } from 'src/shared/dtos/place.dto';
 
 @Injectable()
 export class PlaceHelper {
-  trimToNull(value?: string | null): string | null {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : null;
-  }
-
   toGoogleMapLink(latitude: number, longitude: number): string {
     return `https://maps.google.com/?q=${latitude},${longitude}`;
   }
@@ -43,41 +38,42 @@ export class PlaceHelper {
     const usedDays = new Set<number>();
 
     return openingHours.map((openingHour) => {
-      if (openingHour.dayOfWeek < 0 || openingHour.dayOfWeek > 6) {
+      const rawDay = openingHour.dayOfWeek;
+      let dayOfWeek: number = Number(rawDay);
+
+      if (dayOfWeek < 0 || dayOfWeek > 6) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
           message: PlaceErrorMessages.INVALID_OPENING_HOUR_RANGE,
         });
       }
 
-      if (usedDays.has(openingHour.dayOfWeek)) {
+      if (usedDays.has(dayOfWeek)) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
           message: PlaceErrorMessages.DUPLICATED_OPENING_HOUR_DAY,
         });
       }
-      usedDays.add(openingHour.dayOfWeek);
+      usedDays.add(dayOfWeek);
 
-      const openTimeRaw = this.trimToNull(openingHour.openTime);
-      const closeTimeRaw = this.trimToNull(openingHour.closeTime);
 
-      if (!openTimeRaw && !closeTimeRaw) {
+      if (!openingHour.openTime && !openingHour.closeTime) {
         return {
-          dayOfWeek: openingHour.dayOfWeek,
+          dayOfWeek: dayOfWeek,
           openTime: null,
           closeTime: null,
         };
       }
 
-      if (!openTimeRaw || !closeTimeRaw) {
+      if (!openingHour.openTime || !openingHour.closeTime) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
           message: PlaceErrorMessages.INVALID_OPENING_HOUR_INTERVAL,
         });
       }
 
-      const openTime = this.parseOpeningHourTime(openTimeRaw);
-      const closeTime = this.parseOpeningHourTime(closeTimeRaw);
+      const openTime = this.parseOpeningHourTime(openingHour.openTime);
+      const closeTime = this.parseOpeningHourTime(openingHour.closeTime);
 
       if (closeTime <= openTime) {
         throw new RpcException({
@@ -87,7 +83,7 @@ export class PlaceHelper {
       }
 
       return {
-        dayOfWeek: openingHour.dayOfWeek,
+        dayOfWeek: dayOfWeek,
         openTime,
         closeTime,
       };
@@ -101,10 +97,6 @@ export class PlaceHelper {
     countryCode: string,
   ): string {
     return [street, ward, city, countryCode].map((item) => item.trim()).join(', ');
-  }
-
-  normalizeCountryCode(countryCode: string): string {
-    return countryCode.trim().toUpperCase();
   }
 
   buildPlaceImageKey(contentType?: string): string {

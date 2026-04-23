@@ -24,8 +24,8 @@ import {
   NotificationType,
 } from 'src/shared/enums/notification.enum';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
-import { GroupSessionHelper } from 'src/shared/utils/group-session.helper';
 import { ImageService } from '../image/image.service';
+import { GroupSessionHelper } from './group-session.helper';
 
 @Injectable()
 export class GroupSessionService {

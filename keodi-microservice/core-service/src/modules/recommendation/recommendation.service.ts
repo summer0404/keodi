@@ -18,7 +18,7 @@ import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.consta
 import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
 import { PlaceRecommendationResponseDto, RecommendationPlaceRow } from 'src/shared/dtos/recommendation.dto';
 import { SortOrder } from 'src/shared/enums/sort.enum';
-import { formatTimeOnly } from 'src/shared/utils/time.helper';
+import { formatTimeOnly } from 'src/shared/utils/time.utils';
 import {
   GROUP_SESSION_MAX_RECOMMENDATION_PLACES,
   GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS,

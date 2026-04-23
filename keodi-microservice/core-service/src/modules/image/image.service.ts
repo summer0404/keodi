@@ -59,13 +59,16 @@ export class ImageService {
             await this.s3Service.uploadImage(fileBuffer, key, type);
 
             const resolvedImageId = imageId?.trim();
-            
-            const image = await this.prismaService.image.upsert({
-                where: { id: resolvedImageId },
-                update: { url: key },
-                create: { url: key },
-                select: { id: true, url: true },
-            });
+
+            const image = resolvedImageId
+                ? await this.prismaService.image.update({
+                      where: { id: resolvedImageId },
+                      data: { url: key },
+                  })
+                : await this.prismaService.image.create({
+                      data: { url: key },
+                      select: { id: true, url: true },
+                  });
 
             return {
                 id: image.id,
