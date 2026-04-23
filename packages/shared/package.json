@@ -3,13 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "description": "",
-  "main": "./index.js",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "echo 'Shared library: No build needed (Vite will handle this)'"
+    "build": "echo 'Shared library: source-only workspace package (no build output)'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "module"
 }
