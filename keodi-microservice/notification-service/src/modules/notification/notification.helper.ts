@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
-import { EmailPayloadDto, OwnerApplicationReceivedDto, OwnerApplicationRejectedDto, SendOTPDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
+import { EmailPayloadDto, OwnerApplicationReceivedDto, OwnerApplicationRejectedDto, OwnershipClaimApprovedDto, OwnershipClaimRejectedDto, SendOTPDto, SendVerifyURLDto } from 'src/shared/dtos/email.dto';
 import { EmailPurpose, EmailSubject } from 'src/shared/enums/email.enum';
 import forgotPasswordTemplate from 'src/shared/templates/forgot-password.template';
 import ownerApplicationApprovedTemplate from 'src/shared/templates/owner-application-approved.template';
 import ownerApplicationReceivedTemplate from 'src/shared/templates/owner-application-received.template';
 import ownerApplicationRejectedTemplate from 'src/shared/templates/owner-application-rejected.template';
+import ownershipClaimApprovedTemplate from 'src/shared/templates/ownership-claim-approved.template';
+import ownershipClaimRejectedTemplate from 'src/shared/templates/ownership-claim-rejected.template';
 import resetPasswordTemplate from 'src/shared/templates/reset-password.template';
 import verifyAccountTemplate from 'src/shared/templates/verify-account.template';
 
@@ -36,6 +38,10 @@ export class NotificationHelper {
                 return EmailSubject.OWNER_APPLICATION_APPROVED;
             case EmailPurpose.OWNER_APPLICATION_REJECTED:
                 return EmailSubject.OWNER_APPLICATION_REJECTED;
+            case EmailPurpose.OWNERSHIP_CLAIM_APPROVED:
+                return EmailSubject.OWNERSHIP_CLAIM_APPROVED;
+            case EmailPurpose.OWNERSHIP_CLAIM_REJECTED:
+                return EmailSubject.OWNERSHIP_CLAIM_REJECTED;
         }
     }
 
@@ -56,6 +62,10 @@ export class NotificationHelper {
                 return ownerApplicationApprovedTemplate();
             case EmailPurpose.OWNER_APPLICATION_REJECTED:
                 return ownerApplicationRejectedTemplate((data as OwnerApplicationRejectedDto).reason);
+            case EmailPurpose.OWNERSHIP_CLAIM_APPROVED:
+                return ownershipClaimApprovedTemplate();
+            case EmailPurpose.OWNERSHIP_CLAIM_REJECTED:
+                return ownershipClaimRejectedTemplate((data as OwnershipClaimRejectedDto).reason);
         }
     }
 }

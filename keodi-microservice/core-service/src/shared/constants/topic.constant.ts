@@ -22,6 +22,13 @@ export const OwnerApplicationTopics = {
   Reject: 'owner-application.reject',
 } as const;
 
+export const OwnershipClaimTopics = {
+  Create: 'ownership-claim.create',
+  Approve: 'ownership-claim.approve',
+  Reject: 'ownership-claim.reject',
+  GetPending: 'ownership-claim.get-pending',
+} as const;
+
 export const PlaceTopics = {
   GetById: 'place.get-by-id',
   NearMe: 'place.near-me',
@@ -110,6 +117,8 @@ export const NotificationTopics = {
   Dispatch: 'notification.dispatch',
   PersistInbox: 'notification.persist-inbox',
   RealtimePush: 'notification.realtime.push',
+  OwnershipClaimApproved: 'notification.ownership-claim.approved',
+  OwnershipClaimRejected: 'notification.ownership-claim.rejected',
   GetActiveTokens: 'device-token.get-active',
   UpsertToken: 'device-token.upsert',
   DeactivateToken: 'device-token.deactivate',
