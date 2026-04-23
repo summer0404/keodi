@@ -204,6 +204,10 @@ export function ApiCreatePlace() {
             type: 'string',
             example: 'https://sunsetcoffee.vn',
           },
+          googleMapLink: {
+            type: 'string',
+            example: 'https://maps.app.goo.gl/example',
+          },
           openingHours: {
             oneOf: [
               {

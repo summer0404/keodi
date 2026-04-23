@@ -449,10 +449,12 @@ export class PlaceService {
           name: createPlaceDto.name.trim(),
           description: createPlaceDto.description,
           rating: 0,
-          googleMapLink: this.placeHelper.toGoogleMapLink(
-            createPlaceDto.latitude,
-            createPlaceDto.longitude,
-          ),
+          googleMapLink:
+            createPlaceDto.googleMapLink ||
+            this.placeHelper.toGoogleMapLink(
+              createPlaceDto.latitude,
+              createPlaceDto.longitude,
+            ),
           website: createPlaceDto.website,
           phoneNumber: createPlaceDto.phoneNumber,
           featureImageUrl: featureImage.key,

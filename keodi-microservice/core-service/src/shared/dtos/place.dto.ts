@@ -100,6 +100,10 @@ export class CreatePlaceDto {
   @Max(180)
   longitude: number;
 
+  @IsOptional()
+  @IsString()
+  googleMapLink?: string;
+
   @IsNotEmpty()
   @IsString()
   mainCategoryId: string;

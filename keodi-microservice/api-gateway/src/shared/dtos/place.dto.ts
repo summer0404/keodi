@@ -204,6 +204,16 @@ export class CreatePlaceDto {
   website?: string;
 
   @ApiProperty({
+    description: 'Google Maps link, if not exist will be auto generated based on latitude and longitude',
+    example: 'https://maps.app.goo.gl/example',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  googleMapLink?: string;
+
+  @ApiProperty({
     description: 'Opening hours by day',
     type: [CreatePlaceOpeningHourDto],
     required: false,
