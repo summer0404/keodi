@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EmailPayloadDto } from 'src/shared/dtos/email.dto';
 import { EmailService } from 'src/providers/email/email.service';
 import { NotificationHelper } from './notification.helper';
-import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.utils';
 import { EmailPurpose } from 'src/shared/enums/email.enum';
 
 @Injectable()
