@@ -5,6 +5,10 @@ import {
   OwnerApplicationApprovedDto,
   OwnerApplicationReceivedDto,
   OwnerApplicationRejectedDto,
+  OwnershipClaimApprovedDto,
+  OwnershipClaimDisputedDto,
+  OwnershipClaimRejectedDto,
+  OwnershipRevokedDto,
   SendOTPDto,
   SendVerifyURLDto,
 } from 'src/shared/dtos/email.dto';
@@ -40,9 +44,7 @@ export class NotificationController {
   }
 
   @EventPattern(NotificationTopics.OwnerApplicationReceived)
-  async ownerApplicationReceived(
-    @Payload() data: OwnerApplicationReceivedDto,
-  ) {
+  async ownerApplicationReceived(@Payload() data: OwnerApplicationReceivedDto) {
     return await this.notificationService.sendHtmlEmail(
       data,
       EmailPurpose.OWNER_APPLICATION_RECEIVED,
@@ -58,12 +60,30 @@ export class NotificationController {
   }
 
   @EventPattern(NotificationTopics.OwnerApplicationRejected)
-  async ownerApplicationRejected(
-    @Payload() data: OwnerApplicationRejectedDto,
-  ) {
+  async ownerApplicationRejected(@Payload() data: OwnerApplicationRejectedDto) {
     return await this.notificationService.sendHtmlEmail(
       data,
       EmailPurpose.OWNER_APPLICATION_REJECTED,
     );
+  }
+
+  @EventPattern(NotificationTopics.OwnershipClaimApproved)
+  async ownershipClaimApproved(@Payload() data: OwnershipClaimApprovedDto) {
+    return await this.notificationService.sendOwnershipClaimApprovedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.OwnershipClaimRejected)
+  async ownershipClaimRejected(@Payload() data: OwnershipClaimRejectedDto) {
+    return await this.notificationService.sendOwnershipClaimRejectedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.OwnershipRevoked)
+  async ownershipRevoked(@Payload() data: OwnershipRevokedDto) {
+    return await this.notificationService.sendOwnershipRevokedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.OwnershipClaimDisputed)
+  async ownershipClaimDisputed(@Payload() data: OwnershipClaimDisputedDto) {
+    return await this.notificationService.sendOwnershipClaimDisputedEmail(data);
   }
 }

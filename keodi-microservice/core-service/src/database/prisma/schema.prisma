@@ -74,6 +74,7 @@ model User {
   groupSessions      GroupSession[]       @relation("CreatedSessions")
   setting            UserSetting?
   ownerApplication   OwnerApplication?
+  ownershipClaims    OwnershipClaim[]
 
   @@map("users")
 }
@@ -96,6 +97,32 @@ model OwnerApplication {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("owner_applications")
+}
+
+enum OwnershipClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISPUTED
+}
+
+model OwnershipClaim {
+  id                String               @id @default(cuid())
+  userId            String               @map("user_id")
+  placeId           String               @map("place_id")
+  relationship      String
+  proofDocumentUrls String[]             @map("proof_document_urls")
+  note   String?              @map("additional_notes")
+  status            OwnershipClaimStatus @default(PENDING)
+  rejectionReason   String?              @map("rejection_reason")
+  reviewedAt        DateTime?            @map("reviewed_at")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("ownership_claims")
 }
 
 model Image {
@@ -184,6 +211,7 @@ model Place {
   sessionVotes           SessionVote[]
   wonGroupSessions       GroupSession[]          @relation("SessionWinningPlace")
   groupSessionCandidates GroupSessionCandidate[]
+  ownershipClaims        OwnershipClaim[]
 
   @@index([latitude, longitude])
   @@index([ftsSearchVector], type: Gin, map: "places_fts_vector_idx")

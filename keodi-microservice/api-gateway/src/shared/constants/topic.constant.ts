@@ -34,6 +34,14 @@ export const OwnerApplicationTopics = {
   Reject: 'owner-application.reject',
 } as const;
 
+export const OwnershipClaimTopics = {
+  Create: 'ownership-claim.create',
+  Approve: 'ownership-claim.approve',
+  Reject: 'ownership-claim.reject',
+  GetAll: 'ownership-claim.get-all',
+  GetMyClaims: 'ownership-claim.get-my-claims',
+} as const;
+
 export const PlaceTopics = {
   GetById: 'place.get-by-id',
   NearMe: 'place.near-me',

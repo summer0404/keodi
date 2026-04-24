@@ -17,8 +17,9 @@ import { UserModule } from './modules/user/user.module';
 import { ProviderModule } from './providers/provider.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { SettingModule } from './modules/setting/setting.module';
-import { OwnerApplicationModule } from './modules/owner-application/owner-application.module';
 import { DeviceTokenModule } from './modules/device-token/device-token.module';
+import { OwnerApplicationModule } from './modules/owner-application/owner-application.module';
+import { OwnershipClaimModule } from './modules/ownership-claim/ownership-claim.module';
 
 @Module({
   providers: [
@@ -51,6 +52,7 @@ import { DeviceTokenModule } from './modules/device-token/device-token.module';
     ProviderModule,
     SettingModule,
     OwnerApplicationModule,
+    OwnershipClaimModule,
     DeviceTokenModule,
   ],
 })
