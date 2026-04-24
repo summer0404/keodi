@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMinSize, IsArray, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 import { OwnershipClaimStatus } from '../enums/ownership-claim.enum';
 
@@ -87,14 +94,53 @@ export class OwnershipClaimResponseDto {
   };
 }
 
-export class PaginatedOwnershipClaimResponseDto extends PaginationResponseDto {
+export class PlaceOwnershipClaimsResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiPropertyOptional()
+  ownerId?: string;
+  @ApiPropertyOptional()
+  owner?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    username: string;
+  };
+
   @ApiProperty({ type: [OwnershipClaimResponseDto] })
-  data: OwnershipClaimResponseDto[];
+  ownershipClaims: OwnershipClaimResponseDto[];
+}
+
+export class PaginatedOwnershipClaimResponseDto extends PaginationResponseDto {
+  @ApiProperty({ type: [PlaceOwnershipClaimsResponseDto] })
+  data: PlaceOwnershipClaimsResponseDto[];
 }
 
 export class GetOwnershipClaimsDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ enum: OwnershipClaimStatus, description: 'Filter by status' })
+  @ApiPropertyOptional({
+    enum: OwnershipClaimStatus,
+    description: 'Filter by status',
+  })
   @IsOptional()
   @IsEnum(OwnershipClaimStatus)
   status?: OwnershipClaimStatus;
+}
+
+export class GetMyOwnershipClaimsDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    enum: OwnershipClaimStatus,
+    description: 'Filter by status',
+  })
+  @IsOptional()
+  @IsEnum(OwnershipClaimStatus)
+  status?: OwnershipClaimStatus;
+}
+
+export class PaginatedMyOwnershipClaimsResponseDto extends PaginationResponseDto {
+  @ApiProperty({ type: [OwnershipClaimResponseDto] })
+  data: OwnershipClaimResponseDto[];
 }

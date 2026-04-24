@@ -6,7 +6,9 @@ import {
   OwnerApplicationReceivedDto,
   OwnerApplicationRejectedDto,
   OwnershipClaimApprovedDto,
+  OwnershipClaimDisputedDto,
   OwnershipClaimRejectedDto,
+  OwnershipRevokedDto,
   SendOTPDto,
   SendVerifyURLDto,
 } from 'src/shared/dtos/email.dto';
@@ -15,9 +17,7 @@ import { EmailPurpose } from 'src/shared/enums/email.enum';
 
 @Controller()
 export class NotificationController {
-  constructor(
-    private readonly notificationService: NotificationService,
-  ) {}
+  constructor(private readonly notificationService: NotificationService) {}
 
   @EventPattern(NotificationTopics.ForgotPassword)
   async forgotPassword(@Payload() data: SendOTPDto) {
@@ -44,9 +44,7 @@ export class NotificationController {
   }
 
   @EventPattern(NotificationTopics.OwnerApplicationReceived)
-  async ownerApplicationReceived(
-    @Payload() data: OwnerApplicationReceivedDto,
-  ) {
+  async ownerApplicationReceived(@Payload() data: OwnerApplicationReceivedDto) {
     return await this.notificationService.sendHtmlEmail(
       data,
       EmailPurpose.OWNER_APPLICATION_RECEIVED,
@@ -62,9 +60,7 @@ export class NotificationController {
   }
 
   @EventPattern(NotificationTopics.OwnerApplicationRejected)
-  async ownerApplicationRejected(
-    @Payload() data: OwnerApplicationRejectedDto,
-  ) {
+  async ownerApplicationRejected(@Payload() data: OwnerApplicationRejectedDto) {
     return await this.notificationService.sendHtmlEmail(
       data,
       EmailPurpose.OWNER_APPLICATION_REJECTED,
@@ -77,9 +73,17 @@ export class NotificationController {
   }
 
   @EventPattern(NotificationTopics.OwnershipClaimRejected)
-  async ownershipClaimRejected(
-    @Payload() data: OwnershipClaimRejectedDto,
-  ) {
+  async ownershipClaimRejected(@Payload() data: OwnershipClaimRejectedDto) {
     return await this.notificationService.sendOwnershipClaimRejectedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.OwnershipRevoked)
+  async ownershipRevoked(@Payload() data: OwnershipRevokedDto) {
+    return await this.notificationService.sendOwnershipRevokedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.OwnershipClaimDisputed)
+  async ownershipClaimDisputed(@Payload() data: OwnershipClaimDisputedDto) {
+    return await this.notificationService.sendOwnershipClaimDisputedEmail(data);
   }
 }

@@ -3,6 +3,7 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { OwnershipClaimTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnershipClaimDto,
+  GetMyOwnershipClaimsDto,
   GetOwnershipClaimsDto,
   RejectOwnershipClaimDto,
 } from 'src/shared/dtos/ownership-claim.dto';
@@ -11,7 +12,10 @@ import {
 export class OwnershipClaimService {
   constructor(private readonly kafkaService: KafkaService) {}
 
-  async create(userId: string, createOwnershipClaimDto: CreateOwnershipClaimDto) {
+  async create(
+    userId: string,
+    createOwnershipClaimDto: CreateOwnershipClaimDto,
+  ) {
     return await this.kafkaService.sendWithTimeout(
       OwnershipClaimTopics.Create,
       { ...createOwnershipClaimDto, userId },
@@ -25,7 +29,10 @@ export class OwnershipClaimService {
     );
   }
 
-  async reject(claimId: string, rejectOwnershipClaimDto: RejectOwnershipClaimDto) {
+  async reject(
+    claimId: string,
+    rejectOwnershipClaimDto: RejectOwnershipClaimDto,
+  ) {
     return await this.kafkaService.sendWithTimeout(
       OwnershipClaimTopics.Reject,
       { claimId, data: rejectOwnershipClaimDto },
@@ -36,6 +43,13 @@ export class OwnershipClaimService {
     return await this.kafkaService.sendWithTimeout(
       OwnershipClaimTopics.GetAll,
       query,
+    );
+  }
+
+  async getMyClaims(userId: string, query: GetMyOwnershipClaimsDto) {
+    return await this.kafkaService.sendWithTimeout(
+      OwnershipClaimTopics.GetMyClaims,
+      { ...query, userId },
     );
   }
 }

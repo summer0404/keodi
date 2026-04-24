@@ -1,4 +1,11 @@
-import { ArrayMinSize, IsArray, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { OwnershipClaimStatus } from '@prisma/client';
 import { PaginationQueryDto } from './pagination.dto';
 
@@ -32,6 +39,16 @@ export class RejectOwnershipClaimDto {
 }
 
 export class GetOwnershipClaimsDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsEnum(OwnershipClaimStatus)
+  status?: OwnershipClaimStatus;
+}
+
+export class GetMyOwnershipClaimsDto extends PaginationQueryDto {
+  @IsNotEmpty()
+  @IsString()
+  userId: string;
+
   @IsOptional()
   @IsEnum(OwnershipClaimStatus)
   status?: OwnershipClaimStatus;

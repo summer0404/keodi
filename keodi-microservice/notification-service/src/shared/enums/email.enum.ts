@@ -7,6 +7,8 @@ export enum EmailSubject {
   OWNER_APPLICATION_REJECTED = 'Keodi - Owner Application Update',
   OWNERSHIP_CLAIM_APPROVED = 'Keodi - Ownership Claim Approved',
   OWNERSHIP_CLAIM_REJECTED = 'Keodi - Ownership Claim Update',
+  OWNERSHIP_REVOKED = 'Keodi - Place Ownership Update',
+  OWNERSHIP_CLAIM_DISPUTED = 'Keodi - New Ownership Dispute Filed',
 }
 
 export enum EmailPurpose {
@@ -18,4 +20,6 @@ export enum EmailPurpose {
   OWNER_APPLICATION_REJECTED = 'OWNER_APPLICATION_REJECTED',
   OWNERSHIP_CLAIM_APPROVED = 'OWNERSHIP_CLAIM_APPROVED',
   OWNERSHIP_CLAIM_REJECTED = 'OWNERSHIP_CLAIM_REJECTED',
+  OWNERSHIP_REVOKED = 'OWNERSHIP_REVOKED',
+  OWNERSHIP_CLAIM_DISPUTED = 'OWNERSHIP_CLAIM_DISPUTED',
 }

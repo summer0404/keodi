@@ -6,6 +6,7 @@ export const OwnerApplicationErrorMessages = {
 
 export const OwnershipClaimErrorMessages = {
   CLAIM_ALREADY_EXISTS: 'CLAIM_ALREADY_EXISTS',
+  CLAIM_ALREADY_APPROVED: 'CLAIM_ALREADY_APPROVED',
   CLAIM_NOT_FOUND: 'CLAIM_NOT_FOUND',
   CLAIM_ALREADY_REVIEWED: 'CLAIM_ALREADY_REVIEWED',
 } as const;

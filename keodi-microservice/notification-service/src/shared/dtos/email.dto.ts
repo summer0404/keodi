@@ -26,6 +26,14 @@ export class OwnershipClaimRejectedDto extends SendMailDto {
     reason: string
 }
 
+export class OwnershipRevokedDto extends SendMailDto {
+    placeName: string
+}
+
+export class OwnershipClaimDisputedDto extends SendMailDto {
+    placeName: string
+}
+
 export type EmailPayloadDto =
     SendOTPDto |
     SendVerifyURLDto |
@@ -33,4 +41,6 @@ export type EmailPayloadDto =
     OwnerApplicationApprovedDto |
     OwnerApplicationRejectedDto |
     OwnershipClaimApprovedDto |
-    OwnershipClaimRejectedDto;
+    OwnershipClaimRejectedDto |
+    OwnershipRevokedDto |
+    OwnershipClaimDisputedDto;

@@ -39,6 +39,7 @@ export const OwnershipClaimTopics = {
   Approve: 'ownership-claim.approve',
   Reject: 'ownership-claim.reject',
   GetAll: 'ownership-claim.get-all',
+  GetMyClaims: 'ownership-claim.get-my-claims',
 } as const;
 
 export const PlaceTopics = {

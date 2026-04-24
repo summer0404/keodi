@@ -27,6 +27,7 @@ export const OwnershipClaimTopics = {
   Approve: 'ownership-claim.approve',
   Reject: 'ownership-claim.reject',
   GetAll: 'ownership-claim.get-all',
+  GetMyClaims: 'ownership-claim.get-my-claims',
 } as const;
 
 export const PlaceTopics = {
@@ -119,6 +120,8 @@ export const NotificationTopics = {
   RealtimePush: 'notification.realtime.push',
   OwnershipClaimApproved: 'notification.ownership-claim.approved',
   OwnershipClaimRejected: 'notification.ownership-claim.rejected',
+  OwnershipRevoked: 'notification.ownership-claim.revoked',
+  OwnershipClaimDisputed: 'notification.ownership-claim.disputed',
   GetActiveTokens: 'device-token.get-active',
   UpsertToken: 'device-token.upsert',
   DeactivateToken: 'device-token.deactivate',

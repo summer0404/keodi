@@ -7,6 +7,8 @@ export const NotificationTopics = {
     OwnerApplicationRejected: 'notification.owner-application.rejected',
     OwnershipClaimApproved: 'notification.ownership-claim.approved',
     OwnershipClaimRejected: 'notification.ownership-claim.rejected',
+    OwnershipRevoked: 'notification.ownership-claim.revoked',
+    OwnershipClaimDisputed: 'notification.ownership-claim.disputed',
     Dispatch: 'notification.dispatch',
     PersistInbox: 'notification.persist-inbox',
     RealtimePush: 'notification.realtime.push',

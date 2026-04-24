@@ -64,6 +64,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Approve);
     this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Reject);
     this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.GetAll);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.GetMyClaims);
 
     //place topic
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetById);

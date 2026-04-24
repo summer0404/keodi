@@ -3,7 +3,8 @@ import { IsNotEmpty, IsString } from 'class-validator';
 
 export class RejectOwnerApplicationDto {
   @ApiProperty({
-    example: 'Your submitted business license is expired. Please resubmit a valid document.',
+    example:
+      'Your submitted business license is expired. Please resubmit a valid document.',
   })
   @IsNotEmpty()
   @IsString()

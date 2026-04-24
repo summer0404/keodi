@@ -3,6 +3,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { OwnershipClaimTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnershipClaimDto,
+  GetMyOwnershipClaimsDto,
   GetOwnershipClaimsDto,
   RejectOwnershipClaimDto,
 } from 'src/shared/dtos/ownership-claim.dto';
@@ -32,5 +33,10 @@ export class OwnershipClaimController {
   @MessagePattern(OwnershipClaimTopics.GetAll)
   async getClaims(@Payload() data: GetOwnershipClaimsDto) {
     return await this.ownershipClaimService.getClaims(data);
+  }
+
+  @MessagePattern(OwnershipClaimTopics.GetMyClaims)
+  async getMyClaims(@Payload() data: GetMyOwnershipClaimsDto) {
+    return await this.ownershipClaimService.getMyClaims(data);
   }
 }
