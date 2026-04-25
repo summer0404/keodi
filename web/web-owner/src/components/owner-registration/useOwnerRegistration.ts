@@ -47,7 +47,6 @@ export function useOwnerRegistration() {
         ...rest,
         businessPhone: `${countryCode}${rest.businessPhone}`,
       };
-      console.log("Outgoing API payload:", payload);
       await registerOwner(payload)
       setCurrentStep(3)
     } catch (error: any) {
