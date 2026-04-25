@@ -171,6 +171,8 @@ export class AuthService {
       let ownerApplicationId: string | undefined;
 
       try {
+        await this.userService.createUserInfomation(newOwner.id);
+
         const ownerApplication =
           await this.kafkaService.sendWithTimeout(OwnerApplicationTopics.Create, {
             userId: newOwner.id,
@@ -199,7 +201,6 @@ export class AuthService {
       }
 
       this.sendEmailVerifyUrl(newOwner.email, VerifyUrlPurpose.VERIFY_EMAIL);
-      this.userService.createUserInfomation(newOwner.id);
 
       this.kafkaService.getClient().emit(NotificationTopics.OwnerApplicationReceived, {
         to: newOwner.email,
