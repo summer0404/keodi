@@ -6,7 +6,8 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./assets/*": "./assets/*"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

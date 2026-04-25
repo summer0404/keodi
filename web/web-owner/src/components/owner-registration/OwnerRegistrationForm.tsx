@@ -1,11 +1,5 @@
-import { zodResolver } from "@hookform/resolvers/zod"
-import { registerOwner } from "@keodi/shared"
 import { ArrowRight, Check, Eye, EyeOff, Info, Lock, Mail, Plus, Trash, User, X } from "lucide-react"
-import * as React from "react"
-import { useForm } from "react-hook-form"
-import { useNavigate } from "react-router-dom"
-import * as z from "zod"
-import keodiIcon from "../../../../packages/shared/assets/icon.png"
+import keodiIcon from "@keodi/shared/assets/icon.png"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -19,125 +13,29 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 
-const registerOwnerSchema = z.object({
-  username: z.string()
-    .min(3, { message: "Username must be at least 3 characters" })
-    .max(20, { message: "Username must not exceed 20 characters" })
-    .regex(/^(?!\d+$)[A-Za-z0-9._]+$/, {
-      message: "Letters, numbers, underscores, and dots only"
-    }),
-  email: z.string().email({ message: "Invalid email format" }),
-  password: z.string()
-    .min(8, { message: "Password must be at least 8 characters long" })
-    .regex(/.*[A-Z].*/, { message: "Must contain at least one uppercase letter" })
-    .regex(/.*\d.*/, { message: "Must contain at least one number" })
-    .regex(/.*[@$!%*?&^+#].*/, { message: "Must contain at least one special character" }),
-  confirmPassword: z.string(),
-
-  businessName: z.string().min(1, { message: "Business name is required" }),
-  countryCode: z.string().min(1, { message: "Code required" }),
-  businessPhone: z.string().min(1, { message: "Business phone is required" }),
-  businessAddress: z.string().min(1, { message: "Business address is required" }),
-  taxId: z.string().min(1, { message: "Tax ID is required" }),
-  businessWebsite: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal('')),
-  proofDocumentUrls: z.array(z.string().url({ message: "Must be a valid document URL" }))
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-})
-
-type RegisterOwnerFormValues = z.infer<typeof registerOwnerSchema>
-
-const steps = [
-  { id: 1, name: "ACCOUNT" },
-  { id: 2, name: "BUSINESS" },
-  { id: 3, name: "VERIFY" },
-]
+import { steps } from "./constants"
+import { useOwnerRegistration } from "./useOwnerRegistration"
 
 export default function OwnerRegistrationForm() {
-  const navigate = useNavigate()
-  const [currentStep, setCurrentStep] = React.useState(1)
-  const [showPassword, setShowPassword] = React.useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false)
-  const [submitError, setSubmitError] = React.useState<string | null>(null)
-
-  const form = useForm<RegisterOwnerFormValues>({
-    resolver: zodResolver(registerOwnerSchema),
-    defaultValues: {
-      username: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      businessName: "",
-      countryCode: "+84",
-      businessPhone: "",
-      businessAddress: "",
-      taxId: "",
-      businessWebsite: "",
-      proofDocumentUrls: [""],
-    },
-    mode: "onChange",
-  })
-
-  const passwordValue = form.watch("password")
-  const proofDocs = form.watch("proofDocumentUrls") || [""]
-
-  const passwordRequirements = [
-    { label: "Min. 8 characters", isMet: passwordValue.length >= 8 },
-    { label: "One number", isMet: /.*\d.*/.test(passwordValue) },
-    { label: "One uppercase", isMet: /.*[A-Z].*/.test(passwordValue) },
-    { label: "Special char (!@$%^&*+)", isMet: /.*[@$!%*?&^+#].*/.test(passwordValue) },
-  ]
-
-  const onSubmit = async (data: RegisterOwnerFormValues) => {
-    try {
-      const { confirmPassword, countryCode, ...rest } = data;
-      const payload = {
-        ...rest,
-        businessPhone: `${countryCode}${rest.businessPhone}`,
-      };
-      console.log("Outgoing API payload:", payload);
-      await registerOwner(payload)
-      setCurrentStep(3)
-    } catch (error: any) {
-      console.error("Submission failed:", error)
-      setSubmitError(error.message || "An unexpected error occurred during registration.")
-      
-      // Auto-dismiss the popup
-      setTimeout(() => setSubmitError(null), 5000)
-    }
-  }
-
-  const nextStep = async () => {
-    const fieldsToValidate = ['username', 'email', 'password', 'confirmPassword']
-    const isStepValid = await form.trigger(fieldsToValidate as any)
-    if (isStepValid) {
-      setCurrentStep(2)
-    }
-  }
-
-  const prevStep = () => {
-    if (currentStep === 2) {
-      setCurrentStep(1)
-    }
-  }
-
-  const { errors, isValid } = form.formState;
-  const wUsername = form.watch("username");
-  const wEmail = form.watch("email");
-  const wPassword = form.watch("password");
-  const wConfirm = form.watch("confirmPassword");
-
-  const isStep1Complete = !!(
-    wUsername &&
-    wEmail &&
-    wPassword &&
-    wConfirm &&
-    !errors.username &&
-    !errors.email &&
-    !errors.password &&
-    !errors.confirmPassword
-  );
+  const {
+    form,
+    navigate,
+    currentStep,
+    setCurrentStep,
+    showPassword,
+    setShowPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    submitError,
+    setSubmitError,
+    passwordRequirements,
+    proofDocs,
+    onSubmit,
+    nextStep,
+    prevStep,
+    isStep1Complete,
+    isValid
+  } = useOwnerRegistration()
 
   // --- SUCCESS SCREEN ---
   if (currentStep === 3) {
@@ -165,7 +63,6 @@ export default function OwnerRegistrationForm() {
           </div>
         </Card>
 
-        {/* Info panel below the card */}
         <div className="w-full max-w-xl mt-6">
           <div className="bg-neutral-100/80 rounded-xl p-5 flex items-start">
             <Info className="w-5 h-5 text-neutral-500 mt-0.5 mr-3 shrink-0" />
@@ -179,7 +76,6 @@ export default function OwnerRegistrationForm() {
     )
   }
 
-  // --- FORM SCREEN ---
   return (
     <div className="min-h-screen bg-white sm:bg-[#fafafa] flex flex-col items-center justify-center p-4 py-8">
       <Card className="w-full max-w-xl bg-white ring-0 sm:ring-1 shadow-none sm:shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-none sm:border-solid sm:border-neutral-200/60 p-2 sm:p-10 rounded-none sm:rounded-2xl">
@@ -223,9 +119,7 @@ export default function OwnerRegistrationForm() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-
             <div className={`space-y-5 transition-all duration-300 ${currentStep === 1 ? 'block animate-in fade-in slide-in-from-right-4' : 'hidden'}`}>
-
               <FormField
                 control={form.control}
                 name="username"
@@ -435,7 +329,6 @@ export default function OwnerRegistrationForm() {
                 />
               </div>
 
-              {/* Proof Documents Section */}
               <div className="pt-2">
                 <FormLabel className="text-xs font-semibold uppercase tracking-wider text-neutral-700">Proof Documents</FormLabel>
                 <div className="mt-2 space-y-3">
@@ -484,10 +377,8 @@ export default function OwnerRegistrationForm() {
                   </Button>
                 </div>
               </div>
-
             </div>
 
-            {/* Navigation Buttons for Forms */}
             <div className="flex items-center justify-between pt-4 mt-6 border-t border-neutral-100">
               <Button
                 type="button"
@@ -518,12 +409,10 @@ export default function OwnerRegistrationForm() {
                 </Button>
               )}
             </div>
-
           </form>
         </Form>
       </Card>
 
-      {/* Error Popup Window (Toast) */}
       {submitError && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-8 fade-in duration-300">
           <div className="bg-red-50 text-red-900 border border-red-200 shadow-xl rounded-xl p-4 flex items-start max-w-sm md:max-w-md">
@@ -541,7 +430,6 @@ export default function OwnerRegistrationForm() {
           </div>
         </div>
       )}
-
     </div>
   )
 }

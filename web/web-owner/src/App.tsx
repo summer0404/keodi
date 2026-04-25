@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import OwnerRegistrationForm from './components/OwnerRegistrationForm'
+import OwnerRegistrationForm from './components/owner-registration/OwnerRegistrationForm'
 
 function App() {
   return (
