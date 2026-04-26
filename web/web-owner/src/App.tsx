@@ -1,10 +1,16 @@
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import OwnerRegistrationForm from './components/owner-registration/OwnerRegistrationForm'
 
 function App() {
   return (
-    <main className="app">
-      <h1>Hello World</h1>
-    </main>
+    <Router>
+      <main className="app bg-[#fafafa]">
+        <Routes>
+          <Route path="/registration" element={<OwnerRegistrationForm />} />
+          <Route path="/" element={<Navigate to="/registration" replace />} />
+        </Routes>
+      </main>
+    </Router>
   )
 }
 

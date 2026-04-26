@@ -1,1 +1,2 @@
-export const TEST_MESSAGE = "The Monorepo is ALIVE! 🚀";
+export * from './constants';
+export * from './api';

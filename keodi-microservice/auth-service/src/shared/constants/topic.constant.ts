@@ -17,6 +17,7 @@ export const AuthTopics = {
 
 export const UserTopics = {
   Create: 'user.create',
+  Delete: 'user.delete',
   Unverify: 'user.unverify',
   UpdateUsername: 'user.update-username',
   UsernameSynced: 'user.username-synced',

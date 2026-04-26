@@ -18,6 +18,11 @@ export class UserController {
     return await this.userService.create(data);
   }
 
+  @MessagePattern(UserTopics.Delete)
+  async delete(@Payload() data: { userId: string }) {
+    return await this.userService.delete(data.userId);
+  }
+
   @MessagePattern(UserTopics.UpdatePicture)
   async updatePicture(
     @Payload() data: { file: Buffer; userId: string; type?: string },

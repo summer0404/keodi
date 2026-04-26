@@ -139,6 +139,16 @@ export class UserService {
     }
   }
 
+  async delete(userId: string) {
+    try {
+      await this.prismaService.user.delete({
+        where: { id: userId },
+      });
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
   async updatePicture(file: Buffer, userId: string, type?: string) {
     try {
       const existingUser = await this.prismaService.user.findUnique({
