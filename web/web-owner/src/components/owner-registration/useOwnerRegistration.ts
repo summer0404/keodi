@@ -47,7 +47,7 @@ export function useOwnerRegistration() {
         ...rest,
         businessPhone: `${countryCode}${rest.businessPhone}`,
       };
-      await registerOwner(payload)
+      await registerOwner(payload, import.meta.env.VITE_API_BASE_URL)
       setCurrentStep(3)
     } catch (error: any) {
       console.error("Submission failed:", error)

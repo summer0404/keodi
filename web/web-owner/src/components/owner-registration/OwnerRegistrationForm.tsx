@@ -276,7 +276,7 @@ export default function OwnerRegistrationForm() {
               />
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col space-y-2">
-                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-neutral-700">Phone</FormLabel>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-700">Phone</label>
                   <div className="flex items-start gap-4">
                     <FormField
                       control={form.control}
@@ -330,7 +330,7 @@ export default function OwnerRegistrationForm() {
               </div>
 
               <div className="pt-2">
-                <FormLabel className="text-xs font-semibold uppercase tracking-wider text-neutral-700">Proof Documents</FormLabel>
+                <label className="text-xs font-semibold uppercase tracking-wider text-neutral-700">Proof Documents</label>
                 <div className="mt-2 space-y-3">
                   {proofDocs.map((doc, index) => (
                     <div key={index} className="flex items-start space-x-2">

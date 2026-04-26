@@ -20,7 +20,10 @@ export const registerOwnerSchema = z.object({
   businessPhone: z.string().min(1, { message: "Business phone is required" }),
   businessAddress: z.string().min(1, { message: "Business address is required" }),
   taxId: z.string().min(1, { message: "Tax ID is required" }),
-  businessWebsite: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal('')),
+  businessWebsite: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.string().url({ message: "Must be a valid URL address" }).optional()
+  ),
   proofDocumentUrls: z.array(z.string().url({ message: "Must be a valid document URL" }))
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

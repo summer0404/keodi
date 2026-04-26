@@ -1,7 +1,7 @@
 import { AUTH_API_URLS } from './constants';
 
-export async function registerOwner(data: any): Promise<any> {
-  const response = await fetch(AUTH_API_URLS.REGISTER_OWNER, {
+export async function registerOwner(data: any, baseUrl: string): Promise<any> {
+  const response = await fetch(AUTH_API_URLS(baseUrl).REGISTER_OWNER, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
