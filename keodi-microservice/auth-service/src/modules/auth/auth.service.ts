@@ -7,13 +7,13 @@ import type { StringValue } from 'ms';
 import { PrismaService } from 'src/database/prisma.service';
 import { UserService } from 'src/modules/user/user.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { AuthErrorMessages } from 'src/shared/constants/error.constant';
+import { OWNER_APPLICATION_REVIEW_DAYS } from 'src/shared/constants/owner.constant';
 import {
   NotificationTopics,
   OwnerApplicationTopics,
+  UserTopics,
 } from 'src/shared/constants/topic.constant';
-import { AuthErrorMessages } from 'src/shared/constants/error.constant';
-import { OWNER_APPLICATION_REVIEW_DAYS } from 'src/shared/constants/owner.constant';
-import { handleServiceErrorCatching } from 'src/shared/utils/error.helper';
 import {
   LoginDto,
   RegisterDto,
@@ -34,6 +34,7 @@ import {
   failVerifyAccountTemplate,
   successVerifyAccountTemplate,
 } from 'src/shared/templates/verify-email-response.template';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.helper';
 import { timeLimitResend } from 'src/shared/utils/time-limit-resend';
 import { getTTLForPurpose } from 'src/shared/utils/ttl-redis.helper';
 import { OtpService } from './otp.service';
@@ -173,8 +174,9 @@ export class AuthService {
       try {
         await this.userService.createUserInfomation(newOwner.id);
 
-        const ownerApplication =
-          await this.kafkaService.sendWithTimeout(OwnerApplicationTopics.Create, {
+        const ownerApplication = await this.kafkaService.sendWithTimeout(
+          OwnerApplicationTopics.Create,
+          {
             userId: newOwner.id,
             businessName: data.businessName,
             businessPhone: data.businessPhone,
@@ -182,7 +184,8 @@ export class AuthService {
             taxId: data.taxId,
             businessWebsite: data.businessWebsite,
             proofDocumentUrls: data.proofDocumentUrls,
-          });
+          },
+        );
 
         ownerApplicationId = ownerApplication?.ownerApplicationId;
 
@@ -197,15 +200,20 @@ export class AuthService {
             id: newOwner.id,
           },
         });
+        this.kafkaService
+          .getClient()
+          .emit(UserTopics.Delete, { userId: newOwner.id });
         throw error;
       }
 
       this.sendEmailVerifyUrl(newOwner.email, VerifyUrlPurpose.VERIFY_EMAIL);
 
-      this.kafkaService.getClient().emit(NotificationTopics.OwnerApplicationReceived, {
-        to: newOwner.email,
-        businessDays: OWNER_APPLICATION_REVIEW_DAYS,
-      });
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationReceived, {
+          to: newOwner.email,
+          businessDays: OWNER_APPLICATION_REVIEW_DAYS,
+        });
 
       return {
         message: 'Owner application submitted successfully',
@@ -585,9 +593,11 @@ export class AuthService {
         },
       });
 
-      this.kafkaService.getClient().emit(NotificationTopics.OwnerApplicationApproved, {
-        to: user.email,
-      });
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationApproved, {
+          to: user.email,
+        });
 
       return { message: 'Owner approved successfully' };
     } catch (error) {
@@ -614,10 +624,12 @@ export class AuthService {
         },
       });
 
-      this.kafkaService.getClient().emit(NotificationTopics.OwnerApplicationRejected, {
-        to: user.email,
-        reason,
-      });
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationRejected, {
+          to: user.email,
+          reason,
+        });
 
       return { message: 'Owner rejected successfully' };
     } catch (error) {

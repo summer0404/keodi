@@ -1,5 +1,6 @@
 export const UserTopics = {
   Create: 'user.create',
+  Delete: 'user.delete',
   Get: 'user.get',
   GetAll: 'user.get-all',
   SearchOthers: 'user.search-others',
