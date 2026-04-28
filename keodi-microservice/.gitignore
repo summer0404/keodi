@@ -1,3 +1,4 @@
 kafdrop
 /helpers
-.github
+.github/**/*.md
+.github/*.md
