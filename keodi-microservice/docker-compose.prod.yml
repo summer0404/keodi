@@ -1,12 +1,54 @@
-# =============================================================================
-# Keodi Microservice - Production Docker Compose
-# Usage: GITHUB_REPOSITORY=owner/repo docker compose -f docker-compose.prod.yml up -d
-# =============================================================================
-
 services:
-  # ─────────────────────────────────────────────
-  # Infrastructure
-  # ─────────────────────────────────────────────
+  auth-postgres:
+    image: postgres:17
+    container_name: auth-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: ${AUTH_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-admin} -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  core-postgres:
+    image: pgvector/pgvector:pg17
+    container_name: core-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: core_db
+      POSTGRES_USER: ${CORE_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${CORE_DB_PASSWORD}
+    volumes:
+      - core_postgres_data:/var/lib/postgresql/data
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CORE_DB_USER:-admin} -d core_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     container_name: zookeeper
@@ -54,9 +96,6 @@ services:
         limits:
           memory: 1G
 
-  # ─────────────────────────────────────────────
-  # Application Services
-  # ─────────────────────────────────────────────
   api-gateway:
     image: ghcr.io/${GITHUB_REPOSITORY}/api-gateway:${TAG:-latest}
     container_name: api-gateway
@@ -90,6 +129,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      auth-postgres:
+        condition: service_healthy
       notification-service:
         condition: service_started
     networks:
@@ -114,6 +155,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      core-postgres:
+        condition: service_healthy
     networks:
       - keodi-net
     deploy:
@@ -135,6 +178,8 @@ services:
       - ./env/core-service.env
     depends_on:
       kafka:
+        condition: service_healthy
+      core-postgres:
         condition: service_healthy
     networks:
       - keodi-net
@@ -158,6 +203,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      core-postgres:
+        condition: service_healthy
     networks:
       - keodi-net
     deploy:
@@ -172,6 +219,8 @@ services:
         tag: "{{.Name}}"
 
 volumes:
+  auth_postgres_data:
+  core_postgres_data:
   zookeeper_data:
   zookeeper_log:
   kafka_data:

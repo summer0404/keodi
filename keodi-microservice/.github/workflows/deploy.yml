@@ -1,9 +1,4 @@
-# =============================================================================
-# Keodi Microservice - Build & Deploy Pipeline
-# Trigger: Tag release (v*) or manual workflow_dispatch
-# =============================================================================
-
-name: 🚀 Build & Deploy
+name: Build & Deploy
 
 on:
   push:
@@ -26,11 +21,8 @@ permissions:
   packages: write
 
 jobs:
-  # ============================================
-  # Job 1: Detect which services changed
-  # ============================================
   detect-changes:
-    name: 🔍 Detect Changes
+    name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
       api-gateway: ${{ steps.check.outputs.api-gateway }}
@@ -44,7 +36,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Get version from tag
+      - name: Get version
         id: version
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
@@ -73,11 +65,8 @@ jobs:
             done
           fi
 
-  # ============================================
-  # Job 2: Build & Push Docker images (parallel)
-  # ============================================
   build-api-gateway:
-    name: 🏗️ Build api-gateway
+    name: Build api-gateway
     needs: detect-changes
     if: needs.detect-changes.outputs.api-gateway == 'true'
     runs-on: ubuntu-latest
@@ -97,7 +86,7 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/api-gateway:latest
 
   build-auth-service:
-    name: 🏗️ Build auth-service
+    name: Build auth-service
     needs: detect-changes
     if: needs.detect-changes.outputs.auth-service == 'true'
     runs-on: ubuntu-latest
@@ -117,7 +106,7 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/auth-service:latest
 
   build-core-service:
-    name: 🏗️ Build core-service
+    name: Build core-service
     needs: detect-changes
     if: needs.detect-changes.outputs.core-service == 'true'
     runs-on: ubuntu-latest
@@ -137,7 +126,7 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/core-service:latest
 
   build-notification-service:
-    name: 🏗️ Build notification-service
+    name: Build notification-service
     needs: detect-changes
     if: needs.detect-changes.outputs.notification-service == 'true'
     runs-on: ubuntu-latest
@@ -157,7 +146,7 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/notification-service:latest
 
   build-intelligence-service:
-    name: 🏗️ Build intelligence-service
+    name: Build intelligence-service
     needs: detect-changes
     if: needs.detect-changes.outputs.intelligence-service == 'true'
     runs-on: ubuntu-latest
@@ -176,11 +165,8 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/intelligence-service:${{ needs.detect-changes.outputs.version }}
             ${{ env.IMAGE_PREFIX }}/intelligence-service:latest
 
-  # ============================================
-  # Job 3: Deploy to VPS via SSH
-  # ============================================
   deploy:
-    name: 🚀 Deploy to VPS
+    name: Deploy to VPS
     needs:
       - detect-changes
       - build-api-gateway
@@ -193,14 +179,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy configs to VPS
+      - name: Copy docker-compose to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          source: "docker-compose.prod.yml,docker-compose.monitoring.yml,monitoring/"
+          source: "docker-compose.prod.yml"
           target: "/opt/keodi"
 
       - name: Deploy services
@@ -215,74 +201,11 @@ jobs:
           envs: TAG
           script: |
             cd /opt/keodi
-
-            # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-            # Set environment variables
             export GITHUB_REPOSITORY=${{ github.repository }}
             export TAG=$TAG
-
-            # Pull latest images
-            echo "📥 Pulling images (tag: $TAG)..."
             docker compose -f docker-compose.prod.yml pull
-
-            # Deploy application services
-            echo "🚀 Starting application services..."
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-            # Deploy monitoring stack
-            echo "📊 Starting monitoring stack..."
-            docker compose -f docker-compose.monitoring.yml up -d --remove-orphans
-
-            # Cleanup old images
             docker image prune -f
-
-            # Wait for services to start
-            echo "⏳ Waiting 30s for services to initialize..."
             sleep 30
-
-            # Health checks
-            echo "🔍 Service status:"
             docker compose -f docker-compose.prod.yml ps
-            docker compose -f docker-compose.monitoring.yml ps
-
-            echo "✅ Deploy complete! Tag: $TAG"
-
-  # ============================================
-  # Job 4: Notify via Slack
-  # ============================================
-  notify:
-    name: 📢 Notify
-    needs: [detect-changes, deploy]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Slack Notification
-        if: env.SLACK_WEBHOOK_URL != ''
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
-            STATUS="✅ SUCCESS"
-            COLOR="good"
-          else
-            STATUS="❌ FAILED"
-            COLOR="danger"
-          fi
-
-          curl -X POST "$SLACK_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"attachments\": [{
-                \"color\": \"$COLOR\",
-                \"title\": \"$STATUS — Keodi Deploy\",
-                \"fields\": [
-                  {\"title\": \"Version\", \"value\": \"${{ needs.detect-changes.outputs.version }}\", \"short\": true},
-                  {\"title\": \"Actor\", \"value\": \"${{ github.actor }}\", \"short\": true},
-                  {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": false}
-                ],
-                \"footer\": \"GitHub Actions\",
-                \"ts\": $(date +%s)
-              }]
-            }"
