@@ -79,7 +79,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./api-gateway
+          context: ./keodi-microservice/api-gateway
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}/api-gateway:${{ needs.detect-changes.outputs.version }}
@@ -99,7 +99,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./auth-service
+          context: ./keodi-microservice/auth-service
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}/auth-service:${{ needs.detect-changes.outputs.version }}
@@ -119,7 +119,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./core-service
+          context: ./keodi-microservice/core-service
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}/core-service:${{ needs.detect-changes.outputs.version }}
@@ -139,7 +139,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./notification-service
+          context: ./keodi-microservice/notification-service
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}/notification-service:${{ needs.detect-changes.outputs.version }}
@@ -159,7 +159,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./intelligence-service
+          context: ./keodi-microservice/intelligence-service
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}/intelligence-service:${{ needs.detect-changes.outputs.version }}
@@ -186,7 +186,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          source: "docker-compose.prod.yml"
+          source: "keodi-microservice/docker-compose.prod.yml"
+          strip_components: 1
           target: "/opt/keodi"
 
       - name: Deploy services
