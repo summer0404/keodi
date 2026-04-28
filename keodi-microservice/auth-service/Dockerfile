@@ -1,20 +1,39 @@
-FROM node:20
+# ===== Build Stage =====
+FROM node:20-alpine AS builder
+
+# bcrypt requires native build tools
+RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
 COPY package*.json ./
-
-RUN npm install && npm install -g wait-port
+RUN npm install
 
 COPY . .
-
 RUN npm run prisma:generate
-
 RUN npm run build
+
+# ===== Production Stage =====
+FROM node:20-alpine
+
+# bcrypt requires native runtime libs
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --omit=dev && npm cache clean --force
+
+# Copy built application + Prisma artifacts
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/configs ./src/configs
+COPY --from=builder /app/src/database ./src/database
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 EXPOSE 3001
 
-CMD wait-port kafka:9092 && npm run start
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=15s \
+    CMD wget -qO- http://localhost:3001/health || exit 1
 
-
-
+CMD ["node", "dist/main"]
