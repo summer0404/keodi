@@ -1,0 +1,211 @@
+name: Build & Deploy
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      services:
+        description: "Services to deploy (comma-separated, or 'all')"
+        required: false
+        default: "all"
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api-gateway: ${{ steps.check.outputs.api-gateway }}
+      auth-service: ${{ steps.check.outputs.auth-service }}
+      core-service: ${{ steps.check.outputs.core-service }}
+      notification-service: ${{ steps.check.outputs.notification-service }}
+      intelligence-service: ${{ steps.check.outputs.intelligence-service }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check changes
+        id: check
+        run: |
+          if [[ "${{ github.event.inputs.services }}" == "all" ]] || [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "api-gateway=true" >> $GITHUB_OUTPUT
+            echo "auth-service=true" >> $GITHUB_OUTPUT
+            echo "core-service=true" >> $GITHUB_OUTPUT
+            echo "notification-service=true" >> $GITHUB_OUTPUT
+            echo "intelligence-service=true" >> $GITHUB_OUTPUT
+          else
+            SERVICES="${{ github.event.inputs.services }}"
+            for svc in api-gateway auth-service core-service notification-service intelligence-service; do
+              if echo "$SERVICES" | grep -q "$svc"; then
+                echo "${svc}=true" >> $GITHUB_OUTPUT
+              else
+                echo "${svc}=false" >> $GITHUB_OUTPUT
+              fi
+            done
+          fi
+
+  build-api-gateway:
+    name: Build api-gateway
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api-gateway == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./api-gateway
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/api-gateway:${{ needs.detect-changes.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}/api-gateway:latest
+
+  build-auth-service:
+    name: Build auth-service
+    needs: detect-changes
+    if: needs.detect-changes.outputs.auth-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./auth-service
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/auth-service:${{ needs.detect-changes.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}/auth-service:latest
+
+  build-core-service:
+    name: Build core-service
+    needs: detect-changes
+    if: needs.detect-changes.outputs.core-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./core-service
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/core-service:${{ needs.detect-changes.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}/core-service:latest
+
+  build-notification-service:
+    name: Build notification-service
+    needs: detect-changes
+    if: needs.detect-changes.outputs.notification-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./notification-service
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/notification-service:${{ needs.detect-changes.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}/notification-service:latest
+
+  build-intelligence-service:
+    name: Build intelligence-service
+    needs: detect-changes
+    if: needs.detect-changes.outputs.intelligence-service == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./intelligence-service
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/intelligence-service:${{ needs.detect-changes.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}/intelligence-service:latest
+
+  deploy:
+    name: Deploy to VPS
+    needs:
+      - detect-changes
+      - build-api-gateway
+      - build-auth-service
+      - build-core-service
+      - build-notification-service
+      - build-intelligence-service
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy docker-compose to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: "docker-compose.prod.yml"
+          target: "/opt/keodi"
+
+      - name: Deploy services
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          TAG: ${{ needs.detect-changes.outputs.version }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          envs: TAG
+          script: |
+            cd /opt/keodi
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            export GITHUB_REPOSITORY=${{ github.repository }}
+            export TAG=$TAG
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
+            sleep 30
+            docker compose -f docker-compose.prod.yml ps
