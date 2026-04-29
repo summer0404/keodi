@@ -186,7 +186,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          source: "keodi-microservice/docker-compose.prod.yml"
+          source: "docker-compose.prod.yml,keodi-microservice/monitoring/"
           strip_components: 1
           target: "/opt/keodi"
 
