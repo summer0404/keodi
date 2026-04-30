@@ -5,6 +5,7 @@ import {
   Pressable,
   TextInput,
   TouchableWithoutFeedback,
+  type ViewToken,
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -195,31 +196,6 @@ const GroupSessionCard = React.memo(
               >
                 <Pin size={16} color={isPinned ? Palette.white : Palette.black} strokeWidth={2} />
               </Pressable>
-
-              {currentUserId === item.creator?.id && (
-                <Pressable
-                  accessibilityRole="button"
-                  className={clsx('h-10 w-10 items-center justify-center rounded-full', {
-                    'bg-gray-200': item.status !== 'ACTIVE',
-                    'bg-white': item.status === 'ACTIVE',
-                  })}
-                  style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.18,
-                    shadowRadius: 6,
-                    elevation: 3,
-                  }}
-                  disabled={item.status !== 'ACTIVE' || isClosing}
-                  onPress={() => onClose(item)}
-                >
-                  <X
-                    size={16}
-                    color={item.status !== 'ACTIVE' ? '#9CA3AF' : Palette.black}
-                    strokeWidth={2}
-                  />
-                </Pressable>
-              )}
             </View>
           </View>
         </Pressable>
@@ -244,9 +220,13 @@ export default function GroupScreen() {
   const fetchMe = useAuthStore((state) => state.fetchMe);
   const sessionsById = useGroupSessionStore((state) => state.sessionsById);
   const sessionIds = useGroupSessionStore((state) => state.sessionIds);
+  const currentPage = useGroupSessionStore((state) => state.currentPage);
+  const hasMoreList = useGroupSessionStore((state) => state.hasMoreList);
+  const isLoadingMoreList = useGroupSessionStore((state) => state.isLoadingMoreList);
   const isLoading = useGroupSessionStore((state) => state.isLoadingList);
   const hasLoadedInitialData = useGroupSessionStore((state) => state.hasLoadedInitialData);
   const fetchList = useGroupSessionStore((state) => state.fetchList);
+  const listScopeKey = currentUserId ?? 'guest';
 
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -263,21 +243,28 @@ export default function GroupScreen() {
   );
 
   const refreshSessionsRealtime = useCallback(async () => {
-    if (isRealtimeRefreshingRef.current || isJoining || isCreating || isClosing) {
+    if (
+      isRealtimeRefreshingRef.current ||
+      isJoining ||
+      isCreating ||
+      isClosing ||
+      isLoading ||
+      isLoadingMoreList
+    ) {
       return;
     }
 
     isRealtimeRefreshingRef.current = true;
     try {
-      await fetchList({ force: true, silent: true });
+      await fetchList({ force: true, silent: true, scopeKey: listScopeKey });
     } finally {
       isRealtimeRefreshingRef.current = false;
     }
-  }, [fetchList, isClosing, isCreating, isJoining]);
+  }, [fetchList, isClosing, isCreating, isJoining, isLoading, isLoadingMoreList, listScopeKey]);
 
   useFocusEffect(
     useCallback(() => {
-      void fetchList({ force: true });
+      void fetchList({ force: true, scopeKey: listScopeKey });
       void fetchMe();
 
       const intervalId = setInterval(() => {
@@ -287,7 +274,7 @@ export default function GroupScreen() {
       return () => {
         clearInterval(intervalId);
       };
-    }, [fetchList, fetchMe, refreshSessionsRealtime])
+    }, [fetchList, fetchMe, listScopeKey, refreshSessionsRealtime])
   );
 
   const activeSession = useMemo(
@@ -415,7 +402,7 @@ export default function GroupScreen() {
         shareCode: normalizedShareCode,
       });
       setJoinShareCode('');
-      await fetchList({ force: true });
+      await fetchList({ force: true, scopeKey: listScopeKey });
       router.push(`/(tabs)/group/${joinedSession.sessionId}` as any);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -431,7 +418,43 @@ export default function GroupScreen() {
     } finally {
       setIsJoining(false);
     }
-  }, [activeSession, fetchList, isJoining, joinShareCode, router, t]);
+  }, [activeSession, fetchList, isJoining, joinShareCode, listScopeKey, router, t]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!hasMoreList || isLoadingMoreList) {
+      return;
+    }
+    void fetchList({ page: currentPage + 1, append: true, scopeKey: listScopeKey });
+  }, [
+    currentPage,
+    fetchList,
+    hasMoreList,
+    isLoadingMoreList,
+    listScopeKey,
+    displayedSessions.length,
+  ]);
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
+  const handleViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
+      if (viewableItems.length === 0 || displayedSessions.length === 0) {
+        return;
+      }
+
+      const lastVisibleIndex = viewableItems.reduce((maxIndex, token) => {
+        if (typeof token.index !== 'number') {
+          return maxIndex;
+        }
+
+        return Math.max(maxIndex, token.index);
+      }, -1);
+
+      if (lastVisibleIndex >= displayedSessions.length - 1) {
+        handleLoadMore();
+      }
+    },
+    [displayedSessions.length, handleLoadMore]
+  );
 
   const joinInput = (
     <View className="mt-6 px-1">
@@ -500,11 +523,11 @@ export default function GroupScreen() {
         removePinnedSessionId(sessionToClose.sessionId);
       }
       setSessionToClose(null);
-      await fetchList({ force: true });
+      await fetchList({ force: true, scopeKey: listScopeKey });
     } finally {
       setIsClosing(false);
     }
-  }, [fetchList, removePinnedSessionId, isClosing, pinnedSessionIds, sessionToClose]);
+  }, [fetchList, listScopeKey, removePinnedSessionId, isClosing, pinnedSessionIds, sessionToClose]);
 
   const emptyState = useMemo(() => {
     if (isLoading || !hasLoadedInitialData) {
@@ -612,6 +635,17 @@ export default function GroupScreen() {
           keyExtractor={(item) => item.sessionId}
           renderItem={renderSession}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ListFooterComponent={
+            isLoadingMoreList && hasMoreList ? (
+              <Typography className="py-4 text-center text-gray-500">
+                {t('group.loadingMore')}
+              </Typography>
+            ) : null
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          onViewableItemsChanged={handleViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           contentContainerStyle={{
             paddingHorizontal: horizontalPadding,
             paddingTop: 8,
