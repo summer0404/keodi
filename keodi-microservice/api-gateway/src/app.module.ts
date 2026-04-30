@@ -9,6 +9,7 @@ import { CategoryModule } from './modules/category/category.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { GroupSessionModule } from './modules/group-session/group-session.module';
+import { NotificationInboxModule } from './modules/notification-inbox/notification-inbox.module';
 import { NotificationRealtimeModule } from './modules/notification-realtime/notification-realtime.module';
 import { PlaceModule } from './modules/place/place.module';
 import { ReviewModule } from './modules/review/review.module';
@@ -49,6 +50,7 @@ import { OwnershipClaimModule } from './modules/ownership-claim/ownership-claim.
     AttributeModule,
     SearchModule,
     NotificationRealtimeModule,
+    NotificationInboxModule,
     ProviderModule,
     SettingModule,
     OwnerApplicationModule,

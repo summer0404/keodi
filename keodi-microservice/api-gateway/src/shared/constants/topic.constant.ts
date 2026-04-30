@@ -134,6 +134,13 @@ export const NotificationTopics = {
   RealtimePush: 'notification.realtime.push',
 } as const;
 
+export const NotificationInboxTopics = {
+  GetInbox: 'notification.inbox.get',
+  MarkAsRead: 'notification.inbox.mark-as-read',
+  MarkAllAsRead: 'notification.inbox.mark-all-as-read',
+  GetUnreadCount: 'notification.inbox.unread-count',
+} as const;
+
 export const DeviceTokenTopics = {
   GetActiveTokens: 'device-token.get-active',
   UpsertToken: 'device-token.upsert',
