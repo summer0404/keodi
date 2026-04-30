@@ -38,6 +38,7 @@
     },
     "plugins": [
       "expo-router",
+      "@rnmapbox/maps/app.plugin.js",
       [
         "expo-splash-screen",
         {

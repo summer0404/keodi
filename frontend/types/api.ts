@@ -287,6 +287,14 @@ export interface GroupSessionItem {
   winningPlace?: PlaceItem | null;
 }
 
+export interface GetGroupSessionsResponse {
+  sessions: GroupSessionItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
 export interface CreateGroupSessionResponse {
   sessionId: string;
   createdBy: string;
@@ -440,3 +448,58 @@ export interface GroupVoteItem {
   votes: GroupVoteDetail[];
   results: GroupVoteResult[];
 }
+
+export interface PlaceOpeningHours {
+  dayOfWeek: number;
+  openTime: string | null;
+  closeTime: string | null;
+}
+
+export interface PlaceCategory {
+  id: string;
+  name: string;
+  isMain: boolean;
+}
+
+export interface PlaceRecommendationItem {
+  id: string;
+  name: string;
+  description: string | null;
+  rating: number;
+  googleMapLink: string | null;
+  website: string | null;
+  phoneNumber: string | null;
+  featureImageUrl: string | null;
+  latitude: number;
+  longitude: number;
+  fullAddress: string | null;
+  openingHours: PlaceOpeningHours[];
+  categories: PlaceCategory[];
+}
+
+export type RealtimeLocationSnapshot = {
+  sessionId?: string;
+  locations?: Array<{
+    userId?: string;
+    latitude?: number;
+    longitude?: number;
+    timestamp?: number;
+  }>;
+};
+
+export type RealtimeLocationUpdated = {
+  userId?: string;
+  latitude?: number;
+  longitude?: number;
+  timestamp?: number;
+};
+
+export type RealtimeLocationOffline = {
+  userId?: string;
+};
+
+export type MemberLocation = {
+  memberId?: string;
+  latitude: number;
+  longitude: number;
+};

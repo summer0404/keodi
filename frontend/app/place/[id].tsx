@@ -479,8 +479,10 @@ function PlaceDetailScreen() {
 
     setIsVotingToGroup(true);
     try {
-      const sessions = await groupSessionsService.getGroupSessions();
-      const activeSession = sessions.find((session) => session.status === 'ACTIVE');
+      const sessionsResponse = await groupSessionsService.getGroupSessions();
+      const activeSession = sessionsResponse.sessions.find(
+        (session) => session.status === 'ACTIVE'
+      );
 
       if (!activeSession?.sessionId) {
         setAddToGroupBlockedReason('noActiveGroup');

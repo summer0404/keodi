@@ -1,19 +1,24 @@
 import { create } from 'zustand';
 import { groupSessionsService } from '@/api/groupSessions';
+import { DEFAULT_LIMIT, DEFAULT_PAGE } from '@/constants/helper';
 import type { GroupSessionItem } from '@/types/api';
 
-const DETAIL_BATCH_SIZE = 10;
 const DEFAULT_LIST_TTL_MS = 15 * 1000;
 const DEFAULT_DETAIL_TTL_MS = 15 * 1000;
 
-let fetchListPromise: Promise<GroupSessionItem[]> | null = null;
+const fetchListPromises = new Map<string, Promise<GroupSessionItem[]>>();
 const fetchDetailPromises = new Map<string, Promise<GroupSessionItem | null>>();
+let listLoadingCount = 0;
+let listLoadingMoreCount = 0;
 
 type FetchListOptions = {
   force?: boolean;
   silent?: boolean;
   ttlMs?: number;
-  includeDetails?: boolean;
+  page?: number;
+  limit?: number;
+  append?: boolean;
+  scopeKey?: string | null;
 };
 
 type FetchDetailOptions = {
@@ -24,10 +29,17 @@ type FetchDetailOptions = {
 interface GroupSessionState {
   sessionsById: Record<string, GroupSessionItem>;
   sessionIds: string[];
+  currentPage: number;
+  totalPages: number;
+  totalSessions: number;
+  limit: number;
+  listScopeKey: string | null;
   listFetchedAt: number;
   detailFetchedAtById: Record<string, number>;
   isLoadingList: boolean;
+  isLoadingMoreList: boolean;
   hasLoadedInitialData: boolean;
+  hasMoreList: boolean;
   isLoadingDetailById: Record<string, boolean>;
 
   fetchList: (options?: FetchListOptions) => Promise<GroupSessionItem[]>;
@@ -46,89 +58,166 @@ const mapSessionsById = (sessions: GroupSessionItem[]) => {
   }, {});
 };
 
+const mergeSessions = (
+  previousSessions: GroupSessionItem[],
+  incomingSessions: GroupSessionItem[],
+  append: boolean
+) => {
+  if (incomingSessions.length === 0) {
+    return previousSessions;
+  }
+
+  if (append) {
+    const existingIds = new Set(previousSessions.map((session) => session.sessionId));
+    const filteredIncoming = incomingSessions.filter(
+      (session) => !existingIds.has(session.sessionId)
+    );
+
+    if (filteredIncoming.length === 0) {
+      return previousSessions;
+    }
+
+    return [...previousSessions, ...filteredIncoming];
+  }
+
+  if (previousSessions.length === 0) {
+    return incomingSessions;
+  }
+
+  const incomingIds = new Set(incomingSessions.map((session) => session.sessionId));
+  const remainingPrevious = previousSessions.filter(
+    (session) => !incomingIds.has(session.sessionId)
+  );
+
+  return [...incomingSessions, ...remainingPrevious];
+};
+
 export const useGroupSessionStore = create<GroupSessionState>()((set, get) => ({
   sessionsById: {},
   sessionIds: [],
+  currentPage: 0,
+  totalPages: 0,
+  totalSessions: 0,
+  limit: DEFAULT_LIMIT,
+  listScopeKey: null,
   listFetchedAt: 0,
   detailFetchedAtById: {},
   isLoadingList: false,
+  isLoadingMoreList: false,
   hasLoadedInitialData: false,
+  hasMoreList: false,
   isLoadingDetailById: {},
 
   fetchList: async (options) => {
-    const { force = false, silent = false, includeDetails = true } = options ?? {};
+    const { force = false, silent = false, append = false } = options ?? {};
     const ttlMs = options?.ttlMs ?? DEFAULT_LIST_TTL_MS;
+    const page = options?.page ?? DEFAULT_PAGE;
+    const limit = options?.limit ?? DEFAULT_LIMIT;
+    const scopeKey = options?.scopeKey ?? null;
+    const normalizedScopeKey = scopeKey ?? 'guest';
+    const requestKey = `${normalizedScopeKey}:${page}:${limit}:${append ? 'append' : 'replace'}`;
 
-    const { sessionIds, sessionsById, listFetchedAt } = get();
+    const { sessionIds, sessionsById, listFetchedAt, currentPage, listScopeKey } = get();
+    const isScopeChanged = listScopeKey !== scopeKey;
+
+    if (isScopeChanged) {
+      set({
+        sessionsById: {},
+        sessionIds: [],
+        currentPage: 0,
+        totalPages: 0,
+        totalSessions: 0,
+        limit,
+        listScopeKey: scopeKey,
+        listFetchedAt: 0,
+        hasLoadedInitialData: false,
+        hasMoreList: false,
+      });
+    }
+
     const isCacheValid =
-      sessionIds.length > 0 && listFetchedAt > 0 && Date.now() - listFetchedAt < ttlMs;
+      !isScopeChanged &&
+      page === DEFAULT_PAGE &&
+      sessionIds.length > 0 &&
+      listFetchedAt > 0 &&
+      Date.now() - listFetchedAt < ttlMs;
 
     if (!force && isCacheValid) {
       return sessionIds.map((sessionId) => sessionsById[sessionId]).filter(Boolean);
     }
 
-    if (fetchListPromise) {
-      return fetchListPromise;
+    const existingListPromise = fetchListPromises.get(requestKey);
+    if (existingListPromise) {
+      return existingListPromise;
     }
 
     if (!silent) {
-      set({ isLoadingList: true });
+      if (append) {
+        listLoadingMoreCount += 1;
+      } else {
+        listLoadingCount += 1;
+      }
+
+      set({
+        isLoadingList: listLoadingCount > 0,
+        isLoadingMoreList: listLoadingMoreCount > 0,
+      });
     }
 
-    fetchListPromise = (async () => {
+    const fetchListPromise = (async () => {
       try {
-        const sessionList = await groupSessionsService.getGroupSessions();
+        const response = await groupSessionsService.getGroupSessions({ page, limit });
+        const sessionList = response.sessions ?? [];
+        const now = Date.now();
 
-        if (!Array.isArray(sessionList) || sessionList.length === 0) {
+        if (sessionList.length === 0 && page === DEFAULT_PAGE) {
           set({
             sessionsById: {},
             sessionIds: [],
-            listFetchedAt: Date.now(),
+            currentPage: DEFAULT_PAGE,
+            totalPages: response.totalPages ?? 0,
+            totalSessions: response.total ?? 0,
+            limit: response.limit ?? limit,
+            listScopeKey: scopeKey,
+            listFetchedAt: now,
             hasLoadedInitialData: true,
+            hasMoreList: false,
           });
           return [];
         }
 
-        let nextSessions = sessionList;
-
-        if (includeDetails) {
-          const detailedSessions: GroupSessionItem[] = [];
-
-          for (let index = 0; index < sessionList.length; index += DETAIL_BATCH_SIZE) {
-            const batch = sessionList.slice(index, index + DETAIL_BATCH_SIZE);
-            const batchResults = await Promise.all(
-              batch.map(async (session) => {
-                try {
-                  return await groupSessionsService.getGroupSessionById(session.sessionId);
-                } catch {
-                  return session;
-                }
-              })
-            );
-
-            detailedSessions.push(...batchResults);
-          }
-
-          nextSessions = detailedSessions;
-        }
-
-        const now = Date.now();
+        const latestState = get();
+        const isScopeChangedAtApply = latestState.listScopeKey !== scopeKey;
+        const previousSessions = isScopeChangedAtApply
+          ? []
+          : latestState.sessionIds
+              .map((sessionId) => latestState.sessionsById[sessionId])
+              .filter(Boolean);
+        const nextSessions = mergeSessions(
+          previousSessions,
+          sessionList,
+          append || page > DEFAULT_PAGE
+        );
         const nextById = {
-          ...get().sessionsById,
-          ...mapSessionsById(nextSessions),
+          ...(isScopeChangedAtApply ? {} : latestState.sessionsById),
+          ...mapSessionsById(sessionList),
         };
-
-        const detailFetchedAtById = { ...get().detailFetchedAtById };
-        nextSessions.forEach((session) => {
-          detailFetchedAtById[session.sessionId] = now;
-        });
+        const nextCurrentPage = page;
+        const nextTotalPages = response.totalPages ?? 1;
+        const nextLimit = response.limit ?? limit;
+        const nextHasMore = page < nextTotalPages;
 
         set({
           sessionsById: nextById,
           sessionIds: nextSessions.map((session) => session.sessionId),
+          currentPage: nextCurrentPage,
+          totalPages: nextTotalPages,
+          totalSessions: response.total ?? nextSessions.length,
+          limit: nextLimit,
+          listScopeKey: scopeKey,
           listFetchedAt: now,
-          detailFetchedAtById,
           hasLoadedInitialData: true,
+          hasMoreList: nextHasMore,
         });
 
         return nextSessions;
@@ -136,13 +225,23 @@ export const useGroupSessionStore = create<GroupSessionState>()((set, get) => ({
         set({ hasLoadedInitialData: true });
         return [];
       } finally {
-        fetchListPromise = null;
+        fetchListPromises.delete(requestKey);
         if (!silent) {
-          set({ isLoadingList: false });
+          if (append) {
+            listLoadingMoreCount = Math.max(0, listLoadingMoreCount - 1);
+          } else {
+            listLoadingCount = Math.max(0, listLoadingCount - 1);
+          }
+
+          set({
+            isLoadingList: listLoadingCount > 0,
+            isLoadingMoreList: listLoadingMoreCount > 0,
+          });
         }
       }
     })();
 
+    fetchListPromises.set(requestKey, fetchListPromise);
     return fetchListPromise;
   },
 
@@ -231,13 +330,22 @@ export const useGroupSessionStore = create<GroupSessionState>()((set, get) => ({
     set({
       sessionsById: {},
       sessionIds: [],
+      currentPage: 0,
+      totalPages: 0,
+      totalSessions: 0,
+      limit: DEFAULT_LIMIT,
+      listScopeKey: null,
       listFetchedAt: 0,
       detailFetchedAtById: {},
       isLoadingList: false,
+      isLoadingMoreList: false,
       hasLoadedInitialData: false,
+      hasMoreList: false,
       isLoadingDetailById: {},
     });
-    fetchListPromise = null;
+    fetchListPromises.clear();
+    listLoadingCount = 0;
+    listLoadingMoreCount = 0;
     fetchDetailPromises.clear();
   },
 }));

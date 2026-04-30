@@ -8,6 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '@/api/client';
 import { notificationService } from '@/api/notification';
 import { groupSessionsService } from '@/api/groupSessions';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useGroupSessionStore } from '@/store/useGroupSessionStore';
+import type { GroupSessionMember } from '@/types/api';
 
 type RuntimeArgs = {
   accessToken: string | null;
@@ -30,12 +33,20 @@ type ParsedNotification = {
   title: string | null;
   body: string | null;
   type: string | null;
+  sessionId: string | null;
+  voteUserId: string | null;
+  voteMemberId: string | null;
+  memberId: string | null;
   senderName: string | null;
   senderAvatarUrl: string | null;
   targetPath: string | null;
   shareCode: string | null;
   actionKind: NotificationActionKind;
   primaryLabel: string | null;
+  titleKey: string | null;
+  bodyKey: string | null;
+  primaryLabelKey: string | null;
+  i18nParams: Record<string, string | number | boolean>;
 };
 
 export type NotificationBanner = {
@@ -85,6 +96,76 @@ const toRecord = (value: unknown): Record<string, unknown> => {
   }
 
   return {};
+};
+
+const toI18nParams = (value: unknown): Record<string, string | number | boolean> => {
+  const record = toRecord(value);
+  const params: Record<string, string | number | boolean> = {};
+
+  for (const [key, item] of Object.entries(record)) {
+    if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
+      params[key] = item;
+    }
+  }
+
+  return params;
+};
+
+const normalizeForComparison = (value: string | null) => {
+  if (!value) {
+    return '';
+  }
+
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+};
+
+const resolveGroupVoteFinalizedBodyKey = (body: string | null) => {
+  const normalized = normalizeForComparison(body);
+
+  if (normalized.includes('all members have voted')) {
+    return 'notification.groupVoteFinalizedByAllMembersBody';
+  }
+
+  if (normalized.includes('session host has finalized')) {
+    return 'notification.groupVoteFinalizedByHostBody';
+  }
+
+  return 'notification.groupVoteFinalizedBody';
+};
+
+const resolveTemplateKeysByType = (type: string | null) => {
+  switch (type) {
+    case 'GROUP_INVITE':
+      return {
+        titleKey: 'notification.groupInviteTitle',
+        bodyKey: 'notification.groupInviteBody',
+        primaryLabelKey: 'notification.joinNow',
+      };
+    case 'vote.cast':
+      return {
+        titleKey: 'notification.groupVoteReminderTitle',
+        bodyKey: 'notification.groupVoteReminderBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'vote.member_finalized':
+      return {
+        titleKey: 'notification.memberVoteFinalizedTitle',
+        bodyKey: 'notification.memberVoteFinalizedBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'GROUP_VOTE_FINALIZED':
+      return {
+        titleKey: 'notification.groupVoteFinalizedTitle',
+        bodyKey: 'notification.groupVoteFinalizedBody',
+        primaryLabelKey: 'notification.openNow',
+      };
+    default:
+      return {
+        titleKey: 'notification.defaultTitle',
+        bodyKey: 'notification.defaultBody',
+        primaryLabelKey: 'notification.openNow',
+      };
+  }
 };
 
 const normalizePath = (path: string | null) => {
@@ -170,6 +251,56 @@ const resolveActionKind = ({
   return targetPath ? 'navigate' : 'none';
 };
 
+const resolveMemberDisplayName = (member: GroupSessionMember | undefined | null) => {
+  if (!member) {
+    return null;
+  }
+
+  const firstName = member.user?.firstName?.trim() ?? '';
+  const lastName = member.user?.lastName?.trim() ?? '';
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  const nickname = member.nickname?.trim();
+  return nickname || null;
+};
+
+const withVersionQuery = (url: string, versions: Array<number | undefined | null>) => {
+  const validVersions = versions.filter((version): version is number => Boolean(version));
+
+  if (validVersions.length === 0) {
+    return url;
+  }
+
+  const versionParam = validVersions.join('-');
+  return url.includes('?') ? `${url}&v=${versionParam}` : `${url}?v=${versionParam}`;
+};
+
+const resolveVersionedAvatarUrl = ({
+  rawUrl,
+  avatarCacheEpoch,
+  currentUserAvatarVersion,
+  isCurrentUser,
+}: {
+  rawUrl: string | null;
+  avatarCacheEpoch: number;
+  currentUserAvatarVersion: number;
+  isCurrentUser: boolean;
+}) => {
+  const normalizedUrl = rawUrl?.trim();
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  return withVersionQuery(normalizedUrl, [
+    avatarCacheEpoch,
+    isCurrentUser ? currentUserAvatarVersion : undefined,
+  ]);
+};
+
 const syncTokenSafely = async (token: string) => {
   try {
     await notificationService.syncDeviceToken(token);
@@ -212,11 +343,19 @@ const bindTokenRefresh = () => {
 
 export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   const { t } = useTranslation();
+  const currentUserId = useAuthStore((state) => state.me?.id ?? null);
+  const currentUserAvatarVersion = useAuthStore((state) => state.meFetchedAt);
+  const avatarCacheEpoch = useAuthStore((state) => state.avatarCacheEpoch);
   const [banner, setBanner] = useState<NotificationBanner | null>(null);
   const [isPrimaryLoading, setIsPrimaryLoading] = useState(false);
   const lastHandledEventIdRef = useRef<string | null>(null);
+  const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismissBanner = useCallback(() => {
+    if (autoDismissTimerRef.current) {
+      clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = null;
+    }
     setIsPrimaryLoading(false);
     setBanner(null);
   }, []);
@@ -256,53 +395,165 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       });
   }, [banner, dismissBanner, executeAction]);
 
+  const enrichVoteCastSenderName = useCallback(
+    async (parsed: ParsedNotification) => {
+      if (parsed.type !== 'vote.cast' || !parsed.sessionId) {
+        return parsed;
+      }
+
+      const store = useGroupSessionStore.getState();
+      const session = await store.fetchSessionById(parsed.sessionId, { force: false });
+      if (!session?.members?.length) {
+        return parsed;
+      }
+
+      const matchedMember =
+        session.members.find((member) => member.userId && member.userId === parsed.voteUserId) ??
+        session.members.find((member) => member.id === parsed.voteMemberId);
+      if (!matchedMember) {
+        return parsed;
+      }
+
+      const resolvedSenderName = resolveMemberDisplayName(matchedMember);
+      const resolvedAvatarUrl = resolveVersionedAvatarUrl({
+        rawUrl: matchedMember.user?.pictureUrl ?? parsed.senderAvatarUrl,
+        avatarCacheEpoch,
+        currentUserAvatarVersion,
+        isCurrentUser: Boolean(currentUserId && matchedMember.userId === currentUserId),
+      });
+
+      return {
+        ...parsed,
+        senderName: parsed.senderName ?? resolvedSenderName,
+        senderAvatarUrl: resolvedAvatarUrl ?? parsed.senderAvatarUrl,
+        i18nParams: {
+          ...parsed.i18nParams,
+          ...(resolvedSenderName ? { voterName: resolvedSenderName } : {}),
+        },
+      };
+    },
+    [avatarCacheEpoch, currentUserAvatarVersion, currentUserId]
+  );
+
+  const enrichVoteMemberFinalizedSenderName = useCallback(
+    async (parsed: ParsedNotification) => {
+      if (parsed.type !== 'vote.member_finalized' || !parsed.sessionId || !parsed.memberId) {
+        return parsed;
+      }
+
+      const store = useGroupSessionStore.getState();
+      const session = await store.fetchSessionById(parsed.sessionId, { force: false });
+      if (!session?.members?.length) {
+        return parsed;
+      }
+
+      const matchedMember = session.members.find((member) => member.id === parsed.memberId);
+      if (!matchedMember) {
+        return parsed;
+      }
+
+      const resolvedSenderName = resolveMemberDisplayName(matchedMember);
+      const resolvedAvatarUrl = resolveVersionedAvatarUrl({
+        rawUrl: matchedMember.user?.pictureUrl ?? parsed.senderAvatarUrl,
+        avatarCacheEpoch,
+        currentUserAvatarVersion,
+        isCurrentUser: Boolean(currentUserId && matchedMember.userId === currentUserId),
+      });
+
+      return {
+        ...parsed,
+        senderName: parsed.senderName ?? resolvedSenderName,
+        senderAvatarUrl: resolvedAvatarUrl ?? parsed.senderAvatarUrl,
+        i18nParams: {
+          ...parsed.i18nParams,
+          ...(resolvedSenderName ? { memberName: resolvedSenderName } : {}),
+        },
+      };
+    },
+    [avatarCacheEpoch, currentUserAvatarVersion, currentUserId]
+  );
+
   const parseEvent = useCallback((event: RealtimeNotificationEvent): ParsedNotification => {
     const eventData = toRecord(event.data);
+    const payload = {
+      ...toRecord(event),
+      ...eventData,
+    };
+    const voteData = toRecord(payload.vote);
+    const votePlace = toRecord(voteData.place);
 
-    const title = toStringOrNull(event.title) ?? toStringOrNull(eventData.title);
-    const body = toStringOrNull(event.body) ?? toStringOrNull(eventData.body);
-    const type = toStringOrNull(event.type) ?? toStringOrNull(eventData.type);
+    const title = toStringOrNull(event.title) ?? toStringOrNull(payload.title);
+    const body = toStringOrNull(event.body) ?? toStringOrNull(payload.body);
+    const type = toStringOrNull(event.type) ?? toStringOrNull(payload.type);
 
     const senderName =
-      toStringOrNull(eventData.senderName) ??
-      toStringOrNull(eventData.inviterName) ??
-      toStringOrNull(eventData.fromName);
+      toStringOrNull(payload.senderName) ??
+      toStringOrNull(payload.inviterName) ??
+      toStringOrNull(payload.fromName) ??
+      toStringOrNull(voteData.nickname) ??
+      toStringOrNull(voteData.memberName);
 
     const senderAvatarUrl =
-      toStringOrNull(eventData.senderAvatarUrl) ??
-      toStringOrNull(eventData.inviterAvatarUrl) ??
-      toStringOrNull(eventData.senderPictureUrl);
+      toStringOrNull(payload.senderAvatarUrl) ??
+      toStringOrNull(payload.inviterAvatarUrl) ??
+      toStringOrNull(payload.inviterPictureUrl) ??
+      toStringOrNull(payload.senderPictureUrl);
 
     const shareCode =
-      toStringOrNull(eventData.shareCode)?.toUpperCase() ?? extractShareCodeFromText(body);
+      toStringOrNull(payload.shareCode)?.toUpperCase() ?? extractShareCodeFromText(body);
+    const sessionId =
+      toStringOrNull(payload.sessionId) ??
+      toStringOrNull(payload.groupSessionId) ??
+      toStringOrNull(event.sessionId);
+    const voteUserId = toStringOrNull(voteData.userId) ?? toStringOrNull(payload.userId);
+    const voteMemberId = toStringOrNull(voteData.memberId);
 
     const targetPath = resolveTargetPathFromEvent(event);
     const actionKind = resolveActionKind({
       type,
       shareCode,
       targetPath,
-      actionKind: toStringOrNull(eventData.actionKind),
+      actionKind: toStringOrNull(payload.actionKind),
     });
 
-    const primaryLabel = toStringOrNull(eventData.primaryActionLabel);
+    const primaryLabel = toStringOrNull(payload.primaryActionLabel);
+    const i18nParams = {
+      ...toI18nParams(payload.i18nParams ?? payload.params ?? payload.variables),
+      ...(toStringOrNull(voteData.nickname)
+        ? { voterName: toStringOrNull(voteData.nickname) as string }
+        : {}),
+      ...(toStringOrNull(votePlace.name)
+        ? { placeName: toStringOrNull(votePlace.name) as string }
+        : {}),
+    };
 
     return {
       eventId: toStringOrNull(event.eventId),
       title,
       body,
       type,
+      sessionId,
+      voteUserId,
+      voteMemberId,
+      memberId: toStringOrNull(payload.memberId),
       senderName,
       senderAvatarUrl,
       targetPath,
       shareCode,
       actionKind,
       primaryLabel,
+      titleKey: toStringOrNull(payload.titleKey),
+      bodyKey: toStringOrNull(payload.bodyKey),
+      primaryLabelKey: toStringOrNull(payload.primaryActionLabelKey),
+      i18nParams,
     };
   }, []);
 
   const parseRemoteMessage = useCallback(
     (message: FirebaseMessagingTypes.RemoteMessage): ParsedNotification => {
       const data = toRecord(message.data);
+      const voteData = toRecord(data.vote);
+      const votePlace = toRecord(voteData.place);
       const title = toStringOrNull(message.notification?.title) ?? toStringOrNull(data.title);
       const body = toStringOrNull(message.notification?.body) ?? toStringOrNull(data.body);
       const type = toStringOrNull(data.type);
@@ -310,15 +561,22 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       const senderName =
         toStringOrNull(data.senderName) ??
         toStringOrNull(data.inviterName) ??
-        toStringOrNull(data.fromName);
+        toStringOrNull(data.fromName) ??
+        toStringOrNull(data.nickname) ??
+        toStringOrNull(voteData.nickname) ??
+        toStringOrNull(data.memberName);
 
       const senderAvatarUrl =
         toStringOrNull(data.senderAvatarUrl) ??
         toStringOrNull(data.inviterAvatarUrl) ??
+        toStringOrNull(data.inviterPictureUrl) ??
         toStringOrNull(data.senderPictureUrl);
 
       const shareCode =
         toStringOrNull(data.shareCode)?.toUpperCase() ?? extractShareCodeFromText(body);
+      const sessionId = toStringOrNull(data.sessionId) ?? toStringOrNull(data.groupSessionId);
+      const voteUserId = toStringOrNull(voteData.userId) ?? toStringOrNull(data.userId);
+      const voteMemberId = toStringOrNull(voteData.memberId);
 
       const targetPath = resolveTargetPathFromRemoteMessage(message);
       const actionKind = resolveActionKind({
@@ -329,18 +587,38 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       });
 
       const primaryLabel = toStringOrNull(data.primaryActionLabel);
+      const i18nParams = {
+        ...toI18nParams(data.i18nParams ?? data.params ?? data.variables),
+        ...(toStringOrNull(data.nickname)
+          ? { voterName: toStringOrNull(data.nickname) as string }
+          : {}),
+        ...(toStringOrNull(data.placeName)
+          ? { placeName: toStringOrNull(data.placeName) as string }
+          : {}),
+        ...(toStringOrNull(votePlace.name)
+          ? { placeName: toStringOrNull(votePlace.name) as string }
+          : {}),
+      };
 
       return {
         eventId: toStringOrNull(data.eventId),
         title,
         body,
         type,
+        sessionId,
+        voteUserId,
+        voteMemberId,
+        memberId: toStringOrNull(data.memberId),
         senderName,
         senderAvatarUrl,
         targetPath,
         shareCode,
         actionKind,
         primaryLabel,
+        titleKey: toStringOrNull(data.titleKey),
+        bodyKey: toStringOrNull(data.bodyKey),
+        primaryLabelKey: toStringOrNull(data.primaryActionLabelKey),
+        i18nParams,
       };
     },
     []
@@ -349,39 +627,38 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   const toBannerModel = useCallback(
     (parsed: ParsedNotification): NotificationBanner => {
       const isGroupInvite = parsed.type === 'GROUP_INVITE';
-      const isGroupVoteReminder = parsed.type === 'vote.cast';
-      const isMemberVoteFinalized = parsed.type === 'vote.member_finalized';
       const isGroupVoteFinalized = parsed.type === 'GROUP_VOTE_FINALIZED';
-
+      const isVoteCast = parsed.type === 'vote.cast';
       const senderName = parsed.senderName || t('notification.someone');
+      const template = resolveTemplateKeysByType(parsed.type);
+      const forcedBodyKey = isGroupVoteFinalized
+        ? resolveGroupVoteFinalizedBodyKey(parsed.body)
+        : template.bodyKey;
+      const forceLocalizedTemplate = isGroupInvite || isGroupVoteFinalized || isVoteCast;
+      const i18nValues = {
+        name: senderName,
+        voterName: parsed.i18nParams.voterName ?? senderName,
+        placeName: parsed.i18nParams.placeName ?? t('notification.somePlace'),
+        shareCode: parsed.shareCode ?? '',
+        ...parsed.i18nParams,
+      };
 
-      let title: string;
-      let message: string;
-      let primaryLabel: string | undefined;
+      const title =
+        (parsed.titleKey ? t(parsed.titleKey, i18nValues) : null) ??
+        (forceLocalizedTemplate
+          ? t(template.titleKey, i18nValues)
+          : (parsed.title ?? t(template.titleKey, i18nValues)));
 
-      if (isGroupInvite) {
-        title = t('notification.groupInviteTitle');
-        message = t('notification.groupInviteBody', { name: senderName });
-        primaryLabel = parsed.primaryLabel || t('notification.joinNow');
-      } else if (isGroupVoteReminder) {
-        title = t('notification.groupVoteReminderTitle');
-        message = t('notification.groupVoteReminderBody', { name: senderName });
-        primaryLabel = parsed.primaryLabel || t('notification.viewNow');
-      } else if (isMemberVoteFinalized) {
-        title = t('notification.memberVoteFinalizedTitle');
-        message = t('notification.memberVoteFinalizedBody', { name: senderName });
-        primaryLabel = parsed.primaryLabel || t('notification.viewNow');
-      } else if (isGroupVoteFinalized) {
-        title = t('notification.groupVoteFinalizedTitle');
-        message = t('notification.groupVoteFinalizedBody');
-        primaryLabel = parsed.primaryLabel || t('notification.openNow');
-      } else {
-        title = parsed.title || t('notification.defaultTitle');
-        message = parsed.body || t('notification.defaultBody');
-        primaryLabel =
-          parsed.primaryLabel ||
-          (parsed.actionKind === 'navigate' ? t('notification.openNow') : undefined);
-      }
+      const message =
+        (parsed.bodyKey ? t(parsed.bodyKey, i18nValues) : null) ??
+        (forceLocalizedTemplate
+          ? t(forcedBodyKey, i18nValues)
+          : (parsed.body ?? t(template.bodyKey, i18nValues)));
+
+      const primaryLabel =
+        parsed.primaryLabel ??
+        (parsed.primaryLabelKey ? t(parsed.primaryLabelKey, i18nValues) : undefined) ??
+        (parsed.actionKind === 'none' ? undefined : t(template.primaryLabelKey));
 
       const dismissLabel = t('notification.dismiss');
 
@@ -405,16 +682,22 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   );
 
   const pushForegroundBanner = useCallback(
-    (parsed: ParsedNotification) => {
-      setBanner(toBannerModel(parsed));
+    async (parsed: ParsedNotification) => {
+      let enrichedParsed = parsed;
+      if (parsed.type === 'vote.cast') {
+        enrichedParsed = await enrichVoteCastSenderName(parsed);
+      } else if (parsed.type === 'vote.member_finalized') {
+        enrichedParsed = await enrichVoteMemberFinalizedSenderName(parsed);
+      }
+      setBanner(toBannerModel(enrichedParsed));
     },
-    [toBannerModel]
+    [enrichVoteCastSenderName, enrichVoteMemberFinalizedSenderName, toBannerModel]
   );
 
   const bindForegroundMessage = useCallback(() => {
     return messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
       const parsed = parseRemoteMessage(remoteMessage);
-      pushForegroundBanner(parsed);
+      void pushForegroundBanner(parsed);
     });
   }, [parseRemoteMessage, pushForegroundBanner]);
 
@@ -436,6 +719,27 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     () => ({ banner, dismissBanner, openBanner, isPrimaryLoading }),
     [banner, dismissBanner, openBanner, isPrimaryLoading]
   );
+
+  useEffect(() => {
+    if (!banner) {
+      return;
+    }
+
+    if (autoDismissTimerRef.current) {
+      clearTimeout(autoDismissTimerRef.current);
+    }
+
+    autoDismissTimerRef.current = setTimeout(() => {
+      dismissBanner();
+    }, 5000);
+
+    return () => {
+      if (autoDismissTimerRef.current) {
+        clearTimeout(autoDismissTimerRef.current);
+        autoDismissTimerRef.current = null;
+      }
+    };
+  }, [banner, dismissBanner]);
 
   useEffect(() => {
     if (!accessToken) {
@@ -473,7 +777,7 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         lastHandledEventIdRef.current = eventId;
       }
 
-      pushForegroundBanner(parsed);
+      void pushForegroundBanner(parsed);
     };
 
     socket.on('notification.received', onNotificationReceived);
@@ -491,6 +795,10 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       });
 
     return () => {
+      if (autoDismissTimerRef.current) {
+        clearTimeout(autoDismissTimerRef.current);
+        autoDismissTimerRef.current = null;
+      }
       socket.off('notification.received', onNotificationReceived);
       socket.disconnect();
       unsubscribeForegroundMessage();

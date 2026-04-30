@@ -4,6 +4,7 @@ import type {
   FinalizeMemberVoteRequest,
   FinalizeMemberVoteResponse,
   FinalizeSessionVoteResponse,
+  GetGroupSessionsResponse,
   GroupSessionItem,
   InviteFriendResponse,
   JoinGroupSessionRequest,
@@ -11,12 +12,39 @@ import type {
   VotePlaceSessionRequest,
   VotePlaceSessionResponse,
   GroupVoteItem,
+  PlaceRecommendationItem,
 } from '@/types/api';
 import { apiClient } from './client';
 
+type GetGroupSessionsParams = {
+  page?: number;
+  limit?: number;
+};
+
+const buildGroupSessionsQuery = (params?: GetGroupSessionsParams) => {
+  if (!params) {
+    return '';
+  }
+
+  const searchParams = new URLSearchParams();
+
+  if (typeof params.page === 'number') {
+    searchParams.set('page', String(params.page));
+  }
+
+  if (typeof params.limit === 'number') {
+    searchParams.set('limit', String(params.limit));
+  }
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
+};
+
 export const groupSessionsService = {
-  getGroupSessions: async (): Promise<GroupSessionItem[]> => {
-    const response = await apiClient.get<GroupSessionItem[]>(API_ENDPOINTS.GROUP_SESSIONS);
+  getGroupSessions: async (params?: GetGroupSessionsParams): Promise<GetGroupSessionsResponse> => {
+    const response = await apiClient.get<GetGroupSessionsResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}${buildGroupSessionsQuery(params)}`
+    );
     return response.data;
   },
 
@@ -90,6 +118,23 @@ export const groupSessionsService = {
     const response = await apiClient.get<GroupVoteItem>(
       `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/votes`
     );
+    return response.data;
+  },
+
+  getRecommendations: async (
+    sessionId: string,
+    guestId?: string
+  ): Promise<PlaceRecommendationItem[]> => {
+    const params = new URLSearchParams();
+    if (guestId) {
+      params.set('guestId', guestId);
+    }
+    const query = params.toString();
+    const url = query 
+      ? `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations?${query}`
+      : `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations`;
+    
+    const response = await apiClient.get<PlaceRecommendationItem[]>(url);
     return response.data;
   },
 };
