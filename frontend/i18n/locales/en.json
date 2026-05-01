@@ -304,6 +304,41 @@
     "openNow": "Open now",
     "viewNow": "View now"
   },
+  "settings": {
+    "title": "Settings",
+    "appPreferences": "App Preferences",
+    "privacy": "Privacy Policy",
+    "shareLocation": "Share location",
+    "shareLocationDesc": "Allow friends to see your location in group mode",
+    "language": "Language",
+    "searchRadius": "Search radius",
+    "minRating": "Minimum rating",
+    "profileVisibility": {
+      "title": "Profile visibility",
+      "description": "Control who can see your profile and activity",
+      "public": "Public",
+      "friendsOnly": "Friends only",
+      "private": "Private"
+    },
+    "public": "Public",
+    "friendsOnly": "Friends only",
+    "private": "Private",
+    "notifications": {
+      "title": "Notifications",
+      "groupInvites": "Group Invites",
+      "groupInviteDesc": "Get notified when friends invite you to group sessions",
+      "votingResults": "Voting Results",
+      "votingResultsDesc": "Get notified about group voting outcomes",
+      "nearbyPlaces": "Nearby Places",
+      "nearbyPlacesDesc": "Discover new places around you",
+      "recommendations": "Recommendations",
+      "recommendationsDesc": "Personalized place suggestions"
+    },
+    "defaultSearchRadius": "Default search radius",
+    "defaultSearchRating": "Default search rating",
+    "darkMode": "Dark mode",
+    "logout": "Log out"
+  },
   "button": {
     "update": "Update",
     "updating": "Updating...",

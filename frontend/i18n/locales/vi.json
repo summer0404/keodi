@@ -305,6 +305,41 @@
     "openNow": "Mở ngay",
     "viewNow": "Xem ngay"
   },
+  "settings": {
+    "title": "Cài đặt",
+    "appPreferences": "Tùy chọn ứng dụng",
+    "privacy": "Chính sách bảo mật",
+    "shareLocation": "Chia sẻ vị trí",
+    "shareLocationDesc": "Cho phép bạn bè xem vị trí của bạn trong chế độ nhóm",
+    "language": "Ngôn ngữ",
+    "searchRadius": "Bán kính tìm kiếm",
+    "minRating": "Đánh giá tối thiểu",
+    "profileVisibility": {
+      "title": "Tính riêng tư của hồ sơ",
+      "description": "Kiểm soát ai có thể xem hồ sơ và hoạt động của bạn",
+      "public": "Công khai",
+      "friendsOnly": "Chỉ bạn bè",
+      "private": "Riêng tư"
+    },
+    "public": "Công khai",
+    "friendsOnly": "Chỉ bạn bè",
+    "private": "Riêng tư",
+    "notifications": {
+      "title": "Thông báo",
+      "groupInvites": "Lời mời nhóm",
+      "groupInviteDesc": "Nhận thông báo khi bạn bè mời bạn tham gia phiên nhóm",
+      "votingResults": "Kết quả bình chọn",
+      "votingResultsDesc": "Nhận thông báo về kết quả bình chọn của nhóm",
+      "nearbyPlaces": "Địa điểm gần bạn",
+      "nearbyPlacesDesc": "Khám phá những địa điểm mới xung quanh bạn",
+      "recommendations": "Gợi ý cá nhân",
+      "recommendationsDesc": "Nhận gợi ý địa điểm dựa trên sở thích của bạn"
+    },
+    "defaultSearchRadius": "Bán kính tìm kiếm mặc định",
+    "defaultSearchRating": "Đánh giá tìm kiếm mặc định",
+    "darkMode": "Chế độ tối",
+    "logout": "Đăng xuất"
+  },
   "button": {
     "update": "Cập nhật",
     "updating": "Đang cập nhật...",

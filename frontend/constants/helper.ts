@@ -477,6 +477,19 @@ export const buildSortOrder = (value: 'distance' | 'rating' | 'name' | 'createdA
 export const DEFAULT_RADIUS = 5;
 export const DEFAULT_SORT_BY = 'distance';
 
+// Map API setting values to numeric radius values for places search
+export const getRadiusValueFromSettings = (
+  apiValue: 'KM_2' | 'KM_5' | 'KM_10' | 'KM_20'
+): number => {
+  const radiusMap: Record<'KM_2' | 'KM_5' | 'KM_10' | 'KM_20', number> = {
+    KM_2: 2,
+    KM_5: 5,
+    KM_10: 15,
+    KM_20: 50,
+  };
+  return radiusMap[apiValue] ?? DEFAULT_RADIUS;
+};
+
 export interface Category {
   id: string;
   titleKey: string;
