@@ -6,6 +6,7 @@ export const API_BASE_PATHS = {
   FRIENDS: '/api/v1/friends',
   GROUP_SESSIONS: '/api/v1/group-sessions',
   USERS: '/api/v1/users',
+  SETTINGS: '/api/v1/settings', 
 } as const;
 
 export const API_ENDPOINTS = {
@@ -29,4 +30,5 @@ export const API_ENDPOINTS = {
   UPDATE_USERNAME: `${API_BASE_PATHS.USERS}/username`,
   UPDATE_PICTURE: `${API_BASE_PATHS.USERS}/picture`,
   UPDATE_PROFILE: API_BASE_PATHS.USERS,
+  SETTINGS: API_BASE_PATHS.SETTINGS,
 } as const;

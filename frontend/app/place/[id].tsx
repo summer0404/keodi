@@ -511,7 +511,7 @@ function PlaceDetailScreen() {
         }
       }
 
-      await groupSessionsService.votePlace(activeSession.sessionId, { placeId });
+      await groupSessionsService.addCandidate(activeSession.sessionId, { placeId });
 
       setIsVoteSuccess(true);
       Animated.sequence([

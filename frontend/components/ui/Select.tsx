@@ -51,7 +51,7 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <>
       {/* Trigger */}
-      <View ref={triggerRef} collapsable={false} className={clsx('flex-1', className)}>
+      <View ref={triggerRef} collapsable={false} className={clsx('w-full', className)}>
         <Pressable
           onPress={handleOpen}
           className={clsx(

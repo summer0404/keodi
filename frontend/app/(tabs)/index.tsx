@@ -35,6 +35,7 @@ import { favoriteService } from '@/api/favorite';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import { useLocationStore } from '@/store/useLocationStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useSettingStore } from '@/store/useSettingStore';
 import { isAxiosError } from 'axios';
 
 const appendUniquePlaces = (prev: PlaceItem[], next: PlaceItem[]) => {
@@ -72,7 +73,8 @@ export default function HomeScreen() {
 
   const [locationLabel, setLocationLabel] = useState(t('home.loadingLocation'));
   const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
-  const [radius, setRadius] = useState(DEFAULT_RADIUS);
+  const settingRadius = useSettingStore((s) => s.defaultRadius);
+  const [radius, setRadius] = useState(settingRadius ?? DEFAULT_RADIUS);
   const [nearbyPlaces, setNearbyPlaces] = useState<PlaceItem[]>([]);
   const [isPlacesLoading, setIsPlacesLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -204,6 +206,11 @@ export default function HomeScreen() {
         return;
       }
 
+      // console.log('[GPS] coords:', {
+      //   latitude: nextCoords.latitude,
+      //   longitude: nextCoords.longitude,
+      // });
+
       try {
         const places = await Location.reverseGeocodeAsync(nextCoords);
         const place = places[0];
@@ -271,6 +278,10 @@ export default function HomeScreen() {
 
     fetchPlacesPage(DEFAULT_PAGE, 'replace', requestVersion);
   }, [coords, radius, sortBy, fetchPlacesPage]);
+
+  useEffect(() => {
+    setRadius(settingRadius ?? DEFAULT_RADIUS);
+  }, [settingRadius]);
 
   // Scroll to top when radius or sortBy changes for better UX
   useEffect(() => {

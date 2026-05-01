@@ -649,7 +649,7 @@ export default function GroupScreen() {
           contentContainerStyle={{
             paddingHorizontal: horizontalPadding,
             paddingTop: 8,
-            paddingBottom: insets.bottom + 110,
+            paddingBottom: insets.bottom + 90,
           }}
           showsVerticalScrollIndicator={false}
         />

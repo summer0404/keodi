@@ -355,6 +355,48 @@ export interface InviteFriendResponse {
   friendId: string;
 }
 
+export interface GroupSessionCandidateUserSummary {
+  id: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  pictureUrl: string | null;
+}
+
+export interface GroupSessionCandidateMember {
+  id: string;
+  userId: string | null;
+  guestId: string | null;
+  nickname: string | null;
+  user: GroupSessionCandidateUserSummary | null;
+}
+
+export interface GroupSessionCandidateItem {
+  sessionId: string;
+  placeId: string;
+  addedBy: string;
+  createdAt: string;
+  place: {
+    id: string;
+    name: string;
+    featureImageUrl: string | null;
+    rating: number;
+    fullAddress: string | null;
+  };
+  member: GroupSessionCandidateMember | null;
+}
+
+export interface GetGroupCandidatesResponse {
+  sessionId: string;
+  candidates: GroupSessionCandidateItem[];
+  total: number;
+}
+
+export interface DeleteGroupCandidateResponse {
+  sessionId: string;
+  placeId: string;
+}
+
 export interface VotePlaceSessionRequest {
   guestId?: string;
   placeId: string;
@@ -503,3 +545,30 @@ export type MemberLocation = {
   latitude: number;
   longitude: number;
 };
+
+export interface PlaceCandidateResponse {
+  sessionId: string;
+  placeId: string;
+  addedBy: string;
+  createdAt: string;
+  place: {
+    id: string;
+    name: string;
+    featureImageUrl: string | null;
+    rating: number;
+    fullAddress: string | null;
+  };
+};
+
+export interface UserSettings {
+  shareLocation: boolean;
+  profileVisibility: 'PUBLIC' | 'FRIENDS_ONLY' | 'PRIVATE';
+  notifyGroupInvites: boolean;
+  notifyVotingResults: boolean;
+  notifyNearbyPlaces: boolean;
+  notifyRecommendations: boolean;
+  defaultSearchRadius: 'KM_2' | 'KM_5' | 'KM_10' | 'KM_20';
+  defaultMinRating: 'ABOVE_1' | 'ABOVE_2' | 'ABOVE_3' | 'ABOVE_4' | 'FIVE_STAR';
+  language: 'VI' | 'EN';
+  darkMode: boolean;
+}

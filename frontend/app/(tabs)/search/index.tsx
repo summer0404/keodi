@@ -25,6 +25,7 @@ import {
   FILTER_CATEGORIES,
 } from '@/constants/helper';
 import { Button } from '@/components/ui/Button';
+import { useSettingStore } from '@/store/useSettingStore';
 
 const RECENT_SEARCHES_KEY = '@keodi_recent_searches';
 
@@ -57,10 +58,12 @@ export default function SearchScreen() {
   const sortOptions = useMemo(() => getSortOptions(t), [t]);
   const radiusOptions = useMemo(() => getRadiusOptions(t), [t]);
 
+  const settingRadius = useSettingStore((s) => s.defaultRadius);
+
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [isAIMode, setIsAIMode] = useState(false);
-  const [radius, setRadius] = useState(DEFAULT_RADIUS);
+  const [radius, setRadius] = useState(settingRadius ?? DEFAULT_RADIUS);
   const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
 
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -70,6 +73,10 @@ export default function SearchScreen() {
   useEffect(() => {
     void ensureLocation();
   }, [ensureLocation]);
+
+  useEffect(() => {
+    setRadius(settingRadius ?? DEFAULT_RADIUS);
+  }, [settingRadius]);
 
   useFocusEffect(
     useCallback(() => {

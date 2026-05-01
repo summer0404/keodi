@@ -1,14 +1,17 @@
 import { API_ENDPOINTS } from '@/constants/api';
 import type {
   CreateGroupSessionResponse,
+  DeleteGroupCandidateResponse,
   FinalizeMemberVoteRequest,
   FinalizeMemberVoteResponse,
   FinalizeSessionVoteResponse,
+  GetGroupCandidatesResponse,
   GetGroupSessionsResponse,
   GroupSessionItem,
   InviteFriendResponse,
   JoinGroupSessionRequest,
   JoinGroupSessionResponse,
+  PlaceCandidateResponse,
   VotePlaceSessionRequest,
   VotePlaceSessionResponse,
   GroupVoteItem,
@@ -85,6 +88,36 @@ export const groupSessionsService = {
     return response.data;
   },
 
+  addCandidate: async (
+    sessionId: string,
+    request: { placeId: string; guestId?: string }
+  ): Promise<PlaceCandidateResponse> => {
+    const response = await apiClient.post<PlaceCandidateResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/candidates`,
+      request
+    );
+    return response.data;
+  },
+
+  getCandidates: async (sessionId: string): Promise<GetGroupCandidatesResponse> => {
+    const response = await apiClient.get<GetGroupCandidatesResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/candidates`
+    );
+    return response.data;
+  },
+
+  deleteCandidate: async (
+    sessionId: string,
+    placeId: string,
+    request: { guestId?: string } = {}
+  ): Promise<DeleteGroupCandidateResponse> => {
+    const response = await apiClient.delete<DeleteGroupCandidateResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/candidates/${placeId}`,
+      { data: request }
+    );
+    return response.data;
+  },
+
   votePlace: async (
     sessionId: string,
     voteRequest: VotePlaceSessionRequest
@@ -130,10 +163,9 @@ export const groupSessionsService = {
       params.set('guestId', guestId);
     }
     const query = params.toString();
-    const url = query 
+    const url = query
       ? `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations?${query}`
       : `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations`;
-    
     const response = await apiClient.get<PlaceRecommendationItem[]>(url);
     return response.data;
   },
