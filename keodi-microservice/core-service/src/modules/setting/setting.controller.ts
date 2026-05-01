@@ -9,8 +9,8 @@ export class SettingController {
   constructor(private readonly settingService: SettingService) {}
 
   @MessagePattern(SettingTopics.Get)
-  async get(@Payload() userId: string) {
-    return await this.settingService.get(userId);
+  async get(@Payload() data: { userId: string }) {
+    return await this.settingService.get(data.userId);
   }
 
   @MessagePattern(SettingTopics.Update)

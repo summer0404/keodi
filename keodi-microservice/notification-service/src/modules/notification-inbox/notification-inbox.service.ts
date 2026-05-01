@@ -28,4 +28,79 @@ export class NotificationInboxService {
       },
     });
   }
+
+  async getByUserId(payload: {
+    userId: string;
+    page: number;
+    limit: number;
+    unreadOnly?: boolean;
+  }) {
+    const { userId, page, limit, unreadOnly } = payload;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.NotificationWhereInput = {
+      userId,
+      ...(unreadOnly ? { isRead: false } : {}),
+    };
+
+    const [notifications, total, unreadCount] =
+      await this.prismaService.$transaction([
+        this.prismaService.notification.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            type: true,
+            title: true,
+            body: true,
+            data: true,
+            deepLink: true,
+            channel: true,
+            status: true,
+            isRead: true,
+            deliveredAt: true,
+            readAt: true,
+            createdAt: true,
+          },
+        }),
+        this.prismaService.notification.count({ where }),
+        this.prismaService.notification.count({
+          where: { userId, isRead: false },
+        }),
+      ]);
+
+    return {
+      notifications,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      unreadCount,
+    };
+  }
+
+  async markAsRead(payload: { userId: string; notificationId: string }) {
+    const now = new Date();
+    return await this.prismaService.notification.updateMany({
+      where: { id: payload.notificationId, userId: payload.userId },
+      data: { isRead: true, readAt: now },
+    });
+  }
+
+  async markAllAsRead(payload: { userId: string }) {
+    const now = new Date();
+    return await this.prismaService.notification.updateMany({
+      where: { userId: payload.userId, isRead: false },
+      data: { isRead: true, readAt: now },
+    });
+  }
+
+  async getUnreadCount(payload: { userId: string }) {
+    const count = await this.prismaService.notification.count({
+      where: { userId: payload.userId, isRead: false },
+    });
+    return { count };
+  }
 }

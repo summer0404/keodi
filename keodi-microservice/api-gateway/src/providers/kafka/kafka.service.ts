@@ -5,18 +5,19 @@ import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
 import {
   AttributeTopics,
   AuthTopics,
-  UserTopics,
-  OwnerApplicationTopics,
   CategoryTopics,
   FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
+  NotificationInboxTopics,
+  OwnerApplicationTopics,
+  OwnershipClaimTopics,
   PlaceTopics,
   RecommendationTopics,
   ReviewTopics,
   SearchTopics,
   SettingTopics,
-  OwnershipClaimTopics,
+  UserTopics,
 } from 'src/shared/constants/topic.constant';
 
 @Injectable()
@@ -136,6 +137,16 @@ export class KafkaService implements OnModuleInit {
     //setting topics
     this.kafkaClient.subscribeToResponseOf(SettingTopics.Get);
     this.kafkaClient.subscribeToResponseOf(SettingTopics.Update);
+
+    // notification inbox topics
+    this.kafkaClient.subscribeToResponseOf(NotificationInboxTopics.GetInbox);
+    this.kafkaClient.subscribeToResponseOf(NotificationInboxTopics.MarkAsRead);
+    this.kafkaClient.subscribeToResponseOf(
+      NotificationInboxTopics.MarkAllAsRead,
+    );
+    this.kafkaClient.subscribeToResponseOf(
+      NotificationInboxTopics.GetUnreadCount,
+    );
 
     await this.kafkaClient.connect();
   }

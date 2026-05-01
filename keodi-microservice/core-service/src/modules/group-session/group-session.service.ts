@@ -35,7 +35,7 @@ export class GroupSessionService {
     private readonly groupSessionHelper: GroupSessionHelper,
     private readonly kafkaService: KafkaService,
     private readonly imageService: ImageService,
-  ) { }
+  ) {}
 
   private async mapUserPictureUrl<T extends { pictureUrl: string | null }>(
     user: T,
@@ -220,7 +220,9 @@ export class GroupSessionService {
     }
 
     const normalizedCategoryIds = categoryIds
-      .filter((categoryId): categoryId is string => typeof categoryId === 'string')
+      .filter(
+        (categoryId): categoryId is string => typeof categoryId === 'string',
+      )
       .map((categoryId) => categoryId.trim())
       .filter((categoryId) => categoryId.length > 0);
 
@@ -569,6 +571,7 @@ export class GroupSessionService {
           inviterName,
           inviterPictureUrl,
         },
+        deepLink: `frontend://group?shareCode=${session.shareCode}`,
         preferredChannel: NotificationPreferredChannel.BOTH,
         createdAt: new Date().toISOString(),
       });
@@ -908,6 +911,7 @@ export class GroupSessionService {
             title: 'Vote Finalized!',
             body: 'All members have voted. Check out the results!',
             data: { sessionId },
+            deepLink: `frontend://group/session/${sessionId}/results`,
             preferredChannel: NotificationPreferredChannel.BOTH,
             createdAt: new Date().toISOString(),
           });
@@ -1026,6 +1030,7 @@ export class GroupSessionService {
           title: 'Vote Finalized!',
           body: 'The session host has finalized the vote. Check out the results!',
           data: { sessionId, winningPlaceId },
+          deepLink: `frontend://group/session/${sessionId}/results`,
           preferredChannel: NotificationPreferredChannel.BOTH,
           createdAt: new Date().toISOString(),
         });

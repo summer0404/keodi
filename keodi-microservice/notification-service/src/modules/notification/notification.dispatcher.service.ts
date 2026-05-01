@@ -31,7 +31,7 @@ export class NotificationDispatcherService {
       try {
         const settings = await this.kafkaService.sendWithTimeout(
           SettingTopics.Get,
-          event.userId,
+          { userId: event.userId },
         );
         if (settings?.[settingKey] === false) {
           return;

@@ -8,7 +8,10 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
-import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
+import {
+  NotificationPreferredChannel,
+  NotificationType,
+} from 'src/shared/enums/notification.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { getSearchRadiusKm } from 'src/shared/utils/search.utils';
 
@@ -35,7 +38,7 @@ export class NotificationPushScheduler {
     private readonly settingService: SettingService,
     private readonly recommendationService: RecommendationService,
     private readonly placeService: PlaceService,
-  ) { }
+  ) {}
 
   @Cron('0 10 * * *') // Daily at 10 AM
   async pushNearbyAndRecommendations() {
@@ -118,6 +121,7 @@ export class NotificationPushScheduler {
         title: 'Places Near You',
         body: `Check out ${topPlace.name} and ${places.length - 1} more places nearby!`,
         data: { placeId: topPlace.id },
+        deepLink: `frontend://place/${topPlace.id}`,
         preferredChannel: NotificationPreferredChannel.FCM,
         createdAt: new Date().toISOString(),
       });
@@ -149,6 +153,7 @@ export class NotificationPushScheduler {
         title: 'Recommended For You',
         body: `We think you'll love ${topPlace.name}! Tap to explore.`,
         data: { placeId: topPlace.id },
+        deepLink: `frontend://place/${topPlace.id}`,
         preferredChannel: NotificationPreferredChannel.FCM,
         createdAt: new Date().toISOString(),
       });
