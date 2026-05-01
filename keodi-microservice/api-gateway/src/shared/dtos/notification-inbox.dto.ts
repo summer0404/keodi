@@ -1,25 +1,16 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsNumber, IsOptional, Max, Min } from 'class-validator';
-import { PaginationConstants } from '../constants/pagination.constants';
+import { IsBoolean, IsOptional } from 'class-validator';
+import { PaginationQueryDto } from './pagination.dto';
 
-export class GetNotificationInboxQueryDto {
-  @ApiProperty({ description: 'Page number', example: 1, default: PaginationConstants.DEFAULT_PAGE, required: false })
-  @Type(() => Number)
-  @IsNumber()
-  @IsOptional()
-  @Min(1)
-  page: number = PaginationConstants.DEFAULT_PAGE;
-
-  @ApiProperty({ description: 'Items per page', example: 20, default: 20, required: false })
-  @Type(() => Number)
-  @IsNumber()
-  @IsOptional()
-  @Min(1)
-  @Max(100)
-  limit: number = 20;
-
-  @ApiProperty({ description: 'Return only unread notifications', example: false, required: false })
+export class GetNotificationInboxQueryDto extends OmitType(PaginationQueryDto, [
+  'sortOrder',
+] as const) {
+  @ApiProperty({
+    description: 'Return only unread notifications',
+    example: false,
+    required: false,
+  })
   @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()
@@ -42,7 +33,11 @@ export class NotificationItemDto {
   @ApiProperty({ required: false, nullable: true })
   data: Record<string, unknown> | null;
 
-  @ApiProperty({ required: false, nullable: true, example: 'keodi://friends/requests' })
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    example: 'keodi://friends/requests',
+  })
   deepLink: string | null;
 
   @ApiProperty({ example: 'FCM' })

@@ -17,17 +17,26 @@ export class NotificationInboxService {
   }
 
   async markAsRead(userId: string, notificationId: string) {
-    return this.kafkaService.sendWithTimeout(NotificationInboxTopics.MarkAsRead, {
-      userId,
-      notificationId,
-    });
+    return this.kafkaService.sendWithTimeout(
+      NotificationInboxTopics.MarkAsRead,
+      {
+        userId,
+        notificationId,
+      },
+    );
   }
 
   async markAllAsRead(userId: string) {
-    return this.kafkaService.sendWithTimeout(NotificationInboxTopics.MarkAllAsRead, { userId });
+    return this.kafkaService.sendWithTimeout(
+      NotificationInboxTopics.MarkAllAsRead,
+      { userId },
+    );
   }
 
   async getUnreadCount(userId: string) {
-    return this.kafkaService.sendWithTimeout(NotificationInboxTopics.GetUnreadCount, { userId });
+    return this.kafkaService.sendWithTimeout(
+      NotificationInboxTopics.GetUnreadCount,
+      { userId },
+    );
   }
 }

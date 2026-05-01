@@ -23,7 +23,9 @@ import {
 @Controller('notifications')
 @ApiBearerAuth('access-token')
 export class NotificationInboxController {
-  constructor(private readonly notificationInboxService: NotificationInboxService) {}
+  constructor(
+    private readonly notificationInboxService: NotificationInboxService,
+  ) {}
 
   @Get()
   @ApiGetNotificationInbox()

@@ -1,9 +1,19 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { createId } from '@paralleldrive/cuid2';
 import { FriendRequestStatus } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
-import { FriendErrorMessages, UserErrorMessages } from 'src/shared/constants/error.constant';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
+import {
+  FriendErrorMessages,
+  UserErrorMessages,
+} from 'src/shared/constants/error.constant';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { FriendPaginationDto } from 'src/shared/dtos/user.dto';
+import {
+  NotificationPreferredChannel,
+  NotificationType,
+} from 'src/shared/enums/notification.enum';
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { ImageService } from '../image/image.service';
@@ -13,7 +23,8 @@ export class FriendService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
-  ) { }
+    private readonly kafkaService: KafkaService,
+  ) {}
 
   async sendRequest(senderId: string, receiverId: string) {
     if (senderId == receiverId) {
@@ -73,9 +84,31 @@ export class FriendService {
         },
       });
 
-      return await this.prismaService.friendRequest.create({
+      const request = await this.prismaService.friendRequest.create({
         data: { senderId, receiverId },
       });
+
+      const sender = await this.prismaService.user.findUnique({
+        where: { id: senderId },
+        select: { firstName: true, lastName: true },
+      });
+      const senderName =
+        [sender?.firstName, sender?.lastName].filter(Boolean).join(' ') ||
+        'Someone';
+
+      this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
+        eventId: createId(),
+        userId: receiverId,
+        type: NotificationType.FRIEND_REQUEST,
+        title: 'New Friend Request',
+        body: `${senderName} sent you a friend request`,
+        data: { senderId, requestId: request.id },
+        deepLink: `frontend://friends/requests`,
+        preferredChannel: NotificationPreferredChannel.BOTH,
+        createdAt: new Date().toISOString(),
+      });
+
+      return request;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -119,6 +152,26 @@ export class FriendService {
             { userId: request.senderId, friendId: request.receiverId },
             { userId: request.receiverId, friendId: request.senderId },
           ],
+        });
+
+        const accepter = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true },
+        });
+        const accepterName =
+          [accepter?.firstName, accepter?.lastName].filter(Boolean).join(' ') ||
+          'Someone';
+
+        this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
+          eventId: createId(),
+          userId: request.senderId,
+          type: NotificationType.FRIEND_ACCEPTED,
+          title: 'Friend Request Accepted',
+          body: `${accepterName} accepted your friend request`,
+          data: { accepterId: userId },
+          deepLink: `frontend://friends`,
+          preferredChannel: NotificationPreferredChannel.BOTH,
+          createdAt: new Date().toISOString(),
         });
 
         return { success: true, message: 'Friend request accepted' };
@@ -248,8 +301,8 @@ export class FriendService {
             ...friendship.friend,
             pictureUrl: friendship.friend.pictureUrl
               ? await this.imageService.getImageViewUrl(
-                friendship.friend.pictureUrl,
-              )
+                  friendship.friend.pictureUrl,
+                )
               : null,
           },
         })),
@@ -317,8 +370,8 @@ export class FriendService {
             ...request.sender,
             pictureUrl: request.sender.pictureUrl
               ? await this.imageService.getImageViewUrl(
-                request.sender.pictureUrl,
-              )
+                  request.sender.pictureUrl,
+                )
               : null,
           },
         })),

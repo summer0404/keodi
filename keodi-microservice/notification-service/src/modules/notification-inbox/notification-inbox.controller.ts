@@ -1,7 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import {
+  NotificationInboxTopics,
+  NotificationTopics,
+} from 'src/shared/constants/topic.contant';
 import { NotificationInboxService } from './notification-inbox.service';
-import { NotificationInboxTopics, NotificationTopics } from 'src/shared/constants/topic.contant';
 
 @Controller()
 export class NotificationInboxController {
@@ -13,12 +16,22 @@ export class NotificationInboxController {
   }
 
   @MessagePattern(NotificationInboxTopics.GetInbox)
-  async getInbox(@Payload() payload: { userId: string; page: number; limit: number; unreadOnly?: boolean }) {
+  async getInbox(
+    @Payload()
+    payload: {
+      userId: string;
+      page: number;
+      limit: number;
+      unreadOnly?: boolean;
+    },
+  ) {
     return this.inboxService.getByUserId(payload);
   }
 
   @MessagePattern(NotificationInboxTopics.MarkAsRead)
-  async markAsRead(@Payload() payload: { userId: string; notificationId: string }) {
+  async markAsRead(
+    @Payload() payload: { userId: string; notificationId: string },
+  ) {
     return this.inboxService.markAsRead(payload);
   }
 

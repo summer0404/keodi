@@ -29,7 +29,12 @@ export class NotificationInboxService {
     });
   }
 
-  async getByUserId(payload: { userId: string; page: number; limit: number; unreadOnly?: boolean }) {
+  async getByUserId(payload: {
+    userId: string;
+    page: number;
+    limit: number;
+    unreadOnly?: boolean;
+  }) {
     const { userId, page, limit, unreadOnly } = payload;
     const skip = (page - 1) * limit;
 
@@ -38,30 +43,33 @@ export class NotificationInboxService {
       ...(unreadOnly ? { isRead: false } : {}),
     };
 
-    const [notifications, total, unreadCount] = await this.prismaService.$transaction([
-      this.prismaService.notification.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          type: true,
-          title: true,
-          body: true,
-          data: true,
-          deepLink: true,
-          channel: true,
-          status: true,
-          isRead: true,
-          deliveredAt: true,
-          readAt: true,
-          createdAt: true,
-        },
-      }),
-      this.prismaService.notification.count({ where }),
-      this.prismaService.notification.count({ where: { userId, isRead: false } }),
-    ]);
+    const [notifications, total, unreadCount] =
+      await this.prismaService.$transaction([
+        this.prismaService.notification.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            type: true,
+            title: true,
+            body: true,
+            data: true,
+            deepLink: true,
+            channel: true,
+            status: true,
+            isRead: true,
+            deliveredAt: true,
+            readAt: true,
+            createdAt: true,
+          },
+        }),
+        this.prismaService.notification.count({ where }),
+        this.prismaService.notification.count({
+          where: { userId, isRead: false },
+        }),
+      ]);
 
     return {
       notifications,
