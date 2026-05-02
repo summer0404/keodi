@@ -118,6 +118,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
       - name: Run unit tests with coverage
         run: npm run test:cov
 
@@ -147,6 +150,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
       - name: Run unit tests with coverage
         run: npm run test:cov
 
@@ -175,6 +181,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
 
       - name: Run unit tests with coverage
         run: npm run test:cov
