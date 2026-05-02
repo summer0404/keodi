@@ -89,7 +89,7 @@ export class AuthService {
   private async sendVerifyUrlWithPurpose(email: string, purpose: string) {
     const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
 
-    this.verifyUrlService.sendVerifyUrlWithPurpose(email, token, purpose);
+    await this.verifyUrlService.sendVerifyUrlWithPurpose(email, token, purpose);
   }
 
   async register(data: RegisterDto) {
@@ -126,8 +126,8 @@ export class AuthService {
         },
       });
 
-      this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL);
-      this.userService.createUserInfomation(newUser.id);
+      await this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL);
+      await this.userService.createUserInfomation(newUser.id);
 
       return { message: 'User created successfully', userId: newUser.id };
     } catch (error) {
@@ -206,7 +206,7 @@ export class AuthService {
         throw error;
       }
 
-      this.sendEmailVerifyUrl(newOwner.email, VerifyUrlPurpose.VERIFY_EMAIL);
+      await this.sendEmailVerifyUrl(newOwner.email, VerifyUrlPurpose.VERIFY_EMAIL);
 
       this.kafkaService
         .getClient()
@@ -366,7 +366,7 @@ export class AuthService {
           message: 'User with this email does not exist',
         });
 
-      this.sendVerifyUrlWithPurpose(email, purpose);
+      await this.sendVerifyUrlWithPurpose(email, purpose);
 
       return { message: 'Verification email has sent' };
     } catch (error) {
