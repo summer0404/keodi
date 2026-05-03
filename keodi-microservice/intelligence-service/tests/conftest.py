@@ -223,8 +223,10 @@ def mock_handlers(
 ):
     """Fixture for Handlers with all mocked dependencies"""
     from app.kafka.handler import Handlers
-    
-    handlers = Handlers()
+
+    with patch('app.kafka.handler.get_consumer_service', return_value=mock_consumer_service):
+        handlers = Handlers()
+
     handlers.consumer_service = mock_consumer_service
     handlers.llm_service = mock_llm_service
     handlers.embedding_service = mock_embedding_service
