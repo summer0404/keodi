@@ -218,7 +218,6 @@ export default function OwnershipClaims() {
                   <div>
                     <p className="text-sm font-medium text-neutral-900">{place.name}</p>
                     <div className="flex items-center gap-3 mt-1">
-                      <p className="text-xs text-neutral-500 font-mono">{place.id.slice(0, 16)}...</p>
                       {place.owner && (
                         <span className="text-xs text-green-600">
                           Owner: {place.owner.firstName} {place.owner.lastName || place.owner.username}

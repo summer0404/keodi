@@ -1,4 +1,6 @@
-import { AUTH_API_URLS } from './constants';
+import { API_ENDPOINTS, TOKEN_KEYS } from './constants';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type LoginPayload = {
   identifier: string;
@@ -6,61 +8,33 @@ export type LoginPayload = {
   rememberMe: boolean;
 };
 
-function getErrorMessage(response: Response, fallbackMessage: string) {
-  return response
-    .json()
-    .then((errorData: any) => {
-      if (Array.isArray(errorData?.message)) {
-        return errorData.message.join(', ');
-      }
+export type CreateOwnershipClaimPayload = {
+  placeId: string;
+  relationship: string;
+  proofDocumentUrls: string[];
+  note?: string;
+};
 
-      return errorData?.message || fallbackMessage;
-    })
-    .catch(() => fallbackMessage);
-}
+// ─── Utilities ──────────────────────────────────────────────────────────────
 
-export async function loginOwner(
-  payload: LoginPayload,
-  baseUrl: string,
-): Promise<any> {
-  const response = await fetch(AUTH_API_URLS(baseUrl).LOGIN, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response, 'Login failed'));
+async function getErrorMessage(response: Response, fallbackMessage: string) {
+  try {
+    const errorData = await response.json();
+    if (Array.isArray(errorData?.message)) {
+      return errorData.message.join(', ');
+    }
+    return errorData?.message || fallbackMessage;
+  } catch {
+    return fallbackMessage;
   }
-
-  return response.json();
 }
 
-export async function registerOwner(data: any, baseUrl: string): Promise<any> {
-  const response = await fetch(AUTH_API_URLS(baseUrl).REGISTER_OWNER, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response, 'Registration failed'));
-  }
-
-  return response.json();
-}
-
-const ACCESS_TOKEN_KEY = "owner_access_token";
+// ─── Core Fetch Utility ──────────────────────────────────────────────────────
 
 export async function fetchWithAuth(
   url: string,
   options: RequestInit = {},
-  tokenKey: string = ACCESS_TOKEN_KEY
+  tokenKey: string = TOKEN_KEYS.OWNER
 ): Promise<Response> {
   let token = null;
   if (typeof window !== 'undefined') {
@@ -72,7 +46,6 @@ export async function fetchWithAuth(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Ensure cookies are sent if necessary
   const requestOptions: RequestInit = {
     ...options,
     headers,
@@ -81,10 +54,13 @@ export async function fetchWithAuth(
 
   let response = await fetch(url, requestOptions);
 
-  // If unauthorized, attempt to refresh the token using the httpOnly cookie
+  // If unauthorized, attempt to refresh the token
   if (response.status === 401 && typeof window !== 'undefined') {
+    // Extract base URL for refresh endpoint
     const baseUrlMatch = url.match(/^(.*\/api\/v1)/);
-    const refreshUrl = baseUrlMatch ? `${baseUrlMatch[1]}/auth/refresh` : `/api/v1/auth/refresh`;
+    const refreshUrl = baseUrlMatch 
+      ? `${baseUrlMatch[1]}/auth/refresh` 
+      : url.split('/owner-applications')[0].split('/ownership-claims')[0].split('/places')[0].split('/categories')[0] + '/auth/refresh';
 
     try {
       const refreshResponse = await fetch(refreshUrl, {
@@ -93,28 +69,23 @@ export async function fetchWithAuth(
       });
 
       if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        const newAccessToken = refreshData.accessToken;
+        const { accessToken } = await refreshResponse.json();
 
-        // Update stored token (assuming localStorage since we don't know user preference here, but checking which one exists)
-        if (localStorage.getItem(tokenKey)) {
-          localStorage.setItem(tokenKey, newAccessToken);
-        } else if (sessionStorage.getItem(tokenKey)) {
-          sessionStorage.setItem(tokenKey, newAccessToken);
+        // Update stored token
+        if (localStorage.getItem(tokenKey) || !sessionStorage.getItem(tokenKey)) {
+          localStorage.setItem(tokenKey, accessToken);
         } else {
-          // Default to localStorage if somehow missing
-          localStorage.setItem(tokenKey, newAccessToken);
+          sessionStorage.setItem(tokenKey, accessToken);
         }
 
-        // Retry original request with new token
-        headers.set("Authorization", `Bearer ${newAccessToken}`);
+        // Retry original request
+        headers.set("Authorization", `Bearer ${accessToken}`);
         requestOptions.headers = headers;
         response = await fetch(url, requestOptions);
       } else {
-        throw new Error("Refresh token expired or invalid");
+        throw new Error("Session expired");
       }
     } catch (error) {
-      // Refresh failed, clear tokens and redirect to login
       localStorage.removeItem(tokenKey);
       sessionStorage.removeItem(tokenKey);
       window.location.href = "/login";
@@ -124,14 +95,45 @@ export async function fetchWithAuth(
   return response;
 }
 
-export async function searchPlaces(query: string, baseUrl: string, lat?: number, lng?: number) {
+// ─── Public API Functions ────────────────────────────────────────────────────
+
+export async function loginOwner(payload: LoginPayload, baseUrl: string) {
+  const response = await fetch(API_ENDPOINTS(baseUrl).AUTH.LOGIN, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Login failed'));
+  }
+
+  return response.json();
+}
+
+export async function registerOwner(data: any, baseUrl: string) {
+  const response = await fetch(API_ENDPOINTS(baseUrl).AUTH.REGISTER_OWNER, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Registration failed'));
+  }
+
+  return response.json();
+}
+
+export async function searchPlaces(query: string, baseUrl: string, lat: number = 10.762622, lng: number = 106.660172) {
   const searchParams = new URLSearchParams({
     search: query,
-    latitude: lat ? lat.toString() : "10.762622",
-    longitude: lng ? lng.toString() : "106.660172",
+    latitude: lat.toString(),
+    longitude: lng.toString(),
   });
   
-  const response = await fetchWithAuth(`${baseUrl}/places/search?${searchParams.toString()}`);
+  const response = await fetchWithAuth(`${API_ENDPOINTS(baseUrl).PLACES.SEARCH}?${searchParams.toString()}`);
   
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to search places"));
@@ -141,7 +143,7 @@ export async function searchPlaces(query: string, baseUrl: string, lat?: number,
 }
 
 export async function createPlace(data: FormData, baseUrl: string) {
-  const response = await fetchWithAuth(`${baseUrl}/places`, {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).PLACES.ROOT, {
     method: "POST",
     body: data,
   });
@@ -153,19 +155,10 @@ export async function createPlace(data: FormData, baseUrl: string) {
   return response.json();
 }
 
-export type CreateOwnershipClaimPayload = {
-  placeId: string;
-  relationship: string;
-  proofDocumentUrls: string[];
-  note?: string;
-};
-
 export async function createOwnershipClaim(payload: CreateOwnershipClaimPayload, baseUrl: string) {
-  const response = await fetchWithAuth(`${baseUrl}/ownership-claims`, {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).OWNERSHIP_CLAIMS.ROOT, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -177,12 +170,8 @@ export async function createOwnershipClaim(payload: CreateOwnershipClaimPayload,
 }
 
 export async function searchCategories(query: string, baseUrl: string, limit: number = 10) {
-  const searchParams = new URLSearchParams({
-    q: query,
-    limit: limit.toString(),
-  });
-  
-  const response = await fetchWithAuth(`${baseUrl}/categories/search?${searchParams.toString()}`);
+  const searchParams = new URLSearchParams({ q: query, limit: limit.toString() });
+  const response = await fetchWithAuth(`${API_ENDPOINTS(baseUrl).CATEGORIES.SEARCH}?${searchParams.toString()}`);
   
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to fetch categories"));
@@ -191,18 +180,13 @@ export async function searchCategories(query: string, baseUrl: string, limit: nu
   return response.json();
 }
 
-// ─── Admin API functions ───────────────────────────────────────────────────
-
-const ADMIN_TOKEN_KEY = "admin_access_token";
+// ─── Admin API Functions ─────────────────────────────────────────────────────
 
 export async function getOwnerApplications(baseUrl: string, status?: string, page: number = 1, limit: number = 10) {
-  const searchParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-  });
-  if (status) searchParams.set('status', status);
+  const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+  if (status) params.set('status', status);
 
-  const response = await fetchWithAuth(`${baseUrl}/owner-applications?${searchParams.toString()}`, {}, ADMIN_TOKEN_KEY);
+  const response = await fetchWithAuth(`${API_ENDPOINTS(baseUrl).OWNER_APPLICATIONS.ROOT}?${params.toString()}`, {}, TOKEN_KEYS.ADMIN);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, 'Failed to fetch owner applications'));
@@ -212,13 +196,10 @@ export async function getOwnerApplications(baseUrl: string, status?: string, pag
 }
 
 export async function getOwnershipClaims(baseUrl: string, status?: string, page: number = 1, limit: number = 10) {
-  const searchParams = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-  });
-  if (status) searchParams.set("status", status);
+  const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+  if (status) params.set("status", status);
 
-  const response = await fetchWithAuth(`${baseUrl}/ownership-claims?${searchParams.toString()}`, {}, ADMIN_TOKEN_KEY);
+  const response = await fetchWithAuth(`${API_ENDPOINTS(baseUrl).OWNERSHIP_CLAIMS.ROOT}?${params.toString()}`, {}, TOKEN_KEYS.ADMIN);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to fetch ownership claims"));
@@ -228,9 +209,9 @@ export async function getOwnershipClaims(baseUrl: string, status?: string, page:
 }
 
 export async function approveOwnerApplication(applicationId: string, baseUrl: string) {
-  const response = await fetchWithAuth(`${baseUrl}/owner-applications/${applicationId}/approve`, {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).OWNER_APPLICATIONS.APPROVE(applicationId), {
     method: "POST",
-  }, ADMIN_TOKEN_KEY);
+  }, TOKEN_KEYS.ADMIN);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to approve owner application"));
@@ -240,11 +221,11 @@ export async function approveOwnerApplication(applicationId: string, baseUrl: st
 }
 
 export async function rejectOwnerApplication(applicationId: string, reason: string, baseUrl: string) {
-  const response = await fetchWithAuth(`${baseUrl}/owner-applications/${applicationId}/reject`, {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).OWNER_APPLICATIONS.REJECT(applicationId), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
-  }, ADMIN_TOKEN_KEY);
+  }, TOKEN_KEYS.ADMIN);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to reject owner application"));
@@ -254,9 +235,9 @@ export async function rejectOwnerApplication(applicationId: string, reason: stri
 }
 
 export async function approveOwnershipClaim(claimId: string, baseUrl: string) {
-  const response = await fetchWithAuth(`${baseUrl}/ownership-claims/${claimId}/approve`, {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).OWNERSHIP_CLAIMS.APPROVE(claimId), {
     method: "POST",
-  }, ADMIN_TOKEN_KEY);
+  }, TOKEN_KEYS.ADMIN);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to approve ownership claim"));
@@ -266,11 +247,11 @@ export async function approveOwnershipClaim(claimId: string, baseUrl: string) {
 }
 
 export async function rejectOwnershipClaim(claimId: string, reason: string, baseUrl: string) {
-  const response = await fetchWithAuth(`${baseUrl}/ownership-claims/${claimId}/reject`, {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).OWNERSHIP_CLAIMS.REJECT(claimId), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
-  }, ADMIN_TOKEN_KEY);
+  }, TOKEN_KEYS.ADMIN);
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to reject ownership claim"));

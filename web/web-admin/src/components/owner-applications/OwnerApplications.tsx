@@ -199,7 +199,7 @@ export default function OwnerApplications() {
               ? (app.user.firstName && app.user.lastName
                   ? `${app.user.firstName} ${app.user.lastName}`
                   : app.user.username)
-              : app.userId
+              : "Unknown Applicant"
 
             return (
               <Card
