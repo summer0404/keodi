@@ -1,10 +1,13 @@
 import {
   ArrayMinSize,
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
+import { PaginationQueryDto } from './pagination.dto';
+import { OwnerApplicationStatus } from '@prisma/client';
 
 export class CreateOwnerApplicationDto {
   @IsNotEmpty()
@@ -41,4 +44,10 @@ export class RejectOwnerApplicationDto {
   @IsNotEmpty()
   @IsString()
   reason: string;
+}
+
+export class GetOwnerApplicationsDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsEnum(OwnerApplicationStatus)
+  status?: OwnerApplicationStatus;
 }

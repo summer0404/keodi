@@ -3,6 +3,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { OwnerApplicationTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnerApplicationDto,
+  GetOwnerApplicationsDto,
   RejectOwnerApplicationDto,
 } from 'src/shared/dtos/owner-application.dto';
 import { OwnerApplicationService } from './owner-application.service';
@@ -28,5 +29,10 @@ export class OwnerApplicationController {
     @Payload() data: { applicationId: string; data: RejectOwnerApplicationDto },
   ) {
     return await this.ownerApplicationService.reject(data.applicationId, data.data);
+  }
+
+  @MessagePattern(OwnerApplicationTopics.GetAll)
+  async getAll(@Payload() data: GetOwnerApplicationsDto) {
+    return await this.ownerApplicationService.getAll(data);
   }
 }

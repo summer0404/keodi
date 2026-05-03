@@ -195,11 +195,17 @@ export async function searchCategories(query: string, baseUrl: string, limit: nu
 
 const ADMIN_TOKEN_KEY = "admin_access_token";
 
-export async function getAllUsers(baseUrl: string) {
-  const response = await fetchWithAuth(`${baseUrl}/users/all`, {}, ADMIN_TOKEN_KEY);
+export async function getOwnerApplications(baseUrl: string, status?: string, page: number = 1, limit: number = 10) {
+  const searchParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+  if (status) searchParams.set('status', status);
+
+  const response = await fetchWithAuth(`${baseUrl}/owner-applications?${searchParams.toString()}`, {}, ADMIN_TOKEN_KEY);
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to fetch users"));
+    throw new Error(await getErrorMessage(response, 'Failed to fetch owner applications'));
   }
 
   return response.json();

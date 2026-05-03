@@ -32,6 +32,7 @@ export const UserTopics = {
 export const OwnerApplicationTopics = {
   Approve: 'owner-application.approve',
   Reject: 'owner-application.reject',
+  GetAll: 'owner-application.get-all',
 } as const;
 
 export const OwnershipClaimTopics = {

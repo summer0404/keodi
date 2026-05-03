@@ -21,6 +21,7 @@ export const OwnerApplicationTopics = {
   Create: 'owner-application.create',
   Approve: 'owner-application.approve',
   Reject: 'owner-application.reject',
+  GetAll: 'owner-application.get-all',
 } as const;
 
 export const OwnershipClaimTopics = {

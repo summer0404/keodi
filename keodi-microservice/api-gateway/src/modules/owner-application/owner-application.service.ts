@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { OwnerApplicationTopics } from 'src/shared/constants/topic.constant';
-import { RejectOwnerApplicationDto } from 'src/shared/dtos/owner-application.dto';
+import { GetOwnerApplicationsDto, RejectOwnerApplicationDto } from 'src/shared/dtos/owner-application.dto';
 
 @Injectable()
 export class OwnerApplicationService {
   constructor(private readonly kafkaService: KafkaService) {}
+
+  async getAll(query: GetOwnerApplicationsDto) {
+    return await this.kafkaService.sendWithTimeout(
+      OwnerApplicationTopics.GetAll,
+      query,
+    );
+  }
 
   async approve(applicationId: string) {
     return await this.kafkaService.sendWithTimeout(

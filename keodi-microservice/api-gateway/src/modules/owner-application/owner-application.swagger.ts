@@ -9,8 +9,24 @@ import {
 } from '@nestjs/swagger';
 import {
   OwnerApplicationActionResponseDto,
+  PaginatedOwnerApplicationResponseDto,
   RejectOwnerApplicationDto,
 } from 'src/shared/dtos/owner-application.dto';
+
+export function ApiGetOwnerApplications() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'List owner applications',
+      description:
+        'Retrieve all owner registration applications with optional status filtering and pagination.',
+    }),
+    ApiOkResponse({
+      description: 'Owner applications retrieved successfully',
+      type: PaginatedOwnerApplicationResponseDto,
+    }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+  );
+}
 
 export function ApiApproveOwnerApplication() {
   return applyDecorators(

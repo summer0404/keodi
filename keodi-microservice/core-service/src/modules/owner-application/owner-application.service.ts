@@ -7,6 +7,7 @@ import { OwnerApplicationErrorMessages } from 'src/shared/constants/error.consta
 import { AuthTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnerApplicationDto,
+  GetOwnerApplicationsDto,
   RejectOwnerApplicationDto,
 } from 'src/shared/dtos/owner-application.dto';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
@@ -157,6 +158,47 @@ export class OwnerApplicationService {
 
       return {
         message: 'Owner application rejected successfully',
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async getAll(data: GetOwnerApplicationsDto) {
+    try {
+      const { page, limit, sortOrder, status } = data;
+      const skip = (page - 1) * limit;
+
+      const where = status ? { status } : {};
+
+      const [applications, total] = await Promise.all([
+        this.prismaService.ownerApplication.findMany({
+          where,
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+          orderBy: { createdAt: sortOrder },
+          skip,
+          take: limit,
+        }),
+        this.prismaService.ownerApplication.count({ where }),
+      ]);
+
+      return {
+        data: applications,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
       return handleServiceErrorCatching(error);

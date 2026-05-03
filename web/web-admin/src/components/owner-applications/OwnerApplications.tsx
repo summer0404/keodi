@@ -7,33 +7,56 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   UserCheck,
   UserX,
+  ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { getAllUsers, approveOwnerApplication, rejectOwnerApplication } from "@keodi/shared"
+import { getOwnerApplications, approveOwnerApplication, rejectOwnerApplication } from "@keodi/shared"
 
-type OwnerApplication = {
-  id: string
-  status: string
-  createdAt: string
-  rejectionReason?: string
-}
-
-type User = {
+type OwnerApplicationUser = {
   id: string
   firstName?: string
   lastName?: string
   username: string
   email: string
   role: string
-  ownerApplication?: OwnerApplication
 }
 
+type OwnerApplication = {
+  id: string
+  userId: string
+  businessName: string
+  businessPhone: string
+  businessAddress: string
+  taxId: string
+  businessWebsite?: string
+  proofDocumentUrls: string[]
+  status: string
+  rejectionReason?: string
+  reviewedAt?: string
+  createdAt: string
+  updatedAt: string
+  user?: OwnerApplicationUser
+}
+
+type PaginatedResponse = {
+  data: OwnerApplication[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+const STATUS_OPTIONS = ["PENDING", "APPROVED", "REJECTED"] as const
+type StatusFilter = typeof STATUS_OPTIONS[number] | "all"
+
 export default function OwnerApplications() {
-  const [users, setUsers] = useState<User[]>([])
+  const [appsData, setAppsData] = useState<PaginatedResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -41,28 +64,28 @@ export default function OwnerApplications() {
   const [rejectReason, setRejectReason] = useState("")
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
-  const [filter, setFilter] = useState<"all" | "PENDING" | "APPROVED" | "REJECTED">("PENDING")
+  const [filter, setFilter] = useState<StatusFilter>("PENDING")
+  const [page, setPage] = useState(1)
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || ""
 
-  const fetchUsers = async () => {
+  const fetchApplications = async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await getAllUsers(baseUrl)
-      // Filter users that have ownerApplication
-      const usersWithApplications = (data || []).filter((u: User) => u.ownerApplication)
-      setUsers(usersWithApplications)
+      const statusParam = filter === "all" ? undefined : filter
+      const data = await getOwnerApplications(baseUrl, statusParam, page, 10)
+      setAppsData(data)
     } catch (err: any) {
-      setError(err.message || "Failed to fetch users")
+      setError(err.message || "Failed to fetch owner applications")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    fetchApplications()
+  }, [filter, page])
 
   useEffect(() => {
     if (toast) {
@@ -76,7 +99,7 @@ export default function OwnerApplications() {
       setActionLoading(applicationId)
       await approveOwnerApplication(applicationId, baseUrl)
       setToast({ message: "Owner application approved successfully!", type: "success" })
-      fetchUsers()
+      fetchApplications()
     } catch (err: any) {
       setToast({ message: err.message || "Failed to approve", type: "error" })
     } finally {
@@ -92,18 +115,13 @@ export default function OwnerApplications() {
       setToast({ message: "Owner application rejected.", type: "success" })
       setRejectingId(null)
       setRejectReason("")
-      fetchUsers()
+      fetchApplications()
     } catch (err: any) {
       setToast({ message: err.message || "Failed to reject", type: "error" })
     } finally {
       setActionLoading(null)
     }
   }
-
-  const filteredUsers = users.filter((u) => {
-    if (filter === "all") return true
-    return u.ownerApplication?.status === filter
-  })
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -117,6 +135,8 @@ export default function OwnerApplications() {
       </span>
     )
   }
+
+  const totalPages = appsData?.totalPages ?? 0
 
   return (
     <div>
@@ -134,7 +154,7 @@ export default function OwnerApplications() {
         {(["PENDING", "APPROVED", "REJECTED", "all"] as const).map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => { setFilter(f); setPage(1); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors ${
               filter === f
                 ? "bg-neutral-900 text-white"
@@ -163,19 +183,23 @@ export default function OwnerApplications() {
         </div>
       )}
 
-      {!loading && !error && filteredUsers.length === 0 && (
+      {!loading && !error && (!appsData || appsData.data.length === 0) && (
         <div className="text-center py-20">
           <UserCheck className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
           <p className="text-sm text-neutral-500">No applications found for this filter.</p>
         </div>
       )}
 
-      {!loading && !error && filteredUsers.length > 0 && (
+      {!loading && !error && appsData && appsData.data.length > 0 && (
         <div className="space-y-3">
-          {filteredUsers.map((user) => {
-            const app = user.ownerApplication!
+          {appsData.data.map((app) => {
             const isExpanded = expandedId === app.id
             const isRejecting = rejectingId === app.id
+            const displayName = app.user
+              ? (app.user.firstName && app.user.lastName
+                  ? `${app.user.firstName} ${app.user.lastName}`
+                  : app.user.username)
+              : app.userId
 
             return (
               <Card
@@ -188,15 +212,11 @@ export default function OwnerApplications() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-sm font-semibold text-neutral-700">
-                      {(user.firstName?.[0] || user.username[0]).toUpperCase()}
+                      {(app.user?.firstName?.[0] || app.user?.username?.[0] || "?").toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-neutral-900">
-                        {user.firstName && user.lastName
-                          ? `${user.firstName} ${user.lastName}`
-                          : user.username}
-                      </p>
-                      <p className="text-xs text-neutral-500">{user.email}</p>
+                      <p className="text-sm font-medium text-neutral-900">{displayName}</p>
+                      <p className="text-xs text-neutral-500">{app.businessName}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -216,22 +236,60 @@ export default function OwnerApplications() {
                   <div className="border-t border-neutral-100 p-4 bg-neutral-50/50">
                     <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Username</span>
-                        <p className="text-neutral-800 mt-0.5">{user.username}</p>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Applicant</span>
+                        <p className="text-neutral-800 mt-0.5">{displayName}</p>
+                        {app.user?.email && <p className="text-xs text-neutral-500">{app.user.email}</p>}
                       </div>
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Role</span>
-                        <p className="text-neutral-800 mt-0.5">{user.role}</p>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Business Name</span>
+                        <p className="text-neutral-800 mt-0.5">{app.businessName}</p>
                       </div>
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Application ID</span>
-                        <p className="text-neutral-800 mt-0.5 font-mono text-xs">{app.id}</p>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Phone</span>
+                        <p className="text-neutral-800 mt-0.5">{app.businessPhone}</p>
                       </div>
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Tax ID</span>
+                        <p className="text-neutral-800 mt-0.5 font-mono text-xs">{app.taxId}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Business Address</span>
+                        <p className="text-neutral-800 mt-0.5">{app.businessAddress}</p>
+                      </div>
+                      {app.businessWebsite && (
+                        <div className="col-span-2">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Website</span>
+                          <a href={app.businessWebsite} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 text-sm mt-0.5">
+                            {app.businessWebsite}
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      )}
                       <div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Applied</span>
                         <p className="text-neutral-800 mt-0.5">{new Date(app.createdAt).toLocaleString()}</p>
                       </div>
                     </div>
+
+                    {app.proofDocumentUrls.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-neutral-600 mb-1.5">Proof Documents</p>
+                        <div className="flex flex-wrap gap-2">
+                          {app.proofDocumentUrls.map((url, i) => (
+                            <a
+                              key={i}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors border border-blue-200"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Document {i + 1}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {app.rejectionReason && (
                       <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg">
@@ -241,7 +299,7 @@ export default function OwnerApplications() {
                     )}
 
                     {app.status === "PENDING" && (
-                      <div className="flex items-center gap-3 pt-2 border-t border-neutral-100">
+                      <div className="flex items-center gap-3 pt-3 border-t border-neutral-100">
                         {!isRejecting ? (
                           <>
                             <Button
@@ -285,10 +343,7 @@ export default function OwnerApplications() {
                               )}
                             </Button>
                             <Button
-                              onClick={() => {
-                                setRejectingId(null)
-                                setRejectReason("")
-                              }}
+                              onClick={() => { setRejectingId(null); setRejectReason(""); }}
                               variant="outline"
                               className="h-9 px-3 text-xs"
                             >
@@ -303,6 +358,35 @@ export default function OwnerApplications() {
               </Card>
             )
           })}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-xs text-neutral-500">
+                Page {appsData.page} of {totalPages} · {appsData.total} total
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  variant="outline"
+                  className="h-8 px-3 text-xs"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  variant="outline"
+                  className="h-8 px-3 text-xs"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
