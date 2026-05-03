@@ -180,7 +180,79 @@ export async function searchCategories(query: string, baseUrl: string, limit: nu
   return response.json();
 }
 
+export type ResubmitOwnerApplicationPayload = {
+  businessName: string;
+  businessPhone: string;
+  businessAddress: string;
+  taxId: string;
+  businessWebsite?: string;
+  proofDocumentUrls: string[];
+};
+
+export async function resubmitOwnerApplication(payload: ResubmitOwnerApplicationPayload, baseUrl: string) {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).OWNER_APPLICATIONS.RESUBMIT, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to resubmit owner application"));
+  }
+
+  return response.json();
+}
+
+export async function getMyOwnerApplication(baseUrl: string) {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).OWNER_APPLICATIONS.ME);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to fetch your owner application"));
+  }
+
+  return response.json();
+}
+
 // ─── Admin API Functions ─────────────────────────────────────────────────────
+
+export async function getAdminPlaces(baseUrl: string, status?: string, page: number = 1, limit: number = 10) {
+  const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+  if (status) params.set('status', status);
+
+  const response = await fetchWithAuth(`${API_ENDPOINTS(baseUrl).PLACES.ADMIN}?${params.toString()}`, {}, TOKEN_KEYS.ADMIN);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Failed to fetch places'));
+  }
+
+  return response.json();
+}
+
+export async function approvePlace(placeId: string, baseUrl: string) {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).PLACES.APPROVE(placeId), {
+    method: "POST",
+  }, TOKEN_KEYS.ADMIN);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to approve place"));
+  }
+
+  return response.json();
+}
+
+export async function rejectPlace(placeId: string, reason: string, baseUrl: string) {
+  const response = await fetchWithAuth(API_ENDPOINTS(baseUrl).PLACES.REJECT(placeId), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  }, TOKEN_KEYS.ADMIN);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to reject place"));
+  }
+
+  return response.json();
+}
 
 export async function getOwnerApplications(baseUrl: string, status?: string, page: number = 1, limit: number = 10) {
   const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });

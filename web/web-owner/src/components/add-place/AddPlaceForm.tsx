@@ -38,29 +38,38 @@ export default function AddPlaceForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
 
-  // Category Search states
-  const [catQuery, setCatQuery] = useState("");
-  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
+  const [mainCatQuery, setMainCatQuery] = useState("");
+  const [mainCategories, setMainCategories] = useState<{id: string, name: string}[]>([]);
+  const [secCatQuery, setSecCatQuery] = useState("");
+  const [secCategories, setSecCategories] = useState<{id: string, name: string}[]>([]);
   const [showMainCatDropdown, setShowMainCatDropdown] = useState(false);
   const [showSecCatDropdown, setShowSecCatDropdown] = useState(false);
   const [selectedMainCat, setSelectedMainCat] = useState<{id: string, name: string} | null>(null);
   const [selectedSecCats, setSelectedSecCats] = useState<{id: string, name: string}[]>([]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (catQuery.trim().length > 1) {
-        try {
-          const res = await searchCategories(catQuery, baseUrl, 10);
-          setCategories(res);
-        } catch (err) {
-          console.error(err);
-        }
+    const t = setTimeout(async () => {
+      if (mainCatQuery.trim().length > 1) {
+        try { setMainCategories(await searchCategories(mainCatQuery, baseUrl, 10)); }
+        catch (err) { console.error(err); }
       } else {
-        setCategories([]);
+        setMainCategories([]);
       }
     }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [catQuery, baseUrl]);
+    return () => clearTimeout(t);
+  }, [mainCatQuery, baseUrl]);
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (secCatQuery.trim().length > 1) {
+        try { setSecCategories(await searchCategories(secCatQuery, baseUrl, 10)); }
+        catch (err) { console.error(err); }
+      } else {
+        setSecCategories([]);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [secCatQuery, baseUrl]);
 
   const form = useForm<AddPlaceFormValues>({
     resolver: zodResolver(addPlaceSchema),
@@ -168,9 +177,9 @@ export default function AddPlaceForm() {
     }
   };
 
-  // Prevent Enter key from submitting the form early on non-final steps
+  // Always block Enter from triggering form submission — user must click the button explicitly
   const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
-    if (e.key === "Enter" && currentStep !== totalSteps) {
+    if (e.key === "Enter") {
       e.preventDefault();
     }
   };
@@ -323,9 +332,9 @@ export default function AddPlaceForm() {
                         <Input 
                           placeholder="Search categories..." 
                           className="pl-9"
-                          value={catQuery}
+                          value={mainCatQuery}
                           onChange={(e) => {
-                            setCatQuery(e.target.value);
+                            setMainCatQuery(e.target.value);
                             setShowMainCatDropdown(true);
                             setShowSecCatDropdown(false);
                           }}
@@ -335,16 +344,16 @@ export default function AddPlaceForm() {
                           }}
                         />
                       </div>
-                      {showMainCatDropdown && categories.length > 0 && (
+                      {showMainCatDropdown && mainCategories.length > 0 && (
                         <div className="absolute w-full mt-1 bg-white border border-neutral-200 shadow-lg rounded-lg max-h-48 overflow-y-auto">
-                          {categories.map((c) => (
+                          {mainCategories.map((c) => (
                             <div 
                               key={c.id} 
                               className="px-4 py-2 hover:bg-neutral-100 cursor-pointer text-sm"
                               onClick={() => {
                                 form.setValue("mainCategoryId", c.id, { shouldValidate: true });
                                 setSelectedMainCat(c);
-                                setCatQuery(c.name);
+                                setMainCatQuery(c.name);
                                 setShowMainCatDropdown(false);
                               }}
                             >
@@ -363,7 +372,7 @@ export default function AddPlaceForm() {
                               onClick={() => {
                                 form.setValue("mainCategoryId", "", { shouldValidate: true });
                                 setSelectedMainCat(null);
-                                setCatQuery("");
+                                setMainCatQuery("");
                               }}
                             />
                           </div>
@@ -381,8 +390,9 @@ export default function AddPlaceForm() {
                         <Input 
                           placeholder="Search secondary categories..." 
                           className="pl-9"
+                          value={secCatQuery}
                           onChange={(e) => {
-                            setCatQuery(e.target.value);
+                            setSecCatQuery(e.target.value);
                             setShowSecCatDropdown(true);
                             setShowMainCatDropdown(false);
                           }}
@@ -392,9 +402,9 @@ export default function AddPlaceForm() {
                           }}
                         />
                       </div>
-                      {showSecCatDropdown && categories.length > 0 && (
+                      {showSecCatDropdown && secCategories.length > 0 && (
                         <div className="absolute w-full mt-1 bg-white border border-neutral-200 shadow-lg rounded-lg max-h-48 overflow-y-auto">
-                          {categories.map((c) => (
+                          {secCategories.map((c) => (
                             <div 
                               key={c.id} 
                               className={`px-4 py-2 hover:bg-neutral-100 cursor-pointer text-sm ${
@@ -406,7 +416,7 @@ export default function AddPlaceForm() {
                                   setSelectedSecCats(prev => [...prev, c]);
                                 }
                                 setShowSecCatDropdown(false);
-                                setCatQuery("");
+                                setSecCatQuery("");
                               }}
                             >
                               {c.name}
@@ -550,6 +560,7 @@ export default function AddPlaceForm() {
 
                 {currentStep < totalSteps ? (
                   <Button 
+                    key="next-step-btn"
                     type="button" 
                     onClick={handleNext}
                     className="bg-black hover:bg-neutral-800 text-white h-10 px-8 rounded-lg text-xs font-semibold tracking-wider uppercase"
@@ -559,7 +570,9 @@ export default function AddPlaceForm() {
                   </Button>
                 ) : (
                   <Button 
-                    type="submit" 
+                    key="submit-btn"
+                    type="button"
+                    onClick={form.handleSubmit(onSubmit)}
                     disabled={form.formState.isSubmitting}
                     className="bg-black hover:bg-neutral-800 text-white h-10 px-8 rounded-lg text-xs font-semibold tracking-wider uppercase"
                   >

@@ -51,3 +51,34 @@ export class GetOwnerApplicationsDto extends PaginationQueryDto {
   @IsEnum(OwnerApplicationStatus)
   status?: OwnerApplicationStatus;
 }
+
+export class ResubmitOwnerApplicationDto {
+  @IsNotEmpty()
+  @IsString()
+  userId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  businessName: string;
+
+  @IsNotEmpty()
+  @IsString()
+  businessPhone: string;
+
+  @IsNotEmpty()
+  @IsString()
+  businessAddress: string;
+
+  @IsNotEmpty()
+  @IsString()
+  taxId: string;
+
+  @IsOptional()
+  @IsString()
+  businessWebsite?: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  proofDocumentUrls: string[];
+}

@@ -11,6 +11,7 @@ import {
   SearchDto,
   UpdatePlaceDto,
 } from 'src/shared/dtos/place.dto';
+import { GetAdminPlacesDto } from 'src/shared/dtos/admin-place.dto';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { formatTimeOnly } from 'src/shared/utils/time.utils';
@@ -918,6 +919,154 @@ export class PlaceService {
                 ), 0)
                 WHERE id = ${placeId}
             `;
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async getAllAdmin(data: GetAdminPlacesDto) {
+    try {
+      const page = Number(data.page) || 1;
+      const limit = Number(data.limit) || 10;
+      const sortOrder = data.sortOrder || 'desc';
+      const status = data.status;
+      const skip = (page - 1) * limit;
+
+      const where = status ? { status } : {};
+
+      const [places, total] = await Promise.all([
+        this.prismaService.place.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            status: true,
+            rating: true,
+            phoneNumber: true,
+            website: true,
+            featureImageUrl: true,
+            fullAddress: true,
+            street: true,
+            ward: true,
+            city: true,
+            countryCode: true,
+            ownerId: true,
+            createdAt: true,
+            updatedAt: true,
+            owner: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+              },
+            },
+            placeCategories: {
+              select: {
+                isMain: true,
+                category: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: sortOrder },
+          skip,
+          take: limit,
+        }),
+        this.prismaService.place.count({ where }),
+      ]);
+
+      // Resolve feature image URLs
+      const placesWithImages = await Promise.all(
+        places.map(async (place) => ({
+          ...place,
+          featureImageUrl: place.featureImageUrl
+            ? await this.imageService.getImageViewUrl(place.featureImageUrl)
+            : null,
+          categories: place.placeCategories.map((pc) => ({
+            id: pc.category.id,
+            name: pc.category.name,
+            isMain: pc.isMain,
+          })),
+          placeCategories: undefined,
+        })),
+      );
+
+      return {
+        data: placesWithImages,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async approvePlace(placeId: string) {
+    try {
+      const place = await this.prismaService.place.findUnique({
+        where: { id: placeId },
+      });
+
+      if (!place) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
+        });
+      }
+
+      if (place.status !== PlaceStatus.UNDER_REVIEW) {
+        throw new RpcException({
+          status: HttpStatus.CONFLICT,
+          message: PlaceErrorMessages.PLACE_NOT_UNDER_REVIEW,
+        });
+      }
+
+      await this.prismaService.place.update({
+        where: { id: placeId },
+        data: { status: PlaceStatus.PUBLISHED },
+      });
+
+      return {
+        message: 'Place approved and published successfully',
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async rejectPlace(placeId: string, reason: string) {
+    try {
+      const place = await this.prismaService.place.findUnique({
+        where: { id: placeId },
+      });
+
+      if (!place) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
+        });
+      }
+
+      if (place.status !== PlaceStatus.UNDER_REVIEW) {
+        throw new RpcException({
+          status: HttpStatus.CONFLICT,
+          message: PlaceErrorMessages.PLACE_NOT_UNDER_REVIEW,
+        });
+      }
+
+      await this.prismaService.place.update({
+        where: { id: placeId },
+        data: { status: PlaceStatus.SUSPENDED },
+      });
+
+      return {
+        message: 'Place rejected successfully',
+      };
     } catch (error) {
       return handleServiceErrorCatching(error);
     }

@@ -1,10 +1,11 @@
 import { Routes, Route, NavLink, useNavigate, Navigate } from "react-router-dom"
 import { useEffect, useState } from "react"
-import { ShieldCheck, Users, FileCheck, LogOut } from "lucide-react"
+import { ShieldCheck, Users, FileCheck, MapPin, LogOut } from "lucide-react"
 import keodiIcon from "@keodi/shared/assets/icon.png"
 
 import OwnerApplications from "../owner-applications/OwnerApplications"
 import OwnershipClaims from "../ownership-claims/OwnershipClaims"
+import PlaceReview from "../place-review/PlaceReview"
 
 const ACCESS_TOKEN_KEY = "admin_access_token"
 
@@ -77,6 +78,19 @@ export default function Dashboard() {
             <FileCheck className="w-4 h-4" />
             Ownership Claims
           </NavLink>
+          <NavLink
+            to="/dashboard/place-reviews"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-neutral-900 text-white"
+                  : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+              }`
+            }
+          >
+            <MapPin className="w-4 h-4" />
+            Place Reviews
+          </NavLink>
         </nav>
 
         <div className="p-4 border-t border-neutral-100">
@@ -96,6 +110,7 @@ export default function Dashboard() {
           <Route path="/" element={<Navigate to="owner-applications" replace />} />
           <Route path="owner-applications" element={<OwnerApplications />} />
           <Route path="ownership-claims" element={<OwnershipClaims />} />
+          <Route path="place-reviews" element={<PlaceReview />} />
         </Routes>
       </main>
     </div>

@@ -11,7 +11,10 @@ export const API_ENDPOINTS = (baseUrl: string) => ({
   },
   PLACES: {
     ROOT: `${baseUrl}/places`,
-    SEARCH: `${baseUrl}/places/search`,
+    SEARCH: "http://157.66.218.6/api/v1/places/search",
+    ADMIN: `${baseUrl}/places/admin`,
+    APPROVE: (id: string) => `${baseUrl}/places/${id}/approve`,
+    REJECT: (id: string) => `${baseUrl}/places/${id}/reject`,
   },
   OWNERSHIP_CLAIMS: {
     ROOT: `${baseUrl}/ownership-claims`,
@@ -22,6 +25,8 @@ export const API_ENDPOINTS = (baseUrl: string) => ({
     ROOT: `${baseUrl}/owner-applications`,
     APPROVE: (id: string) => `${baseUrl}/owner-applications/${id}/approve`,
     REJECT: (id: string) => `${baseUrl}/owner-applications/${id}/reject`,
+    RESUBMIT: `${baseUrl}/owner-applications/resubmit`,
+    ME: `${baseUrl}/owner-applications/me`,
   },
   CATEGORIES: {
     SEARCH: `${baseUrl}/categories/search`,

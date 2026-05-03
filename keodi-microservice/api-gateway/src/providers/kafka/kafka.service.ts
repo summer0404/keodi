@@ -60,6 +60,8 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Approve);
     this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Reject);
     this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.GetAll);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Resubmit);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.GetMe);
 
     // owner ship claim topic
     this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Create);
@@ -73,6 +75,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.NearMe);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Search);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetAllAdmin);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Approve);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Reject);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Update);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { OwnerApplicationTopics } from 'src/shared/constants/topic.constant';
-import { GetOwnerApplicationsDto, RejectOwnerApplicationDto } from 'src/shared/dtos/owner-application.dto';
+import { GetOwnerApplicationsDto, RejectOwnerApplicationDto, ResubmitOwnerApplicationDto } from 'src/shared/dtos/owner-application.dto';
 
 @Injectable()
 export class OwnerApplicationService {
@@ -25,6 +25,20 @@ export class OwnerApplicationService {
     return await this.kafkaService.sendWithTimeout(
       OwnerApplicationTopics.Reject,
       { applicationId, data: rejectOwnerApplicationDto },
+    );
+  }
+
+  async resubmit(userId: string, dto: ResubmitOwnerApplicationDto) {
+    return await this.kafkaService.sendWithTimeout(
+      OwnerApplicationTopics.Resubmit,
+      { userId, ...dto },
+    );
+  }
+
+  async getMe(userId: string) {
+    return await this.kafkaService.sendWithTimeout(
+      OwnerApplicationTopics.GetMe,
+      { userId },
     );
   }
 }

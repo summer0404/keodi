@@ -37,6 +37,7 @@ import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
 import { RoleGuard } from 'src/common/guards/role.guard';
+import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
 import { Roles } from 'src/common/decorators/role.decorator';
 import { Role } from 'src/shared/enums/role.enum';
 
@@ -46,7 +47,7 @@ import { Role } from 'src/shared/enums/role.enum';
 export class PlaceController {
   constructor(private readonly placeService: PlaceService) { }
 
-  @UseGuards(RoleGuard)
+  @UseGuards(JwtAuthGuard, RoleGuard)
   @Roles(Role.OWNER)
   @Post()
   @UseInterceptors(FileInterceptor('featureImage'))
@@ -106,6 +107,30 @@ export class PlaceController {
     @CurrentUser() user: CurrentUserDto
   ) {
     return await this.placeService.getForYou(user.id, query);
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin')
+  async getAllAdmin(@Query() query: any) {
+    return await this.placeService.getAllAdmin(query);
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  @Post(':id/approve')
+  async approvePlace(@Param('id') placeId: string) {
+    return await this.placeService.approvePlace(placeId);
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  @Post(':id/reject')
+  async rejectPlace(
+    @Param('id') placeId: string,
+    @Body() body: { reason: string },
+  ) {
+    return await this.placeService.rejectPlace(placeId, body.reason);
   }
 
   @Get(':id')

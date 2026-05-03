@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ArrayMinSize, IsArray, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 
 export enum OwnerApplicationStatus {
@@ -84,4 +84,37 @@ export class OwnerApplicationResponseDto {
 export class PaginatedOwnerApplicationResponseDto extends PaginationResponseDto {
   @ApiProperty({ type: [OwnerApplicationResponseDto] })
   data: OwnerApplicationResponseDto[];
+}
+
+export class ResubmitOwnerApplicationDto {
+  @ApiProperty({ example: 'My Coffee Shop', description: 'Updated business name' })
+  @IsNotEmpty()
+  @IsString()
+  businessName: string;
+
+  @ApiProperty({ example: '+84901234567', description: 'Updated business phone' })
+  @IsNotEmpty()
+  @IsString()
+  businessPhone: string;
+
+  @ApiProperty({ example: '123 Main St, HCMC', description: 'Updated business address' })
+  @IsNotEmpty()
+  @IsString()
+  businessAddress: string;
+
+  @ApiProperty({ example: 'TAX-12345', description: 'Updated tax ID' })
+  @IsNotEmpty()
+  @IsString()
+  taxId: string;
+
+  @ApiPropertyOptional({ example: 'https://mycoffee.com', description: 'Business website (optional)' })
+  @IsOptional()
+  @IsString()
+  businessWebsite?: string;
+
+  @ApiProperty({ type: [String], example: ['https://s3.example.com/doc1.pdf'], description: 'Updated proof documents' })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  proofDocumentUrls: string[];
 }

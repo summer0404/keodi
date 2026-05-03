@@ -2,6 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
+  ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -11,6 +12,7 @@ import {
   OwnerApplicationActionResponseDto,
   PaginatedOwnerApplicationResponseDto,
   RejectOwnerApplicationDto,
+  ResubmitOwnerApplicationDto,
 } from 'src/shared/dtos/owner-application.dto';
 
 export function ApiGetOwnerApplications() {
@@ -57,6 +59,24 @@ export function ApiRejectOwnerApplication() {
       type: OwnerApplicationActionResponseDto,
     }),
     ApiBadRequestResponse({ description: 'Invalid rejection reason' }),
+    ApiNotFoundResponse({ description: 'Owner application not found' }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+  );
+}
+
+export function ApiResubmitOwnerApplication() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Resubmit rejected owner application',
+      description:
+        'Allows a user whose owner application was rejected to update their business information and resubmit for review. Resets the application status to PENDING and the user role to OWNER_PENDING.',
+    }),
+    ApiBody({ type: ResubmitOwnerApplicationDto }),
+    ApiOkResponse({
+      description: 'Owner application resubmitted successfully',
+      type: OwnerApplicationActionResponseDto,
+    }),
+    ApiConflictResponse({ description: 'Application is not in REJECTED status' }),
     ApiNotFoundResponse({ description: 'Owner application not found' }),
     ApiUnauthorizedResponse({ description: 'Unauthorized' }),
   );
