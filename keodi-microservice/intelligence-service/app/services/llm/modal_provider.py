@@ -2,10 +2,9 @@ import httpx
 from app.config.settings import get_settings
 from app.services.llm.base_provider import BaseLLMProvider
 
-settings = get_settings()
-
 class ModalProvider(BaseLLMProvider):
     def __init__(self):
+        settings = get_settings()
         self.endpoint = settings.modal_endpoint
         self.api_token = settings.modal_api_token
 
@@ -18,6 +17,7 @@ class ModalProvider(BaseLLMProvider):
         **kwargs
     ) -> str:
         """Generate text using Modal endpoint"""
+        settings = get_settings()
         temperature = settings.modal_temperature
         max_tokens = settings.modal_max_tokens
 

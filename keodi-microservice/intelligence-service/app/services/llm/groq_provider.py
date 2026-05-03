@@ -1,11 +1,9 @@
 from app.config.settings import get_settings
 from app.services.llm.base_provider import BaseLLMProvider
 
-settings = get_settings()
-
-
 class GroqProvider(BaseLLMProvider):
     def __init__(self):
+        settings = get_settings()
         try:
             from groq import AsyncGroq
 
@@ -28,6 +26,7 @@ class GroqProvider(BaseLLMProvider):
         prompt: str,
         **kwargs
     ) -> str:
+        settings = get_settings()
         temperature = settings.groq_temperature
         max_tokens = settings.groq_max_tokens
 

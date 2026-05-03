@@ -1,11 +1,9 @@
 from app.config.settings import get_settings
-from dataclasses import dataclass
-
-settings = get_settings()
+from dataclasses import dataclass, field
 
 @dataclass
 class KafkaConfig:
-    bootstrap_servers: str = settings.kafka_bootstrap_servers
+    bootstrap_servers: str = field(default_factory=lambda: get_settings().kafka_bootstrap_servers)
     group_id: str = "intelligence-consumer"
     client_id: str = "intelligence-client"
 
