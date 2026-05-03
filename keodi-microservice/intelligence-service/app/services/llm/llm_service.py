@@ -8,10 +8,9 @@ from app.services.llm.modal_provider import ModalProvider
 from app.services.embedding.embedding_service import get_embedding_service
 from app.repositories.attribute_repository import AttributeRepository
 
-settings = get_settings()
-
 class LLMService:
     def __init__(self):
+        settings = get_settings()
         self.mode = settings.llm_deployment_mode
         self.providers: Dict[str, BaseLLMProvider] = {}
 
@@ -27,6 +26,7 @@ class LLMService:
         return self
 
     def _init_providers(self):
+        settings = get_settings()
         if self.mode == "groq":
             if settings.groq_api_key:
                 self.providers["groq"] = GroqProvider()
@@ -48,7 +48,7 @@ class LLMService:
         if not provider:
             raise ValueError(f"Provider not available: {self.mode}")
 
-        max_retries = settings.llm_max_retries
+        max_retries = get_settings().llm_max_retries
         last_error = None
 
         prompt = self.prompts.EXTRACT_USER_INTENT.format(search=search)
@@ -79,9 +79,9 @@ class LLMService:
         if not provider:
             raise ValueError(f"Provider not available: {self.mode}")
 
-        max_retries = settings.llm_max_retries
+        max_retries = get_settings().llm_max_retries
         last_error = None
-        
+
         attributes = await self.attribute_repository.get_all_attributes()
 
         attributes_list = [attr.name for attr in attributes] if attributes else []
