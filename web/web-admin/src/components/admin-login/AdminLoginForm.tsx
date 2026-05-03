@@ -1,8 +1,4 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
 import {
   ArrowRight,
   Eye,
@@ -13,8 +9,11 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { useNavigate } from "react-router-dom"
+import * as z from "zod"
 
-import keodiIcon from "@keodi/shared/assets/icon.png"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -27,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import keodiIcon from "@keodi/shared/assets/icon.png"
 
 import { loginOwner } from "@keodi/shared"
 
@@ -104,14 +104,14 @@ export default function AdminLoginForm() {
             alt="Keodi"
             className="w-24 h-24 drop-shadow-sm object-contain"
           />
-          <div className="flex flex-col items-center text-center mt-6">
-            <div className="flex items-center gap-2 mb-1 -mt-8 relative z-10">
-              <ShieldCheck className="w-5 h-5 text-neutral-700" />
+          <div className="flex flex-col items-center text-center mt-2">
+            <div className="flex items-center gap-2 -mt-8 relative z-10">
+              <ShieldCheck className="w-5 h-5 sm:w-8 sm:h-8 text-neutral-700" />
               <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
                 Admin
               </h1>
             </div>
-            <p className="text-sm text-neutral-500">Access the admin control panel</p>
+            <p className="text-sm text-neutral-500 -mt-2">Access the admin control panel</p>
           </div>
         </div>
 

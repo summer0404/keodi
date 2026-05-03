@@ -181,8 +181,6 @@ export class OwnerApplicationService {
                 firstName: true,
                 lastName: true,
                 username: true,
-                email: true,
-                role: true,
               },
             },
           },

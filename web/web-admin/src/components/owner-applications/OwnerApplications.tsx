@@ -23,8 +23,6 @@ type OwnerApplicationUser = {
   firstName?: string
   lastName?: string
   username: string
-  email: string
-  role: string
 }
 
 type OwnerApplication = {
@@ -238,7 +236,6 @@ export default function OwnerApplications() {
                       <div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Applicant</span>
                         <p className="text-neutral-800 mt-0.5">{displayName}</p>
-                        {app.user?.email && <p className="text-xs text-neutral-500">{app.user.email}</p>}
                       </div>
                       <div>
                         <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Business Name</span>
