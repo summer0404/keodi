@@ -59,11 +59,12 @@ const ACCESS_TOKEN_KEY = "owner_access_token";
 
 export async function fetchWithAuth(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  tokenKey: string = ACCESS_TOKEN_KEY
 ): Promise<Response> {
   let token = null;
   if (typeof window !== 'undefined') {
-    token = localStorage.getItem(ACCESS_TOKEN_KEY) || sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    token = localStorage.getItem(tokenKey) || sessionStorage.getItem(tokenKey);
   }
 
   const headers = new Headers(options.headers);
@@ -96,13 +97,13 @@ export async function fetchWithAuth(
         const newAccessToken = refreshData.accessToken;
 
         // Update stored token (assuming localStorage since we don't know user preference here, but checking which one exists)
-        if (localStorage.getItem(ACCESS_TOKEN_KEY)) {
-          localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
-        } else if (sessionStorage.getItem(ACCESS_TOKEN_KEY)) {
-          sessionStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
+        if (localStorage.getItem(tokenKey)) {
+          localStorage.setItem(tokenKey, newAccessToken);
+        } else if (sessionStorage.getItem(tokenKey)) {
+          sessionStorage.setItem(tokenKey, newAccessToken);
         } else {
           // Default to localStorage if somehow missing
-          localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
+          localStorage.setItem(tokenKey, newAccessToken);
         }
 
         // Retry original request with new token
@@ -114,8 +115,8 @@ export async function fetchWithAuth(
       }
     } catch (error) {
       // Refresh failed, clear tokens and redirect to login
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(tokenKey);
+      sessionStorage.removeItem(tokenKey);
       window.location.href = "/login";
     }
   }
@@ -187,5 +188,87 @@ export async function searchCategories(query: string, baseUrl: string, limit: nu
     throw new Error(await getErrorMessage(response, "Failed to fetch categories"));
   }
   
+  return response.json();
+}
+
+// ─── Admin API functions ───────────────────────────────────────────────────
+
+const ADMIN_TOKEN_KEY = "admin_access_token";
+
+export async function getAllUsers(baseUrl: string) {
+  const response = await fetchWithAuth(`${baseUrl}/users/all`, {}, ADMIN_TOKEN_KEY);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to fetch users"));
+  }
+
+  return response.json();
+}
+
+export async function getOwnershipClaims(baseUrl: string, status?: string, page: number = 1, limit: number = 10) {
+  const searchParams = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+  if (status) searchParams.set("status", status);
+
+  const response = await fetchWithAuth(`${baseUrl}/ownership-claims?${searchParams.toString()}`, {}, ADMIN_TOKEN_KEY);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to fetch ownership claims"));
+  }
+
+  return response.json();
+}
+
+export async function approveOwnerApplication(applicationId: string, baseUrl: string) {
+  const response = await fetchWithAuth(`${baseUrl}/owner-applications/${applicationId}/approve`, {
+    method: "POST",
+  }, ADMIN_TOKEN_KEY);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to approve owner application"));
+  }
+
+  return response.json();
+}
+
+export async function rejectOwnerApplication(applicationId: string, reason: string, baseUrl: string) {
+  const response = await fetchWithAuth(`${baseUrl}/owner-applications/${applicationId}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  }, ADMIN_TOKEN_KEY);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to reject owner application"));
+  }
+
+  return response.json();
+}
+
+export async function approveOwnershipClaim(claimId: string, baseUrl: string) {
+  const response = await fetchWithAuth(`${baseUrl}/ownership-claims/${claimId}/approve`, {
+    method: "POST",
+  }, ADMIN_TOKEN_KEY);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to approve ownership claim"));
+  }
+
+  return response.json();
+}
+
+export async function rejectOwnershipClaim(claimId: string, reason: string, baseUrl: string) {
+  const response = await fetchWithAuth(`${baseUrl}/ownership-claims/${claimId}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  }, ADMIN_TOKEN_KEY);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to reject ownership claim"));
+  }
+
   return response.json();
 }
