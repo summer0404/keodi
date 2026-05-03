@@ -21,8 +21,12 @@ permissions:
   packages: write
 
 jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
   detect-changes:
     name: Detect Changes
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       api-gateway: ${{ steps.check.outputs.api-gateway }}

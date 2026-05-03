@@ -25,13 +25,27 @@ export async function createAndSubscribeConsumer(
 ): Promise<{ consumer: Consumer; messages: KafkaMessage[] }> {
   const consumer = kafka.consumer({ groupId });
   await consumer.connect();
-  await consumer.subscribe({ topic, fromBeginning: false });
+
+  // Retry subscribe to tolerate transient leadership election on auto-created topics.
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await consumer.subscribe({ topic, fromBeginning: false });
+      break;
+    } catch (err) {
+      if (attempt === 5) throw err;
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
+  }
+
   const messages: KafkaMessage[] = [];
   await consumer.run({
     eachMessage: async ({ message }) => {
       messages.push(message);
     },
   });
+  // consumer.run() returns immediately but group join + partition assignment is async.
+  // Wait for the consumer to be fully ready before returning to the test.
+  await new Promise((r) => setTimeout(r, 4000));
   return { consumer, messages };
 }
 

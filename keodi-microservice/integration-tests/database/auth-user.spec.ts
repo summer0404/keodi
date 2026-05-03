@@ -1,5 +1,5 @@
 import { Pool, PoolClient } from 'pg';
-import { createAuthDbPool, runMigrations, withTransaction } from '../helpers/db.helper';
+import { createAuthDbPool, withTransaction } from '../helpers/db.helper';
 
 function makeTestId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -7,20 +7,16 @@ function makeTestId(prefix: string): string {
 
 describe('Auth Database Integration', () => {
   let pool: Pool;
-  const runSuffix = Date.now();
+  const runSuffix = String(Date.now()).slice(-6);
   const insertedUserIds: string[] = [];
 
   beforeAll(async () => {
-    const dbUrl =
-      process.env.AUTH_DB_URL ??
-      'postgresql://test_user:test_password_123@localhost:5435/keodi_test';
-    runMigrations('auth-service', dbUrl);
     pool = createAuthDbPool();
     try {
       await pool.query('SELECT 1 FROM "users" LIMIT 1');
     } catch (err: any) {
       throw new Error(
-        `"users" table not found in test DB — migrations may have failed. Original error: ${err.message}`,
+        `"users" table not found in test DB — globalSetup migration may have failed. Original error: ${err.message}`,
       );
     }
   });

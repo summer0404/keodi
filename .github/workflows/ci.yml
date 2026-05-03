@@ -5,6 +5,7 @@ on:
     branches:
       - "**"
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -245,13 +246,12 @@ jobs:
         working-directory: keodi-microservice/auth-service
         env:
           DATABASE_URL: postgresql://test_user:test_password_123@localhost:5435/keodi_test
-        run: npx --yes prisma migrate deploy --schema=src/database/prisma/schema.prisma
+        run: npx --yes prisma migrate deploy --config=src/configs/prisma.config.ts
 
       - name: Run Database integration tests
         working-directory: keodi-microservice/integration-tests
         env:
-          AUTH_DB_URL: postgresql://test_user:test_password_123@localhost:5435/keodi_test
-          CORE_DB_URL: postgresql://test_user:test_password_123@localhost:5435/keodi_test
+          DATABASE_URL: postgresql://test_user:test_password_123@localhost:5435/keodi_test
         run: npm run test:db
 
       - name: Run Redis integration tests
@@ -267,3 +267,4 @@ jobs:
         env:
           KAFKA_BROKER: localhost:9092
         run: npm run test:kafka
+n: npm run test:kafka

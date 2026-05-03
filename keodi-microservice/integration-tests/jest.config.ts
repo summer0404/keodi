@@ -5,11 +5,13 @@ const config: Config = {
   rootDir: '.',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.ts$': 'ts-jest',
   },
   testEnvironment: 'node',
   testTimeout: 60000,
   verbose: true,
+  globalSetup: './setup/global-setup.js',
+  setupFiles: ['./setup/load-env.js'],
 };
 
 export default config;
