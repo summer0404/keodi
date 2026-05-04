@@ -23,8 +23,10 @@ import {
   CoordinateDto,
   CreatePlaceDto,
   CreatePlaceResponseDto,
+  GetAdminPlacesDto,
   NearMePlacesResponseDto,
   NearMeQueryDto,
+  RejectPlaceBodyDto,
   SearchDto,
   UpdatePlaceDto,
   UpdatePlaceResponseDto,
@@ -32,7 +34,7 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiCreatePlace, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace, ApiUpdatePlace } from './place.swagger';
+import { ApiApprovePlace, ApiCreatePlace, ApiGetAdminPlaces, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiRejectPlace, ApiSearchPlace, ApiUpdatePlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
@@ -112,13 +114,15 @@ export class PlaceController {
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN)
   @Get('admin')
-  async getAllAdmin(@Query() query: any) {
+  @ApiGetAdminPlaces()
+  async getAllAdmin(@Query() query: GetAdminPlacesDto) {
     return await this.placeService.getAllAdmin(query);
   }
 
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN)
   @Post(':id/approve')
+  @ApiApprovePlace()
   async approvePlace(@Param('id') placeId: string) {
     return await this.placeService.approvePlace(placeId);
   }
@@ -126,9 +130,10 @@ export class PlaceController {
   @UseGuards(RoleGuard)
   @Roles(Role.ADMIN)
   @Post(':id/reject')
+  @ApiRejectPlace()
   async rejectPlace(
     @Param('id') placeId: string,
-    @Body() body: { reason: string },
+    @Body() body: RejectPlaceBodyDto,
   ) {
     return await this.placeService.rejectPlace(placeId, body.reason);
   }

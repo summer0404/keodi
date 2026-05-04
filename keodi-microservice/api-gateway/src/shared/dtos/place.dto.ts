@@ -15,6 +15,7 @@ import {
 } from 'class-validator';
 import { PlaceConstants } from '../constants/place.constant';
 import { PlaceSortBy } from '../enums/sort.enum';
+import { PlaceStatus } from '../enums/place.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 import { parseArray, parseStringArray } from '../utils/type.util';
 
@@ -559,4 +560,22 @@ export class UpdatePlaceDto {
 export class UpdatePlaceResponseDto {
   @ApiProperty({ example: 'Place updated successfully' })
   message: string;
+}
+
+export class GetAdminPlacesDto extends PaginationQueryDto {
+  @ApiProperty({
+    description: 'Filter by place status',
+    enum: PlaceStatus,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(PlaceStatus)
+  status?: PlaceStatus;
+}
+
+export class RejectPlaceBodyDto {
+  @ApiProperty({ description: 'Rejection reason', example: 'Incomplete information' })
+  @IsNotEmpty()
+  @IsString()
+  reason: string;
 }
