@@ -62,9 +62,9 @@ export class OwnerApplicationController {
   @ApiResubmitOwnerApplication()
   async resubmit(
     @CurrentUser() user: CurrentUserDto,
-    @Body() dto: ResubmitOwnerApplicationDto,
+    @Body() resubmitOwnerApplicationDto: ResubmitOwnerApplicationDto,
   ) {
-    return await this.ownerApplicationService.resubmit(user.id, dto);
+    return await this.ownerApplicationService.resubmit(user.id, resubmitOwnerApplicationDto);
   }
 
   @UseGuards(JwtAuthGuard)
