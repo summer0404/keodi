@@ -237,10 +237,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: keodi-microservice/integration-tests/package-lock.json
 
       - name: Install integration-tests dependencies
         working-directory: keodi-microservice/integration-tests
-        run: npm install
+        run: npm ci
 
       - name: Apply auth-service Prisma migrations to test DB
         working-directory: keodi-microservice/auth-service
