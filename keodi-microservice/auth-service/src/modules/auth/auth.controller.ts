@@ -97,4 +97,9 @@ export class AuthController {
   async rejectOwner(@Payload() data: { userId: string; reason: string }) {
     return await this.authService.rejectOwner(data.userId, data.reason);
   }
+
+  @MessagePattern(AuthTopics.ResubmitOwner)
+  async resubmitOwner(@Payload() data: { userId: string }) {
+    return await this.authService.resubmitOwner(data.userId);
+  }
 }

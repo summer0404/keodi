@@ -67,6 +67,18 @@ export class PlaceService {
         return await this.kafkaService.sendWithTimeout(RecommendationTopics.ForYou, { userId, coordinateDto });
     }
 
+    async getAllAdmin(query: any) {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.GetAllAdmin, query);
+    }
+
+    async approvePlace(placeId: string) {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Approve, { placeId });
+    }
+
+    async rejectPlace(placeId: string, reason: string) {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Reject, { placeId, data: { reason } });
+    }
+
     async update(
         placeId: string,
         requesterId: string,

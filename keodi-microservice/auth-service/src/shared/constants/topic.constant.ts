@@ -13,6 +13,7 @@ export const AuthTopics = {
   Refresh: 'auth.refresh',
   ApproveOwner: 'auth.approve-owner',
   RejectOwner: 'auth.reject-owner',
+  ResubmitOwner: 'auth.resubmit-owner',
 } as const;
 
 export const UserTopics = {
@@ -25,6 +26,9 @@ export const UserTopics = {
 
 export const OwnerApplicationTopics = {
   Create: 'owner-application.create',
+  GetAll: 'owner-application.get-all',
+  Resubmit: 'owner-application.resubmit',
+  GetMe: 'owner-application.get-me',
 } as const;
 
 export const NotificationTopics = {

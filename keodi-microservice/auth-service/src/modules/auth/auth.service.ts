@@ -636,4 +636,36 @@ export class AuthService {
       handleServiceErrorCatching(error);
     }
   }
+
+  async resubmitOwner(userId: string) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: AuthErrorMessages.USER_NOT_FOUND,
+        });
+
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: {
+          role: Role.OWNER_PENDING,
+        },
+      });
+
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationReceived, {
+          to: user.email,
+          businessDays: OWNER_APPLICATION_REVIEW_DAYS,
+        });
+
+      return { message: 'Owner role reset to pending successfully' };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
 }

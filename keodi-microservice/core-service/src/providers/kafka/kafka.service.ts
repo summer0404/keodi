@@ -15,6 +15,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(IntelligenceTopics.Ranking);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ApproveOwner);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.RejectOwner);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.ResubmitOwner);
 
     await this.kafkaClient.connect();
   }

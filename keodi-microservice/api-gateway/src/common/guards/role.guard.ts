@@ -27,6 +27,10 @@ export class  RoleGuard implements CanActivate {
     if (!userRole)
       throw new ForbiddenException(ApiErrorMessages.USER_ROLE_REQUIRED);
 
+
+    if (userRole === Role.OWNER_PENDING && requiredRoles.includes(Role.OWNER))
+      throw new ForbiddenException(ApiErrorMessages.OWNER_APPLICATION_NOT_APPROVED);
+
     if (!requiredRoles.includes(userRole))
       throw new ForbiddenException(ApiErrorMessages.INSUFFICIENT_ROLE_PERMISSION);
 

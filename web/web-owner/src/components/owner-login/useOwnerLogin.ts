@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginOwner } from "@keodi/shared";
+import { loginOwner, getMyOwnerApplication } from "@keodi/shared";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -44,15 +44,25 @@ export function useOwnerLogin() {
         baseUrl,
       )) as LoginResponse;
 
+      const activeStorage = data.rememberMe ? localStorage : sessionStorage;
       if (response.accessToken) {
-        const activeStorage = data.rememberMe ? localStorage : sessionStorage;
         const inactiveStorage = data.rememberMe ? sessionStorage : localStorage;
-
         inactiveStorage.removeItem(ACCESS_TOKEN_KEY);
-
         activeStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
       } else {
         throw new Error("Login succeeded but no access token was returned");
+      }
+
+      // Check application status for redirection
+      let targetPath = "/home";
+      try {
+        const application = await getMyOwnerApplication(baseUrl);
+        if (application && application.status === "REJECTED") {
+          targetPath = "/resubmit-application";
+        }
+      } catch (error) {
+        // Fallback to home if check fails
+        console.error("Failed to check application status:", error);
       }
 
       form.reset({
@@ -61,7 +71,7 @@ export function useOwnerLogin() {
         rememberMe: data.rememberMe,
       });
 
-      navigate("/home");
+      navigate(targetPath);
     } catch (error) {
       if (error instanceof Error) {
         setSubmitError(error.message);

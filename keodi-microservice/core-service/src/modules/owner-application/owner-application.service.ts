@@ -7,7 +7,9 @@ import { OwnerApplicationErrorMessages } from 'src/shared/constants/error.consta
 import { AuthTopics } from 'src/shared/constants/topic.constant';
 import {
   CreateOwnerApplicationDto,
+  GetOwnerApplicationsDto,
   RejectOwnerApplicationDto,
+  ResubmitOwnerApplicationDto,
 } from 'src/shared/dtos/owner-application.dto';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
@@ -158,6 +160,118 @@ export class OwnerApplicationService {
       return {
         message: 'Owner application rejected successfully',
       };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async getAll(data: GetOwnerApplicationsDto) {
+    try {
+      const { page, limit, sortOrder, status } = data;
+      const skip = (page - 1) * limit;
+
+      const where = status ? { status } : {};
+
+      const [applications, total] = await Promise.all([
+        this.prismaService.ownerApplication.findMany({
+          where,
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+              },
+            },
+          },
+          orderBy: { createdAt: sortOrder },
+          skip,
+          take: limit,
+        }),
+        this.prismaService.ownerApplication.count({ where }),
+      ]);
+
+      return {
+        data: applications,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async resubmit(data: ResubmitOwnerApplicationDto) {
+    try {
+      const existingApplication = await this.prismaService.ownerApplication.findUnique({
+        where: { userId: data.userId },
+      });
+
+      if (!existingApplication)
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: OwnerApplicationErrorMessages.OWNER_APPLICATION_NOT_FOUND,
+        });
+
+      if (existingApplication.status !== OwnerApplicationStatus.REJECTED)
+        throw new RpcException({
+          status: HttpStatus.CONFLICT,
+          message: OwnerApplicationErrorMessages.OWNER_APPLICATION_NOT_REJECTED,
+        });
+
+      await this.prismaService.ownerApplication.update({
+        where: { id: existingApplication.id },
+        data: {
+          businessName: data.businessName,
+          businessPhone: data.businessPhone,
+          businessAddress: data.businessAddress,
+          taxId: data.taxId,
+          businessWebsite: data.businessWebsite,
+          proofDocumentUrls: data.proofDocumentUrls,
+          status: OwnerApplicationStatus.PENDING,
+          rejectionReason: null,
+          reviewedAt: null,
+        },
+      });
+
+      // Promote user back to OWNER_PENDING in auth-service
+      try {
+        await this.kafkaService.sendWithTimeout(AuthTopics.ResubmitOwner, {
+          userId: data.userId,
+        });
+      } catch (error) {
+        // Rollback application status on auth-service failure
+        await this.prismaService.ownerApplication.update({
+          where: { id: existingApplication.id },
+          data: {
+            status: OwnerApplicationStatus.REJECTED,
+            rejectionReason: existingApplication.rejectionReason,
+            reviewedAt: existingApplication.reviewedAt,
+          },
+        });
+        throw error;
+      }
+
+      return {
+        message: 'Owner application resubmitted successfully',
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async getStatusByUserId(userId: string) {
+    try {
+      const application = await this.prismaService.ownerApplication.findUnique({
+        where: { userId },
+      });
+
+      if (!application) return null;
+
+      return application;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }

@@ -149,7 +149,7 @@ export default function OwnerLoginForm() {
                             <ArrowRight className="ml-2 w-4 h-4" />
                         </Button>
 
-                        <div className="pt-5 border-t border-neutral-200">
+                        <div className="pt-5 border-t border-neutral-200 space-y-3">
                             <p className="text-sm text-neutral-600 text-center">
                                 Don&apos;t have an account?{" "}
                                 <button

@@ -1,10 +1,14 @@
-import './App.css'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import AdminLogin from './components/admin-login/AdminLoginForm'
+import Dashboard from './components/dashboard/Dashboard'
 
 function App() {
   return (
-    <main className="app">
-      <h1>Hello World</h1>
-    </main>
+    <Routes>
+      <Route path="/login" element={<AdminLogin />} />
+      <Route path="/dashboard/*" element={<Dashboard />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   )
 }
 

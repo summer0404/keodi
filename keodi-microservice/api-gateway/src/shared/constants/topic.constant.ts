@@ -32,6 +32,9 @@ export const UserTopics = {
 export const OwnerApplicationTopics = {
   Approve: 'owner-application.approve',
   Reject: 'owner-application.reject',
+  GetAll: 'owner-application.get-all',
+  Resubmit: 'owner-application.resubmit',
+  GetMe: 'owner-application.get-me',
 } as const;
 
 export const OwnershipClaimTopics = {
@@ -48,6 +51,9 @@ export const PlaceTopics = {
   Search: 'place.search',
   Create: 'place.create',
   Update: 'place.update',
+  GetAllAdmin: 'place.get-all-admin',
+  Approve: 'place.approve',
+  Reject: 'place.reject',
 } as const;
 
 export const RecommendationTopics = {

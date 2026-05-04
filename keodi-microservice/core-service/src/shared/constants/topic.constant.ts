@@ -15,12 +15,16 @@ export const UserTopics = {
 export const AuthTopics = {
   ApproveOwner: 'auth.approve-owner',
   RejectOwner: 'auth.reject-owner',
+  ResubmitOwner: 'auth.resubmit-owner',
 } as const;
 
 export const OwnerApplicationTopics = {
   Create: 'owner-application.create',
   Approve: 'owner-application.approve',
   Reject: 'owner-application.reject',
+  GetAll: 'owner-application.get-all',
+  Resubmit: 'owner-application.resubmit',
+  GetMe: 'owner-application.get-me',
 } as const;
 
 export const OwnershipClaimTopics = {
@@ -36,6 +40,9 @@ export const PlaceTopics = {
   NearMe: 'place.near-me',
   Search: 'place.search',
   Create: 'place.create',
+  GetAllAdmin: 'place.get-all-admin',
+  Approve: 'place.approve',
+  Reject: 'place.reject',
   Update: 'place.update',
 } as const;
 

@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PlaceService } from '../place.service';
-import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ReviewService } from 'src/modules/review/review.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import {
-  PlaceTopics,
   IntelligenceTopics,
+  PlaceTopics,
   RecommendationTopics,
 } from 'src/shared/constants/topic.constant';
 import { UserAction } from 'src/shared/enums/user.enum';
+import { PlaceService } from '../place.service';
 
 const mockKafkaClient = {
   emit: jest.fn(),
@@ -59,8 +59,12 @@ describe('PlaceService', () => {
     });
 
     it('should propagate kafka error from getNearbyPlaces', async () => {
-      mockKafkaService.sendWithTimeout.mockRejectedValue(new Error('kafka error'));
-      await expect(service.getNearbyPlaces({} as any, 'u1')).rejects.toThrow('kafka error');
+      mockKafkaService.sendWithTimeout.mockRejectedValue(
+        new Error('kafka error'),
+      );
+      await expect(service.getNearbyPlaces({} as any, 'u1')).rejects.toThrow(
+        'kafka error',
+      );
     });
   });
 
@@ -73,7 +77,12 @@ describe('PlaceService', () => {
       const result = { placeId: 'place-1' };
       mockKafkaService.sendWithTimeout.mockResolvedValue(result);
 
-      const response = await service.create(ownerId, dto, featureImage, featureImageType);
+      const response = await service.create(
+        ownerId,
+        dto,
+        featureImage,
+        featureImageType,
+      );
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         PlaceTopics.Create,
@@ -85,7 +94,11 @@ describe('PlaceService', () => {
 
   describe('search', () => {
     it('should call PlaceTopics.Search with query merged with userId', async () => {
-      const query = { keyword: 'cafe', latitude: 10.0, longitude: 106.0 } as any;
+      const query = {
+        keyword: 'cafe',
+        latitude: 10.0,
+        longitude: 106.0,
+      } as any;
       const userId = 'user-2';
       const result = { places: [{ id: 'p1' }] };
       mockKafkaService.sendWithTimeout.mockResolvedValue(result);
@@ -121,8 +134,12 @@ describe('PlaceService', () => {
     });
 
     it('should propagate kafka error from getById', async () => {
-      mockKafkaService.sendWithTimeout.mockRejectedValue(new Error('not found'));
-      await expect(service.getById('place-x', 'user-1')).rejects.toThrow('not found');
+      mockKafkaService.sendWithTimeout.mockRejectedValue(
+        new Error('not found'),
+      );
+      await expect(service.getById('place-x', 'user-1')).rejects.toThrow(
+        'not found',
+      );
     });
   });
 
@@ -145,8 +162,12 @@ describe('PlaceService', () => {
     });
 
     it('should propagate error from reviewService.getByPlaceId', async () => {
-      mockReviewService.getByPlaceId.mockRejectedValue(new Error('review error'));
-      await expect(service.getReviewsById({} as any, 'p1', 'u1')).rejects.toThrow('review error');
+      mockReviewService.getByPlaceId.mockRejectedValue(
+        new Error('review error'),
+      );
+      await expect(
+        service.getReviewsById({} as any, 'p1', 'u1'),
+      ).rejects.toThrow('review error');
     });
   });
 
@@ -182,6 +203,78 @@ describe('PlaceService', () => {
     });
   });
 
+  describe('getAllAdmin', () => {
+    it('should call PlaceTopics.GetAllAdmin with query', async () => {
+      const query = { page: 1, limit: 10, status: 'PENDING' };
+      const result = { data: [], total: 0 };
+      mockKafkaService.sendWithTimeout.mockResolvedValue(result);
+
+      const response = await service.getAllAdmin(query);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        PlaceTopics.GetAllAdmin,
+        query,
+      );
+      expect(response).toEqual(result);
+    });
+
+    it('should propagate kafka error from getAllAdmin', async () => {
+      mockKafkaService.sendWithTimeout.mockRejectedValue(
+        new Error('kafka error'),
+      );
+      await expect(service.getAllAdmin({})).rejects.toThrow('kafka error');
+    });
+  });
+
+  describe('approvePlace', () => {
+    it('should call PlaceTopics.Approve with placeId', async () => {
+      const placeId = 'place-1';
+      const result = { message: 'Place approved' };
+      mockKafkaService.sendWithTimeout.mockResolvedValue(result);
+
+      const response = await service.approvePlace(placeId);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        PlaceTopics.Approve,
+        { placeId },
+      );
+      expect(response).toEqual(result);
+    });
+
+    it('should propagate kafka error from approvePlace', async () => {
+      mockKafkaService.sendWithTimeout.mockRejectedValue(
+        new Error('not found'),
+      );
+      await expect(service.approvePlace('place-x')).rejects.toThrow(
+        'not found',
+      );
+    });
+  });
+
+  describe('rejectPlace', () => {
+    it('should call PlaceTopics.Reject with placeId and data.reason', async () => {
+      const placeId = 'place-1';
+      const reason = 'Incomplete information';
+      const result = { message: 'Place rejected' };
+      mockKafkaService.sendWithTimeout.mockResolvedValue(result);
+
+      const response = await service.rejectPlace(placeId, reason);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        PlaceTopics.Reject,
+        { placeId, data: { reason } },
+      );
+      expect(response).toEqual(result);
+    });
+
+    it('should propagate kafka error from rejectPlace', async () => {
+      mockKafkaService.sendWithTimeout.mockRejectedValue(new Error('conflict'));
+      await expect(service.rejectPlace('place-1', 'reason')).rejects.toThrow(
+        'conflict',
+      );
+    });
+  });
+
   describe('update', () => {
     it('should call PlaceTopics.Update with placeId, requesterId, dto fields, featureImage and featureImageType', async () => {
       const placeId = 'place-1';
@@ -192,7 +285,13 @@ describe('PlaceService', () => {
       const result = { message: 'Place updated successfully' };
       mockKafkaService.sendWithTimeout.mockResolvedValue(result);
 
-      const response = await service.update(placeId, requesterId, dto, featureImage, featureImageType);
+      const response = await service.update(
+        placeId,
+        requesterId,
+        dto,
+        featureImage,
+        featureImageType,
+      );
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         PlaceTopics.Update,
@@ -202,8 +301,12 @@ describe('PlaceService', () => {
     });
 
     it('should propagate kafka error from update', async () => {
-      mockKafkaService.sendWithTimeout.mockRejectedValue(new Error('kafka error'));
-      await expect(service.update('p1', 'u1', {} as any)).rejects.toThrow('kafka error');
+      mockKafkaService.sendWithTimeout.mockRejectedValue(
+        new Error('kafka error'),
+      );
+      await expect(service.update('p1', 'u1', {} as any)).rejects.toThrow(
+        'kafka error',
+      );
     });
   });
 });
