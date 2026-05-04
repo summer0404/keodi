@@ -1,4 +1,4 @@
-import { Kafka, Producer, Consumer, KafkaMessage } from 'kafkajs';
+import { Kafka, Producer, Consumer, KafkaMessage, Partitioners } from 'kafkajs';
 
 const BROKER = process.env.KAFKA_BROKER ?? 'localhost:29092';
 
@@ -6,14 +6,14 @@ export function createKafkaClient(clientId: string): Kafka {
   return new Kafka({
     clientId,
     brokers: [BROKER],
-    retry: { retries: 3 },
+    retry: { retries: 10, initialRetryTime: 1000, maxRetryTime: 30000 },
     connectionTimeout: 10000,
     requestTimeout: 30000,
   });
 }
 
 export async function createAndConnectProducer(kafka: Kafka): Promise<Producer> {
-  const producer = kafka.producer();
+  const producer = kafka.producer({ createPartitioner: Partitioners.LegacyPartitioner });
   await producer.connect();
   return producer;
 }
@@ -23,6 +23,15 @@ export async function createAndSubscribeConsumer(
   groupId: string,
   topic: string,
 ): Promise<{ consumer: Consumer; messages: KafkaMessage[] }> {
+  const admin = kafka.admin();
+  await admin.connect();
+  const topics = await admin.listTopics();
+  if (!topics.includes(topic)) {
+    await admin.createTopics({ topics: [{ topic }] });
+    await new Promise((r) => setTimeout(r, 2000)); // wait for leader election
+  }
+  await admin.disconnect();
+
   const consumer = kafka.consumer({ groupId });
   await consumer.connect();
 
@@ -45,7 +54,7 @@ export async function createAndSubscribeConsumer(
   });
   // consumer.run() returns immediately but group join + partition assignment is async.
   // Wait for the consumer to be fully ready before returning to the test.
-  await new Promise((r) => setTimeout(r, 4000));
+  await new Promise((r) => setTimeout(r, 5000));
   return { consumer, messages };
 }
 
