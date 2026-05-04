@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
-import { CoordinateDto, CreatePlaceDto, CreatePlaceResponseDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/shared/dtos/place.dto';
+import { CoordinateDto, CreatePlaceDto, CreatePlaceResponseDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto, UpdatePlaceDto, UpdatePlaceResponseDto } from 'src/shared/dtos/place.dto';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { ReviewService } from '../review/review.service';
 import { UserAction } from 'src/shared/enums/user.enum';
@@ -65,5 +65,21 @@ export class PlaceService {
 
     async getForYou(userId: string, coordinateDto: CoordinateDto) {
         return await this.kafkaService.sendWithTimeout(RecommendationTopics.ForYou, { userId, coordinateDto });
+    }
+
+    async update(
+        placeId: string,
+        requesterId: string,
+        updatePlaceDto: UpdatePlaceDto,
+        featureImage?: Buffer,
+        featureImageType?: string,
+    ): Promise<UpdatePlaceResponseDto> {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Update, {
+            placeId,
+            requesterId,
+            ...updatePlaceDto,
+            featureImage,
+            featureImageType,
+        });
     }
 }

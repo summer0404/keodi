@@ -181,4 +181,29 @@ describe('PlaceService', () => {
       expect(response).toEqual(result);
     });
   });
+
+  describe('update', () => {
+    it('should call PlaceTopics.Update with placeId, requesterId, dto fields, featureImage and featureImageType', async () => {
+      const placeId = 'place-1';
+      const requesterId = 'owner-1';
+      const dto = { name: 'New Name' } as any;
+      const featureImage = Buffer.from('img');
+      const featureImageType = 'image/jpeg';
+      const result = { message: 'Place updated successfully' };
+      mockKafkaService.sendWithTimeout.mockResolvedValue(result);
+
+      const response = await service.update(placeId, requesterId, dto, featureImage, featureImageType);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        PlaceTopics.Update,
+        { placeId, requesterId, ...dto, featureImage, featureImageType },
+      );
+      expect(response).toEqual(result);
+    });
+
+    it('should propagate kafka error from update', async () => {
+      mockKafkaService.sendWithTimeout.mockRejectedValue(new Error('kafka error'));
+      await expect(service.update('p1', 'u1', {} as any)).rejects.toThrow('kafka error');
+    });
+  });
 });

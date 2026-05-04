@@ -9,6 +9,7 @@ import {
   CreatePlaceDto,
   NearMeDto,
   SearchDto,
+  UpdatePlaceDto,
 } from 'src/shared/dtos/place.dto';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
@@ -719,6 +720,188 @@ export class PlaceService {
           isMain: pc.isMain,
         })),
       };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async update(updatePlaceDto: UpdatePlaceDto) {
+    try {
+      const { placeId, requesterId } = updatePlaceDto;
+
+      const place = await this.prismaService.place.findUnique({
+        where: { id: placeId },
+        select: {
+          id: true,
+          ownerId: true,
+          street: true,
+          ward: true,
+          city: true,
+          countryCode: true,
+          latitude: true,
+          longitude: true,
+        },
+      });
+
+      if (!place) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
+        });
+      }
+
+      if (place.ownerId !== requesterId) {
+        throw new RpcException({
+          status: HttpStatus.FORBIDDEN,
+          message: PlaceErrorMessages.PLACE_NOT_OWNER,
+        });
+      }
+
+      let featureImageUrl: string | undefined;
+      if (updatePlaceDto.featureImage) {
+        const uploaded = await this.imageService.uploadImage(
+          this.placeHelper.buildPlaceImageKey(updatePlaceDto.featureImageType),
+          updatePlaceDto.featureImage,
+          updatePlaceDto.featureImageType,
+        );
+        featureImageUrl = uploaded.key;
+      }
+
+      const normalizedOpeningHours =
+        updatePlaceDto.openingHours !== undefined
+          ? this.placeHelper.normalizeOpeningHours(updatePlaceDto.openingHours)
+          : undefined;
+
+      let categoryIds: string[] | undefined;
+      if (updatePlaceDto.mainCategoryId) {
+        const secondaryIds = (updatePlaceDto.secondaryCategoryIds ?? [])
+          .map((id) => id.trim())
+          .filter(Boolean);
+        categoryIds = Array.from(
+          new Set([updatePlaceDto.mainCategoryId, ...secondaryIds]),
+        );
+
+        const existingCategories = await this.prismaService.category.findMany({
+          where: { id: { in: categoryIds } },
+          select: { id: true },
+        });
+        if (existingCategories.length !== categoryIds.length) {
+          throw new RpcException({
+            status: HttpStatus.BAD_REQUEST,
+            message: PlaceErrorMessages.PLACE_CATEGORY_NOT_FOUND,
+          });
+        }
+      }
+
+      let attributeIds: string[] | undefined;
+      if (updatePlaceDto.attributeIds !== undefined) {
+        attributeIds = Array.from(
+          new Set(
+            updatePlaceDto.attributeIds.map((id) => id.trim()).filter(Boolean),
+          ),
+        );
+        if (attributeIds.length > 0) {
+          const existingAttributes = await this.prismaService.attribute.findMany({
+            where: { id: { in: attributeIds } },
+            select: { id: true },
+          });
+          if (existingAttributes.length !== attributeIds.length) {
+            throw new RpcException({
+              status: HttpStatus.BAD_REQUEST,
+              message: PlaceErrorMessages.PLACE_ATTRIBUTE_NOT_FOUND,
+            });
+          }
+        }
+      }
+
+      const hasAddressChange =
+        !!updatePlaceDto.street ||
+        !!updatePlaceDto.ward ||
+        !!updatePlaceDto.city ||
+        !!updatePlaceDto.countryCode;
+
+      const hasCoordChange =
+        Number.isFinite(updatePlaceDto.latitude) ||
+        Number.isFinite(updatePlaceDto.longitude);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: Record<string, any> = {};
+
+      if (updatePlaceDto.name !== undefined && updatePlaceDto.name.trim())
+        updateData.name = updatePlaceDto.name.trim();
+      if (updatePlaceDto.description !== undefined)
+        updateData.description = updatePlaceDto.description || null;
+      if (updatePlaceDto.phoneNumber !== undefined)
+        updateData.phoneNumber = updatePlaceDto.phoneNumber || null;
+      if (updatePlaceDto.website !== undefined)
+        updateData.website = updatePlaceDto.website || null;
+      if (updatePlaceDto.googleMapLink)
+        updateData.googleMapLink = updatePlaceDto.googleMapLink;
+      if (featureImageUrl !== undefined)
+        updateData.featureImageUrl = featureImageUrl;
+
+      if (hasAddressChange) {
+        if (updatePlaceDto.street) updateData.street = updatePlaceDto.street;
+        if (updatePlaceDto.ward) updateData.ward = updatePlaceDto.ward;
+        if (updatePlaceDto.city) updateData.city = updatePlaceDto.city;
+        if (updatePlaceDto.countryCode) updateData.countryCode = updatePlaceDto.countryCode;
+        updateData.fullAddress = this.placeHelper.buildFullAddress(
+          updatePlaceDto.street || place.street || '',
+          updatePlaceDto.ward || place.ward || '',
+          updatePlaceDto.city || place.city || '',
+          updatePlaceDto.countryCode || place.countryCode || '',
+        );
+      }
+
+      if (hasCoordChange) {
+        if (Number.isFinite(updatePlaceDto.latitude))
+          updateData.latitude = updatePlaceDto.latitude;
+        if (Number.isFinite(updatePlaceDto.longitude))
+          updateData.longitude = updatePlaceDto.longitude;
+        if (!updatePlaceDto.googleMapLink) {
+          const lat = Number.isFinite(updatePlaceDto.latitude) ? updatePlaceDto.latitude! : place.latitude;
+          const lng = Number.isFinite(updatePlaceDto.longitude) ? updatePlaceDto.longitude! : place.longitude;
+          updateData.googleMapLink = this.placeHelper.toGoogleMapLink(lat, lng);
+        }
+      }
+
+      await this.prismaService.$transaction(async (tx) => {
+        if (normalizedOpeningHours !== undefined) {
+          await tx.openingHour.deleteMany({ where: { placeId } });
+          if (normalizedOpeningHours.length > 0) {
+            await tx.openingHour.createMany({
+              data: normalizedOpeningHours.map((oh) => ({ ...oh, placeId })),
+            });
+          }
+        }
+
+        if (categoryIds !== undefined) {
+          await tx.placeCategory.deleteMany({ where: { placeId } });
+          await tx.placeCategory.createMany({
+            data: categoryIds.map((categoryId) => ({
+              placeId,
+              categoryId,
+              isMain: categoryId === updatePlaceDto.mainCategoryId,
+            })),
+          });
+        }
+
+        if (attributeIds !== undefined) {
+          await tx.placeAttribute.deleteMany({ where: { placeId } });
+          if (attributeIds.length > 0) {
+            await tx.placeAttribute.createMany({
+              data: attributeIds.map((attributeId) => ({ placeId, attributeId })),
+            });
+          }
+        }
+
+        await tx.place.update({
+          where: { id: placeId },
+          data: updateData,
+        });
+      });
+
+      return { message: 'Place updated successfully' };
     } catch (error) {
       return handleServiceErrorCatching(error);
     }

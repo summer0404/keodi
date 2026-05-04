@@ -7,6 +7,7 @@ const mockPlaceService = {
   findNearby: jest.fn(),
   search: jest.fn(),
   getById: jest.fn(),
+  update: jest.fn(),
 };
 
 describe('PlaceController', () => {
@@ -70,6 +71,18 @@ describe('PlaceController', () => {
 
       expect(mockPlaceService.getById).toHaveBeenCalledWith('place-1', 'user-1');
       expect(result).toEqual({ id: 'place-1', name: 'Cafe' });
+    });
+  });
+
+  describe('update', () => {
+    it('delegates to service.update with full DTO', async () => {
+      const dto = { placeId: 'place-1', requesterId: 'owner-1', name: 'New Name' } as any;
+      mockPlaceService.update.mockResolvedValue({ message: 'Place updated successfully' });
+
+      const result = await controller.update(dto);
+
+      expect(mockPlaceService.update).toHaveBeenCalledWith(dto);
+      expect(result).toEqual({ message: 'Place updated successfully' });
     });
   });
 });

@@ -4,6 +4,7 @@ import { Response } from 'express';
 import { GoogleService } from 'src/providers/google/google.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { AuthTopics, UserTopics } from 'src/shared/constants/topic.constant';
+import { CookieMaxAge } from 'src/shared/constants/auth.constant';
 import {
   ForgotPasswordOTPDto,
   LoginDto,
@@ -22,6 +23,18 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly googleService: GoogleService,
   ) {}
+
+  private buildRefreshTokenCookieOptions(maxAge: number): Record<string, any> {
+    const options: Record<string, any> = {
+      httpOnly: true,
+      secure: this.configService.get<string>('COOKIE_SECURE') !== 'false',
+      sameSite: 'none' as const,
+      maxAge,
+    };
+    const domain = this.configService.get<string>('COOKIE_DOMAIN');
+    if (domain) options.domain = domain;
+    return options;
+  }
 
   private async verifyGoogleIdToken(token: string) {
     try {
@@ -61,16 +74,9 @@ export class AuthService {
     try {
       const response = await this.kafkaService.sendWithTimeout(AuthTopics.Login, body);
 
-      const cookieMaxAge = body.rememberMe
-        ? 365 * 24 * 60 * 60 * 1000 // 1 year
-        : 7 * 24 * 60 * 60 * 1000; // 7 days
+      const cookieMaxAge = body.rememberMe ? CookieMaxAge.REMEMBER_ME : CookieMaxAge.DEFAULT;
 
-      res.cookie('refreshToken', response.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: cookieMaxAge,
-      });
+      res.cookie('refreshToken', response.refreshToken, this.buildRefreshTokenCookieOptions(cookieMaxAge));
 
       return {
         accessToken: response.accessToken,
@@ -89,12 +95,7 @@ export class AuthService {
 
       const response = await this.kafkaService.sendWithTimeout(AuthTopics.Google, userInfo);
 
-      res.cookie('refreshToken', response.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      res.cookie('refreshToken', response.refreshToken, this.buildRefreshTokenCookieOptions(CookieMaxAge.DEFAULT));
 
       return {
         accessToken: response.accessToken,
@@ -108,12 +109,7 @@ export class AuthService {
     try {
       const response = await this.kafkaService.sendWithTimeout(AuthTopics.Google, user);
 
-      res.cookie('refreshToken', response.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      res.cookie('refreshToken', response.refreshToken, this.buildRefreshTokenCookieOptions(CookieMaxAge.DEFAULT));
 
       return res.redirect(
         `${this.configService.get<string>('FRONTEND_URL')}/auth-google`,
@@ -200,12 +196,7 @@ export class AuthService {
     );
     const cookieMaxAge = newTokenPayload.exp * 1000 - Date.now();
 
-    res.cookie('refreshToken', response.refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: cookieMaxAge,
-    });
+    res.cookie('refreshToken', response.refreshToken, this.buildRefreshTokenCookieOptions(cookieMaxAge));
     return {
       accessToken: response.accessToken,
     };
