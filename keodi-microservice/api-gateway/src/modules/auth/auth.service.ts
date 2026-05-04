@@ -25,15 +25,13 @@ export class AuthService {
   ) {}
 
   private buildRefreshTokenCookieOptions(maxAge: number): Record<string, any> {
-    const options: Record<string, any> = {
+    const secure = this.configService.get<string>('COOKIE_SECURE') !== 'false';
+    return {
       httpOnly: true,
-      secure: this.configService.get<string>('COOKIE_SECURE') !== 'false',
-      sameSite: 'none' as const,
+      secure,
+      sameSite: secure ? 'none' : 'lax',
       maxAge,
     };
-    const domain = this.configService.get<string>('COOKIE_DOMAIN');
-    if (domain) options.domain = domain;
-    return options;
   }
 
   private async verifyGoogleIdToken(token: string) {
