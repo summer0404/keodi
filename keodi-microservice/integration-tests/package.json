@@ -1,0 +1,25 @@
+{
+  "name": "keodi-integration-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest --config jest.config.ts --runInBand --forceExit",
+    "test:db": "jest --config jest.config.ts --testPathPattern=database --runInBand --forceExit",
+    "test:kafka": "jest --config jest.config.ts --testPathPattern=kafka --runInBand --forceExit",
+    "test:redis": "jest --config jest.config.ts --testPathPattern=redis --runInBand --forceExit"
+  },
+  "dependencies": {
+    "ioredis": "^5.9.1",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.7",
+    "@types/pg": "^8.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}

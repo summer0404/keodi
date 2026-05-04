@@ -1,4 +1,4 @@
-name: CI / Build & Deploy
+name: Deploy
 
 on:
   push:
@@ -21,11 +21,12 @@ permissions:
   packages: write
 
 jobs:
-  # ============================================================
-  # 1. DETECT CHANGES
-  # ============================================================
+  test:
+    uses: ./.github/workflows/ci.yml
+
   detect-changes:
     name: Detect Changes
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       api-gateway: ${{ steps.check.outputs.api-gateway }}
@@ -68,174 +69,9 @@ jobs:
             done
           fi
 
-  # ============================================================
-  # 2. TEST — runs per service in parallel, gates the build
-  # ============================================================
-  test-api-gateway:
-    name: Test api-gateway
-    needs: detect-changes
-    if: needs.detect-changes.outputs.api-gateway == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: keodi-microservice/api-gateway
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run unit tests with coverage
-        run: npm run test:cov
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-api-gateway
-          path: keodi-microservice/api-gateway/coverage/
-          retention-days: 7
-
-  test-auth-service:
-    name: Test auth-service
-    needs: detect-changes
-    if: needs.detect-changes.outputs.auth-service == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: keodi-microservice/auth-service
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Generate Prisma client
-        run: npm run prisma:generate
-
-      - name: Run unit tests with coverage
-        run: npm run test:cov
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-auth-service
-          path: keodi-microservice/auth-service/coverage/
-          retention-days: 7
-
-  test-core-service:
-    name: Test core-service
-    needs: detect-changes
-    if: needs.detect-changes.outputs.core-service == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: keodi-microservice/core-service
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Generate Prisma client
-        run: npm run prisma:generate
-
-      - name: Run unit tests with coverage
-        run: npm run test:cov
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-core-service
-          path: keodi-microservice/core-service/coverage/
-          retention-days: 7
-
-  test-notification-service:
-    name: Test notification-service
-    needs: detect-changes
-    if: needs.detect-changes.outputs.notification-service == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: keodi-microservice/notification-service
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Generate Prisma client
-        run: npm run prisma:generate
-
-      - name: Run unit tests with coverage
-        run: npm run test:cov
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-notification-service
-          path: keodi-microservice/notification-service/coverage/
-          retention-days: 7
-
-  test-intelligence-service:
-    name: Test intelligence-service
-    needs: detect-changes
-    if: needs.detect-changes.outputs.intelligence-service == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: keodi-microservice/intelligence-service
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: keodi-microservice/intelligence-service/requirements.txt
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Generate Prisma client
-        run: prisma generate --schema=app/database/schema.prisma
-
-      - name: Run unit tests with coverage
-        run: pytest --cov=app --cov-report=xml --cov-report=term
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-intelligence-service
-          path: keodi-microservice/intelligence-service/coverage.xml
-          retention-days: 7
-
-  # ============================================================
-  # 3. BUILD — only runs after tests pass for that service
-  # ============================================================
   build-api-gateway:
     name: Build api-gateway
-    needs: [detect-changes, test-api-gateway]
+    needs: detect-changes
     if: needs.detect-changes.outputs.api-gateway == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -255,7 +91,7 @@ jobs:
 
   build-auth-service:
     name: Build auth-service
-    needs: [detect-changes, test-auth-service]
+    needs: detect-changes
     if: needs.detect-changes.outputs.auth-service == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -275,7 +111,7 @@ jobs:
 
   build-core-service:
     name: Build core-service
-    needs: [detect-changes, test-core-service]
+    needs: detect-changes
     if: needs.detect-changes.outputs.core-service == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -295,7 +131,7 @@ jobs:
 
   build-notification-service:
     name: Build notification-service
-    needs: [detect-changes, test-notification-service]
+    needs: detect-changes
     if: needs.detect-changes.outputs.notification-service == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -315,7 +151,7 @@ jobs:
 
   build-intelligence-service:
     name: Build intelligence-service
-    needs: [detect-changes, test-intelligence-service]
+    needs: detect-changes
     if: needs.detect-changes.outputs.intelligence-service == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -333,18 +169,10 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/intelligence-service:${{ needs.detect-changes.outputs.version }}
             ${{ env.IMAGE_PREFIX }}/intelligence-service:latest
 
-  # ============================================================
-  # 4. DEPLOY — blocked if any test or build failed
-  # ============================================================
   deploy:
     name: Deploy to VPS
     needs:
       - detect-changes
-      - test-api-gateway
-      - test-auth-service
-      - test-core-service
-      - test-notification-service
-      - test-intelligence-service
       - build-api-gateway
       - build-auth-service
       - build-core-service
