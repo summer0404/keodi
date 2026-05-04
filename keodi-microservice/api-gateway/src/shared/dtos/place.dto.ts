@@ -430,3 +430,133 @@ export class PlaceRecommendationResponseDto extends PickType(PlaceDistanceDto, [
   'openingHours',
   'categories',
 ] as const) {}
+
+export class UpdatePlaceDto {
+  @ApiProperty({ description: 'Place name', example: 'Sunset Coffee', required: false })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({
+    description: 'Place description',
+    example: 'Cozy cafe with parking and pet-friendly space',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({ description: 'Street address', example: '255 Do Xuan Hop', required: false })
+  @IsOptional()
+  @IsString()
+  street?: string;
+
+  @ApiProperty({ description: 'Ward', example: 'Tan Phu Ward', required: false })
+  @IsOptional()
+  @IsString()
+  ward?: string;
+
+  @ApiProperty({ description: 'City', example: 'Thu Duc City', required: false })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiProperty({ description: 'Country code', example: 'VN', required: false })
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
+
+  @ApiProperty({ description: 'Place latitude', example: 10.76407, required: false })
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : undefined;
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @ApiProperty({ description: 'Place longitude', example: 106.67838, required: false })
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : undefined;
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
+
+  @ApiProperty({
+    description: 'Google Maps link',
+    example: 'https://maps.app.goo.gl/example',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  googleMapLink?: string;
+
+  @ApiProperty({ description: 'Phone number', example: '+84901234567', required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
+
+  @ApiProperty({ description: 'Website', example: 'https://sunsetcoffee.vn', required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @ApiProperty({ description: 'Main category ID', example: 'clx123-main-category', required: false })
+  @IsOptional()
+  @IsString()
+  mainCategoryId?: string;
+
+  @ApiProperty({
+    description: 'Secondary category IDs',
+    required: false,
+    type: [String],
+    example: ['clx123-secondary-category'],
+  })
+  @Transform(({ value }) => parseStringArray(value))
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  secondaryCategoryIds?: string[];
+
+  @ApiProperty({
+    description: 'Opening hours by day',
+    type: [CreatePlaceOpeningHourDto],
+    required: false,
+  })
+  @Transform(({ value }) => {
+    const arr = parseArray(value);
+    return arr ? plainToInstance(CreatePlaceOpeningHourDto, arr) : arr;
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePlaceOpeningHourDto)
+  openingHours?: CreatePlaceOpeningHourDto[];
+
+  @ApiProperty({
+    description: 'Attribute IDs',
+    required: false,
+    type: [String],
+    example: ['clx123-attribute-parking'],
+  })
+  @Transform(({ value }) => parseStringArray(value))
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  attributeIds?: string[];
+}
+
+export class UpdatePlaceResponseDto {
+  @ApiProperty({ example: 'Place updated successfully' })
+  message: string;
+}

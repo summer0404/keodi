@@ -47,6 +47,7 @@ export const PlaceTopics = {
   NearMe: 'place.near-me',
   Search: 'place.search',
   Create: 'place.create',
+  Update: 'place.update',
 } as const;
 
 export const RecommendationTopics = {

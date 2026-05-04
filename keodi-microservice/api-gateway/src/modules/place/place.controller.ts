@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseFilePipe,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -24,12 +25,14 @@ import {
   CreatePlaceResponseDto,
   NearMePlacesResponseDto,
   NearMeQueryDto,
-  SearchDto
+  SearchDto,
+  UpdatePlaceDto,
+  UpdatePlaceResponseDto,
 } from 'src/shared/dtos/place.dto';
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiCreatePlace, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiCreatePlace, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace, ApiUpdatePlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
@@ -112,6 +115,35 @@ export class PlaceController {
     @Param('id') id: string
   ) {
     return await this.placeService.getById(id, user.id);
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.OWNER)
+  @Patch(':id')
+  @UseInterceptors(FileInterceptor('featureImage'))
+  @ApiUpdatePlace()
+  async update(
+    @CurrentUser() user: CurrentUserDto,
+    @Param('id') id: string,
+    @Body() updatePlaceDto: UpdatePlaceDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: false,
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    featureImage?: Express.Multer.File,
+  ): Promise<UpdatePlaceResponseDto> {
+    return await this.placeService.update(
+      id,
+      user.id,
+      updatePlaceDto,
+      featureImage?.buffer,
+      featureImage?.mimetype,
+    );
   }
 
   @Get(':id/reviews')
