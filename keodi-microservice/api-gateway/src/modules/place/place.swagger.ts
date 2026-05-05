@@ -12,6 +12,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
+  AgentSearchResponseDto,
   CreatePlaceResponseDto,
   NearMePlacesResponseDto,
   PlaceRecommendationResponseDto,
@@ -443,5 +444,16 @@ export function ApiRejectPlace() {
     ApiBadRequestResponse({
       description: 'Missing or invalid rejection reason',
     }),
+  );
+}
+
+export function ApiChatSearch() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'AI Agent search (chat)',
+      description: 'Conversational place search powered by LLM agent. Supports emotional and abstract queries.',
+    }),
+    ApiOkResponse({ description: 'Agent recommendations', type: AgentSearchResponseDto }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
   );
 }

@@ -1,11 +1,12 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
-import { CoordinateDto, CreatePlaceDto, CreatePlaceResponseDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto, UpdatePlaceDto, UpdatePlaceResponseDto } from 'src/shared/dtos/place.dto';
+import { AgentSearchResponseDto, ChatSearchDto, CoordinateDto, CreatePlaceDto, CreatePlaceResponseDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto, UpdatePlaceDto, UpdatePlaceResponseDto } from 'src/shared/dtos/place.dto';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { ReviewService } from '../review/review.service';
 import { UserAction } from 'src/shared/enums/user.enum';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { IntelligenceTopics, PlaceTopics, RecommendationTopics } from 'src/shared/constants/topic.constant';
+import { AGENT_KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
 
 @Injectable()
 export class PlaceService {
@@ -93,5 +94,24 @@ export class PlaceService {
             featureImage,
             featureImageType,
         });
+    }
+
+    async chatSearch(dto: ChatSearchDto, userId: string): Promise<AgentSearchResponseDto> {
+        const { message, placeIds } = await this.kafkaService.sendWithTimeout(
+            IntelligenceTopics.AgentSearch,
+            { message: dto.message, userId, latitude: dto.latitude, longitude: dto.longitude },
+            AGENT_KAFKA_TIMEOUT_MS,
+        );
+
+        if (!placeIds?.length) {
+            return { message, places: [] };
+        }
+
+        const places = await this.kafkaService.sendWithTimeout(
+            PlaceTopics.GetByIdsWithDistance,
+            { ids: placeIds, userId, latitude: dto.latitude, longitude: dto.longitude },
+        );
+
+        return { message, places };
     }
 }

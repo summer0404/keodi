@@ -20,6 +20,8 @@ import {
   ApiTags
 } from '@nestjs/swagger';
 import {
+  AgentSearchResponseDto,
+  ChatSearchDto,
   CoordinateDto,
   CreatePlaceDto,
   CreatePlaceResponseDto,
@@ -34,7 +36,7 @@ import {
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiApprovePlace, ApiCreatePlace, ApiGetAdminPlaces, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiRejectPlace, ApiSearchPlace, ApiUpdatePlace } from './place.swagger';
+import { ApiApprovePlace, ApiChatSearch, ApiCreatePlace, ApiGetAdminPlaces, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiRejectPlace, ApiSearchPlace, ApiUpdatePlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
@@ -91,6 +93,16 @@ export class PlaceController {
     @Query() query: SearchDto
   ) {
     return await this.placeService.search(query, user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('chat-search')
+  @ApiChatSearch()
+  async chatSearch(
+    @CurrentUser() user: CurrentUserDto,
+    @Body() dto: ChatSearchDto,
+  ): Promise<AgentSearchResponseDto> {
+    return await this.placeService.chatSearch(dto, user.id);
   }
 
   @UseInterceptors(CacheInterceptor)

@@ -601,6 +601,72 @@ export class PlaceService {
     }
   }
 
+  async getByIdsWithDistance(
+    ids: string[],
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<PlaceWithDistance[]> {
+    try {
+      const places = await this.prismaService.place.findMany({
+        where: { id: { in: ids }, status: PlaceStatus.PUBLISHED },
+        include: {
+          favorites: {
+            where: { userId },
+            select: { userId: true },
+          },
+          openingHours: {
+            select: { dayOfWeek: true, openTime: true, closeTime: true },
+            orderBy: { dayOfWeek: SortOrder.ASC },
+          },
+          placeCategories: {
+            select: {
+              isMain: true,
+              category: { select: { id: true, name: true } },
+            },
+          },
+        },
+      });
+
+      // Preserve agent ranking order
+      const placeMap = new Map(places.map((p) => [p.id, p]));
+      const ordered = ids
+        .map((id) => placeMap.get(id))
+        .filter((p): p is NonNullable<typeof p> => p !== undefined);
+
+      return await Promise.all(
+        ordered.map(async (place) => {
+          const { favorites, placeCategories, ...placeData } = place;
+          return {
+            ...placeData,
+            distance: this.placeHelper.calculateDistance(
+              latitude,
+              longitude,
+              place.latitude,
+              place.longitude,
+            ),
+            isFavorite: favorites.length > 0,
+            featureImageUrl: placeData.featureImageUrl
+              ? await this.imageService.getImageViewUrl(placeData.featureImageUrl)
+              : null,
+            openingHours: placeData.openingHours.map((oh) => ({
+              ...oh,
+              openTime: oh.openTime ? formatTimeOnly(oh.openTime) : null,
+              closeTime: oh.closeTime ? formatTimeOnly(oh.closeTime) : null,
+            })),
+            categories: placeCategories.map((pc) => ({
+              id: pc.category.id,
+              name: pc.category.name,
+              isMain: pc.isMain,
+            })),
+          };
+        }),
+      );
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
   async update(updatePlaceDto: UpdatePlaceDto) {
     try {
       const { placeId, requesterId } = updatePlaceDto;

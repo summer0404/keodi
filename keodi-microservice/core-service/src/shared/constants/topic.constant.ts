@@ -37,6 +37,7 @@ export const OwnershipClaimTopics = {
 
 export const PlaceTopics = {
   GetById: 'place.get-by-id',
+  GetByIdsWithDistance: 'place.get-by-ids-with-distance',
   NearMe: 'place.near-me',
   Search: 'place.search',
   Create: 'place.create',

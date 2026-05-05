@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { ApiProperty, IntersectionType, PickType } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType, OmitType, PickType } from '@nestjs/swagger';
 import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
@@ -578,4 +578,19 @@ export class RejectPlaceBodyDto {
   @IsNotEmpty()
   @IsString()
   reason: string;
+}
+
+export class ChatSearchDto extends CoordinateDto {
+  @ApiProperty({ description: 'User message (can be emotional or abstract)', example: 'Tôi đang buồn, muốn đi đâu đó giải khuây' })
+  @IsNotEmpty()
+  @IsString()
+  message: string;
+}
+
+export class AgentSearchResponseDto {
+  @ApiProperty({ description: 'AI agent message in Vietnamese' })
+  message: string;
+
+  @ApiProperty({ type: [PlaceDistanceDto], description: 'Recommended places with full details including distance' })
+  places: PlaceDistanceDto[];
 }

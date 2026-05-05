@@ -111,6 +111,29 @@ export class PlaceHelper {
     return `${ImageConstants.IMAGE_FOLDERS.PLACE_IMAGES}/${Date.now()}.${extension}`;
   }
 
+  calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const toRad = (deg: number) =>
+      (deg * Math.PI) / GeoConstants.DEGREES_IN_HALF_CIRCLE;
+    return (
+      GeoConstants.EARTH_RADIUS_IN_KILOMETERS *
+      Math.acos(
+        Math.min(
+          1,
+          Math.max(
+            -1,
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2) - toRad(lon1)) +
+              Math.sin(toRad(lat1)) * Math.sin(toRad(lat2)),
+          ),
+        ),
+      )
+    );
+  }
+
   calculateGeoDeltas(
     latitude: number,
     radius: number,

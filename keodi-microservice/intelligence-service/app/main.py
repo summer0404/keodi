@@ -36,6 +36,11 @@ async def lifespan(app: FastAPI):
         handler=handlers.ranking
     )
 
+    consumer_service.register_handler(
+        topic=Topics.AGENT_SEARCH,
+        handler=handlers.agent_search
+    )
+
     asyncio.create_task(consumer_service.start(
         topics=Topics.get_consuming_topics()
     ))

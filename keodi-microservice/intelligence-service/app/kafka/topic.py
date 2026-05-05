@@ -9,8 +9,11 @@ class Topics:
     TRAIN_RANKING_MODEL: str = "intelligence.train-ranking-model"
     RANKING: str = "intelligence.ranking"
 
+    AGENT_SEARCH: str = "intelligence.agent-search"
+
     EXTRACT_USER_INTENT_REPLY: str = "intelligence.extract-user-intent.reply"
     RANKING_REPLY: str = "intelligence.ranking.reply"
+    AGENT_SEARCH_REPLY: str = "intelligence.agent-search.reply"
 
     @classmethod
     def get_consuming_topics(cls) -> List[str]:
@@ -20,11 +23,13 @@ class Topics:
             cls.USER_ACTION,
             cls.TRAIN_RANKING_MODEL,
             cls.RANKING,
+            cls.AGENT_SEARCH,
         ]
-    
+
     @classmethod
     def get_reply_topics(cls) -> List[str]:
         return [
             cls.EXTRACT_USER_INTENT_REPLY,
             cls.RANKING_REPLY,
+            cls.AGENT_SEARCH_REPLY,
         ]
