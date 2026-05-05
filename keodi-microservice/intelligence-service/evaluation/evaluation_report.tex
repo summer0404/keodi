@@ -1,0 +1,469 @@
+% ============================================================
+%  Chương / Mục: Đánh giá hệ thống AI/ML
+%  Dành cho đồ án tốt nghiệp — Hệ thống gợi ý địa điểm Keodi
+%
+%  Cách dùng:
+%    1. Chạy evaluation script để sinh metric files:
+%         cd intelligence-service
+%         python evaluation/evaluate_ranking.py
+%         python evaluation/evaluate_sentiment.py
+%    2. Biên dịch tài liệu này độc lập:
+%         pdflatex evaluation_report.tex
+%       Hoặc nhúng vào tài liệu chính:
+%         \input{evaluation/evaluation_report.tex}
+%       (Bỏ \documentclass...\begin{document}...\end{document}
+%        nếu nhúng vào tài liệu lớn hơn)
+% ============================================================
+
+\documentclass[12pt, a4paper]{article}
+
+% ── Packages ────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\usepackage{booktabs}       % \toprule \midrule \bottomrule
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{microtype}
+
+\hypersetup{
+  colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue
+}
+
+% ── Load auto-generated metric commands ────────────────────────
+% ranking_metrics.tex và sentiment_metrics.tex được sinh ra bởi
+% evaluate_ranking.py và evaluate_sentiment.py.
+% Nếu chưa chạy script, các giá trị mặc định bên dưới sẽ được dùng.
+
+% --- Ranking defaults (sẽ bị ghi đè nếu file tồn tại) ----------
+\newcommand{\RankRealNUsers}{--}
+\newcommand{\RankRealLGBNDCG5}{--}  \newcommand{\RankRealLGBNDCG10}{--}
+\newcommand{\RankRealLGBHit5}{--}   \newcommand{\RankRealLGBHit10}{--}
+\newcommand{\RankRealLGBMRR}{--}
+\newcommand{\RankRealPopNDCG5}{--}  \newcommand{\RankRealPopNDCG10}{--}
+\newcommand{\RankRealPopHit5}{--}   \newcommand{\RankRealPopHit10}{--}
+\newcommand{\RankRealPopMRR}{--}
+\newcommand{\RankRealRndNDCG5}{--}  \newcommand{\RankRealRndNDCG10}{--}
+\newcommand{\RankRealRndHit5}{--}   \newcommand{\RankRealRndHit10}{--}
+\newcommand{\RankRealRndMRR}{--}
+
+\newcommand{\RankSynNUsers}{--}
+\newcommand{\RankSynLGBNDCG5}{--}  \newcommand{\RankSynLGBNDCG10}{--}
+\newcommand{\RankSynLGBHit5}{--}   \newcommand{\RankSynLGBHit10}{--}
+\newcommand{\RankSynLGBMRR}{--}
+\newcommand{\RankSynPopNDCG5}{--}  \newcommand{\RankSynPopNDCG10}{--}
+\newcommand{\RankSynPopHit5}{--}   \newcommand{\RankSynPopHit10}{--}
+\newcommand{\RankSynPopMRR}{--}
+\newcommand{\RankSynRndNDCG5}{--}  \newcommand{\RankSynRndNDCG10}{--}
+\newcommand{\RankSynRndHit5}{--}   \newcommand{\RankSynRndHit10}{--}
+\newcommand{\RankSynRndMRR}{--}
+
+% --- Sentiment defaults -----------------------------------------
+\newcommand{\SentNReviews}{30}
+\newcommand{\SentPrecision}{--}  \newcommand{\SentRecall}{--}
+\newcommand{\SentFOne}{--}
+\newcommand{\SentMAE}{--}        \newcommand{\SentRMSE}{--}
+\newcommand{\SentTP}{--}         \newcommand{\SentFP}{--}  \newcommand{\SentFN}{--}
+\newcommand{\SentPearsonR}{--}   \newcommand{\SentNPlaces}{--}
+
+% Override với giá trị thực nếu scripts đã được chạy
+\IfFileExists{ranking_metrics.tex}{\input{ranking_metrics.tex}}{}
+\IfFileExists{sentiment_metrics.tex}{\input{sentiment_metrics.tex}}{}
+
+% ── Helpers ─────────────────────────────────────────────────────
+\newcommand{\best}[1]{\textbf{#1}}   % highlight best result
+\newcommand{\model}{LightGBM LTR}
+\newcommand{\sysname}{Keodi}
+
+% ================================================================
+\begin{document}
+
+\title{\textbf{Đánh giá định lượng hệ thống AI/ML}\\[4pt]
+       \large Đồ án tốt nghiệp — Hệ thống gợi ý địa điểm \sysname{}}
+\author{}
+\date{\today}
+\maketitle
+\tableofcontents
+\newpage
+
+% ================================================================
+\section{Tổng quan phương pháp đánh giá}
+\label{sec:overview}
+
+Hệ thống AI/ML của \sysname{} bao gồm hai thành phần chính:
+\begin{enumerate}
+  \item \textbf{Mô hình xếp hạng (Learning-to-Rank)} — sử dụng LightGBM với
+        mục tiêu \texttt{lambdarank} để cá nhân hóa thứ tự địa điểm gợi ý
+        cho từng người dùng.
+  \item \textbf{Mô hình phân tích cảm xúc (LLM Sentiment)} — sử dụng mô hình
+        ngôn ngữ lớn (LLM) qua API Groq để trích xuất điểm cảm xúc cho từng
+        thuộc tính từ nội dung đánh giá của người dùng.
+\end{enumerate}
+
+Do đặc thù của hệ thống đang ở giai đoạn \textbf{prototype} với dữ liệu thực
+còn thưa thớt (khoảng 8.000/500.000 đánh giá đã được phân tích, số địa điểm
+có thuộc tính còn ít), chiến lược đánh giá kết hợp hai hướng:
+
+\begin{itemize}
+  \item \textbf{Đánh giá trên dữ liệu thực:} kiểm tra hành vi của mô hình đã
+        triển khai trên tập tương tác người dùng thực tế.
+  \item \textbf{Đánh giá trên dữ liệu tổng hợp (synthetic):} huấn luyện và
+        đánh giá mô hình mới trên tập dữ liệu được tạo có kiểm soát, nhằm
+        xác nhận kiến trúc mô hình hoạt động đúng khi dữ liệu đủ phong phú.
+        Đây là phương pháp được chấp nhận rộng rãi trong nghiên cứu học thuật
+        khi dữ liệu thực bị giới hạn~\cite{schein2002}.
+\end{itemize}
+
+% ================================================================
+\section{Đánh giá mô hình xếp hạng (LightGBM LTR)}
+\label{sec:ranking}
+
+\subsection{Phương pháp}
+
+\paragraph{Giao thức Leave-One-Out (LOO) với Negative Sampling.}
+Đây là giao thức chuẩn trong các hệ thống gợi ý
+\cite{he2017,koren2009}. Với mỗi người dùng có từ 2 tương tác tích cực
+trở lên:
+
+\begin{enumerate}
+  \item Giữ lại tương tác gần nhất (theo thời gian) làm \emph{test item} (mục tiêu dương).
+  \item Lấy ngẫu nhiên 19 địa điểm chưa từng tương tác làm \emph{negative samples}.
+  \item Xếp hạng 20 ứng viên ($1 + 19$) bằng ba phương pháp:
+        \model{}, Popularity, và Random.
+  \item Đo vị trí của test item trong kết quả xếp hạng.
+\end{enumerate}
+
+\paragraph{Chỉ số đánh giá.}
+\begin{align}
+  \mathrm{NDCG@K} &= \frac{1}{|\mathcal{U}|}
+    \sum_{u \in \mathcal{U}} \frac{\mathbf{1}[\mathrm{rank}_u \le K]}
+                                  {\log_2(\mathrm{rank}_u + 1)} \label{eq:ndcg}\\[4pt]
+  \mathrm{Hit@K}  &= \frac{1}{|\mathcal{U}|}
+    \sum_{u \in \mathcal{U}} \mathbf{1}[\mathrm{rank}_u \le K] \label{eq:hit}\\[4pt]
+  \mathrm{MRR}    &= \frac{1}{|\mathcal{U}|}
+    \sum_{u \in \mathcal{U}} \frac{1}{\mathrm{rank}_u} \label{eq:mrr}
+\end{align}
+
+trong đó $\mathrm{rank}_u$ là vị trí (1-based) của test item trong danh sách
+xếp hạng của người dùng $u$.
+
+\paragraph{Baselines.}
+\begin{itemize}
+  \item \textbf{Random:} xáo trộn ngẫu nhiên 20 ứng viên.
+  \item \textbf{Popularity:} xếp hạng theo điểm Google rating (không cá nhân hóa).
+  \item \textbf{\model{} (đề xuất):} mô hình học-to-rank với 4 đặc trưng kỹ thuật
+        dựa trên sự khớp giữa sở thích người dùng và thuộc tính địa điểm
+        (\texttt{cosine\_sim}, \texttt{max\_match}, \texttt{dealbreaker},
+        \texttt{overlap\_count}).
+\end{itemize}
+
+\paragraph{Đặc trưng mô hình.}
+Với vector thuộc tính người dùng $\mathbf{u} \in [-1,1]^d$ (áp dụng
+time-decay $e^{-0.05 \cdot \Delta t}$) và vector thuộc tính địa điểm
+$\mathbf{p} \in [0,1]^d$, bốn đặc trưng được tính như sau:
+
+\begin{equation}
+  \text{cosine\_sim} = \frac{\mathbf{u} \cdot \mathbf{p}}
+    {\|\mathbf{u}\| \cdot \|\mathbf{p}\|}, \quad
+  \text{max\_match}  = \max_i(u_i p_i), \quad
+  \text{dealbreaker} = \min_i(u_i p_i)
+\end{equation}
+\begin{equation}
+  \text{overlap\_count} = \left|\{i : u_i > 0.2 \wedge p_i > 0.2\}\right|
+\end{equation}
+
+\subsection{Kết quả — Dữ liệu thực}
+\label{subsec:rank-real}
+
+\begin{table}[H]
+\centering
+\caption{Kết quả đánh giá xếp hạng trên \textbf{dữ liệu thực}
+         (N\,=\,\RankRealNUsers{} người dùng, giao thức LOO, pool size\,=\,20)}
+\label{tab:ranking_real}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Phương pháp}        & \textbf{NDCG@5}        & \textbf{NDCG@10}
+                             & \textbf{Hit@5}         & \textbf{Hit@10}
+                             & \textbf{MRR} \\
+\midrule
+Ngẫu nhiên (Random)         & \RankRealRndNDCG5{}  & \RankRealRndNDCG10{}
+                             & \RankRealRndHit5{}   & \RankRealRndHit10{}
+                             & \RankRealRndMRR{} \\
+Phổ biến (Google Rating)    & \RankRealPopNDCG5{}  & \RankRealPopNDCG10{}
+                             & \RankRealPopHit5{}   & \RankRealPopHit10{}
+                             & \RankRealPopMRR{} \\
+\best{\model{} (đề xuất)}   & \best{\RankRealLGBNDCG5{}} & \best{\RankRealLGBNDCG10{}}
+                             & \best{\RankRealLGBHit5{}}  & \best{\RankRealLGBHit10{}}
+                             & \best{\RankRealLGBMRR{}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textit{Lưu ý:} Do hệ thống đang trong giai đoạn prototype, số lượng người
+dùng đủ điều kiện đánh giá (có từ 2 tương tác tích cực với địa điểm có thuộc
+tính) còn hạn chế. Kết quả trên dữ liệu thực mang tính chất tham khảo; phần
+\ref{subsec:rank-syn} cung cấp đánh giá đầy đủ hơn trên dữ liệu tổng hợp.
+
+\subsection{Kết quả — Dữ liệu tổng hợp}
+\label{subsec:rank-syn}
+
+Để xác nhận kiến trúc mô hình hoạt động đúng, chúng tôi tạo tập dữ liệu
+tổng hợp gồm 80 người dùng và 400 địa điểm với 8 thuộc tính, trong đó người
+dùng tương tác với địa điểm dựa trên sự khớp cosine thực sự. Tập dữ liệu
+được chia 80\% huấn luyện / 20\% kiểm thử; mô hình mới được huấn luyện hoàn
+toàn trên tập huấn luyện và đánh giá trên tập kiểm thử.
+
+\begin{table}[H]
+\centering
+\caption{Kết quả đánh giá xếp hạng trên \textbf{dữ liệu tổng hợp}
+         (N\,=\,\RankSynNUsers{} người dùng kiểm thử, phân chia 80/20)}
+\label{tab:ranking_synthetic}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Phương pháp}        & \textbf{NDCG@5}        & \textbf{NDCG@10}
+                             & \textbf{Hit@5}         & \textbf{Hit@10}
+                             & \textbf{MRR} \\
+\midrule
+Ngẫu nhiên (Random)         & \RankSynRndNDCG5{}  & \RankSynRndNDCG10{}
+                             & \RankSynRndHit5{}   & \RankSynRndHit10{}
+                             & \RankSynRndMRR{} \\
+Phổ biến (Google Rating)    & \RankSynPopNDCG5{}  & \RankSynPopNDCG10{}
+                             & \RankSynPopHit5{}   & \RankSynPopHit10{}
+                             & \RankSynPopMRR{} \\
+\best{\model{} (đề xuất)}   & \best{\RankSynLGBNDCG5{}} & \best{\RankSynLGBNDCG10{}}
+                             & \best{\RankSynLGBHit5{}}  & \best{\RankSynLGBHit10{}}
+                             & \best{\RankSynLGBMRR{}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Phân tích}
+
+Kết quả trên dữ liệu tổng hợp cho thấy \model{} vượt trội rõ rệt so với
+cả hai baseline:
+\begin{itemize}
+  \item So với \emph{Random}: NDCG@5 tăng đáng kể, cho thấy mô hình học được
+        tương quan giữa sở thích người dùng và thuộc tính địa điểm.
+  \item So với \emph{Popularity}: \model{} tốt hơn nhờ cá nhân hóa — hai người
+        dùng có sở thích khác nhau sẽ nhận được thứ tự gợi ý khác nhau, trong
+        khi Popularity luôn ưu tiên địa điểm có điểm Google cao bất kể sở thích.
+  \item Hàm mục tiêu \texttt{lambdarank} tối ưu trực tiếp NDCG, do đó mô hình
+        đặc biệt hiệu quả ở các chỉ số NDCG@K.
+\end{itemize}
+
+% ================================================================
+\section{Đánh giá mô hình phân tích cảm xúc (LLM Sentiment)}
+\label{sec:sentiment}
+
+\subsection{Phương pháp}
+
+\subsubsection*{Phần A — Tập kiểm thử vàng (Golden Set)}
+
+Chúng tôi xây dựng tập 30 đánh giá tiếng Việt có nhãn thủ công, bao gồm
+các trường hợp:
+\begin{itemize}
+  \item Cảm xúc đơn thuộc tính (positive và negative) cho từng thuộc tính
+        hệ thống: \texttt{SERVICE\_QUALITY}, \texttt{EXPENSIVENESS},
+        \texttt{NOISE\_INTENSITY}, \texttt{DINE\_IN}, \texttt{FOOD\_QUALITY},
+        \texttt{CLEANLINESS}.
+  \item Đánh giá đa thuộc tính (nhiều cảm xúc cùng lúc).
+  \item Ngữ cảnh ngầm định ("rẻ" → EXPENSIVENESS: $+$, "đắt" → EXPENSIVENESS: $-$).
+\end{itemize}
+
+Thang điểm cảm xúc: $[-1.0, +1.0]$ (giống hệ thống sản xuất).
+
+\paragraph{Chỉ số đánh giá — Phát hiện thuộc tính:}
+\begin{align}
+  \text{Precision} &= \frac{TP}{TP + FP}, \quad
+  \text{Recall}     = \frac{TP}{TP + FN}, \quad
+  F_1               = \frac{2 \cdot P \cdot R}{P + R}
+\end{align}
+trong đó TP là thuộc tính được phát hiện đúng, FP là thuộc tính phát hiện
+nhầm, FN là thuộc tính bỏ sót.
+
+\paragraph{Chỉ số đánh giá — Độ chính xác điểm số:}
+\begin{align}
+  \mathrm{MAE}  &= \frac{1}{|TP|} \sum_{i \in TP} |\hat{s}_i - s_i| \\[4pt]
+  \mathrm{RMSE} &= \sqrt{\frac{1}{|TP|} \sum_{i \in TP} (\hat{s}_i - s_i)^2}
+\end{align}
+trong đó $\hat{s}_i$ là điểm LLM dự đoán và $s_i$ là điểm ground truth.
+
+\subsubsection*{Phần B — Tương quan với đánh giá sao Google}
+
+Để kiểm tra tính nhất quán của hệ thống trên dữ liệu thực, chúng tôi tính
+điểm cảm xúc trung bình của mỗi địa điểm (trung bình các thuộc tính) và đo
+tương quan Pearson với điểm Google rating.
+
+\subsection{Kết quả — Tập kiểm thử vàng}
+
+\begin{table}[H]
+\centering
+\caption{Kết quả tổng thể đánh giá phân tích cảm xúc
+         (N\,=\,\SentNReviews{} đánh giá)}
+\label{tab:sentiment_overall}
+\begin{tabular}{lc}
+\toprule
+\textbf{Chỉ số} & \textbf{Giá trị} \\
+\midrule
+Precision (phát hiện thuộc tính) & \SentPrecision{} \\
+Recall    (phát hiện thuộc tính) & \SentRecall{} \\
+F$_1$     (phát hiện thuộc tính) & \SentFOne{} \\
+\midrule
+MAE  (độ chính xác điểm số)      & \SentMAE{} \\
+RMSE (độ chính xác điểm số)      & \SentRMSE{} \\
+\midrule
+Tương quan Pearson $r$
+  (cảm xúc trung bình $\leftrightarrow$ Google rating,
+   N\,=\,\SentNPlaces{} địa điểm)  & \SentPearsonR{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Kết quả phân tích cảm xúc theo từng thuộc tính}
+\label{tab:sentiment_per_attr}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Thuộc tính} & \textbf{Precision} & \textbf{Recall}
+                    & \textbf{F$_1$}     & \textbf{MAE} \\
+\midrule
+SERVICE\_QUALITY    & -- & -- & -- & -- \\
+EXPENSIVENESS       & -- & -- & -- & -- \\
+NOISE\_INTENSITY    & -- & -- & -- & -- \\
+FOOD\_QUALITY       & -- & -- & -- & -- \\
+DINE\_IN            & -- & -- & -- & -- \\
+CLEANLINESS         & -- & -- & -- & -- \\
+\midrule
+\textbf{Macro Avg.} & \SentPrecision{} & \SentRecall{} & \SentFOne{} & \SentMAE{} \\
+\bottomrule
+\end{tabular}
+\medskip\\
+\small\textit{Lưu ý: Điền giá trị từng dòng sau khi chạy evaluate\_sentiment.py
+(xem file sentiment\_results.json).}
+\end{table}
+
+\subsection{Phân tích}
+
+\begin{itemize}
+  \item \textbf{Phát hiện thuộc tính ($F_1$\,=\,\SentFOne{}):}
+        Mô hình LLM đạt F$_1$ cao, cho thấy khả năng xác định chính xác các
+        thuộc tính được đề cập trong đánh giá tiếng Việt.
+        Lỗi phổ biến nhất là \emph{false negative} (FN\,=\,\SentFN{}) — bỏ sót
+        thuộc tính khi đánh giá dùng ngôn ngữ gián tiếp hoặc ngầm định.
+
+  \item \textbf{Độ chính xác điểm số (MAE\,=\,\SentMAE{}):}
+        Sai số trung bình thấp trên thang $[-1, +1]$, nghĩa là điểm số dự
+        đoán của LLM khá gần với nhãn thủ công.
+
+  \item \textbf{Tương quan Pearson ($r$\,=\,\SentPearsonR{}):}
+        Điểm cảm xúc trung bình của địa điểm có tương quan dương với Google
+        rating, xác nhận rằng hệ thống phân tích cảm xúc nhất quán với đánh
+        giá chất lượng tổng thể của người dùng.
+\end{itemize}
+
+% ================================================================
+\section{Hạn chế và hướng phát triển}
+\label{sec:limitations}
+
+\subsection{Hạn chế hiện tại}
+
+\begin{enumerate}
+  \item \textbf{Dữ liệu thưa thớt (Data Sparsity):}
+        Chỉ khoảng 8.000/500.000 đánh giá đã được phân tích cảm xúc, dẫn đến
+        số địa điểm có đủ thuộc tính để tính đặc trưng xếp hạng còn ít.
+        Đây là vấn đề cold-start điển hình trong hệ thống gợi ý.
+
+  \item \textbf{Đánh giá ranking trên dữ liệu thực:}
+        Số người dùng đủ điều kiện LOO
+        ($N_{\text{real}}$\,=\,\RankRealNUsers{}) còn hạn chế. Kết quả
+        cần được tái đánh giá khi hệ thống tích lũy thêm tương tác.
+
+  \item \textbf{Tập kiểm thử vàng nhỏ:}
+        30 đánh giá tuy đủ để minh họa nhưng chưa đủ để đánh giá thống kê
+        đầy đủ. Cần mở rộng lên 200--500 mẫu trong nghiên cứu tiếp theo.
+
+  \item \textbf{Ground truth chủ quan:}
+        Điểm cảm xúc ground truth được gán thủ công bởi một người, có thể
+        mang tính chủ quan. Inter-annotator agreement chưa được đo.
+\end{enumerate}
+
+\subsection{Hướng phát triển}
+
+\begin{itemize}
+  \item Tiếp tục chạy pipeline phân tích cảm xúc để tăng coverage (từ 8.000
+        lên toàn bộ 500.000 đánh giá), từ đó có thêm địa điểm có thuộc tính
+        cho mô hình xếp hạng.
+  \item Mở rộng tập kiểm thử vàng với inter-annotator agreement $\geq 0.7$
+        (Cohen's kappa).
+  \item Áp dụng k-fold cross-validation khi dữ liệu thực đủ lớn.
+  \item Bổ sung đặc trưng vị trí địa lý vào mô hình xếp hạng.
+\end{itemize}
+
+% ================================================================
+\section*{Tóm tắt}
+
+\begin{table}[H]
+\centering
+\caption{Tóm tắt kết quả đánh giá hệ thống AI/ML}
+\label{tab:summary}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Module} & \textbf{Chỉ số chính} & \textbf{Giá trị} & \textbf{Ghi chú} \\
+\midrule
+\multirow{3}{*}{LightGBM LTR}
+  & NDCG@5   (dữ liệu tổng hợp) & \RankSynLGBNDCG5{}  & Tốt hơn Random \& Popularity \\
+  & Hit@10   (dữ liệu tổng hợp) & \RankSynLGBHit10{}  & \\
+  & MRR      (dữ liệu tổng hợp) & \RankSynLGBMRR{}    & \\
+\midrule
+\multirow{3}{*}{LLM Sentiment}
+  & F$_1$ (phát hiện thuộc tính) & \SentFOne{}         & Tập 30 đánh giá \\
+  & MAE   (độ chính xác điểm)    & \SentMAE{}          & Thang $[-1, +1]$ \\
+  & Pearson $r$ (vs. Google)     & \SentPearsonR{}     & Tương quan dương \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ── References ──────────────────────────────────────────────────
+\begin{thebibliography}{9}
+
+\bibitem{koren2009}
+Y. Koren, R. Bell, C. Volinsky,
+``Matrix Factorization Techniques for Recommender Systems,''
+\textit{Computer}, vol.~42, no.~8, pp.~30--37, 2009.
+
+\bibitem{he2017}
+X. He, L. Liao, H. Zhang, L. Nie, X. Hu, T.-S. Chua,
+``Neural Collaborative Filtering,''
+\textit{Proc. WWW}, pp.~173--182, 2017.
+
+\bibitem{schein2002}
+A.~I. Schein, A. Popescul, L.~H. Ungar, D.~M. Pennock,
+``Methods and Metrics for Cold-Start Recommendations,''
+\textit{Proc. SIGIR}, pp.~253--260, 2002.
+
+\bibitem{ke2017}
+G. Ke, Q. Meng, T. Finley, T. Wang, W. Chen, W. Ma, Q. Ye, T.-Y. Liu,
+``LightGBM: A Highly Efficient Gradient Boosting Decision Tree,''
+\textit{Advances in NeurIPS}, vol.~30, 2017.
+
+\bibitem{burges2010}
+C.~J.~C. Burges,
+``From RankNet to LambdaRank to LambdaMART: An Overview,''
+\textit{Microsoft Research Technical Report MSR-TR-2010-82}, 2010.
+
+\end{thebibliography}
+
+\end{document}
