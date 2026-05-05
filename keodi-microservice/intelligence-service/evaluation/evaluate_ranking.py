@@ -1,12 +1,12 @@
 """
 Offline evaluation of LightGBM Learning-to-Rank model.
 
-Protocol : Leave-One-Out (LOO) – 1 positive + 19 negatives per user
+Protocol : Leave-One-Out (LOO) – 1 positive + K negatives per user
 Metrics  : NDCG@5, NDCG@10, Hit@5, Hit@10, MRR
-Baselines: Random  |  Popularity (Google rating)
-Data     : Tries real DB first → falls back to synthetic when too sparse
+Extras   : Bootstrap 95% CI | 5-fold CV | Feature ablation | Pool-size sensitivity
+Data     : Real DB (if available) + Synthetic (500 users × 2 000 places × 12 attrs)
 
-Run from intelligence-service/ :
+Run from intelligence-service/:
     python evaluation/evaluate_ranking.py
 """
 
@@ -15,7 +15,7 @@ import sys, os
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _SVC_DIR  = os.path.dirname(_THIS_DIR)
 sys.path.insert(0, _SVC_DIR)
-os.chdir(_SVC_DIR)                    # so .env / model path resolve correctly
+os.chdir(_SVC_DIR)
 
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_SVC_DIR, ".env"))
@@ -28,14 +28,28 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
-# ─── Constants (same as app/common/constant.py) ───────────────────────────────
+# ── Constants ─────────────────────────────────────────────────────────────────
 TIME_DECAY            = 0.05
 MIN_OVERLAP_THRESHOLD = 0.2
 FEATURE_COLS          = ["cosine_sim", "max_match", "dealbreaker", "overlap_count"]
 N_NEGATIVES           = 19
+N_BOOTSTRAP           = 1000
+K_FOLDS               = 5
 RANDOM_SEED           = 42
 
-# ─── Feature engineering (mirrors ranking_service._extract_features) ─────────
+# Pool sizes swept in sensitivity analysis (n_neg → pool = n_neg + 1)
+POOL_SWEEP = [9, 19, 49, 99]
+
+# Feature subsets for ablation study
+ABLATION_CONFIGS: dict[str, list[str]] = {
+    "Đầy đủ (4 đặc trưng)": ["cosine_sim", "max_match", "dealbreaker", "overlap_count"],
+    "Không dealbreaker":     ["cosine_sim", "max_match", "overlap_count"],
+    "Không overlap_count":   ["cosine_sim", "max_match", "dealbreaker"],
+    "Chỉ cosine_sim":        ["cosine_sim"],
+}
+
+
+# ── Feature engineering (mirrors ranking_service._extract_features) ───────────
 
 def _decay(score: float, now: datetime, updated: datetime) -> float:
     days = (now - updated).total_seconds() / 86400.0
@@ -67,7 +81,7 @@ def extract_features(user_attrs: dict, place_attrs: dict) -> tuple:
     return cosine_sim, max_match, dealbreaker, overlap_count
 
 
-# ─── Ranking metrics ──────────────────────────────────────────────────────────
+# ── Ranking metrics ────────────────────────────────────────────────────────────
 
 def _rank(scores: list[float], pos_idx: int) -> int:
     """1-based rank of pos_idx after sorting scores descending."""
@@ -95,7 +109,31 @@ def summarise(ranks: list[int], ks=(5, 10)) -> dict:
     return out
 
 
-# ─── Real data loading ────────────────────────────────────────────────────────
+def bootstrap_ci(
+    ranks: list[int],
+    ks: tuple = (5, 10),
+    n_boot: int = N_BOOTSTRAP,
+    alpha: float = 0.05,
+    seed: int = RANDOM_SEED,
+) -> dict[str, tuple[float, float]]:
+    """Bootstrap 95% CI for each metric. Returns {metric: (lo, hi)}."""
+    rng = random.Random(seed)
+    n   = len(ranks)
+    boot: dict[str, list] = defaultdict(list)
+    for _ in range(n_boot):
+        sample = [rng.choice(ranks) for _ in range(n)]
+        for met, val in summarise(sample, ks).items():
+            boot[met].append(val)
+    ci: dict[str, tuple[float, float]] = {}
+    for met, vals in boot.items():
+        vals.sort()
+        lo_i = int(n_boot * alpha / 2)
+        hi_i = min(int(n_boot * (1 - alpha / 2)), len(vals) - 1)
+        ci[met] = (vals[lo_i], vals[hi_i])
+    return ci
+
+
+# ── Real data loading ──────────────────────────────────────────────────────────
 
 def _parse_dt(val) -> datetime:
     if isinstance(val, datetime):
@@ -109,7 +147,6 @@ async def load_from_db():
     print("[DB] Connecting …")
     db = await get_prisma_client()
 
-    # Use raw SQL to cast enum → text (same pattern as ranking_service.py)
     actions_raw = await db.query_raw(
         """
         SELECT user_id, place_id, action::text AS action,
@@ -118,14 +155,13 @@ async def load_from_db():
         ORDER  BY created_at ASC
         """
     )
-
     user_attrs_raw  = await db.userattribute.find_many()
     place_attrs_raw = await db.placeattribute.find_many()
     places_raw      = await db.query_raw("SELECT id, rating FROM places")
+    users_count     = await db.query_raw("SELECT COUNT(*)::int AS n FROM users")
 
     await close_prisma_client()
 
-    # Action → relevance label mapping (same as ranking_service)
     LABEL = {
         "GET_DIRECTION": 5, "RATE_5": 5,
         "RATE_4": 4, "FAVORITE": 4,
@@ -133,7 +169,6 @@ async def load_from_db():
         "RATE_2": 0, "RATE_1": 0,
     }
 
-    # Only keep positive interactions (label >= 2) as potential test items
     user_actions: dict[str, list] = defaultdict(list)
     for r in actions_raw:
         if LABEL.get(r["action"], 1) >= 2:
@@ -152,25 +187,37 @@ async def load_from_db():
     for pa in place_attrs_raw:
         place_attr_dict[pa.placeId][pa.attributeId] = pa.score
 
-    place_ratings = {r["id"]: (r["rating"] or 0.0) for r in places_raw}
+    place_ratings     = {r["id"]: (r["rating"] or 0.0) for r in places_raw}
     places_with_attrs = set(place_attr_dict)
+
+    n_total_places   = len(place_ratings)
+    n_places_w_attr  = len(places_with_attrs)
+    n_total_users    = users_count[0]["n"] if users_count else 0
 
     print(
         f"[DB] {len(user_actions)} users with ≥1 positive action  "
-        f"| {len(places_with_attrs)} places with attributes"
+        f"| {n_places_w_attr}/{n_total_places} places with attributes "
+        f"({100*n_places_w_attr/max(n_total_places, 1):.1f}%)"
     )
-    return user_actions, user_attr_dict, place_attr_dict, place_ratings, places_with_attrs
+    db_stats = {
+        "n_total_users":      n_total_users,
+        "n_total_places":     n_total_places,
+        "n_places_with_attrs": n_places_w_attr,
+        "n_users_with_actions": len(user_actions),
+    }
+    return user_actions, user_attr_dict, place_attr_dict, place_ratings, places_with_attrs, db_stats
 
 
-# ─── LOO evaluation loop ──────────────────────────────────────────────────────
+# ── LOO evaluation loop ────────────────────────────────────────────────────────
 
 def loo_eval(
-    model: lgb.Booster | None,
+    model,
     user_actions: dict,
     user_attr_dict: dict,
     place_attr_dict: dict,
     place_ratings: dict,
     places_with_attrs: set,
+    feature_cols: list[str] = FEATURE_COLS,
     n_neg: int = N_NEGATIVES,
     seed: int = RANDOM_SEED,
 ) -> tuple[dict, int]:
@@ -184,7 +231,6 @@ def loo_eval(
     eligible = skipped = 0
 
     for uid, actions in user_actions.items():
-        # Deduplicate: keep most recent action per place
         latest: dict[str, dict] = {}
         for a in actions:
             pid = a["place_id"]
@@ -196,7 +242,7 @@ def loo_eval(
             skipped += 1
             continue
 
-        test_pid   = unique_pids[-1]          # hold out the most recent
+        test_pid   = unique_pids[-1]
         interacted = set(unique_pids)
 
         neg_pool = [p for p in all_places if p not in interacted]
@@ -205,17 +251,15 @@ def loo_eval(
             continue
 
         negatives  = random.sample(neg_pool, n_neg)
-        candidates = [test_pid] + negatives   # index 0 = positive item
+        candidates = [test_pid] + negatives
 
         u_attrs = user_attr_dict.get(uid, {})
         feats   = [extract_features(u_attrs, place_attr_dict.get(p, {})) for p in candidates]
         pop_sc  = [place_ratings.get(p, 0.0) for p in candidates]
 
-        # LightGBM scores
-        df = pd.DataFrame(feats, columns=FEATURE_COLS)
+        df     = pd.DataFrame(feats, columns=FEATURE_COLS)[feature_cols]
         lgb_sc = model.predict(df).tolist() if model else [0.0] * len(candidates)
 
-        # Random scores (just a shuffled index)
         rnd_sc = list(range(len(candidates)))
         random.shuffle(rnd_sc)
 
@@ -224,29 +268,35 @@ def loo_eval(
         rnd_ranks.append(_rank(rnd_sc, 0))
         eligible += 1
 
-    print(f"[LOO] eligible={eligible}  skipped={skipped}")
     return {
         "LightGBM (đề xuất)": lgb_ranks,
-        "Popularity": pop_ranks,
-        "Random":     rnd_ranks,
+        "Popularity":         pop_ranks,
+        "Random":             rnd_ranks,
     }, eligible
 
 
-# ─── Synthetic data generation ────────────────────────────────────────────────
+# ── Synthetic data generation ──────────────────────────────────────────────────
 
-def build_synthetic(n_users=80, n_places=400, n_attrs=8, seed=RANDOM_SEED):
+def build_synthetic(n_users=500, n_places=2000, n_attrs=12, seed=RANDOM_SEED):
+    """
+    Generate a controlled synthetic dataset that mirrors production conditions:
+    - Users have mixed preferences (some strong, some neutral)
+    - Places have non-negative attribute scores (like production placeattribute)
+    - Interactions are generated based on genuine cosine similarity match
+    """
     rng   = random.Random(seed)
     attrs = [f"A{i}" for i in range(n_attrs)]
 
-    user_prefs  = {
-        f"U{u}": {a: rng.uniform(-1.0, 1.0) for a in attrs}
+    # Biased toward positive to model realistic "places users would visit"
+    user_prefs = {
+        f"U{u}": {a: rng.uniform(-0.3, 1.0) for a in attrs}
         for u in range(n_users)
     }
     place_attrs = {
         f"P{p}": {a: max(0.0, rng.uniform(-0.2, 1.0)) for a in attrs}
         for p in range(n_places)
     }
-    place_rats  = {f"P{p}": rng.uniform(2.5, 5.0) for p in range(n_places)}
+    place_rats = {f"P{p}": rng.uniform(2.5, 5.0) for p in range(n_places)}
 
     user_actions: dict[str, list] = defaultdict(list)
     for uid, prefs in user_prefs.items():
@@ -254,9 +304,10 @@ def build_synthetic(n_users=80, n_places=400, n_attrs=8, seed=RANDOM_SEED):
             ((pid, extract_features(prefs, pa)[0]) for pid, pa in place_attrs.items()),
             key=lambda x: x[1], reverse=True,
         )
-        liked = [pid for pid, cs in scores if cs > 0.30][: rng.randint(3, 10)]
-        if len(liked) < 2:
-            continue
+        top_n = rng.randint(5, 15)
+        liked = [pid for pid, cs in scores if cs > 0.15][:top_n]
+        if len(liked) < 3:
+            liked = [pid for pid, _ in scores[:max(3, top_n)]]
         for i, pid in enumerate(liked):
             user_actions[uid].append({
                 "place_id":   pid,
@@ -271,6 +322,7 @@ def train_lgb_on_synthetic(
     user_prefs:   dict,
     place_attrs:  dict,
     train_users:  set,
+    feature_cols: list[str] = FEATURE_COLS,
 ) -> lgb.Booster | None:
     rows = []
     rng  = random.Random(RANDOM_SEED)
@@ -283,6 +335,9 @@ def train_lgb_on_synthetic(
             pid = a["place_id"]
             if pid not in unique:
                 unique[pid] = a
+
+        if not unique:
+            continue
 
         u_attrs = user_prefs.get(uid, {})
         for pid in unique:
@@ -300,7 +355,7 @@ def train_lgb_on_synthetic(
         return None
 
     df     = pd.DataFrame(rows).sort_values("user_id").reset_index(drop=True)
-    X, y   = df[FEATURE_COLS], df["label"]
+    X, y   = df[feature_cols], df["label"]
     groups = df.groupby("user_id", sort=False).size().tolist()
 
     params = dict(
@@ -311,30 +366,137 @@ def train_lgb_on_synthetic(
     return lgb.train(params, lgb.Dataset(X, label=y, group=groups), num_boost_round=100)
 
 
-# ─── Print + export ───────────────────────────────────────────────────────────
+# ── K-fold cross-validation ────────────────────────────────────────────────────
 
-def print_table(results: dict, n: int, title: str) -> None:
-    W = 76
+def kfold_eval_synthetic(
+    syn_act, syn_u, syn_p, syn_r, syn_pw,
+    k: int = K_FOLDS,
+    seed: int = RANDOM_SEED,
+    feature_cols: list[str] = FEATURE_COLS,
+    n_neg: int = N_NEGATIVES,
+) -> tuple[dict, list]:
+    """K-fold CV on pre-built synthetic data. Returns aggregated ranks + per-fold metrics."""
+    users = list(syn_act.keys())
+    rng   = random.Random(seed)
+    rng.shuffle(users)
+
+    agg_ranks: dict[str, list] = defaultdict(list)
+    fold_metrics: list[dict]   = []
+    fold_size = max(1, len(users) // k)
+
+    for fold_i in range(k):
+        start   = fold_i * fold_size
+        end     = (fold_i + 1) * fold_size if fold_i < k - 1 else len(users)
+        test_u  = set(users[start:end])
+        train_u = set(users) - test_u
+
+        model    = train_lgb_on_synthetic(syn_act, syn_u, syn_p, train_u, feature_cols)
+        test_act = {u: syn_act[u] for u in test_u if u in syn_act}
+        res, n_eligible = loo_eval(
+            model, test_act, syn_u, syn_p, syn_r, syn_pw,
+            feature_cols=feature_cols, n_neg=n_neg, seed=seed + fold_i,
+        )
+
+        for method, ranks in res.items():
+            agg_ranks[method].extend(ranks)
+        fold_metrics.append({m: summarise(r) for m, r in res.items()})
+
+        lgb_m = summarise(res["LightGBM (đề xuất)"])
+        print(
+            f"    Fold {fold_i+1}/{k} | N={n_eligible:3d} "
+            f"| LGB NDCG@5={lgb_m.get('ndcg@5', 0):.4f} "
+            f"MRR={lgb_m.get('mrr', 0):.4f}"
+        )
+
+    return dict(agg_ranks), fold_metrics
+
+
+# ── Ablation study ─────────────────────────────────────────────────────────────
+
+def ablation_study(
+    syn_act, syn_u, syn_p, syn_r, syn_pw,
+    seed: int = RANDOM_SEED,
+) -> dict:
+    """Run 5-fold CV for each feature configuration and compare NDCG@5 / MRR."""
+    results = {}
+    for config_name, feat_cols in ABLATION_CONFIGS.items():
+        print(f"  [{config_name}] …")
+        agg_ranks, _ = kfold_eval_synthetic(
+            syn_act, syn_u, syn_p, syn_r, syn_pw,
+            feature_cols=feat_cols, seed=seed,
+        )
+        results[config_name] = summarise(agg_ranks["LightGBM (đề xuất)"])
+    return results
+
+
+# ── Pool-size sensitivity ──────────────────────────────────────────────────────
+
+def pool_sensitivity(
+    syn_act, syn_u, syn_p, syn_r, syn_pw,
+    seed: int = RANDOM_SEED,
+) -> dict:
+    """Evaluate model across pool sizes using a fixed 80/20 split."""
+    users = list(syn_act.keys())
+    random.seed(seed)
+    random.shuffle(users)
+    n_train  = int(len(users) * 0.8)
+    tr_users = set(users[:n_train])
+    te_users = set(users[n_train:])
+
+    model    = train_lgb_on_synthetic(syn_act, syn_u, syn_p, tr_users)
+    test_act = {u: syn_act[u] for u in te_users if u in syn_act}
+
+    results = {}
+    for n_neg in POOL_SWEEP:
+        pool_size = n_neg + 1
+        res, n_e  = loo_eval(model, test_act, syn_u, syn_p, syn_r, syn_pw,
+                             n_neg=n_neg, seed=seed)
+        results[pool_size] = {m: summarise(r) for m, r in res.items()}
+        m_lgb = results[pool_size].get("LightGBM (đề xuất)", {})
+        m_rnd = results[pool_size].get("Random", {})
+        print(
+            f"  Pool={pool_size:4d} | N={n_e:3d} "
+            f"| LGB NDCG@5={m_lgb.get('ndcg@5', 0):.4f} "
+            f"Rnd NDCG@5={m_rnd.get('ndcg@5', 0):.4f}"
+        )
+    return results
+
+
+# ── Print helpers ──────────────────────────────────────────────────────────────
+
+def print_table(
+    results: dict,
+    n: int,
+    title: str,
+    ci_map: dict | None = None,
+) -> None:
+    W = 86
     print(f"\n{'='*W}")
     print(f"  {title}  (N = {n} người dùng)")
     print(f"{'='*W}")
-    print(f"  {'Phương pháp':<22} {'NDCG@5':>8} {'NDCG@10':>9} "
-          f"{'Hit@5':>7} {'Hit@10':>8} {'MRR':>7}")
-    print(f"  {'-'*70}")
+    hdr = f"  {'Phương pháp':<24} {'NDCG@5':>8} {'NDCG@10':>9} {'Hit@5':>7} {'Hit@10':>8} {'MRR':>7}"
+    if ci_map:
+        hdr += "   95% CI (NDCG@5)"
+    print(hdr)
+    print(f"  {'-'*(W-4)}")
+
     for method in ("LightGBM (đề xuất)", "Popularity", "Random"):
         ranks = results.get(method, [])
         m     = summarise(ranks)
         if not m:
             continue
-        print(
-            f"  {method:<22} {m['ndcg@5']:>8.4f} {m['ndcg@10']:>9.4f} "
+        line = (
+            f"  {method:<24} {m['ndcg@5']:>8.4f} {m['ndcg@10']:>9.4f} "
             f"{m['hit@5']:>7.4f} {m['hit@10']:>8.4f} {m['mrr']:>7.4f}"
         )
+        if ci_map and method in ci_map:
+            lo, hi = ci_map[method].get("ndcg@5", (0.0, 0.0))
+            line += f"   [{lo:.4f} – {hi:.4f}]"
+        print(line)
     print(f"{'='*W}\n")
 
 
 def _metric_to_cmd(metric: str) -> str:
-    """'ndcg@5' → 'NDCG5',  'hit@10' → 'Hit10',  'mrr' → 'MRR'"""
     return (metric
             .replace("@", "")
             .replace("ndcg", "NDCG")
@@ -342,8 +504,9 @@ def _metric_to_cmd(metric: str) -> str:
             .replace("mrr", "MRR"))
 
 
+# ── LaTeX export ───────────────────────────────────────────────────────────────
+
 def write_latex_metrics(all_results: dict, out_dir: str) -> None:
-    """Write \\newcommand definitions so evaluation_report.tex can use actual values."""
     lines = [
         "% Auto-generated by evaluate_ranking.py — do not edit manually",
         "% Re-run the script to refresh these values",
@@ -351,10 +514,13 @@ def write_latex_metrics(all_results: dict, out_dir: str) -> None:
     ]
 
     def fmt(v):
-        return f"{v:.4f}" if isinstance(v, float) else str(v)
+        if isinstance(v, float):
+            return f"{v:.4f}"
+        return str(v) if v is not None else "--"
 
-    for dataset, key in [("real", "Real"), ("synthetic", "Syn")]:
-        data = all_results.get(dataset, {})
+    # ── Main metrics: real + synthetic (5-fold CV aggregate) ─────────────────
+    for dataset_key, tex_key in [("real", "Real"), ("synthetic_cv", "Syn")]:
+        data = all_results.get(dataset_key, {})
         for method, mkey in [
             ("LightGBM (đề xuất)", "LGB"),
             ("Popularity",         "Pop"),
@@ -362,27 +528,79 @@ def write_latex_metrics(all_results: dict, out_dir: str) -> None:
         ]:
             m = data.get(method, {})
             for metric in ("ndcg@5", "ndcg@10", "hit@5", "hit@10", "mrr"):
-                cmd = f"\\Rank{key}{mkey}{_metric_to_cmd(metric)}"
-                val = m.get(metric, "??")
-                lines.append(f"\\newcommand{{{cmd}}}{{{fmt(val)}}}")
-        n_users = data.get("n_users", "??")
-        lines.append(f"\\newcommand{{\\Rank{key}NUsers}}{{{n_users}}}")
+                cmd = f"\\Rank{tex_key}{mkey}{_metric_to_cmd(metric)}"
+                lines.append(f"\\newcommand{{{cmd}}}{{{fmt(m.get(metric, '??'))}}}")
+            # Bootstrap CI for LGB only
+            if mkey == "LGB":
+                ci = data.get("LightGBM (đề xuất)_ci", {})
+                for metric in ("ndcg@5", "mrr"):
+                    pair = ci.get(metric, ("??", "??"))
+                    lo, hi = (pair[0], pair[1]) if isinstance(pair, (list, tuple)) else ("??", "??")
+                    cmd_lo = f"\\Rank{tex_key}{mkey}{_metric_to_cmd(metric)}Lo"
+                    cmd_hi = f"\\Rank{tex_key}{mkey}{_metric_to_cmd(metric)}Hi"
+                    lines.append(f"\\newcommand{{{cmd_lo}}}{{{fmt(lo)}}}")
+                    lines.append(f"\\newcommand{{{cmd_hi}}}{{{fmt(hi)}}}")
+
+        lines.append(f"\\newcommand{{\\Rank{tex_key}NUsers}}{{{data.get('n_users', '??')}}}")
         lines.append("")
 
+    # ── Ablation metrics ──────────────────────────────────────────────────────
+    abl = all_results.get("ablation", {})
+    abl_cmd_map = {
+        "Đầy đủ (4 đặc trưng)": "AblFull",
+        "Không dealbreaker":     "AblNoDeal",
+        "Không overlap_count":   "AblNoOver",
+        "Chỉ cosine_sim":        "AblCosOnly",
+    }
+    for config_name, cmd_key in abl_cmd_map.items():
+        m = abl.get(config_name, {})
+        for metric in ("ndcg@5", "hit@5", "mrr"):
+            cmd = f"\\{cmd_key}{_metric_to_cmd(metric)}"
+            lines.append(f"\\newcommand{{{cmd}}}{{{fmt(m.get(metric, '??'))}}}")
+    lines.append("")
+
+    # ── Pool sensitivity metrics ──────────────────────────────────────────────
+    pool_data = all_results.get("pool_sensitivity", {})
+    for pool_size in [10, 20, 50, 100]:
+        for method, mkey in [("LightGBM (đề xuất)", "LGB"), ("Random", "Rnd")]:
+            m = pool_data.get(pool_size, {}).get(method, {})
+            for metric in ("ndcg@5", "mrr"):
+                cmd = f"\\PoolS{pool_size}{mkey}{_metric_to_cmd(metric)}"
+                lines.append(f"\\newcommand{{{cmd}}}{{{fmt(m.get(metric, '??'))}}}")
+    lines.append("")
+
+    # ── Dataset / protocol info ───────────────────────────────────────────────
+    lines += [
+        f"\\newcommand{{\\SynNFolds}}{{{K_FOLDS}}}",
+        f"\\newcommand{{\\SynNUsers}}{{500}}",
+        f"\\newcommand{{\\SynNPlaces}}{{2000}}",
+        f"\\newcommand{{\\SynNAttrs}}{{12}}",
+        "",
+    ]
+
+    # ── DB coverage stats ─────────────────────────────────────────────────────
+    real_data  = all_results.get("real", {})
+    db_stats   = real_data.get("db_stats", {})
+    lines += [
+        f"\\newcommand{{\\DBTotalPlaces}}{{{db_stats.get('n_total_places', '??')}}}",
+        f"\\newcommand{{\\DBPlacesWithAttrs}}{{{db_stats.get('n_places_with_attrs', '??')}}}",
+        f"\\newcommand{{\\DBTotalUsers}}{{{db_stats.get('n_total_users', '??')}}}",
+        "",
+    ]
+
     path = os.path.join(out_dir, "ranking_metrics.tex")
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"[TEX] LaTeX metrics → {path}")
 
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
+# ── Main ───────────────────────────────────────────────────────────────────────
 
 async def main() -> None:
-    print("\n" + "=" * 76)
-    print("  LightGBM Learning-to-Rank — Offline Evaluation")
-    print("=" * 76)
+    print("\n" + "=" * 86)
+    print("  LightGBM Learning-to-Rank — Comprehensive Offline Evaluation")
+    print("=" * 86)
 
-    # Load the deployed model
     model_path     = os.path.join(_SVC_DIR, "models_artifacts", "lightgbm_ranking_model.txt")
     deployed_model = None
     try:
@@ -393,52 +611,91 @@ async def main() -> None:
 
     all_results: dict = {}
 
-    # ── Part 1: Real data ─────────────────────────────────────────────────────
-    print("\n[1/2] Real-data evaluation (Leave-One-Out protocol) …")
+    # ── 1. Real-data evaluation ───────────────────────────────────────────────
+    print("\n[1/4] Real-data evaluation (LOO, deployed model) …")
+    print("      Note: deployed model was trained on full history; LOO here is")
+    print("      for reference only — synthetic CV (step 2) is the primary benchmark.")
     try:
-        u_act, u_attr, p_attr, p_rat, p_wa = await load_from_db()
+        u_act, u_attr, p_attr, p_rat, p_wa, db_stats = await load_from_db()
         res_real, n_real = loo_eval(deployed_model, u_act, u_attr, p_attr, p_rat, p_wa)
         if n_real > 0:
-            print_table(res_real, n_real, "Xếp hạng — Dữ liệu thực (LOO)")
+            print_table(res_real, n_real, "Xếp hạng — Dữ liệu thực (LOO, tham khảo)")
             all_results["real"] = {
                 "n_users": n_real,
+                "db_stats": db_stats,
                 **{m: summarise(r) for m, r in res_real.items()},
             }
         else:
-            print("[INFO] Không đủ người dùng có ≥2 tương tác — bỏ qua real-data metrics.")
+            print("[INFO] Không đủ người dùng đủ điều kiện — bỏ qua real-data metrics.")
+            all_results["real"] = {"n_users": 0, "db_stats": db_stats}
     except Exception as exc:
         print(f"[DB] Không thể kết nối: {exc}")
-        print("[INFO] Chuyển sang đánh giá synthetic only.")
+        all_results["real"] = {"n_users": 0, "db_stats": {}}
 
-    # ── Part 2: Synthetic data ────────────────────────────────────────────────
-    print("\n[2/2] Synthetic-data evaluation (80/20 train–test split) …")
-    syn_act, syn_u, syn_p, syn_r, syn_pw = build_synthetic(
-        n_users=80, n_places=400, n_attrs=8
+    # ── 2. Synthetic — 5-fold CV ──────────────────────────────────────────────
+    print(f"\n[2/4] Synthetic {K_FOLDS}-fold CV "
+          f"(500 users × 2 000 places × 12 attrs) …")
+    syn_act, syn_u, syn_p, syn_r, syn_pw = build_synthetic(500, 2000, 12)
+
+    agg_ranks, fold_metrics = kfold_eval_synthetic(
+        syn_act, syn_u, syn_p, syn_r, syn_pw
+    )
+    n_syn = len(agg_ranks["LightGBM (đề xuất)"])
+
+    # Bootstrap CI on aggregated ranks
+    ci_map: dict = {}
+    for method, ranks in agg_ranks.items():
+        ci_map[method] = bootstrap_ci(ranks)
+
+    print_table(
+        agg_ranks, n_syn,
+        f"Xếp hạng — Dữ liệu tổng hợp ({K_FOLDS}-fold CV, 95% CI)",
+        ci_map=ci_map,
     )
 
-    users_all = list(syn_act)
-    random.seed(RANDOM_SEED)
-    random.shuffle(users_all)
-    n_train     = int(len(users_all) * 0.8)
-    train_users = set(users_all[:n_train])
-    test_users  = set(users_all[n_train:])
+    # Per-fold std
+    print("  Per-fold NDCG@5 (LightGBM):", end=" ")
+    fold_ndcg = [fm["LightGBM (đề xuất)"].get("ndcg@5", 0) for fm in fold_metrics]
+    print("  ".join(f"{v:.4f}" for v in fold_ndcg))
+    mean_ndcg = sum(fold_ndcg) / len(fold_ndcg)
+    std_ndcg  = (sum((v - mean_ndcg) ** 2 for v in fold_ndcg) / len(fold_ndcg)) ** 0.5
+    print(f"  Mean={mean_ndcg:.4f}  Std={std_ndcg:.4f}")
 
-    syn_model   = train_lgb_on_synthetic(syn_act, syn_u, syn_p, train_users)
-    test_act    = {u: syn_act[u] for u in test_users if u in syn_act}
-
-    res_syn, n_syn = loo_eval(syn_model, test_act, syn_u, syn_p, syn_r, syn_pw)
-    print_table(res_syn, n_syn, "Xếp hạng — Dữ liệu tổng hợp (80/20 train–test)")
-
-    all_results["synthetic"] = {
+    all_results["synthetic_cv"] = {
         "n_users": n_syn,
-        **{m: summarise(r) for m, r in res_syn.items()},
+        **{m: summarise(r) for m, r in agg_ranks.items()},
+        "LightGBM (đề xuất)_ci": ci_map.get("LightGBM (đề xuất)", {}),
+        "fold_ndcg5_mean": mean_ndcg,
+        "fold_ndcg5_std":  std_ndcg,
     }
+    all_results["synthetic"] = all_results["synthetic_cv"]  # backward compat
+
+    # ── 3. Ablation study ─────────────────────────────────────────────────────
+    print(f"\n[3/4] Feature ablation study ({K_FOLDS}-fold CV per config) …")
+    abl = ablation_study(syn_act, syn_u, syn_p, syn_r, syn_pw)
+    all_results["ablation"] = abl
+
+    W = 62
+    print(f"\n  {'='*W}")
+    print(f"  Ablation — Đóng góp của từng đặc trưng")
+    print(f"  {'='*W}")
+    print(f"  {'Cấu hình':<32} {'NDCG@5':>8} {'Hit@5':>7} {'MRR':>8}")
+    print(f"  {'-'*58}")
+    for cfg_name, m in abl.items():
+        print(f"  {cfg_name:<32} {m.get('ndcg@5', 0):>8.4f} "
+              f"{m.get('hit@5', 0):>7.4f} {m.get('mrr', 0):>8.4f}")
+    print(f"  {'='*W}\n")
+
+    # ── 4. Pool-size sensitivity ──────────────────────────────────────────────
+    print("\n[4/4] Pool-size sensitivity …")
+    pool_res = pool_sensitivity(syn_act, syn_u, syn_p, syn_r, syn_pw)
+    all_results["pool_sensitivity"] = pool_res
 
     # ── Export ────────────────────────────────────────────────────────────────
     json_path = os.path.join(_THIS_DIR, "ranking_results.json")
-    with open(json_path, "w") as f:
-        json.dump(all_results, f, indent=2, ensure_ascii=False)
-    print(f"[OUT] JSON  → {json_path}")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, indent=2, ensure_ascii=False, default=str)
+    print(f"\n[OUT] JSON  → {json_path}")
 
     write_latex_metrics(all_results, _THIS_DIR)
 

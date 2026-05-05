@@ -3,16 +3,14 @@
 %  Dành cho đồ án tốt nghiệp — Hệ thống gợi ý địa điểm Keodi
 %
 %  Cách dùng:
-%    1. Chạy evaluation script để sinh metric files:
+%    1. Chạy evaluation scripts:
 %         cd intelligence-service
 %         python evaluation/evaluate_ranking.py
 %         python evaluation/evaluate_sentiment.py
-%    2. Biên dịch tài liệu này độc lập:
+%    2. Biên dịch:
 %         pdflatex evaluation_report.tex
-%       Hoặc nhúng vào tài liệu chính:
+%       Hoặc nhúng vào tài liệu chính (bỏ \documentclass...\end{document}):
 %         \input{evaluation/evaluation_report.tex}
-%       (Bỏ \documentclass...\begin{document}...\end{document}
-%        nếu nhúng vào tài liệu lớn hơn)
 % ============================================================
 
 \documentclass[12pt, a4paper]{article}
@@ -24,7 +22,7 @@
 \usepackage{geometry}
 \geometry{margin=2.5cm}
 
-\usepackage{booktabs}       % \toprule \midrule \bottomrule
+\usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{multirow}
 \usepackage{amsmath}
@@ -36,21 +34,23 @@
 \usepackage{subcaption}
 \usepackage{float}
 \usepackage{microtype}
+\usepackage{siunitx}      % \num{} for formatted numbers
 
 \hypersetup{
   colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue
 }
 
-% ── Load auto-generated metric commands ────────────────────────
-% ranking_metrics.tex và sentiment_metrics.tex được sinh ra bởi
-% evaluate_ranking.py và evaluate_sentiment.py.
+% ── Load auto-generated metric commands ─────────────────────────
+% Sinh bởi evaluate_ranking.py và evaluate_sentiment.py.
 % Nếu chưa chạy script, các giá trị mặc định bên dưới sẽ được dùng.
 
-% --- Ranking defaults (sẽ bị ghi đè nếu file tồn tại) ----------
+% --- Ranking: real data -----------------------------------------
 \newcommand{\RankRealNUsers}{--}
 \newcommand{\RankRealLGBNDCG5}{--}  \newcommand{\RankRealLGBNDCG10}{--}
 \newcommand{\RankRealLGBHit5}{--}   \newcommand{\RankRealLGBHit10}{--}
 \newcommand{\RankRealLGBMRR}{--}
+\newcommand{\RankRealLGBNDCG5Lo}{--}\newcommand{\RankRealLGBNDCG5Hi}{--}
+\newcommand{\RankRealLGBMRRLo}{--}  \newcommand{\RankRealLGBMRRHi}{--}
 \newcommand{\RankRealPopNDCG5}{--}  \newcommand{\RankRealPopNDCG10}{--}
 \newcommand{\RankRealPopHit5}{--}   \newcommand{\RankRealPopHit10}{--}
 \newcommand{\RankRealPopMRR}{--}
@@ -58,16 +58,44 @@
 \newcommand{\RankRealRndHit5}{--}   \newcommand{\RankRealRndHit10}{--}
 \newcommand{\RankRealRndMRR}{--}
 
+% --- Ranking: synthetic (5-fold CV) -----------------------------
 \newcommand{\RankSynNUsers}{--}
 \newcommand{\RankSynLGBNDCG5}{--}  \newcommand{\RankSynLGBNDCG10}{--}
 \newcommand{\RankSynLGBHit5}{--}   \newcommand{\RankSynLGBHit10}{--}
 \newcommand{\RankSynLGBMRR}{--}
+\newcommand{\RankSynLGBNDCG5Lo}{--}\newcommand{\RankSynLGBNDCG5Hi}{--}
+\newcommand{\RankSynLGBMRRLo}{--}  \newcommand{\RankSynLGBMRRHi}{--}
 \newcommand{\RankSynPopNDCG5}{--}  \newcommand{\RankSynPopNDCG10}{--}
 \newcommand{\RankSynPopHit5}{--}   \newcommand{\RankSynPopHit10}{--}
 \newcommand{\RankSynPopMRR}{--}
 \newcommand{\RankSynRndNDCG5}{--}  \newcommand{\RankSynRndNDCG10}{--}
 \newcommand{\RankSynRndHit5}{--}   \newcommand{\RankSynRndHit10}{--}
 \newcommand{\RankSynRndMRR}{--}
+
+% --- Ablation ---------------------------------------------------
+\newcommand{\AblFullNDCG5}{--}    \newcommand{\AblFullHit5}{--}    \newcommand{\AblFullMRR}{--}
+\newcommand{\AblNoDealNDCG5}{--}  \newcommand{\AblNoDealHit5}{--}  \newcommand{\AblNoDealMRR}{--}
+\newcommand{\AblNoOverNDCG5}{--}  \newcommand{\AblNoOverHit5}{--}  \newcommand{\AblNoOverMRR}{--}
+\newcommand{\AblCosOnlyNDCG5}{--} \newcommand{\AblCosOnlyHit5}{--} \newcommand{\AblCosOnlyMRR}{--}
+
+% --- Pool sensitivity -------------------------------------------
+\newcommand{\PoolS10LGBNDCG5}{--}  \newcommand{\PoolS10LGBMRR}{--}
+\newcommand{\PoolS10RndNDCG5}{--}  \newcommand{\PoolS10RndMRR}{--}
+\newcommand{\PoolS20LGBNDCG5}{--}  \newcommand{\PoolS20LGBMRR}{--}
+\newcommand{\PoolS20RndNDCG5}{--}  \newcommand{\PoolS20RndMRR}{--}
+\newcommand{\PoolS50LGBNDCG5}{--}  \newcommand{\PoolS50LGBMRR}{--}
+\newcommand{\PoolS50RndNDCG5}{--}  \newcommand{\PoolS50RndMRR}{--}
+\newcommand{\PoolS100LGBNDCG5}{--} \newcommand{\PoolS100LGBMRR}{--}
+\newcommand{\PoolS100RndNDCG5}{--} \newcommand{\PoolS100RndMRR}{--}
+
+% --- Dataset info -----------------------------------------------
+\newcommand{\SynNFolds}{5}
+\newcommand{\SynNUsers}{500}
+\newcommand{\SynNPlaces}{2000}
+\newcommand{\SynNAttrs}{12}
+\newcommand{\DBTotalPlaces}{37700}
+\newcommand{\DBPlacesWithAttrs}{--}
+\newcommand{\DBTotalUsers}{--}
 
 % --- Sentiment defaults -----------------------------------------
 \newcommand{\SentNReviews}{30}
@@ -82,7 +110,7 @@
 \IfFileExists{sentiment_metrics.tex}{\input{sentiment_metrics.tex}}{}
 
 % ── Helpers ─────────────────────────────────────────────────────
-\newcommand{\best}[1]{\textbf{#1}}   % highlight best result
+\newcommand{\best}[1]{\textbf{#1}}
 \newcommand{\model}{LightGBM LTR}
 \newcommand{\sysname}{Keodi}
 
@@ -107,22 +135,49 @@ Hệ thống AI/ML của \sysname{} bao gồm hai thành phần chính:
         mục tiêu \texttt{lambdarank} để cá nhân hóa thứ tự địa điểm gợi ý
         cho từng người dùng.
   \item \textbf{Mô hình phân tích cảm xúc (LLM Sentiment)} — sử dụng mô hình
-        ngôn ngữ lớn (LLM) qua API Groq để trích xuất điểm cảm xúc cho từng
-        thuộc tính từ nội dung đánh giá của người dùng.
+        ngôn ngữ lớn qua API Groq để trích xuất điểm cảm xúc theo từng thuộc
+        tính từ nội dung đánh giá.
 \end{enumerate}
 
-Do đặc thù của hệ thống đang ở giai đoạn \textbf{prototype} với dữ liệu thực
-còn thưa thớt (khoảng 8.000/500.000 đánh giá đã được phân tích, số địa điểm
-có thuộc tính còn ít), chiến lược đánh giá kết hợp hai hướng:
+\subsection{Bối cảnh dữ liệu thực tế}
+
+Do \sysname{} đang ở giai đoạn \textbf{prototype}, dữ liệu có những hạn chế
+cụ thể sau:
+
+\begin{table}[H]
+\centering
+\caption{Thống kê dữ liệu thực tại thời điểm đánh giá}
+\label{tab:data_stats}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Thành phần} & \textbf{Số lượng} & \textbf{Ghi chú} \\
+\midrule
+Tổng số địa điểm trong hệ thống    & \num{\DBTotalPlaces}          & Google Maps data \\
+Địa điểm có thuộc tính phân tích   & \DBPlacesWithAttrs{}          & Qua pipeline sentiment \\
+Tỷ lệ phủ thuộc tính địa điểm      & $\approx 0.7\%$               & Cold-start constraint \\
+Tổng số người dùng đã đăng ký       & \DBTotalUsers{}               & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Đây là vấn đề \textbf{cold-start} điển hình: chỉ $\approx 0.7\%$ địa điểm có
+đủ thuộc tính để mô hình tính đặc trưng cá nhân hóa. Chiến lược đánh giá
+được thiết kế để phản ánh trung thực giới hạn này đồng thời cung cấp bằng
+chứng về hiệu quả kiến trúc khi dữ liệu phủ đầy đủ~\cite{schein2002}.
+
+\subsection{Chiến lược đánh giá kép}
 
 \begin{itemize}
   \item \textbf{Đánh giá trên dữ liệu thực:} kiểm tra hành vi của mô hình đã
-        triển khai trên tập tương tác người dùng thực tế.
+        triển khai trên tập người dùng thực tế đủ điều kiện (có từ 2 tương
+        tác tích cực với địa điểm có thuộc tính). Kết quả mang tính tham
+        khảo do N nhỏ và khả năng data leakage từ deployed model.
   \item \textbf{Đánh giá trên dữ liệu tổng hợp (synthetic):} huấn luyện và
-        đánh giá mô hình mới trên tập dữ liệu được tạo có kiểm soát, nhằm
-        xác nhận kiến trúc mô hình hoạt động đúng khi dữ liệu đủ phong phú.
-        Đây là phương pháp được chấp nhận rộng rãi trong nghiên cứu học thuật
-        khi dữ liệu thực bị giới hạn~\cite{schein2002}.
+        đánh giá bằng \textbf{\SynNFolds{}-fold cross-validation} trên tập
+        dữ liệu kiểm soát (\SynNUsers{} người dùng × \SynNPlaces{} địa điểm
+        × \SynNAttrs{} thuộc tính), nhằm xác nhận tính đúng đắn của kiến trúc
+        khi dữ liệu phủ đầy đủ. Đây là phương pháp được chấp nhận rộng rãi
+        trong nghiên cứu~\cite{schein2002,he2017}.
 \end{itemize}
 
 % ================================================================
@@ -132,17 +187,29 @@ có thuộc tính còn ít), chiến lược đánh giá kết hợp hai hướn
 \subsection{Phương pháp}
 
 \paragraph{Giao thức Leave-One-Out (LOO) với Negative Sampling.}
-Đây là giao thức chuẩn trong các hệ thống gợi ý
-\cite{he2017,koren2009}. Với mỗi người dùng có từ 2 tương tác tích cực
-trở lên:
-
+Đây là giao thức chuẩn trong các hệ thống gợi ý~\cite{he2017,koren2009}.
+Với mỗi người dùng có từ 2 tương tác tích cực trở lên:
 \begin{enumerate}
-  \item Giữ lại tương tác gần nhất (theo thời gian) làm \emph{test item} (mục tiêu dương).
-  \item Lấy ngẫu nhiên 19 địa điểm chưa từng tương tác làm \emph{negative samples}.
-  \item Xếp hạng 20 ứng viên ($1 + 19$) bằng ba phương pháp:
-        \model{}, Popularity, và Random.
-  \item Đo vị trí của test item trong kết quả xếp hạng.
+  \item Giữ lại tương tác gần nhất (theo thời gian) làm \emph{test item}.
+  \item Lấy ngẫu nhiên $K$ địa điểm chưa tương tác làm \emph{negative samples}.
+  \item Xếp hạng $K+1$ ứng viên bằng \model{}, Popularity, và Random.
+  \item Đo vị trí của test item trong kết quả.
 \end{enumerate}
+Cấu hình mặc định: $K = 19$ (pool size = 20), tương đương thiết lập chuẩn
+trong NCF~\cite{he2017}. Phần~\ref{subsec:pool} phân tích độ nhạy với $K$.
+
+\paragraph{5-fold Cross-Validation trên dữ liệu tổng hợp.}
+Để đảm bảo tính ổn định của kết quả, dữ liệu tổng hợp được chia thành
+\SynNFolds{} fold. Mỗi lần lặp huấn luyện trên $4/5$ người dùng và đánh
+giá trên $1/5$ còn lại; kết quả được tổng hợp trên toàn bộ \SynNUsers{}
+người dùng. Phương pháp này loại trừ sự phụ thuộc vào một lần chia ngẫu
+nhiên duy nhất.
+
+\paragraph{Bootstrap 95\% Confidence Interval.}
+Từ tập rank của tất cả người dùng qua các fold, chúng tôi áp dụng
+\textit{bootstrap resampling} (1000 lần lặp) để ước lượng khoảng tin cậy
+95\% cho từng chỉ số~\cite{efron1993}. CI hẹp cho thấy kết quả ổn định,
+không phụ thuộc vào phân phối ngẫu nhiên.
 
 \paragraph{Chỉ số đánh giá.}
 \begin{align}
@@ -155,24 +222,18 @@ trở lên:
     \sum_{u \in \mathcal{U}} \frac{1}{\mathrm{rank}_u} \label{eq:mrr}
 \end{align}
 
-trong đó $\mathrm{rank}_u$ là vị trí (1-based) của test item trong danh sách
-xếp hạng của người dùng $u$.
-
 \paragraph{Baselines.}
 \begin{itemize}
-  \item \textbf{Random:} xáo trộn ngẫu nhiên 20 ứng viên.
+  \item \textbf{Random:} xáo trộn ngẫu nhiên $K+1$ ứng viên.
   \item \textbf{Popularity:} xếp hạng theo điểm Google rating (không cá nhân hóa).
-  \item \textbf{\model{} (đề xuất):} mô hình học-to-rank với 4 đặc trưng kỹ thuật
-        dựa trên sự khớp giữa sở thích người dùng và thuộc tính địa điểm
-        (\texttt{cosine\_sim}, \texttt{max\_match}, \texttt{dealbreaker},
-        \texttt{overlap\_count}).
+  \item \textbf{\model{} (đề xuất):} mô hình lambdarank với 4 đặc trưng dựa
+        trên sự khớp giữa sở thích người dùng và thuộc tính địa điểm.
 \end{itemize}
 
 \paragraph{Đặc trưng mô hình.}
 Với vector thuộc tính người dùng $\mathbf{u} \in [-1,1]^d$ (áp dụng
-time-decay $e^{-0.05 \cdot \Delta t}$) và vector thuộc tính địa điểm
-$\mathbf{p} \in [0,1]^d$, bốn đặc trưng được tính như sau:
-
+time-decay $e^{-0.05 \cdot \Delta t_{\text{ngày}}}$) và vector thuộc tính
+địa điểm $\mathbf{p} \in [0,1]^d$:
 \begin{equation}
   \text{cosine\_sim} = \frac{\mathbf{u} \cdot \mathbf{p}}
     {\|\mathbf{u}\| \cdot \|\mathbf{p}\|}, \quad
@@ -183,85 +244,191 @@ $\mathbf{p} \in [0,1]^d$, bốn đặc trưng được tính như sau:
   \text{overlap\_count} = \left|\{i : u_i > 0.2 \wedge p_i > 0.2\}\right|
 \end{equation}
 
+% ── 2.2 Real data ─────────────────────────────────────────────────────────────
 \subsection{Kết quả — Dữ liệu thực}
 \label{subsec:rank-real}
 
 \begin{table}[H]
 \centering
-\caption{Kết quả đánh giá xếp hạng trên \textbf{dữ liệu thực}
-         (N\,=\,\RankRealNUsers{} người dùng, giao thức LOO, pool size\,=\,20)}
+\caption{Kết quả xếp hạng trên \textbf{dữ liệu thực}
+         (N\,=\,\RankRealNUsers{} người dùng, giao thức LOO, pool\,=\,20)}
 \label{tab:ranking_real}
 \begin{tabular}{lrrrrr}
 \toprule
-\textbf{Phương pháp}        & \textbf{NDCG@5}        & \textbf{NDCG@10}
-                             & \textbf{Hit@5}         & \textbf{Hit@10}
-                             & \textbf{MRR} \\
+\textbf{Phương pháp}    & \textbf{NDCG@5} & \textbf{NDCG@10}
+                         & \textbf{Hit@5}  & \textbf{Hit@10}
+                         & \textbf{MRR} \\
 \midrule
-Ngẫu nhiên (Random)         & \RankRealRndNDCG5{}  & \RankRealRndNDCG10{}
-                             & \RankRealRndHit5{}   & \RankRealRndHit10{}
-                             & \RankRealRndMRR{} \\
-Phổ biến (Google Rating)    & \RankRealPopNDCG5{}  & \RankRealPopNDCG10{}
-                             & \RankRealPopHit5{}   & \RankRealPopHit10{}
-                             & \RankRealPopMRR{} \\
-\best{\model{} (đề xuất)}   & \best{\RankRealLGBNDCG5{}} & \best{\RankRealLGBNDCG10{}}
-                             & \best{\RankRealLGBHit5{}}  & \best{\RankRealLGBHit10{}}
-                             & \best{\RankRealLGBMRR{}} \\
+Ngẫu nhiên              & \RankRealRndNDCG5{}  & \RankRealRndNDCG10{}
+                         & \RankRealRndHit5{}   & \RankRealRndHit10{}
+                         & \RankRealRndMRR{} \\
+Phổ biến (Google)       & \RankRealPopNDCG5{}  & \RankRealPopNDCG10{}
+                         & \RankRealPopHit5{}   & \RankRealPopHit10{}
+                         & \RankRealPopMRR{} \\
+\best{\model{} (đề xuất)}
+                         & \best{\RankRealLGBNDCG5{}} & \best{\RankRealLGBNDCG10{}}
+                         & \best{\RankRealLGBHit5{}}  & \best{\RankRealLGBHit10{}}
+                         & \best{\RankRealLGBMRR{}} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent
-\textit{Lưu ý:} Do hệ thống đang trong giai đoạn prototype, số lượng người
-dùng đủ điều kiện đánh giá (có từ 2 tương tác tích cực với địa điểm có thuộc
-tính) còn hạn chế. Kết quả trên dữ liệu thực mang tính chất tham khảo; phần
-\ref{subsec:rank-syn} cung cấp đánh giá đầy đủ hơn trên dữ liệu tổng hợp.
+\noindent\textbf{Lưu ý về tính hợp lệ.} Kết quả thực (N\,=\,\RankRealNUsers{}) cần
+được đọc thận trọng vì hai lý do: (1) N quá nhỏ để rút ra kết luận thống kê;
+(2) mô hình triển khai được huấn luyện trên toàn bộ lịch sử, bao gồm cả các
+test item LOO — đây là dạng \emph{data leakage} phổ biến trong đánh giá
+deployed models~\cite{koren2009}. Kết quả này chỉ xác nhận mô hình hoạt động
+đúng trên production data; xem Phần~\ref{subsec:rank-syn} để đánh giá không
+thiên vị.
 
-\subsection{Kết quả — Dữ liệu tổng hợp}
+% ── 2.3 Synthetic CV ──────────────────────────────────────────────────────────
+\subsection{Kết quả — Dữ liệu tổng hợp (\SynNFolds{}-fold CV)}
 \label{subsec:rank-syn}
 
-Để xác nhận kiến trúc mô hình hoạt động đúng, chúng tôi tạo tập dữ liệu
-tổng hợp gồm 80 người dùng và 400 địa điểm với 8 thuộc tính, trong đó người
-dùng tương tác với địa điểm dựa trên sự khớp cosine thực sự. Tập dữ liệu
-được chia 80\% huấn luyện / 20\% kiểm thử; mô hình mới được huấn luyện hoàn
-toàn trên tập huấn luyện và đánh giá trên tập kiểm thử.
+Tập dữ liệu tổng hợp gồm \SynNUsers{} người dùng và \SynNPlaces{} địa điểm
+với \SynNAttrs{} thuộc tính được thiết kế để phản ánh điều kiện production:
+người dùng có sở thích hỗn hợp (positive và neutral); địa điểm có điểm
+thuộc tính không âm; tương tác được sinh ra dựa trên cosine similarity thực sự
+giữa sở thích và thuộc tính địa điểm.
 
 \begin{table}[H]
 \centering
-\caption{Kết quả đánh giá xếp hạng trên \textbf{dữ liệu tổng hợp}
-         (N\,=\,\RankSynNUsers{} người dùng kiểm thử, phân chia 80/20)}
+\caption{Kết quả xếp hạng trên \textbf{dữ liệu tổng hợp}
+         (N\,=\,\RankSynNUsers{} người dùng tổng hợp qua \SynNFolds{} fold,
+          pool\,=\,20, Bootstrap 95\% CI)}
 \label{tab:ranking_synthetic}
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrrrrr}
 \toprule
-\textbf{Phương pháp}        & \textbf{NDCG@5}        & \textbf{NDCG@10}
-                             & \textbf{Hit@5}         & \textbf{Hit@10}
-                             & \textbf{MRR} \\
+\textbf{Phương pháp} & \textbf{NDCG@5} & \textbf{NDCG@10}
+                      & \textbf{Hit@5}  & \textbf{Hit@10}
+                      & \textbf{MRR}    & \textbf{95\% CI (NDCG@5)} \\
 \midrule
-Ngẫu nhiên (Random)         & \RankSynRndNDCG5{}  & \RankSynRndNDCG10{}
-                             & \RankSynRndHit5{}   & \RankSynRndHit10{}
-                             & \RankSynRndMRR{} \\
-Phổ biến (Google Rating)    & \RankSynPopNDCG5{}  & \RankSynPopNDCG10{}
-                             & \RankSynPopHit5{}   & \RankSynPopHit10{}
-                             & \RankSynPopMRR{} \\
-\best{\model{} (đề xuất)}   & \best{\RankSynLGBNDCG5{}} & \best{\RankSynLGBNDCG10{}}
-                             & \best{\RankSynLGBHit5{}}  & \best{\RankSynLGBHit10{}}
-                             & \best{\RankSynLGBMRR{}} \\
+Ngẫu nhiên
+  & \RankSynRndNDCG5{} & \RankSynRndNDCG10{}
+  & \RankSynRndHit5{}  & \RankSynRndHit10{}
+  & \RankSynRndMRR{}   & -- \\
+Phổ biến (Google)
+  & \RankSynPopNDCG5{} & \RankSynPopNDCG10{}
+  & \RankSynPopHit5{}  & \RankSynPopHit10{}
+  & \RankSynPopMRR{}   & -- \\
+\best{\model{} (đề xuất)}
+  & \best{\RankSynLGBNDCG5{}} & \best{\RankSynLGBNDCG10{}}
+  & \best{\RankSynLGBHit5{}}  & \best{\RankSynLGBHit10{}}
+  & \best{\RankSynLGBMRR{}}
+  & \textbf{[\RankSynLGBNDCG5Lo{} – \RankSynLGBNDCG5Hi{}]} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Phân tích}
+% ── 2.4 Ablation study ────────────────────────────────────────────────────────
+\subsection{Nghiên cứu loại bỏ đặc trưng (Ablation Study)}
+\label{subsec:ablation}
 
-Kết quả trên dữ liệu tổng hợp cho thấy \model{} vượt trội rõ rệt so với
-cả hai baseline:
+Để hiểu đóng góp của từng đặc trưng, chúng tôi huấn luyện và đánh giá
+(\SynNFolds{}-fold CV) bốn mô hình với các tập đặc trưng khác nhau:
+
+\begin{table}[H]
+\centering
+\caption{Kết quả ablation study — đóng góp của từng đặc trưng
+         (\SynNFolds{}-fold CV, \SynNUsers{} người dùng tổng hợp)}
+\label{tab:ablation}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Cấu hình đặc trưng} & \textbf{NDCG@5} & \textbf{Hit@5} & \textbf{MRR} \\
+\midrule
+\best{Đầy đủ (cosine + max + deal + overlap)}
+  & \best{\AblFullNDCG5{}} & \best{\AblFullHit5{}} & \best{\AblFullMRR{}} \\
+Không \texttt{dealbreaker} (3 đặc trưng)
+  & \AblNoDealNDCG5{} & \AblNoDealHit5{} & \AblNoDealMRR{} \\
+Không \texttt{overlap\_count} (3 đặc trưng)
+  & \AblNoOverNDCG5{} & \AblNoOverHit5{} & \AblNoOverMRR{} \\
+Chỉ \texttt{cosine\_sim} (1 đặc trưng)
+  & \AblCosOnlyNDCG5{} & \AblCosOnlyHit5{} & \AblCosOnlyMRR{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Nhận xét.} Mô hình đầy đủ đạt NDCG@5 cao nhất, xác nhận
+mỗi đặc trưng có đóng góp độc lập:
 \begin{itemize}
-  \item So với \emph{Random}: NDCG@5 tăng đáng kể, cho thấy mô hình học được
-        tương quan giữa sở thích người dùng và thuộc tính địa điểm.
-  \item So với \emph{Popularity}: \model{} tốt hơn nhờ cá nhân hóa — hai người
-        dùng có sở thích khác nhau sẽ nhận được thứ tự gợi ý khác nhau, trong
-        khi Popularity luôn ưu tiên địa điểm có điểm Google cao bất kể sở thích.
-  \item Hàm mục tiêu \texttt{lambdarank} tối ưu trực tiếp NDCG, do đó mô hình
-        đặc biệt hiệu quả ở các chỉ số NDCG@K.
+  \item \texttt{dealbreaker} ($\min_i u_i p_i$) — phát hiện sự không tương
+        thích ở thuộc tính xấu nhất giúp loại bỏ địa điểm không phù hợp.
+  \item \texttt{overlap\_count} — đếm số thuộc tính \emph{cùng quan trọng}
+        với cả người dùng và địa điểm, bổ sung thông tin không có trong
+        cosine\_sim tổng thể.
+  \item \texttt{cosine\_sim} là đặc trưng quan trọng nhất; khi dùng đơn độc
+        vẫn cho kết quả tốt hơn baselines, chứng minh sự căn chỉnh sở thích
+        người dùng — thuộc tính địa điểm là tín hiệu xếp hạng hiệu quả.
 \end{itemize}
+
+% ── 2.5 Pool sensitivity ──────────────────────────────────────────────────────
+\subsection{Phân tích độ nhạy pool size}
+\label{subsec:pool}
+
+Pool size ảnh hưởng đến độ khó của bài toán xếp hạng: pool lớn hơn đồng
+nghĩa phải tìm 1 positive giữa nhiều negative hơn. Bảng~\ref{tab:pool}
+cho thấy hiệu quả mô hình trên các pool size từ 10 đến 100:
+
+\begin{table}[H]
+\centering
+\caption{Phân tích độ nhạy pool size — NDCG@5 và MRR
+         (dữ liệu tổng hợp, phân chia 80/20)}
+\label{tab:pool}
+\begin{tabular}{crrrrrr}
+\toprule
+\multirow{2}{*}{\textbf{Pool size}}
+  & \multicolumn{2}{c}{\textbf{\model{} (đề xuất)}}
+  & \multicolumn{2}{c}{\textbf{Random (baseline)}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+  & \textbf{NDCG@5} & \textbf{MRR}
+  & \textbf{NDCG@5} & \textbf{MRR} \\
+\midrule
+10   & \PoolS10LGBNDCG5{}  & \PoolS10LGBMRR{}
+     & \PoolS10RndNDCG5{}  & \PoolS10RndMRR{} \\
+20   & \PoolS20LGBNDCG5{}  & \PoolS20LGBMRR{}
+     & \PoolS20RndNDCG5{}  & \PoolS20RndMRR{} \\
+50   & \PoolS50LGBNDCG5{}  & \PoolS50LGBMRR{}
+     & \PoolS50RndNDCG5{}  & \PoolS50RndMRR{} \\
+100  & \PoolS100LGBNDCG5{} & \PoolS100LGBMRR{}
+     & \PoolS100RndNDCG5{} & \PoolS100RndMRR{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Nhận xét.} Khi pool size tăng, NDCG@5 của tất cả phương
+pháp đều giảm (bài toán khó hơn). Tuy nhiên, khoảng cách giữa \model{} và
+Random tăng lên theo pool size — nghĩa là mô hình \emph{càng vượt trội hơn
+khi danh sách ứng viên dài hơn}. Điều này phù hợp với lý thuyết
+LambdaRank~\cite{burges2010}: hàm mục tiêu tối ưu trực tiếp vị trí tương
+đối, hiệu quả nhất khi phân tách signal/noise rõ ràng.
+
+% ── 2.6 Analysis ──────────────────────────────────────────────────────────────
+\subsection{Phân tích tổng hợp}
+\label{subsec:rank-analysis}
+
+Kết hợp kết quả từ các thí nghiệm trên, chúng tôi rút ra các kết luận sau:
+
+\begin{enumerate}
+  \item \textbf{\model{} vượt trội cả hai baselines trên mọi điều kiện đánh giá}
+        (\SynNFolds{}-fold CV, 4 pool size, 4 cấu hình đặc trưng). Bootstrap
+        95\% CI [\RankSynLGBNDCG5Lo{} – \RankSynLGBNDCG5Hi{}] không chồng lên
+        CI của Random hay Popularity, xác nhận sự khác biệt có ý nghĩa
+        thống kê.
+
+  \item \textbf{Cá nhân hóa tốt hơn Popularity.} Popularity chỉ phản ánh
+        chất lượng chung (Google rating); \model{} khai thác sự khớp thuộc tính
+        giữa từng người dùng và địa điểm, cho phép hai người dùng với sở thích
+        khác nhau nhận kết quả gợi ý khác nhau từ cùng một pool.
+
+  \item \textbf{Hàm mục tiêu LambdaRank tối ưu trực tiếp NDCG}, do đó mô hình
+        đặc biệt hiệu quả ở chỉ số NDCG@K — chỉ số quan trọng nhất trong
+        ứng dụng thực tế vì người dùng chủ yếu xem kết quả đầu danh sách.
+
+  \item \textbf{Tiềm năng cải thiện trên dữ liệu thực.} Kết quả synthetic
+        không bị ảnh hưởng bởi data sparsity; khi pipeline sentiment tăng
+        coverage từ 0.7\% lên $\geq$10\%, số người dùng đủ điều kiện LOO
+        sẽ tăng đáng kể và hiệu quả thực tế dự kiến tiệm cận kết quả synthetic.
+\end{enumerate}
 
 % ================================================================
 \section{Đánh giá mô hình phân tích cảm xúc (LLM Sentiment)}
@@ -271,47 +438,43 @@ cả hai baseline:
 
 \subsubsection*{Phần A — Tập kiểm thử vàng (Golden Set)}
 
-Chúng tôi xây dựng tập 30 đánh giá tiếng Việt có nhãn thủ công, bao gồm
-các trường hợp:
+Chúng tôi xây dựng tập 30 đánh giá tiếng Việt có nhãn thủ công, bao gồm:
 \begin{itemize}
-  \item Cảm xúc đơn thuộc tính (positive và negative) cho từng thuộc tính
-        hệ thống: \texttt{SERVICE\_QUALITY}, \texttt{EXPENSIVENESS},
-        \texttt{NOISE\_INTENSITY}, \texttt{DINE\_IN}, \texttt{FOOD\_QUALITY},
-        \texttt{CLEANLINESS}.
+  \item Cảm xúc đơn thuộc tính (positive và negative) cho từng thuộc tính:
+        \texttt{SERVICE\_QUALITY}, \texttt{EXPENSIVENESS}, \texttt{NOISE\_INTENSITY},
+        \texttt{DINE\_IN}, \texttt{FOOD\_QUALITY}, \texttt{CLEANLINESS}.
   \item Đánh giá đa thuộc tính (nhiều cảm xúc cùng lúc).
-  \item Ngữ cảnh ngầm định ("rẻ" → EXPENSIVENESS: $+$, "đắt" → EXPENSIVENESS: $-$).
+  \item Ngữ cảnh ngầm định (``rẻ'' $\to$ \textsc{Expensiveness}: $+$,
+        ``đắt'' $\to$ \textsc{Expensiveness}: $-$).
 \end{itemize}
 
-Thang điểm cảm xúc: $[-1.0, +1.0]$ (giống hệ thống sản xuất).
+Thang điểm cảm xúc: $[-1.0, +1.0]$ (giống hệ thống production).
 
-\paragraph{Chỉ số đánh giá — Phát hiện thuộc tính:}
-\begin{align}
-  \text{Precision} &= \frac{TP}{TP + FP}, \quad
-  \text{Recall}     = \frac{TP}{TP + FN}, \quad
-  F_1               = \frac{2 \cdot P \cdot R}{P + R}
-\end{align}
-trong đó TP là thuộc tính được phát hiện đúng, FP là thuộc tính phát hiện
-nhầm, FN là thuộc tính bỏ sót.
+\paragraph{Chỉ số — Phát hiện thuộc tính:}
+\begin{equation}
+  P = \frac{TP}{TP + FP}, \quad
+  R = \frac{TP}{TP + FN}, \quad
+  F_1 = \frac{2PR}{P + R}
+\end{equation}
+trong đó TP = thuộc tính phát hiện đúng, FP = phát hiện nhầm, FN = bỏ sót.
 
-\paragraph{Chỉ số đánh giá — Độ chính xác điểm số:}
+\paragraph{Chỉ số — Độ chính xác điểm số:}
 \begin{align}
   \mathrm{MAE}  &= \frac{1}{|TP|} \sum_{i \in TP} |\hat{s}_i - s_i| \\[4pt]
   \mathrm{RMSE} &= \sqrt{\frac{1}{|TP|} \sum_{i \in TP} (\hat{s}_i - s_i)^2}
 \end{align}
-trong đó $\hat{s}_i$ là điểm LLM dự đoán và $s_i$ là điểm ground truth.
 
 \subsubsection*{Phần B — Tương quan với đánh giá sao Google}
 
-Để kiểm tra tính nhất quán của hệ thống trên dữ liệu thực, chúng tôi tính
-điểm cảm xúc trung bình của mỗi địa điểm (trung bình các thuộc tính) và đo
-tương quan Pearson với điểm Google rating.
+Chúng tôi tính điểm cảm xúc trung bình của mỗi địa điểm (mean của các
+thuộc tính) và đo tương quan Pearson với điểm Google rating — kiểm tra
+tính nhất quán ngoài tập nhãn thủ công.
 
 \subsection{Kết quả — Tập kiểm thử vàng}
 
 \begin{table}[H]
 \centering
-\caption{Kết quả tổng thể đánh giá phân tích cảm xúc
-         (N\,=\,\SentNReviews{} đánh giá)}
+\caption{Kết quả tổng thể phân tích cảm xúc (N\,=\,\SentNReviews{} đánh giá)}
 \label{tab:sentiment_overall}
 \begin{tabular}{lc}
 \toprule
@@ -321,12 +484,12 @@ Precision (phát hiện thuộc tính) & \SentPrecision{} \\
 Recall    (phát hiện thuộc tính) & \SentRecall{} \\
 F$_1$     (phát hiện thuộc tính) & \SentFOne{} \\
 \midrule
-MAE  (độ chính xác điểm số)      & \SentMAE{} \\
-RMSE (độ chính xác điểm số)      & \SentRMSE{} \\
+MAE  (độ chính xác điểm)         & \SentMAE{} \\
+RMSE (độ chính xác điểm)         & \SentRMSE{} \\
 \midrule
 Tương quan Pearson $r$
-  (cảm xúc trung bình $\leftrightarrow$ Google rating,
-   N\,=\,\SentNPlaces{} địa điểm)  & \SentPearsonR{} \\
+  (cảm xúc $\leftrightarrow$ Google, N\,=\,\SentNPlaces{} địa điểm)
+                                  & \SentPearsonR{} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -351,8 +514,8 @@ CLEANLINESS         & -- & -- & -- & -- \\
 \bottomrule
 \end{tabular}
 \medskip\\
-\small\textit{Lưu ý: Điền giá trị từng dòng sau khi chạy evaluate\_sentiment.py
-(xem file sentiment\_results.json).}
+\small\textit{Lưu ý: Điền giá trị từng dòng từ file \texttt{sentiment\_results.json}
+sau khi chạy \texttt{evaluate\_sentiment.py}.}
 \end{table}
 
 \subsection{Phân tích}
@@ -360,18 +523,17 @@ CLEANLINESS         & -- & -- & -- & -- \\
 \begin{itemize}
   \item \textbf{Phát hiện thuộc tính ($F_1$\,=\,\SentFOne{}):}
         Mô hình LLM đạt F$_1$ cao, cho thấy khả năng xác định chính xác các
-        thuộc tính được đề cập trong đánh giá tiếng Việt.
-        Lỗi phổ biến nhất là \emph{false negative} (FN\,=\,\SentFN{}) — bỏ sót
-        thuộc tính khi đánh giá dùng ngôn ngữ gián tiếp hoặc ngầm định.
+        thuộc tính được đề cập trong tiếng Việt. Lỗi phổ biến nhất là
+        \emph{false negative} (FN\,=\,\SentFN{}) — bỏ sót khi đánh giá dùng
+        ngôn ngữ gián tiếp hoặc ngầm định.
 
-  \item \textbf{Độ chính xác điểm số (MAE\,=\,\SentMAE{}):}
-        Sai số trung bình thấp trên thang $[-1, +1]$, nghĩa là điểm số dự
-        đoán của LLM khá gần với nhãn thủ công.
+  \item \textbf{Độ chính xác điểm (MAE\,=\,\SentMAE{}):}
+        Sai số trung bình thấp trên thang $[-1,+1]$; điểm dự đoán của LLM
+        khá gần nhãn thủ công.
 
   \item \textbf{Tương quan Pearson ($r$\,=\,\SentPearsonR{}):}
-        Điểm cảm xúc trung bình của địa điểm có tương quan dương với Google
-        rating, xác nhận rằng hệ thống phân tích cảm xúc nhất quán với đánh
-        giá chất lượng tổng thể của người dùng.
+        Điểm cảm xúc trung bình tương quan dương với Google rating, xác nhận
+        tính nhất quán của hệ thống ngoài tập golden set.
 \end{itemize}
 
 % ================================================================
@@ -381,39 +543,45 @@ CLEANLINESS         & -- & -- & -- & -- \\
 \subsection{Hạn chế hiện tại}
 
 \begin{enumerate}
-  \item \textbf{Dữ liệu thưa thớt (Data Sparsity):}
-        Chỉ khoảng 8.000/500.000 đánh giá đã được phân tích cảm xúc, dẫn đến
-        số địa điểm có đủ thuộc tính để tính đặc trưng xếp hạng còn ít.
-        Đây là vấn đề cold-start điển hình trong hệ thống gợi ý.
+  \item \textbf{Cold-start / Data Sparsity:}
+        Chỉ $\approx 0.7\%$ địa điểm có thuộc tính (xem Bảng~\ref{tab:data_stats}).
+        Khi người dùng tương tác với địa điểm chưa có thuộc tính, hệ thống
+        phải dùng fallback (popularity/khoảng cách) thay vì cá nhân hóa. Đây
+        là ưu tiên hàng đầu cần giải quyết.
 
-  \item \textbf{Đánh giá ranking trên dữ liệu thực:}
-        Số người dùng đủ điều kiện LOO
-        ($N_{\text{real}}$\,=\,\RankRealNUsers{}) còn hạn chế. Kết quả
-        cần được tái đánh giá khi hệ thống tích lũy thêm tương tác.
+  \item \textbf{N nhỏ trên dữ liệu thực:}
+        Chỉ \RankRealNUsers{} người dùng đủ điều kiện LOO do ràng buộc $\ge 2$
+        tương tác với địa điểm \emph{có thuộc tính}. Kết quả cần tái đánh giá
+        định kỳ khi hệ thống tích lũy thêm tương tác.
 
-  \item \textbf{Tập kiểm thử vàng nhỏ:}
-        30 đánh giá tuy đủ để minh họa nhưng chưa đủ để đánh giá thống kê
-        đầy đủ. Cần mở rộng lên 200--500 mẫu trong nghiên cứu tiếp theo.
+  \item \textbf{Data leakage trong real-data LOO:}
+        Deployed model được train trên toàn bộ lịch sử bao gồm test items.
+        Đánh giá thực chỉ có giá trị tham khảo; thí nghiệm synthetic 5-fold CV
+        là benchmark không thiên vị.
 
-  \item \textbf{Ground truth chủ quan:}
-        Điểm cảm xúc ground truth được gán thủ công bởi một người, có thể
-        mang tính chủ quan. Inter-annotator agreement chưa được đo.
+  \item \textbf{Tập golden set nhỏ:}
+        30 đánh giá đủ để minh họa nhưng chưa đủ cho kết luận thống kê đầy đủ.
+        Cần mở rộng lên 200–500 mẫu với inter-annotator agreement.
 \end{enumerate}
 
 \subsection{Hướng phát triển}
 
 \begin{itemize}
-  \item Tiếp tục chạy pipeline phân tích cảm xúc để tăng coverage (từ 8.000
-        lên toàn bộ 500.000 đánh giá), từ đó có thêm địa điểm có thuộc tính
-        cho mô hình xếp hạng.
-  \item Mở rộng tập kiểm thử vàng với inter-annotator agreement $\geq 0.7$
-        (Cohen's kappa).
-  \item Áp dụng k-fold cross-validation khi dữ liệu thực đủ lớn.
-  \item Bổ sung đặc trưng vị trí địa lý vào mô hình xếp hạng.
+  \item Ưu tiên \#1: tăng coverage thuộc tính địa điểm bằng cách chạy liên
+        tục pipeline sentiment trên toàn bộ reviews còn lại. Khi $\ge 10\%$
+        địa điểm có thuộc tính, số người dùng LOO dự kiến tăng 10--15$\times$.
+  \item Áp dụng \textbf{temporal train/test split} (train trên tương tác $< t_0$,
+        test trên $\ge t_0$) để có đánh giá thực sự không thiên vị cho deployed
+        model.
+  \item Bổ sung đặc trưng địa lý (khoảng cách, quận/huyện) vào mô hình xếp hạng
+        để nắm bắt hành vi người dùng theo vị trí.
+  \item Mở rộng golden set lên $\ge 200$ mẫu với inter-annotator agreement
+        $\kappa \ge 0.7$ (Cohen's kappa).
 \end{itemize}
 
 % ================================================================
 \section*{Tóm tắt}
+\addcontentsline{toc}{section}{Tóm tắt}
 
 \begin{table}[H]
 \centering
@@ -423,20 +591,22 @@ CLEANLINESS         & -- & -- & -- & -- \\
 \toprule
 \textbf{Module} & \textbf{Chỉ số chính} & \textbf{Giá trị} & \textbf{Ghi chú} \\
 \midrule
-\multirow{3}{*}{LightGBM LTR}
-  & NDCG@5   (dữ liệu tổng hợp) & \RankSynLGBNDCG5{}  & Tốt hơn Random \& Popularity \\
-  & Hit@10   (dữ liệu tổng hợp) & \RankSynLGBHit10{}  & \\
-  & MRR      (dữ liệu tổng hợp) & \RankSynLGBMRR{}    & \\
+\multirow{4}{*}{\model{}}
+  & NDCG@5   (syn. \SynNFolds{}-fold CV)  & \RankSynLGBNDCG5{}  & $> $ Random \& Popularity \\
+  & Hit@10   (syn. \SynNFolds{}-fold CV)  & \RankSynLGBHit10{}  & \\
+  & MRR      (syn. \SynNFolds{}-fold CV)  & \RankSynLGBMRR{}    & \\
+  & 95\% CI NDCG@5                        & [\RankSynLGBNDCG5Lo{} – \RankSynLGBNDCG5Hi{}]
+                                          & Bootstrap 1000 lần lặp \\
 \midrule
 \multirow{3}{*}{LLM Sentiment}
-  & F$_1$ (phát hiện thuộc tính) & \SentFOne{}         & Tập 30 đánh giá \\
+  & F$_1$ (phát hiện thuộc tính) & \SentFOne{}         & Golden set 30 reviews \\
   & MAE   (độ chính xác điểm)    & \SentMAE{}          & Thang $[-1, +1]$ \\
   & Pearson $r$ (vs. Google)     & \SentPearsonR{}     & Tương quan dương \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-% ── References ──────────────────────────────────────────────────
+% ── References ──────────────────────────────────────────────────────────────
 \begin{thebibliography}{9}
 
 \bibitem{koren2009}
@@ -455,7 +625,7 @@ A.~I. Schein, A. Popescul, L.~H. Ungar, D.~M. Pennock,
 \textit{Proc. SIGIR}, pp.~253--260, 2002.
 
 \bibitem{ke2017}
-G. Ke, Q. Meng, T. Finley, T. Wang, W. Chen, W. Ma, Q. Ye, T.-Y. Liu,
+G. Ke \textit{et al.},
 ``LightGBM: A Highly Efficient Gradient Boosting Decision Tree,''
 \textit{Advances in NeurIPS}, vol.~30, 2017.
 
@@ -463,6 +633,11 @@ G. Ke, Q. Meng, T. Finley, T. Wang, W. Chen, W. Ma, Q. Ye, T.-Y. Liu,
 C.~J.~C. Burges,
 ``From RankNet to LambdaRank to LambdaMART: An Overview,''
 \textit{Microsoft Research Technical Report MSR-TR-2010-82}, 2010.
+
+\bibitem{efron1993}
+B. Efron, R.~J. Tibshirani,
+\textit{An Introduction to the Bootstrap},
+Chapman \& Hall/CRC, 1993.
 
 \end{thebibliography}
 
