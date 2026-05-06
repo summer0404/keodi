@@ -1,118 +1,97 @@
-# Chat & Group Chat — Implementation Plan
+# Chat & Group Chat — Implementation Plan (Revised)
 
-## 1. Database
+## Quyết định kiến trúc
 
-**Tiếp tục PostgreSQL, không cần MySQL hay MongoDB.**
+**Tích hợp vào `notification-service` thay vì tạo service mới.**
 
-- Prisma + PostgreSQL đang chạy ổn định trên toàn bộ các service
-- `pgvector` đã có → có thể dùng cho semantic search message sau này
-- PostgreSQL xử lý được chat ở quy mô vừa với index đúng cách
-- Redis (đã có) dùng thêm cho: recent messages, unread counts, typing indicator
+Lý do:
+- notification-service đã có PostgreSQL + Redis + Kafka + FCM + WebSocket infra
+- DB hiện tại ít dữ liệu, schema mở rộng được an toàn
+- Tránh overhead quản lý thêm 1 service (port, Docker container, Kafka consumer group)
+- Chat cần FCM push khi offline → tái dùng được `NotificationDispatcherService` luôn
+- Redis presence tracking đã có → tích hợp typing indicator + unread count không tốn code mới
 
-> Cassandra/MongoDB chỉ cần xét khi quy mô đến hàng trăm triệu message/ngày.
-
----
-
-## 2. Service mới: `chat-service`
-
-Tạo service riêng, không nhét vào `core-service`. Chat có write throughput cao hơn hẳn các domain khác, cần scale độc lập.
-
-```
-keodi-microservice/
-├── api-gateway/
-├── auth-service/
-├── core-service/
-├── notification-service/
-├── intelligence-service/
-└── chat-service/                  ← NEW (NestJS + Kafka + Prisma, port 3005)
-    └── src/
-        ├── modules/
-        │   ├── conversation/      # tạo/quản lý conversation
-        │   ├── message/           # gửi/nhận/xóa message
-        │   └── member/            # quản lý thành viên group
-        ├── database/
-        │   └── prisma/
-        │       └── schema.prisma
-        └── shared/
-            └── constants/
-                └── topic.constant.ts
-```
+**Group chat linked to Session** — conversation nhóm có thể gắn với `sessionId` (session đang có trong
+`NotificationGateway`), cho phép các thành viên group tự động thành thành viên chat.
 
 ---
 
-## 3. Prisma Schema (`chat-service`)
+## 1. Prisma Schema (thêm vào `notification-service/src/database/prisma/schema.prisma`)
 
 ```prisma
 enum ConversationType { DIRECT  GROUP }
-enum MemberRole       { OWNER  ADMIN  MEMBER }
 enum MessageType      { TEXT  IMAGE  FILE  SYSTEM }
 
 model Conversation {
-  id            String           @id @default(uuid())
+  id            String           @id @default(cuid())
   type          ConversationType
   name          String?          // chỉ dùng cho GROUP
   avatarUrl     String?
   createdById   String
+  sessionId     String?          // nếu group gắn với session hiện có
   lastMessageId String?          @unique
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
   members       ConversationMember[]
   messages      Message[]
-  lastMessage   Message?         @relation("LastMessage", fields: [lastMessageId], references: [id])
+  lastMessage   Message?         @relation("ConvLastMessage", fields: [lastMessageId], references: [id])
+
+  @@index([sessionId])           // look up conversation by sessionId
 }
 
 model ConversationMember {
-  id             String       @id @default(uuid())
+  id             String       @id @default(cuid())
   conversationId String
   userId         String
-  role           MemberRole   @default(MEMBER)
   joinedAt       DateTime     @default(now())
-  lastReadAt     DateTime?    // để tính unread count
+  lastReadAt     DateTime?
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
-  @@index([userId])            // list conversations của 1 user
+  @@index([userId])
 }
 
 model Message {
-  id             String      @id @default(uuid())
+  id             String      @id @default(cuid())
   conversationId String
   senderId       String
   content        String
   type           MessageType @default(TEXT)
-  replyToId      String?     // reply-to
+  replyToId      String?
   deletedAt      DateTime?   // soft delete
 
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-  replyTo        Message?     @relation("ReplyTo", fields: [replyToId], references: [id])
-  replies        Message[]    @relation("ReplyTo")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo        Message?     @relation("MessageReplyTo", fields: [replyToId], references: [id])
+  replies        Message[]    @relation("MessageReplyTo")
 
   @@index([conversationId, createdAt(sort: Desc)])  // cursor pagination
   @@index([senderId])
 }
 ```
 
+> Dùng `cuid()` cho nhất quán với models hiện có (User, Notification, UserDeviceToken đều dùng cuid).
+
 ---
 
-## 4. Kafka Topics
+## 2. Kafka Topics
 
-Thêm vào `topic.constant.ts` ở cả `api-gateway` và `chat-service`:
+### `notification-service/src/shared/constants/topic.contant.ts` — thêm vào:
 
 ```typescript
 export const ChatTopics = {
   Conversation: {
-    Create:  'chat.conversation.create',
+    Create:  'chat.conversation.create',   // MessagePattern (RPC)
     GetById: 'chat.conversation.get-by-id',
     List:    'chat.conversation.list',
     Update:  'chat.conversation.update',
   },
   Message: {
-    Send:     'chat.message.send',
+    Send:     'chat.message.send',         // MessagePattern (RPC)
     List:     'chat.message.list',
     Delete:   'chat.message.delete',
     MarkRead: 'chat.message.mark-read',
@@ -122,138 +101,235 @@ export const ChatTopics = {
     Remove: 'chat.member.remove',
     Leave:  'chat.member.leave',
   },
-  RealtimePush: 'chat.realtime.push',   // internal: chat-service → ChatGateway
+  RealtimePush: 'chat.realtime.push',     // EventPattern: notification-service → ChatGateway
 } as const;
+```
+
+Sao chép y chang vào `api-gateway/src/shared/constants/topic.constant.ts`.
+
+---
+
+## 3. Cấu trúc module mới trong `notification-service`
+
+```
+notification-service/src/
+├── modules/
+│   ├── notification/          (existing)
+│   ├── notification-inbox/    (existing)
+│   ├── device-token/          (existing)
+│   ├── conversation/          ← NEW
+│   │   ├── conversation.controller.ts    # Kafka MessagePattern handlers
+│   │   ├── conversation.service.ts       # Prisma CRUD + Redis member cache
+│   │   ├── conversation.module.ts
+│   │   └── __test__/
+│   │       └── conversation.service.spec.ts
+│   ├── message/               ← NEW
+│   │   ├── message.controller.ts         # Kafka MessagePattern handlers
+│   │   ├── message.service.ts            # Persist + emit realtime push
+│   │   ├── message.module.ts
+│   │   └── __test__/
+│   │       └── message.service.spec.ts
+│   └── member/                ← NEW
+│       ├── member.controller.ts
+│       ├── member.service.ts
+│       ├── member.module.ts
+│       └── __test__/
+│           └── member.service.spec.ts
+├── shared/
+│   ├── enums/
+│   │   ├── notification.enum.ts  (existing)
+│   │   └── chat.enum.ts          ← NEW (ConversationType, MemberRole, MessageType)
+│   └── constants/
+│       └── redis.constant.ts     # Thêm RedisKeys chat vào file hiện có
 ```
 
 ---
 
-## 5. WebSocket Gateway mới: `ChatGateway`
+## 4. Redis Keys (thêm vào `redis.constant.ts` hiện có)
 
-Tách riêng khỏi `NotificationGateway` (namespace `/chat`), đặt trong `api-gateway`:
+```typescript
+// Thêm vào RedisKeys object hiện có:
+CHAT_MEMBERS: (convId: string) => `chat:conv:${convId}:members`,   // TTL 10 phút
+CHAT_RECENT:  (convId: string) => `chat:conv:${convId}:recent`,    // TTL 1 giờ
+CHAT_UNREAD:  (userId: string) => `chat:user:${userId}:unread`,    // TTL 5 phút
+CHAT_TYPING:  (convId: string) => `chat:conv:${convId}:typing`,    // TTL 5 giây (auto-expire)
+```
+
+---
+
+## 5. ChatGateway trong `api-gateway`
+
+Tách riêng namespace `/chat`, **không** gộp vào `NotificationGateway` để giữ concern separation.
 
 ```
 api-gateway/src/modules/chat/
 ├── chat.module.ts
-├── chat.controller.ts   # Kafka consumer: nhận chat.realtime.push
-├── chat.service.ts      # REST endpoints qua Kafka
-├── chat.gateway.ts      # Socket.io gateway, namespace /chat
+├── chat.controller.ts    # EventPattern: nhận chat.realtime.push → broadcast
+├── chat.service.ts       # Các REST endpoints qua Kafka (MessagePattern)
+├── chat.gateway.ts       # WebSocketGateway namespace /chat
 └── chat.swagger.ts
 ```
 
-### WebSocket Events
-
-| Client → Server   | Server → Client | Mô tả                              |
-|-------------------|-----------------|------------------------------------|
-| `chat.join`       | —               | Join room `conversation:{id}`      |
-| `chat.leave`      | —               | Leave room                         |
-| `chat.send`       | `message.new`   | Gửi tin nhắn, broadcast cho room   |
-| `chat.mark-read`  | `message.read`  | Đánh dấu đã đọc                    |
-| `chat.typing.start` | `typing.start` | Bắt đầu gõ phím                  |
-| `chat.typing.stop`  | `typing.stop`  | Dừng gõ                           |
-
----
-
-## 6. Luồng gửi tin nhắn (Message Flow)
-
-```
-Client
-  │── WebSocket: chat.send ───────────────────────────────────────┐
-  │                                                               ▼
-  │                                                   ChatGateway (api-gateway)
-  │                                                               │
-  │                                         validate membership (Redis cache)
-  │                                                               │
-  │                                          Kafka: chat.message.send
-  │                                                               ▼
-  │                                                      chat-service
-  │                                                               │
-  │                                               persist Message to DB
-  │                                               update lastMessageId
-  │                                                               │
-  │                                    ┌──────────────────────────┤
-  │                                    │                          │
-  │                       Kafka: chat.realtime.push    Kafka: notification.dispatch
-  │                                    │                (members OFFLINE → FCM)
-  │                                    ▼                          ▼
-  │                           ChatGateway               notification-service
-  │                                    │                          │ (FCM push)
-  │◄── WebSocket: message.new ─────────┘                         ▼
-  │  (members đang online)                                Mobile notification
-```
-
----
-
-## 7. REST Endpoints
-
-```
-POST   /api/v1/conversations                       # tạo direct hoặc group
-GET    /api/v1/conversations                       # list + unread count
-GET    /api/v1/conversations/:id/messages          # messages (cursor pagination)
-PATCH  /api/v1/conversations/:id                   # đổi tên/avatar group
-POST   /api/v1/conversations/:id/members           # thêm thành viên
-DELETE /api/v1/conversations/:id/members/:userId   # kick thành viên
-DELETE /api/v1/conversations/:id/members/me        # tự rời group
-DELETE /api/v1/conversations/:id/messages/:msgId   # xóa message (soft delete)
-```
-
----
-
-## 8. Redis Caching Strategy
-
-| Key pattern                   | TTL      | Nội dung                                          |
-|-------------------------------|----------|---------------------------------------------------|
-| `chat:conv:{id}:members`      | 10 phút  | Member list để validate membership nhanh          |
-| `chat:conv:{id}:recent`       | 1 giờ    | 50 message gần nhất, tránh query DB               |
-| `chat:user:{id}:unread`       | 5 phút   | Map `{ conversationId → unreadCount }`            |
-| `chat:conv:{id}:typing`       | 5 giây   | Set userId đang typing (auto-expire)              |
-
----
-
-## 9. Socket.io Multi-instance (Production)
-
-Khi scale `api-gateway` lên nhiều pod, cần **Redis Adapter** cho Socket.io để các instance chia sẻ room với nhau:
+### `chat.gateway.ts` — tái dùng hoàn toàn pattern của `NotificationGateway`:
 
 ```typescript
-import { createAdapter } from '@socket.io/redis-adapter';
+@WebSocketGateway({ namespace: '/chat', cors: { origin: '*' } })
+export class ChatGateway {
+  // Tái dụng: JWT auth từ handshake (y chang NotificationGateway)
+  // Tái dụng: Redis presence check
+  // Rooms: conversation:{conversationId}
 
-const pubClient = new Redis(redisConfig);
-const subClient = pubClient.duplicate();
-io.adapter(createAdapter(pubClient, subClient));
+  // Client → Server events:
+  // chat.join      → join room conversation:{id}, validate membership
+  // chat.leave     → leave room
+  // chat.send      → gửi tin nhắn qua Kafka (chat.message.send)
+  // chat.mark-read → qua Kafka (chat.message.mark-read)
+  // chat.typing.start / chat.typing.stop → Redis SADD/SREM + broadcast
+
+  // Server → Client events:
+  // message.new     → tin nhắn mới broadcast cho room
+  // message.deleted → tin nhắn bị xóa
+  // message.read    → đánh dấu đã đọc
+  // typing.start / typing.stop
+}
 ```
 
-> Nên làm ngay từ đầu cho `ChatGateway`, và backport vào `NotificationGateway` luôn.
-
 ---
 
-## 10. Thứ tự triển khai
+## 6. Message Flow chi tiết
 
-| Phase | Việc cần làm                                                                 |
-|-------|------------------------------------------------------------------------------|
-| 1     | Tạo `chat-service`: Prisma schema, module conversation + message + member, Kafka consumers |
-| 2     | Thêm `ChatTopics` vào api-gateway, REST endpoints qua Kafka                  |
-| 3     | `ChatGateway` trong api-gateway: join/leave room, `chat.realtime.push` consumer |
-| 4     | WebSocket events: `chat.send` → persist → broadcast `message.new`            |
-| 5     | Typing indicator, mark-read, unread count qua Redis                          |
-| 6     | Tích hợp `notification-service`: FCM push khi user offline                   |
-| 7     | Redis Adapter cho Socket.io multi-instance                                   |
-| 8     | Rate limiting (message send), spam protection                                |
-
----
-
-## 11. Tóm tắt kiến trúc
+### 6a. Gửi tin nhắn qua WebSocket
 
 ```
 Client
- ├── REST ──────────────────► api-gateway ──(Kafka)──► chat-service ──► PostgreSQL
- └── WebSocket (/chat) ──────► ChatGateway
-                                   │  (Kafka: chat.realtime.push)
-                                   ◄──────────────────── chat-service
-                                   │  (Kafka: notification.dispatch)
-                                   └──────────────────── notification-service ──► FCM
+  │── WS: chat.send { conversationId, content, type, replyToId? }
+  ▼
+ChatGateway (api-gateway)
+  │── validate membership: Redis CHAT_MEMBERS cache → nếu miss thì Kafka RPC
+  │── emit Kafka: chat.message.send { senderId, conversationId, content, ... }
+  ▼
+message.service.ts (notification-service)
+  │── Prisma: INSERT Message
+  │── Prisma: UPDATE Conversation.lastMessageId
+  │── invalidate Redis CHAT_RECENT cache
+  │── emit Kafka EventPattern: chat.realtime.push { conversationId, event: 'message.new', payload }
+  │── fetch member list (Redis hoặc DB)
+  │── foreach OFFLINE member: emit NotificationTopics.Dispatch → FCM push
+  ▼
+chat.controller.ts (api-gateway) nhận chat.realtime.push
+  │── ChatGateway.broadcastToRoom(conversationId, 'message.new', payload)
+  ▼
+Client(s) nhận message.new
 ```
 
-- **Database**: PostgreSQL (giữ nguyên) + Redis (cache + typing + presence)
-- **1 service mới**: `chat-service` (NestJS + Kafka + Prisma, port 3005)
-- **1 gateway mới**: `ChatGateway` trong `api-gateway` (namespace `/chat`)
-- **Redis Adapter**: bắt buộc khi deploy nhiều instance `api-gateway`
+### 6b. Gửi tin nhắn qua REST (fallback/mobile background)
+
+```
+Client
+  │── POST /api/v1/conversations/:id/messages
+  ▼
+chat.service.ts (api-gateway)
+  │── Kafka RPC: chat.message.send
+  ▼
+(giống 6a từ message.service.ts trở xuống)
+```
+
+---
+
+## 7. REST Endpoints (api-gateway)
+
+```
+POST   /api/v1/conversations                          # Tạo direct hoặc group
+GET    /api/v1/conversations                          # List + unread count
+GET    /api/v1/conversations/:id                      # Chi tiết conversation
+PATCH  /api/v1/conversations/:id                      # Đổi tên/avatar (GROUP only)
+
+GET    /api/v1/conversations/:id/messages             # Lấy messages (cursor pagination)
+POST   /api/v1/conversations/:id/messages             # Gửi message (REST fallback)
+DELETE /api/v1/conversations/:id/messages/:msgId      # Soft delete message
+
+POST   /api/v1/conversations/:id/members              # Thêm thành viên (OWNER/ADMIN)
+DELETE /api/v1/conversations/:id/members/:userId      # Kick thành viên (OWNER/ADMIN)
+DELETE /api/v1/conversations/:id/members/me           # Tự rời group
+```
+
+---
+
+## 8. Group Chat gắn với Session
+
+Khi một group/session đã có (sessionId tồn tại trong hệ thống):
+
+```typescript
+// Tạo group conversation gắn với session:
+POST /api/v1/conversations
+{
+  "type": "GROUP",
+  "sessionId": "session-uuid",  // optional
+  "name": "Trip to Đà Lạt",
+  "memberIds": ["userId1", "userId2"]
+}
+```
+
+- `conversation-service` kiểm tra nếu đã có Conversation với sessionId → trả về existing (idempotent)
+- Client socket tham gia cả `session:{sessionId}` (location) lẫn `conversation:{convId}` (chat)
+- `NotificationGateway` vẫn quản lý `session:{sessionId}` room, `ChatGateway` quản lý `conversation:{convId}` room
+
+---
+
+## 9. Thứ tự triển khai
+
+| Phase | Việc cần làm                                                                                     | Ưu tiên |
+|-------|--------------------------------------------------------------------------------------------------|---------|
+| 1     | Thêm Prisma models (Conversation, ConversationMember, Message) + migration                       | P0      |
+| 2     | Thêm ChatTopics vào cả notification-service và api-gateway                                       | P0      |
+| 3     | `conversation` module trong notification-service: tạo, list, get, update + Redis member cache    | P0      |
+| 4     | `message` module: send, list (cursor), delete + emit chat.realtime.push                          | P0      |
+| 5     | `member` module: add, remove, leave                                                              | P0      |
+| 6     | `ChatGateway` + `chat.controller.ts` trong api-gateway: join/leave/realtime push                 | P0      |
+| 7     | REST endpoints trong api-gateway + Swagger                                                       | P1      |
+| 8     | WebSocket events: chat.send, chat.mark-read, typing indicator qua Redis                          | P1      |
+| 9     | FCM push cho offline members (tái dùng NotificationDispatcherService)                            | P1      |
+| 10    | Unread count (Redis CHAT_UNREAD, update on send + mark-read)                                     | P2      |
+| 11    | Redis Adapter cho Socket.io (cần khi scale api-gateway nhiều pod)                                | P2      |
+| 12    | Rate limiting (message send): NestJS ThrottlerModule                                             | P2      |
+
+---
+
+## 10. Unit Test coverage
+
+Mỗi service mới cần spec file trong `__test__/`:
+
+| File                                   | Cần test                                                    |
+|----------------------------------------|-------------------------------------------------------------|
+| `conversation.service.spec.ts`         | createDirect (idempotent), createGroup, list, update        |
+| `message.service.spec.ts`              | send (persist + emit realtime), list cursor, softDelete     |
+| `member.service.spec.ts`               | add, remove (role check), leave                             |
+| `chat.service.spec.ts` (api-gateway)   | Kafka RPC delegation, error propagation                     |
+
+---
+
+## 11. Tóm tắt kiến trúc cuối
+
+```
+Client
+ ├── REST ──────────────► api-gateway ──(Kafka RPC)──────────► notification-service ──► PostgreSQL
+ │                            │                                        │
+ └── WS /chat ──────────► ChatGateway                         MessageService
+                               │  EventPattern                         │
+                               │  chat.realtime.push ◄────────────────┘
+                               │
+                               └── broadcastToRoom(conversationId)
+                                        │
+                               (offline members)
+                                        │
+                               NotificationTopics.Dispatch
+                                        │
+                               NotificationDispatcherService ──► FCM
+```
+
+**Thay đổi so với plan cũ:**
+- Không có `chat-service` mới — toàn bộ logic trong `notification-service`
+- Reuse: `PrismaService`, `RedisService`, `KafkaService`, `NotificationDispatcherService` (FCM)
+- 3 module mới: `conversation`, `message`, `member` trong notification-service
+- 1 module mới: `chat` (gateway + controller + service) trong api-gateway
+- Schema mở rộng thêm 3 model, không break existing models
