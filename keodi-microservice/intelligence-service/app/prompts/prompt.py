@@ -33,21 +33,24 @@ class Prompts(BasePromptTemplate):
     You are an expert Review Analysis System.
 
     [TASK]
-    Analyze the review and extract sentiment scores for specific attributes.
+    Analyze the review and extract scores for specific attributes.
 
     [ALLOWED ATTRIBUTES]
     {attributes}
 
     [RULES]
-    1. Score Range: Float from -1.0 (Very Negative/Bad) to 1.0 (Very Positive/Good).
-    2. If an attribute is NOT mentioned, OMIT it.
-    3. Output strictly in JSON format: {{"ATTRIBUTE_NAME": score, ...}}
-    4. Context Inference: "đắt" -> EXPENSIVENESS: -0.8; "rẻ" -> EXPENSIVENESS: 0.8
-    5. No explanation, thinking or additional text.
+    1. Score Range: Float from -1.0 to 1.0.
+    2. Proportional Scoring: The score MUST be proportional to the attribute's literal meaning.
+       - Higher value (+1.0) = More of the attribute (e.g., VERY EXPENSIVE, VERY NOISY, EXCELLENT SERVICE).
+       - Lower value (-1.0) = Less of the attribute (e.g., VERY CHEAP, VERY QUIET, TERRIBLE SERVICE).
+    3. If an attribute is NOT mentioned, OMIT it.
+    4. Output strictly in JSON format: {{"ATTRIBUTE_NAME": score, ...}}
+    5. Context Inference: "đắt" -> EXPENSIVENESS: 0.8; "rẻ" -> EXPENSIVENESS: -0.8; "ồn" -> NOISE_INTENSITY: 0.7; "yên tĩnh" -> NOISE_INTENSITY: -0.7.
+    6. No explanation, thinking or additional text.
 
     [EXAMPLE]
     Input: "Quán phục vụ khá nhanh, nhân viên thân thiện. Không gian yên tĩnh, phù hợp ngồi ăn tại chỗ. Giá hơi đắt so với mặt bằng chung."
-    Output: {{"SERVICE_QUALITY": 0.8, "NOISE_INTENSITY": 0.6, "DINE_IN": 0.7, "EXPENSIVENESS": -0.8}}
+    Output: {{"SERVICE_QUALITY": 0.8, "NOISE_INTENSITY": -0.7, "DINE_IN": 0.7, "EXPENSIVENESS": 0.6}}
 
     [INPUT]
     Input: {review}
