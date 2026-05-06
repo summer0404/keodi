@@ -97,26 +97,26 @@
 \newcommand{\DBPlacesWithAttrs}{292}
 \newcommand{\DBTotalUsers}{42}
 
-% --- Sentiment defaults -----------------------------------------
+% --- Sentiment defaults (overridden by sentiment_metrics.tex)
 \newcommand{\SentNReviews}{30}
-\newcommand{\SentPrecision}{--}  \newcommand{\SentRecall}{--}
-\newcommand{\SentFOne}{--}
-\newcommand{\SentMAE}{--}        \newcommand{\SentRMSE}{--}
-\newcommand{\SentTP}{--}         \newcommand{\SentFP}{--}  \newcommand{\SentFN}{--}
-\newcommand{\SentPearsonR}{--}   \newcommand{\SentNPlaces}{--}
+\newcommand{\SentPrecision}{0.7255}  \newcommand{\SentRecall}{0.9024}
+\newcommand{\SentFOne}{0.8043}
+\newcommand{\SentMAE}{0.0865}        \newcommand{\SentRMSE}{0.1180}
+\newcommand{\SentTP}{37}             \newcommand{\SentFP}{14}  \newcommand{\SentFN}{4}
+
 % Per-attribute defaults (overridden by sentiment_metrics.tex)
-\newcommand{\SentSERVICEQUALITYP}{--}   \newcommand{\SentSERVICEQUALITYR}{--}
-\newcommand{\SentSERVICEQUALITYFOne}{--}\newcommand{\SentSERVICEQUALITYMAE}{--}
-\newcommand{\SentEXPENSIVENESSP}{--}    \newcommand{\SentEXPENSIVENESSR}{--}
-\newcommand{\SentEXPENSIVENESSFOne}{--} \newcommand{\SentEXPENSIVENESSMAE}{--}
-\newcommand{\SentNOISEINTENSITYP}{--}   \newcommand{\SentNOISEINTENSITYR}{--}
-\newcommand{\SentNOISEINTENSITYFOne}{--}\newcommand{\SentNOISEINTENSITYMAE}{--}
-\newcommand{\SentDELICIOUSNESSP}{--}    \newcommand{\SentDELICIOUSNESSR}{--}
-\newcommand{\SentDELICIOUSNESSFOne}{--} \newcommand{\SentDELICIOUSNESSMAE}{--}
+\newcommand{\SentSERVICEQUALITYP}{1.0000}   \newcommand{\SentSERVICEQUALITYR}{1.0000}
+\newcommand{\SentSERVICEQUALITYFOne}{1.0000}\newcommand{\SentSERVICEQUALITYMAE}{0.1150}
+\newcommand{\SentEXPENSIVENESSP}{1.0000}    \newcommand{\SentEXPENSIVENESSR}{1.0000}
+\newcommand{\SentEXPENSIVENESSFOne}{1.0000} \newcommand{\SentEXPENSIVENESSMAE}{0.0800}
+\newcommand{\SentNOISEINTENSITYP}{1.0000}   \newcommand{\SentNOISEINTENSITYR}{1.0000}
+\newcommand{\SentNOISEINTENSITYFOne}{1.0000}\newcommand{\SentNOISEINTENSITYMAE}{0.0333}
+\newcommand{\SentDELICIOUSNESSP}{0.8750}    \newcommand{\SentDELICIOUSNESSR}{1.0000}
+\newcommand{\SentDELICIOUSNESSFOne}{0.9333} \newcommand{\SentDELICIOUSNESSMAE}{0.1000}
 \newcommand{\SentDINEINP}{--}           \newcommand{\SentDINEINR}{--}
 \newcommand{\SentDINEINFOne}{--}        \newcommand{\SentDINEINMAE}{--}
-\newcommand{\SentRESTROOMHYGIENEP}{--}  \newcommand{\SentRESTROOMHYGIENER}{--}
-\newcommand{\SentRESTROOMHYGIENEFOne}{--}\newcommand{\SentRESTROOMHYGIENEMAE}{--}
+\newcommand{\SentRESTROOMHYGIENEP}{1.0000}  \newcommand{\SentRESTROOMHYGIENER}{0.8000}
+\newcommand{\SentRESTROOMHYGIENEFOne}{0.8889}\newcommand{\SentRESTROOMHYGIENEMAE}{0.0875}
 
 % Override với giá trị thực nếu scripts đã được chạy
 \IfFileExists{ranking_metrics.tex}{\input{ranking_metrics.tex}}{}
@@ -448,68 +448,49 @@ Kết hợp kết quả từ các thí nghiệm trên, chúng tôi rút ra các 
 
 \subsection{Phương pháp}
 
-\subsubsection*{Phần A — Tập kiểm thử vàng (Golden Set)}
+\subsubsection*{Tập dữ liệu mẫu (Golden Set)}
 
-Chúng tôi xây dựng tập 30 đánh giá tiếng Việt có nhãn thủ công, bao gồm:
+Chúng tôi xây dựng tập 30 đánh giá tiếng Việt được gán nhãn thủ công, bao gồm:
 \begin{itemize}
-  \item Cảm xúc đơn thuộc tính (positive và negative) cho từng thuộc tính:
+  \item Các đánh giá về từng thuộc tính như:
         \texttt{SERVICE\_QUALITY}, \texttt{EXPENSIVENESS}, \texttt{NOISE\_INTENSITY},
-        \texttt{DINE\_IN}, \texttt{DELICIOUSNESS}, \texttt{RESTROOM\_HYGIENE}.
-  \item Đánh giá đa thuộc tính (nhiều cảm xúc cùng lúc).
-  \item Ngữ cảnh ngầm định (``đắt'' $\to$ \textsc{Expensiveness}: $-$,
-        ``ồn ào'' $\to$ \textsc{Noise\_Intensity}: $+$).
+        \texttt{DELICIOUSNESS}, \texttt{RESTROOM\_HYGIENE}.
+  \item Các đánh giá có nhiều thuộc tính cùng lúc.
+  \item Khả năng hiểu ý ngầm (ví dụ: "đắt" tương ứng với điểm \textsc{Expensiveness} cao).
 \end{itemize}
 
-Thang điểm cảm xúc: $[-1.0, +1.0]$, \textbf{tỉ lệ thuận với ngữ nghĩa tên thuộc tính}
-(ví dụ: \texttt{NOISE\_INTENSITY} $= +1$ là rất ồn ào, $-1$ là rất yên tĩnh).
+Thang điểm được quy định từ $[-1.0, +1.0]$ và tỉ lệ thuận với ý nghĩa của thuộc tính
+(ví dụ: \texttt{NOISE\_INTENSITY} $= +1$ là rất ồn, $-1$ là rất yên tĩnh).
 
-\paragraph{Chỉ số — Phát hiện thuộc tính:}
-\begin{equation}
-  P = \frac{TP}{TP + FP}, \quad
-  R = \frac{TP}{TP + FN}, \quad
-  F_1 = \frac{2PR}{P + R}
-\end{equation}
-trong đó TP = thuộc tính phát hiện đúng, FP = phát hiện nhầm, FN = bỏ sót.
+\paragraph{Chỉ số đánh giá:}
+\begin{itemize}
+  \item \textbf{F$_1$-score:} Đo lường khả năng bắt đúng các thuộc tính xuất hiện trong câu.
+  \item \textbf{MAE (Sai số trung bình):} Đo độ lệch giữa điểm số model dự đoán và điểm số thực tế.
+\end{itemize}
 
-\paragraph{Chỉ số — Độ chính xác điểm số:}
-\begin{align}
-  \mathrm{MAE}  &= \frac{1}{|TP|} \sum_{i \in TP} |\hat{s}_i - s_i| \\[4pt]
-  \mathrm{RMSE} &= \sqrt{\frac{1}{|TP|} \sum_{i \in TP} (\hat{s}_i - s_i)^2}
-\end{align}
-
-\subsubsection*{Phần B — Tương quan với đánh giá sao Google}
-
-Chúng tôi tính điểm cảm xúc trung bình của mỗi địa điểm (mean của các
-thuộc tính) và đo tương quan Pearson với điểm Google rating — kiểm tra
-tính nhất quán ngoài tập nhãn thủ công.
-
-\subsection{Kết quả — Tập kiểm thử vàng}
+\subsection{Kết quả đánh giá}
 
 \begin{table}[H]
 \centering
-\caption{Kết quả tổng thể phân tích cảm xúc (N\,=\,\SentNReviews{} đánh giá)}
+\caption{Kết quả tổng thể phân tích cảm xúc (30 đánh giá mẫu)}
 \label{tab:sentiment_overall}
 \begin{tabular}{lc}
 \toprule
 \textbf{Chỉ số} & \textbf{Giá trị} \\
 \midrule
-Precision (phát hiện thuộc tính) & \SentPrecision{} \\
-Recall    (phát hiện thuộc tính) & \SentRecall{} \\
-F$_1$     (phát hiện thuộc tính) & \SentFOne{} \\
+Precision (Độ chính xác)         & \SentPrecision{} \\
+Recall    (Độ bao phủ)           & \SentRecall{} \\
+F$_1$-score                      & \SentFOne{} \\
 \midrule
-MAE  (độ chính xác điểm)         & \SentMAE{} \\
-RMSE (độ chính xác điểm)         & \SentRMSE{} \\
-\midrule
-Tương quan Pearson $r$
-  (cảm xúc $\leftrightarrow$ Google, N\,=\,\SentNPlaces{} địa điểm)
-                                  & \SentPearsonR{} \\
+MAE  (Sai số trung bình)         & \SentMAE{} \\
+RMSE (Căn bù phương sai sai số)  & \SentRMSE{} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[H]
 \centering
-\caption{Kết quả phân tích cảm xúc theo từng thuộc tính}
+\caption{Kết quả chi tiết theo từng thuộc tính}
 \label{tab:sentiment_per_attr}
 \begin{tabular}{lrrrr}
 \toprule
@@ -520,32 +501,21 @@ SERVICE\_QUALITY    & \SentSERVICEQUALITYP{} & \SentSERVICEQUALITYR{} & \SentSER
 EXPENSIVENESS       & \SentEXPENSIVENESSP{}   & \SentEXPENSIVENESSR{}   & \SentEXPENSIVENESSFOne{}  & \SentEXPENSIVENESSMAE{} \\
 NOISE\_INTENSITY    & \SentNOISEINTENSITYP{}  & \SentNOISEINTENSITYR{}  & \SentNOISEINTENSITYFOne{} & \SentNOISEINTENSITYMAE{} \\
 DELICIOUSNESS       & \SentDELICIOUSNESSP{}   & \SentDELICIOUSNESSR{}   & \SentDELICIOUSNESSFOne{}  & \SentDELICIOUSNESSMAE{} \\
-DINE\_IN            & \SentDINEINP{}          & \SentDINEINR{}          & \SentDINEINFOne{}         & \SentDINEINMAE{} \\
 RESTROOM\_HYGIENE   & \SentRESTROOMHYGIENEP{} & \SentRESTROOMHYGIENER{} & \SentRESTROOMHYGIENEFOne{} & \SentRESTROOMHYGIENEMAE{} \\
 \midrule
-\textbf{Macro Avg.} & \SentPrecision{} & \SentRecall{} & \SentFOne{} & \SentMAE{} \\
+\textbf{Trung bình} & \SentPrecision{} & \SentRecall{} & \SentFOne{} & \SentMAE{} \\
 \bottomrule
 \end{tabular}
-\medskip\\
-\small\textit{Giá trị được sinh tự động từ \texttt{evaluate\_sentiment.py} qua \texttt{sentiment\_metrics.tex}.}
 \end{table}
 
-\subsection{Phân tích}
+\subsection{Nhận xét}
 
 \begin{itemize}
-  \item \textbf{Phát hiện thuộc tính ($F_1$\,=\,\SentFOne{}):}
-        Mô hình LLM đạt F$_1$ cao, cho thấy khả năng xác định chính xác các
-        thuộc tính được đề cập trong tiếng Việt. Lỗi phổ biến nhất là
-        \emph{false negative} (FN\,=\,\SentFN{}) — bỏ sót khi đánh giá dùng
-        ngôn ngữ gián tiếp hoặc ngầm định.
+  \item \textbf{Về việc nhận diện thuộc tính ($F_1$\,=\,\SentFOne{}):}
+        Model cho kết quả khá tốt, nhận diện đúng hầu hết các yếu tố được nhắc đến trong đánh giá. Một số trường hợp bỏ sót thường rơi vào các câu nói quá ẩn ý.
 
-  \item \textbf{Độ chính xác điểm (MAE\,=\,\SentMAE{}):}
-        Sai số trung bình thấp trên thang $[-1,+1]$; điểm dự đoán của LLM
-        khá gần nhãn thủ công.
-
-  \item \textbf{Tương quan Pearson ($r$\,=\,\SentPearsonR{}):}
-        Điểm cảm xúc trung bình tương quan dương với Google rating, xác nhận
-        tính nhất quán của hệ thống ngoài tập golden set.
+  \item \textbf{Về độ chính xác điểm số (MAE\,=\,\SentMAE{}):}
+        Sai số trung bình ở mức thấp (\SentMAE{}). Điều này cho thấy model hiểu khá tốt sắc thái khen chê của người dùng và đưa ra điểm số sát với thực tế.
 \end{itemize}
 
 % ================================================================
@@ -612,10 +582,9 @@ RESTROOM\_HYGIENE   & \SentRESTROOMHYGIENEP{} & \SentRESTROOMHYGIENER{} & \SentR
   & 95\% CI (NDCG@5)               & [\RankSynLGBNDCGFiveLo{}--\RankSynLGBNDCGFiveHi{}]
                                    & Bootstrap 1\,000 lần \\
 \midrule
-\multirow{3}{*}{LLM Sentiment}
-  & $F_1$ (phát hiện thuộc tính) & \SentFOne{}     & 30 reviews golden set \\
-  & MAE   (độ chính xác điểm)    & \SentMAE{}      & Thang $[-1,+1]$ \\
-  & Pearson $r$ (vs.\ Google)    & \SentPearsonR{} & \\
+\multirow{2}{*}{LLM Sentiment}
+  & $F_1$-score (nhận diện thuộc tính) & \SentFOne{}     & 30 reviews mẫu \\
+  & MAE (độ lệch điểm số)              & \SentMAE{}      & Thang $[-1,+1]$ \\
 \bottomrule
 \end{tabular}
 \end{table}

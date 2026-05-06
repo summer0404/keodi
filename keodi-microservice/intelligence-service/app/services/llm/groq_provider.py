@@ -6,16 +6,14 @@ class GroqProvider(BaseLLMProvider):
         settings = get_settings()
         try:
             from groq import AsyncGroq
+            import httpx
 
-            # Script for my company PC :))))
-            # import httpx
-            # http_client = httpx.AsyncClient(verify=False)
-            # self.client = AsyncGroq(
-            #     api_key=settings.groq_api_key,
-            #     http_client=http_client
-            # )
-
-            self.client = AsyncGroq(api_key=settings.groq_api_key)
+            # Bypass SSL verification for environments with self-signed certificates
+            http_client = httpx.AsyncClient(verify=False)
+            self.client = AsyncGroq(
+                api_key=settings.groq_api_key,
+                http_client=http_client
+            )
 
             self.model = settings.groq_model
         except ImportError:

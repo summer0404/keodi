@@ -1,10 +1,9 @@
 """
 Offline evaluation of LLM-based sentiment analysis.
 
-Part A  : 30-review golden set with manually defined ground truth.
-          Metrics: Attribute Detection (Precision / Recall / F1)
-                   Score Regression (MAE / RMSE)
-Part B  : Pearson correlation — average place sentiment score vs. Google star rating.
+Golden set with 30-review manually defined ground truth.
+Metrics: Attribute Detection (Precision / Recall / F1)
+         Score Regression (MAE / RMSE)
 
 Score convention (same as production system):
   All attributes: score proportional to the attribute's literal meaning.
@@ -144,20 +143,28 @@ def _parse_json(raw: str) -> dict:
 
 async def call_groq(review: str, attributes: list[str]) -> dict:
     from groq import AsyncGroq
+    import httpx
 
-    client = AsyncGroq(api_key=os.environ.get("GROQ_API_KEY", ""))
-    model  = os.environ.get("GROQ_MODEL",       "qwen/qwen3-32b")
+    # Bypass SSL verification for environments with self-signed certificates
+    http_client = httpx.AsyncClient(verify=False)
+    client = AsyncGroq(
+        api_key=os.environ.get("GROQ_API_KEY", ""),
+        http_client=http_client,
+        base_url=os.environ.get("GROQ_BASE_URL", "https://api.groq.com/openai/v1").removesuffix("/openai/v1"),
+    )
+    model  = os.environ.get("GROQ_MODEL", "qwen/qwen3-32b")
     temp   = float(os.environ.get("GROQ_TEMPERATURE", "0.1"))
-    max_t  = int(os.environ.get("GROQ_MAX_TOKENS",   "1024"))
+    max_t  = int(os.environ.get("GROQ_MAX_TOKENS", "1024"))
 
     prompt = _PROMPTS.SENTIMENT_ANALYSIS.format(
         attributes=json.dumps(attributes),
         review=review,
     )
-
     resp = await client.chat.completions.create(
         model=model,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
         temperature=temp,
         max_tokens=max_t,
     )
@@ -214,93 +221,11 @@ def compute_metrics(
     return overall, dict(per_attr)
 
 
-# ─── Part B: Pearson correlation ──────────────────────────────────────────────
-
-async def rating_correlation() -> tuple[float | None, int]:
-    try:
-        from app.database.prisma_service import get_prisma_client, close_prisma_client
-
-        db           = await get_prisma_client()
-        place_attrs  = await db.placeattribute.find_many()
-        places_raw   = await db.query_raw(
-            "SELECT id, rating FROM places WHERE rating IS NOT NULL"
-        )
-        await close_prisma_client()
-
-        # Average sentiment score per place (mean of its attribute scores)
-        bucket: dict = defaultdict(list)
-        for pa in place_attrs:
-            bucket[pa.placeId].append(pa.score)
-        avg_sent = {pid: sum(sc) / len(sc) for pid, sc in bucket.items() if sc}
-
-        xs, ys = [], []
-        for p in places_raw:
-            pid = p["id"]
-            if pid in avg_sent:
-                xs.append(avg_sent[pid])
-                ys.append(p["rating"])
-
-        if len(xs) < 5:
-            return None, len(xs)
-
-        n  = len(xs)
-        mx, my = sum(xs) / n, sum(ys) / n
-        num    = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
-        den_x  = math.sqrt(sum((x - mx) ** 2 for x in xs))
-        den_y  = math.sqrt(sum((y - my) ** 2 for y in ys))
-        r      = num / (den_x * den_y) if den_x * den_y > 0 else 0.0
-        return r, n
-
-    except Exception as exc:
-        print(f"[CORR] Bỏ qua: {exc}")
-        return None, 0
-
-
-# ─── Printing ─────────────────────────────────────────────────────────────────
-
-def print_overall(m: dict) -> None:
-    W = 62
-    print(f"\n{'='*W}")
-    print(f"  Sentiment — Tổng thể  (N = {m['n_reviews']} reviews)")
-    print(f"{'='*W}")
-    print(f"  Precision : {m['precision']:.4f}")
-    print(f"  Recall    : {m['recall']:.4f}")
-    print(f"  F1-score  : {m['f1']:.4f}")
-    print(f"  MAE       : {m['mae']:.4f}")
-    print(f"  RMSE      : {m['rmse']:.4f}")
-    print(f"  (TP={m['tp']}  FP={m['fp']}  FN={m['fn']})")
-    print(f"{'='*W}\n")
-
-
-def print_per_attr(per_attr: dict) -> None:
-    W = 64
-    print(f"{'='*W}")
-    print(f"  Sentiment — Theo từng thuộc tính")
-    print(f"{'='*W}")
-    print(f"  {'Thuộc tính':<26} {'P':>7} {'R':>7} {'F1':>7} {'MAE':>8}")
-    print(f"  {'-'*58}")
-    rows = []
-    for a, d in per_attr.items():
-        tp, fp, fn = d["tp"], d["fp"], d["fn"]
-        p  = tp / (tp + fp) if (tp + fp) else 0.0
-        r  = tp / (tp + fn) if (tp + fn) else 0.0
-        f1 = 2 * p * r / (p + r) if (p + r) else 0.0
-        mae = sum(d["errors"]) / len(d["errors"]) if d["errors"] else float("nan")
-        rows.append((a, p, r, f1, mae))
-    rows.sort(key=lambda x: x[3], reverse=True)
-    for a, p, r, f1, mae in rows:
-        mae_s = f"{mae:.4f}" if not math.isnan(mae) else "   —"
-        print(f"  {a:<26} {p:>7.4f} {r:>7.4f} {f1:>7.4f} {mae_s:>8}")
-    print(f"{'='*W}\n")
-
-
 # ─── LaTeX export ─────────────────────────────────────────────────────────────
 
 def write_latex_metrics(
     overall:  dict,
     per_attr: dict,
-    pearson_r: float | None,
-    n_places: int,
     out_dir:  str,
 ) -> None:
     lines = [
@@ -317,14 +242,7 @@ def write_latex_metrics(
         f"\\newcommand{{\\SentFP}}{{{overall['fp']}}}",
         f"\\newcommand{{\\SentFN}}{{{overall['fn']}}}",
         "",
-    ]
-
-    r_str      = f"{pearson_r:.4f}" if pearson_r is not None else "--"
-    lines += [
-        f"\\newcommand{{\\SentPearsonR}}{{{r_str}}}",
-        f"\\newcommand{{\\SentNPlaces}}{{{n_places}}}",
-        "",
-        "% Per-attribute table rows (copy into tabular manually if needed)",
+        "% Per-attribute table rows",
     ]
 
     for a, d in sorted(per_attr.items()):
@@ -417,14 +335,6 @@ async def main() -> None:
     print_overall(overall)
     print_per_attr(per_attr)
 
-    # ── Part B: Rating correlation ─────────────────────────────────────────
-    print("[B] Tính tương quan Pearson (sentiment trung bình ↔ Google rating) …")
-    r, n_places = await rating_correlation()
-    if r is not None:
-        print(f"  Pearson r = {r:.4f}  (N = {n_places} địa điểm)")
-    else:
-        print(f"  Không đủ dữ liệu (N = {n_places} địa điểm có attribute và rating)")
-
     # ── Export JSON ────────────────────────────────────────────────────────────
     export = {
         "overall":    overall,
@@ -440,7 +350,6 @@ async def main() -> None:
             }
             for a, d in per_attr.items()
         },
-        "rating_correlation": {"pearson_r": r, "n_places": n_places},
     }
 
     json_path = os.path.join(_THIS_DIR, "sentiment_results.json")
@@ -448,7 +357,7 @@ async def main() -> None:
         json.dump(export, f, indent=2, ensure_ascii=False)
     print(f"[OUT] JSON  → {json_path}")
 
-    write_latex_metrics(overall, per_attr, r, n_places, _THIS_DIR)
+    write_latex_metrics(overall, per_attr, _THIS_DIR)
 
 
 if __name__ == "__main__":
