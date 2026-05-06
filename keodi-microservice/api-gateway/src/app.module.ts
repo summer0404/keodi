@@ -1,9 +1,10 @@
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConvertToHttpExceptionFilter } from './common/filters/rpc-to-http-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt.guard';
+import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
 import { AttributeModule } from './modules/attribute/attribute.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CategoryModule } from './modules/category/category.module';
@@ -31,6 +32,10 @@ import { ProviderModule } from './providers/provider.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpLoggingInterceptor,
     },
   ],
   imports: [

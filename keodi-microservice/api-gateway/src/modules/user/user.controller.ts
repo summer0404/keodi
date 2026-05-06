@@ -9,6 +9,7 @@ import {
   Patch,
   Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -36,13 +37,17 @@ import {
   ApiUpdateProfile,
   ApiUpdateUsername,
 } from './user.swagger';
+import { RoleGuard } from 'src/common/guards/role.guard';
+import { Role } from 'src/shared/enums/role.enum';
+import { Roles } from 'src/common/decorators/role.decorator';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @SkipAuth() //Used for testing purposes - need to authorization this endpoint to admin later
   @Get('all')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
   @ApiGetAllUsers()
   async getAll() {
     return await this.userService.getAll();
@@ -73,7 +78,8 @@ export class UserController {
     return await this.userService.getOtherProfile(user.id, userId);
   }
 
-  @SkipAuth() // Skip authentication for testing purposes - remove in production
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
   @Patch(':userId/unverify')
   @ApiUnverifyUser()
   async unverifyUser(@Param('userId') userId: string) {

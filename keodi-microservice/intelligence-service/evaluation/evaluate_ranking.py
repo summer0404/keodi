@@ -1,19 +1,8 @@
-"""
-Offline evaluation of LightGBM Learning-to-Rank model.
-
-Protocol : Leave-One-Out (LOO) – 1 positive + K negatives per user
-Metrics  : NDCG@5, NDCG@10, Hit@5, Hit@10, MRR
-Extras   : Bootstrap 95% CI | 5-fold CV | Feature ablation | Pool-size sensitivity
-Data     : Real DB (if available) + Synthetic (500 users × 2 000 places × 12 attrs)
-
-Run from intelligence-service/:
-    python evaluation/evaluate_ranking.py
-"""
-
 import sys, os
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _SVC_DIR  = os.path.dirname(_THIS_DIR)
+sys.path.insert(0, _THIS_DIR)
 sys.path.insert(0, _SVC_DIR)
 os.chdir(_SVC_DIR)
 
@@ -25,31 +14,14 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import lightgbm as lgb
-import numpy as np
 import pandas as pd
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-TIME_DECAY            = 0.05
-MIN_OVERLAP_THRESHOLD = 0.2
-FEATURE_COLS          = ["cosine_sim", "max_match", "dealbreaker", "overlap_count"]
-N_NEGATIVES           = 19
-N_BOOTSTRAP           = 1000
-K_FOLDS               = 5
-RANDOM_SEED           = 42
+from config import (
+    TIME_DECAY, MIN_OVERLAP_THRESHOLD, FEATURE_COLS,
+    N_NEGATIVES, N_BOOTSTRAP, K_FOLDS, RANDOM_SEED,
+    POOL_SWEEP, ABLATION_CONFIGS,
+)
 
-# Pool sizes swept in sensitivity analysis (n_neg → pool = n_neg + 1)
-POOL_SWEEP = [9, 19, 49, 99]
-
-# Feature subsets for ablation study
-ABLATION_CONFIGS: dict[str, list[str]] = {
-    "Đầy đủ (4 đặc trưng)": ["cosine_sim", "max_match", "dealbreaker", "overlap_count"],
-    "Không dealbreaker":     ["cosine_sim", "max_match", "overlap_count"],
-    "Không overlap_count":   ["cosine_sim", "max_match", "dealbreaker"],
-    "Chỉ cosine_sim":        ["cosine_sim"],
-}
-
-
-# ── Feature engineering (mirrors ranking_service._extract_features) ───────────
 
 def _decay(score: float, now: datetime, updated: datetime) -> float:
     days = (now - updated).total_seconds() / 86400.0
@@ -69,7 +41,7 @@ def extract_features(user_attrs: dict, place_attrs: dict) -> tuple:
             p_sq += p * p
             if u != 0.0 and p != 0.0:
                 prod = u * p
-                dot  += prod
+                dot += prod
                 prods.append(prod)
                 if u > MIN_OVERLAP_THRESHOLD and p > MIN_OVERLAP_THRESHOLD:
                     overlap_count += 1
@@ -81,10 +53,7 @@ def extract_features(user_attrs: dict, place_attrs: dict) -> tuple:
     return cosine_sim, max_match, dealbreaker, overlap_count
 
 
-# ── Ranking metrics ────────────────────────────────────────────────────────────
-
 def _rank(scores: list[float], pos_idx: int) -> int:
-    """1-based rank of pos_idx after sorting scores descending."""
     order = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
     return order.index(pos_idx) + 1
 
@@ -116,9 +85,8 @@ def bootstrap_ci(
     alpha: float = 0.05,
     seed: int = RANDOM_SEED,
 ) -> dict[str, tuple[float, float]]:
-    """Bootstrap 95% CI for each metric. Returns {metric: (lo, hi)}."""
-    rng = random.Random(seed)
-    n   = len(ranks)
+    rng  = random.Random(seed)
+    n    = len(ranks)
     boot: dict[str, list] = defaultdict(list)
     for _ in range(n_boot):
         sample = [rng.choice(ranks) for _ in range(n)]
@@ -133,8 +101,6 @@ def bootstrap_ci(
     return ci
 
 
-# ── Real data loading ──────────────────────────────────────────────────────────
-
 def _parse_dt(val) -> datetime:
     if isinstance(val, datetime):
         return val if val.tzinfo else val.replace(tzinfo=timezone.utc)
@@ -144,7 +110,7 @@ def _parse_dt(val) -> datetime:
 async def load_from_db():
     from app.database.prisma_service import get_prisma_client, close_prisma_client
 
-    print("[DB] Connecting …")
+    print("[DB] Connecting ...")
     db = await get_prisma_client()
 
     actions_raw = await db.query_raw(
@@ -190,25 +156,23 @@ async def load_from_db():
     place_ratings     = {r["id"]: (r["rating"] or 0.0) for r in places_raw}
     places_with_attrs = set(place_attr_dict)
 
-    n_total_places   = len(place_ratings)
-    n_places_w_attr  = len(places_with_attrs)
-    n_total_users    = users_count[0]["n"] if users_count else 0
+    n_total_places  = len(place_ratings)
+    n_places_w_attr = len(places_with_attrs)
+    n_total_users   = users_count[0]["n"] if users_count else 0
 
     print(
-        f"[DB] {len(user_actions)} users with ≥1 positive action  "
+        f"[DB] {len(user_actions)} users with >=1 positive action "
         f"| {n_places_w_attr}/{n_total_places} places with attributes "
         f"({100*n_places_w_attr/max(n_total_places, 1):.1f}%)"
     )
     db_stats = {
-        "n_total_users":      n_total_users,
-        "n_total_places":     n_total_places,
-        "n_places_with_attrs": n_places_w_attr,
+        "n_total_users":        n_total_users,
+        "n_total_places":       n_total_places,
+        "n_places_with_attrs":  n_places_w_attr,
         "n_users_with_actions": len(user_actions),
     }
     return user_actions, user_attr_dict, place_attr_dict, place_ratings, places_with_attrs, db_stats
 
-
-# ── LOO evaluation loop ────────────────────────────────────────────────────────
 
 def loo_eval(
     model,
@@ -269,21 +233,13 @@ def loo_eval(
         eligible += 1
 
     return {
-        "LightGBM (đề xuất)": lgb_ranks,
-        "Popularity":         pop_ranks,
-        "Random":             rnd_ranks,
+        "LightGBM": lgb_ranks,
+        "Popularity": pop_ranks,
+        "Random":    rnd_ranks,
     }, eligible
 
 
-# ── Synthetic data generation ──────────────────────────────────────────────────
-
 def build_synthetic(n_users=500, n_places=2000, n_attrs=12, seed=RANDOM_SEED):
-    """
-    Generate a controlled synthetic dataset that mirrors production conditions:
-    - Users have mixed preferences (some strong, some neutral)
-    - Places have non-negative attribute scores (like production placeattribute)
-    - Interactions are generated based on genuine cosine similarity match
-    """
     rng   = random.Random(seed)
     attrs = [f"A{i}" for i in range(n_attrs)]
 
@@ -365,8 +321,6 @@ def train_lgb_on_synthetic(
     return lgb.train(params, lgb.Dataset(X, label=y, group=groups), num_boost_round=100)
 
 
-# ── K-fold cross-validation ────────────────────────────────────────────────────
-
 def kfold_eval_synthetic(
     syn_act, syn_u, syn_p, syn_r, syn_pw,
     k: int = K_FOLDS,
@@ -374,14 +328,13 @@ def kfold_eval_synthetic(
     feature_cols: list[str] = FEATURE_COLS,
     n_neg: int = N_NEGATIVES,
 ) -> tuple[dict, list]:
-    """K-fold CV on pre-built synthetic data. Returns aggregated ranks + per-fold metrics."""
-    users = list(syn_act.keys())
-    rng   = random.Random(seed)
+    users     = list(syn_act.keys())
+    rng       = random.Random(seed)
     rng.shuffle(users)
+    fold_size = max(1, len(users) // k)
 
     agg_ranks: dict[str, list] = defaultdict(list)
     fold_metrics: list[dict]   = []
-    fold_size = max(1, len(users) // k)
 
     for fold_i in range(k):
         start   = fold_i * fold_size
@@ -400,42 +353,30 @@ def kfold_eval_synthetic(
             agg_ranks[method].extend(ranks)
         fold_metrics.append({m: summarise(r) for m, r in res.items()})
 
-        lgb_m = summarise(res["LightGBM (đề xuất)"])
+        lgb_m = summarise(res["LightGBM"])
         print(
-            f"    Fold {fold_i+1}/{k} | N={n_eligible:3d} "
-            f"| LGB NDCG@5={lgb_m.get('ndcg@5', 0):.4f} "
+            f"  Fold {fold_i+1}/{k} | N={n_eligible:3d} "
+            f"| NDCG@5={lgb_m.get('ndcg@5', 0):.4f} "
             f"MRR={lgb_m.get('mrr', 0):.4f}"
         )
 
     return dict(agg_ranks), fold_metrics
 
 
-# ── Ablation study ─────────────────────────────────────────────────────────────
-
-def ablation_study(
-    syn_act, syn_u, syn_p, syn_r, syn_pw,
-    seed: int = RANDOM_SEED,
-) -> dict:
-    """Run 5-fold CV for each feature configuration and compare NDCG@5 / MRR."""
+def ablation_study(syn_act, syn_u, syn_p, syn_r, syn_pw, seed: int = RANDOM_SEED) -> dict:
     results = {}
     for config_name, feat_cols in ABLATION_CONFIGS.items():
-        print(f"  [{config_name}] …")
+        print(f"  [{config_name}]")
         agg_ranks, _ = kfold_eval_synthetic(
             syn_act, syn_u, syn_p, syn_r, syn_pw,
             feature_cols=feat_cols, seed=seed,
         )
-        results[config_name] = summarise(agg_ranks["LightGBM (đề xuất)"])
+        results[config_name] = summarise(agg_ranks["LightGBM"])
     return results
 
 
-# ── Pool-size sensitivity ──────────────────────────────────────────────────────
-
-def pool_sensitivity(
-    syn_act, syn_u, syn_p, syn_r, syn_pw,
-    seed: int = RANDOM_SEED,
-) -> dict:
-    """Evaluate model across pool sizes using a fixed 80/20 split."""
-    users = list(syn_act.keys())
+def pool_sensitivity(syn_act, syn_u, syn_p, syn_r, syn_pw, seed: int = RANDOM_SEED) -> dict:
+    users    = list(syn_act.keys())
     random.seed(seed)
     random.shuffle(users)
     n_train  = int(len(users) * 0.8)
@@ -451,7 +392,7 @@ def pool_sensitivity(
         res, n_e  = loo_eval(model, test_act, syn_u, syn_p, syn_r, syn_pw,
                              n_neg=n_neg, seed=seed)
         results[pool_size] = {m: summarise(r) for m, r in res.items()}
-        m_lgb = results[pool_size].get("LightGBM (đề xuất)", {})
+        m_lgb = results[pool_size].get("LightGBM", {})
         m_rnd = results[pool_size].get("Random", {})
         print(
             f"  Pool={pool_size:4d} | N={n_e:3d} "
@@ -461,25 +402,18 @@ def pool_sensitivity(
     return results
 
 
-# ── Print helpers ──────────────────────────────────────────────────────────────
-
-def print_table(
-    results: dict,
-    n: int,
-    title: str,
-    ci_map: dict | None = None,
-) -> None:
+def print_table(results: dict, n: int, title: str, ci_map: dict | None = None) -> None:
     W = 86
     print(f"\n{'='*W}")
-    print(f"  {title}  (N = {n} người dùng)")
+    print(f"  {title}  (N = {n} users)")
     print(f"{'='*W}")
-    hdr = f"  {'Phương pháp':<24} {'NDCG@5':>8} {'NDCG@10':>9} {'Hit@5':>7} {'Hit@10':>8} {'MRR':>7}"
+    hdr = f"  {'Method':<24} {'NDCG@5':>8} {'NDCG@10':>9} {'Hit@5':>7} {'Hit@10':>8} {'MRR':>7}"
     if ci_map:
         hdr += "   95% CI (NDCG@5)"
     print(hdr)
     print(f"  {'-'*(W-4)}")
 
-    for method in ("LightGBM (đề xuất)", "Popularity", "Random"):
+    for method in ("LightGBM", "Popularity", "Random"):
         ranks = results.get(method, [])
         m     = summarise(ranks)
         if not m:
@@ -490,220 +424,88 @@ def print_table(
         )
         if ci_map and method in ci_map:
             lo, hi = ci_map[method].get("ndcg@5", (0.0, 0.0))
-            line += f"   [{lo:.4f} – {hi:.4f}]"
+            line += f"   [{lo:.4f} - {hi:.4f}]"
         print(line)
     print(f"{'='*W}\n")
 
 
-_POOL_WORDS = {10: "Ten", 20: "Twenty", 50: "Fifty", 100: "Hundred"}
-
-
-def _metric_to_cmd(metric: str) -> str:
-    """Convert metric name to a LaTeX-safe command suffix (letters only, no digits)."""
-    return (metric
-            .replace("ndcg@5",  "NDCGFive")
-            .replace("ndcg@10", "NDCGTen")
-            .replace("hit@5",   "HitFive")
-            .replace("hit@10",  "HitTen")
-            .replace("mrr",     "MRR"))
-
-
-# ── LaTeX export ───────────────────────────────────────────────────────────────
-
-def write_latex_metrics(all_results: dict, out_dir: str) -> None:
-    lines = [
-        "% Auto-generated by evaluate_ranking.py — do not edit manually",
-        "% Re-run the script to refresh these values",
-        "% Uses \\renewcommand so it overrides defaults in evaluation_report.tex",
-        "",
-    ]
-
-    def fmt(v):
-        if isinstance(v, float):
-            return f"{v:.4f}"
-        return str(v) if v is not None else "--"
-
-    # ── Main metrics: real + synthetic (5-fold CV aggregate) ─────────────────
-    for dataset_key, tex_key in [("real", "Real"), ("synthetic_cv", "Syn")]:
-        data = all_results.get(dataset_key, {})
-        for method, mkey in [
-            ("LightGBM (đề xuất)", "LGB"),
-            ("Popularity",         "Pop"),
-            ("Random",             "Rnd"),
-        ]:
-            m = data.get(method, {})
-            for metric in ("ndcg@5", "ndcg@10", "hit@5", "hit@10", "mrr"):
-                cmd = f"\\Rank{tex_key}{mkey}{_metric_to_cmd(metric)}"
-                lines.append(f"\\renewcommand{{{cmd}}}{{{fmt(m.get(metric, '??'))}}}")
-            # Bootstrap CI for LGB only
-            if mkey == "LGB":
-                ci = data.get("LightGBM (đề xuất)_ci", {})
-                for metric in ("ndcg@5", "mrr"):
-                    pair = ci.get(metric, ("??", "??"))
-                    lo, hi = (pair[0], pair[1]) if isinstance(pair, (list, tuple)) else ("??", "??")
-                    cmd_lo = f"\\Rank{tex_key}{mkey}{_metric_to_cmd(metric)}Lo"
-                    cmd_hi = f"\\Rank{tex_key}{mkey}{_metric_to_cmd(metric)}Hi"
-                    lines.append(f"\\renewcommand{{{cmd_lo}}}{{{fmt(lo)}}}")
-                    lines.append(f"\\renewcommand{{{cmd_hi}}}{{{fmt(hi)}}}")
-
-        lines.append(f"\\renewcommand{{\\Rank{tex_key}NUsers}}{{{data.get('n_users', '??')}}}")
-        lines.append("")
-
-    # ── Ablation metrics ──────────────────────────────────────────────────────
-    abl = all_results.get("ablation", {})
-    abl_cmd_map = {
-        "Đầy đủ (4 đặc trưng)": "AblFull",
-        "Không dealbreaker":     "AblNoDeal",
-        "Không overlap_count":   "AblNoOver",
-        "Chỉ cosine_sim":        "AblCosOnly",
-    }
-    for config_name, cmd_key in abl_cmd_map.items():
-        m = abl.get(config_name, {})
-        for metric in ("ndcg@5", "hit@5", "mrr"):
-            cmd = f"\\{cmd_key}{_metric_to_cmd(metric)}"
-            lines.append(f"\\renewcommand{{{cmd}}}{{{fmt(m.get(metric, '??'))}}}")
-    lines.append("")
-
-    # ── Pool sensitivity metrics ──────────────────────────────────────────────
-    pool_data = all_results.get("pool_sensitivity", {})
-    for pool_size in [10, 20, 50, 100]:
-        pool_word = _POOL_WORDS[pool_size]
-        for method, mkey in [("LightGBM (đề xuất)", "LGB"), ("Random", "Rnd")]:
-            m = pool_data.get(pool_size, {}).get(method, {})
-            for metric in ("ndcg@5", "mrr"):
-                cmd = f"\\Pool{pool_word}{mkey}{_metric_to_cmd(metric)}"
-                lines.append(f"\\renewcommand{{{cmd}}}{{{fmt(m.get(metric, '??'))}}}")
-    lines.append("")
-
-    # ── Dataset / protocol info ───────────────────────────────────────────────
-    lines += [
-        f"\\renewcommand{{\\SynNFolds}}{{{K_FOLDS}}}",
-        f"\\renewcommand{{\\SynNUsers}}{{500}}",
-        f"\\renewcommand{{\\SynNPlaces}}{{2000}}",
-        f"\\renewcommand{{\\SynNAttrs}}{{12}}",
-        "",
-    ]
-
-    # ── DB coverage stats ─────────────────────────────────────────────────────
-    real_data  = all_results.get("real", {})
-    db_stats   = real_data.get("db_stats", {})
-    lines += [
-        f"\\renewcommand{{\\DBTotalPlaces}}{{{db_stats.get('n_total_places', '??')}}}",
-        f"\\renewcommand{{\\DBPlacesWithAttrs}}{{{db_stats.get('n_places_with_attrs', '??')}}}",
-        f"\\renewcommand{{\\DBTotalUsers}}{{{db_stats.get('n_total_users', '??')}}}",
-        "",
-    ]
-
-    path = os.path.join(out_dir, "ranking_metrics.tex")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-    print(f"[TEX] LaTeX metrics → {path}")
-
-
-# ── Main ───────────────────────────────────────────────────────────────────────
-
 async def main() -> None:
     print("\n" + "=" * 86)
-    print("  LightGBM Learning-to-Rank — Comprehensive Offline Evaluation")
+    print("  LightGBM Learning-to-Rank — Offline Evaluation")
     print("=" * 86)
 
     model_path     = os.path.join(_SVC_DIR, "models_artifacts", "lightgbm_ranking_model.txt")
     deployed_model = None
     try:
         deployed_model = lgb.Booster(model_file=model_path)
-        print(f"[MODEL] Loaded deployed LightGBM from {model_path}")
+        print(f"[MODEL] Loaded {model_path}")
     except Exception as e:
         print(f"[MODEL] Could not load deployed model: {e}")
 
     all_results: dict = {}
 
-    # ── 1. Real-data evaluation ───────────────────────────────────────────────
-    print("\n[1/4] Real-data evaluation (LOO, deployed model) …")
-    print("      Note: deployed model was trained on full history; LOO here is")
-    print("      for reference only — synthetic CV (step 2) is the primary benchmark.")
+    print("\n[1/4] Real-data evaluation ...")
     try:
         u_act, u_attr, p_attr, p_rat, p_wa, db_stats = await load_from_db()
         res_real, n_real = loo_eval(deployed_model, u_act, u_attr, p_attr, p_rat, p_wa)
         if n_real > 0:
-            print_table(res_real, n_real, "Xếp hạng — Dữ liệu thực (LOO, tham khảo)")
+            print_table(res_real, n_real, "Ranking — Real data (LOO)")
             all_results["real"] = {
                 "n_users": n_real,
                 "db_stats": db_stats,
                 **{m: summarise(r) for m, r in res_real.items()},
             }
         else:
-            print("[INFO] Không đủ người dùng đủ điều kiện — bỏ qua real-data metrics.")
+            print("[INFO] Not enough eligible users.")
             all_results["real"] = {"n_users": 0, "db_stats": db_stats}
     except Exception as exc:
-        print(f"[DB] Không thể kết nối: {exc}")
+        print(f"[DB] Cannot connect: {exc}")
         all_results["real"] = {"n_users": 0, "db_stats": {}}
 
-    # ── 2. Synthetic — 5-fold CV ──────────────────────────────────────────────
-    print(f"\n[2/4] Synthetic {K_FOLDS}-fold CV "
-          f"(500 users × 2 000 places × 12 attrs) …")
+    print(f"\n[2/4] Synthetic {K_FOLDS}-fold CV (500 users x 2000 places x 12 attrs) ...")
     syn_act, syn_u, syn_p, syn_r, syn_pw = build_synthetic(500, 2000, 12)
 
-    agg_ranks, fold_metrics = kfold_eval_synthetic(
-        syn_act, syn_u, syn_p, syn_r, syn_pw
-    )
-    n_syn = len(agg_ranks["LightGBM (đề xuất)"])
+    agg_ranks, fold_metrics = kfold_eval_synthetic(syn_act, syn_u, syn_p, syn_r, syn_pw)
+    n_syn = len(agg_ranks["LightGBM"])
 
-    # Bootstrap CI on aggregated ranks
-    ci_map: dict = {}
-    for method, ranks in agg_ranks.items():
-        ci_map[method] = bootstrap_ci(ranks)
+    ci_map: dict = {m: bootstrap_ci(r) for m, r in agg_ranks.items()}
+    print_table(agg_ranks, n_syn, f"Ranking — Synthetic ({K_FOLDS}-fold CV)", ci_map=ci_map)
 
-    print_table(
-        agg_ranks, n_syn,
-        f"Xếp hạng — Dữ liệu tổng hợp ({K_FOLDS}-fold CV, 95% CI)",
-        ci_map=ci_map,
-    )
-
-    # Per-fold std
-    print("  Per-fold NDCG@5 (LightGBM):", end=" ")
-    fold_ndcg = [fm["LightGBM (đề xuất)"].get("ndcg@5", 0) for fm in fold_metrics]
-    print("  ".join(f"{v:.4f}" for v in fold_ndcg))
+    fold_ndcg = [fm["LightGBM"].get("ndcg@5", 0) for fm in fold_metrics]
     mean_ndcg = sum(fold_ndcg) / len(fold_ndcg)
     std_ndcg  = (sum((v - mean_ndcg) ** 2 for v in fold_ndcg) / len(fold_ndcg)) ** 0.5
+    print(f"  Per-fold NDCG@5: {'  '.join(f'{v:.4f}' for v in fold_ndcg)}")
     print(f"  Mean={mean_ndcg:.4f}  Std={std_ndcg:.4f}")
 
     all_results["synthetic_cv"] = {
         "n_users": n_syn,
         **{m: summarise(r) for m, r in agg_ranks.items()},
-        "LightGBM (đề xuất)_ci": ci_map.get("LightGBM (đề xuất)", {}),
+        "LightGBM_ci": ci_map.get("LightGBM", {}),
         "fold_ndcg5_mean": mean_ndcg,
         "fold_ndcg5_std":  std_ndcg,
     }
-    all_results["synthetic"] = all_results["synthetic_cv"]  # backward compat
 
-    # ── 3. Ablation study ─────────────────────────────────────────────────────
-    print(f"\n[3/4] Feature ablation study ({K_FOLDS}-fold CV per config) …")
+    print(f"\n[3/4] Feature ablation ({K_FOLDS}-fold CV per config) ...")
     abl = ablation_study(syn_act, syn_u, syn_p, syn_r, syn_pw)
     all_results["ablation"] = abl
 
     W = 62
     print(f"\n  {'='*W}")
-    print(f"  Ablation — Đóng góp của từng đặc trưng")
-    print(f"  {'='*W}")
-    print(f"  {'Cấu hình':<32} {'NDCG@5':>8} {'Hit@5':>7} {'MRR':>8}")
+    print(f"  {'Config':<32} {'NDCG@5':>8} {'Hit@5':>7} {'MRR':>8}")
     print(f"  {'-'*58}")
     for cfg_name, m in abl.items():
         print(f"  {cfg_name:<32} {m.get('ndcg@5', 0):>8.4f} "
               f"{m.get('hit@5', 0):>7.4f} {m.get('mrr', 0):>8.4f}")
     print(f"  {'='*W}\n")
 
-    # ── 4. Pool-size sensitivity ──────────────────────────────────────────────
-    print("\n[4/4] Pool-size sensitivity …")
+    print("\n[4/4] Pool-size sensitivity ...")
     pool_res = pool_sensitivity(syn_act, syn_u, syn_p, syn_r, syn_pw)
     all_results["pool_sensitivity"] = pool_res
 
-    # ── Export ────────────────────────────────────────────────────────────────
     json_path = os.path.join(_THIS_DIR, "ranking_results.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False, default=str)
-    print(f"\n[OUT] JSON  → {json_path}")
-
-    write_latex_metrics(all_results, _THIS_DIR)
+    print(f"\n[OUT] {json_path}")
 
 
 if __name__ == "__main__":
