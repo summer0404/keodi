@@ -6,6 +6,15 @@ Part A  : 30-review golden set with manually defined ground truth.
                    Score Regression (MAE / RMSE)
 Part B  : Pearson correlation — average place sentiment score vs. Google star rating.
 
+Score convention (same as production system):
+  All attributes: score proportional to the attribute's literal meaning.
+  Examples:
+    NOISE_INTENSITY  : +1.0 = very noisy       -1.0 = very quiet
+    EXPENSIVENESS    : +1.0 = very expensive    -1.0 = very cheap
+    SERVICE_QUALITY  : +1.0 = excellent service -1.0 = terrible service
+    DELICIOUSNESS    : +1.0 = very delicious    -1.0 = not delicious at all
+    RESTROOM_HYGIENE : +1.0 = very clean        -1.0 = very dirty
+
 Run from intelligence-service/ :
     python evaluation/evaluate_sentiment.py
 """
@@ -23,12 +32,15 @@ load_dotenv(os.path.join(_SVC_DIR, ".env"))
 import asyncio, json, math, re
 from collections import defaultdict
 
+from app.prompts.prompt import Prompts
+
+_PROMPTS = Prompts()
+
 # ─── Golden-set (30 Vietnamese reviews with ground-truth attribute scores) ────
 #
-# Score convention (same as the production system):
-#   +1.0 = very positive / good        −1.0 = very negative / bad
-#   EXPENSIVENESS : +1 = cheap          −1 = expensive
-#   NOISE_INTENSITY: +1 = quiet         −1 = noisy
+# All attributes are drawn from the production system attribute list.
+# Score convention: proportional to the attribute's literal meaning (see module
+# docstring). NOISE_INTENSITY = +1 means very noisy; -1 means very quiet.
 #
 GOLDEN_SET = [
     # ── SERVICE_QUALITY ──────────────────────────────────────────────────────
@@ -44,26 +56,28 @@ GOLDEN_SET = [
      {"SERVICE_QUALITY": -0.8}),
 
     # ── EXPENSIVENESS ─────────────────────────────────────────────────────────
+    # +1 = very expensive, -1 = very cheap
     ("Giá cả rất hợp lý, đáng đồng tiền bỏ ra.",
-     {"EXPENSIVENESS": 0.8}),
+     {"EXPENSIVENESS": -0.5}),
     ("Rẻ bất ngờ mà chất lượng vẫn tốt, chắc chắn sẽ quay lại.",
-     {"EXPENSIVENESS": 0.9}),
-    ("Giá bình dân, phù hợp cho học sinh sinh viên.",
-     {"EXPENSIVENESS": 0.7}),
-    ("Giá hơi đắt so với chất lượng nhận được.",
-     {"EXPENSIVENESS": -0.7}),
-    ("Đắt quá, không xứng đáng với số tiền bỏ ra.",
      {"EXPENSIVENESS": -0.9}),
+    ("Giá bình dân, phù hợp cho học sinh sinh viên.",
+     {"EXPENSIVENESS": -0.7}),
+    ("Giá hơi đắt so với chất lượng nhận được.",
+     {"EXPENSIVENESS": 0.7}),
+    ("Đắt quá, không xứng đáng với số tiền bỏ ra.",
+     {"EXPENSIVENESS": 0.9}),
 
     # ── NOISE_INTENSITY ──────────────────────────────────────────────────────
+    # +1 = very noisy, -1 = very quiet
     ("Không gian yên tĩnh, phù hợp để làm việc hoặc đọc sách.",
-     {"NOISE_INTENSITY": 0.8}),
-    ("Quán rất ít người, yên ả, rất thoải mái.",
-     {"NOISE_INTENSITY": 0.7}),
-    ("Quán ồn ào, nhạc mở to quá, rất khó nói chuyện.",
      {"NOISE_INTENSITY": -0.8}),
-    ("Đông đúc và ồn ĩ, không thể tập trung làm việc được.",
+    ("Quán rất ít người, yên ả, rất thoải mái.",
      {"NOISE_INTENSITY": -0.7}),
+    ("Quán ồn ào, nhạc mở to quá, rất khó nói chuyện.",
+     {"NOISE_INTENSITY": 0.8}),
+    ("Đông đúc và ồn ĩ, không thể tập trung làm việc được.",
+     {"NOISE_INTENSITY": 0.7}),
 
     # ── DINE_IN ──────────────────────────────────────────────────────────────
     ("Không gian ngồi rất thoải mái, chỗ ngồi rộng rãi, view đẹp.",
@@ -71,39 +85,39 @@ GOLDEN_SET = [
     ("Chỗ ngồi chật chội, không thoải mái để ngồi lâu.",
      {"DINE_IN": -0.7}),
 
-    # ── FOOD_QUALITY ─────────────────────────────────────────────────────────
+    # ── DELICIOUSNESS ─────────────────────────────────────────────────────────
     ("Đồ ăn ngon, hương vị đậm đà, rất ấn tượng.",
-     {"FOOD_QUALITY": 0.9}),
+     {"DELICIOUSNESS": 0.9}),
     ("Thức uống rất ngon, sẽ quay lại lần sau.",
-     {"FOOD_QUALITY": 0.8}),
+     {"DELICIOUSNESS": 0.8}),
     ("Đồ ăn nhạt nhẽo, không có gì đặc biệt.",
-     {"FOOD_QUALITY": -0.6}),
+     {"DELICIOUSNESS": -0.6}),
     ("Uống vào không thấy ngon, hoàn toàn thất vọng.",
-     {"FOOD_QUALITY": -0.7}),
+     {"DELICIOUSNESS": -0.7}),
 
-    # ── CLEANLINESS ──────────────────────────────────────────────────────────
+    # ── RESTROOM_HYGIENE ─────────────────────────────────────────────────────
     ("Quán sạch sẽ, thoáng mát, nhà vệ sinh cũng sạch.",
-     {"CLEANLINESS": 0.8}),
+     {"RESTROOM_HYGIENE": 0.8}),
     ("Vệ sinh kém, nhà vệ sinh bẩn và có mùi khó chịu.",
-     {"CLEANLINESS": -0.8}),
+     {"RESTROOM_HYGIENE": -0.8}),
 
     # ── Multi-attribute ──────────────────────────────────────────────────────
     ("Phục vụ tốt, giá hơi cao nhưng đồ ăn khá ngon.",
-     {"SERVICE_QUALITY": 0.7, "EXPENSIVENESS": -0.5, "FOOD_QUALITY": 0.7}),
+     {"SERVICE_QUALITY": 0.7, "EXPENSIVENESS": 0.5, "DELICIOUSNESS": 0.7}),
     ("Yên tĩnh, sạch sẽ, thích hợp làm việc nhóm.",
-     {"NOISE_INTENSITY": 0.7, "CLEANLINESS": 0.7}),
+     {"NOISE_INTENSITY": -0.7, "RESTROOM_HYGIENE": 0.7}),
     ("Giá rẻ nhưng chất lượng phục vụ kém, thái độ không tốt.",
-     {"EXPENSIVENESS": 0.7, "SERVICE_QUALITY": -0.6}),
+     {"EXPENSIVENESS": -0.7, "SERVICE_QUALITY": -0.6}),
     ("Đồ ăn ngon, không gian đẹp nhưng hơi đắt.",
-     {"FOOD_QUALITY": 0.8, "EXPENSIVENESS": -0.6}),
+     {"DELICIOUSNESS": 0.8, "EXPENSIVENESS": 0.6}),
     ("Nhân viên thân thiện, quán sạch sẽ, giá phải chăng.",
-     {"SERVICE_QUALITY": 0.7, "CLEANLINESS": 0.7, "EXPENSIVENESS": 0.5}),
+     {"SERVICE_QUALITY": 0.7, "RESTROOM_HYGIENE": 0.7, "EXPENSIVENESS": -0.5}),
     ("Ồn ào quá, phục vụ cũng không được tốt.",
-     {"NOISE_INTENSITY": -0.7, "SERVICE_QUALITY": -0.5}),
+     {"NOISE_INTENSITY": 0.7, "SERVICE_QUALITY": -0.5}),
     ("Không gian ấm cúng, trang trí đẹp, thích hợp cho các buổi hẹn.",
      {"DINE_IN": 0.8}),
     ("Quán sạch, nhân viên niềm nở, nhưng giá đắt và đồ ăn bình thường.",
-     {"CLEANLINESS": 0.7, "SERVICE_QUALITY": 0.6, "EXPENSIVENESS": -0.7, "FOOD_QUALITY": -0.3}),
+     {"RESTROOM_HYGIENE": 0.7, "SERVICE_QUALITY": 0.6, "EXPENSIVENESS": 0.7, "DELICIOUSNESS": -0.3}),
 ]
 
 # ─── LLM helpers ──────────────────────────────────────────────────────────────
@@ -136,27 +150,10 @@ async def call_groq(review: str, attributes: list[str]) -> dict:
     temp   = float(os.environ.get("GROQ_TEMPERATURE", "0.1"))
     max_t  = int(os.environ.get("GROQ_MAX_TOKENS",   "1024"))
 
-    prompt = f"""You are an expert Review Analysis System.
-
-[TASK]
-Analyze the review and extract sentiment scores for specific attributes.
-
-[ALLOWED ATTRIBUTES]
-{json.dumps(attributes)}
-
-[RULES]
-1. Score Range: Float from -1.0 (Very Negative/Bad) to 1.0 (Very Positive/Good).
-2. If an attribute is NOT mentioned, OMIT it.
-3. Output strictly in JSON format: {{"ATTRIBUTE_NAME": score, ...}}
-4. Context Inference: "đắt" -> EXPENSIVENESS: -0.8; "rẻ" -> EXPENSIVENESS: 0.8
-5. No explanation, thinking or additional text.
-
-[EXAMPLE]
-Input: "Quán phục vụ khá nhanh, nhân viên thân thiện. Không gian yên tĩnh, phù hợp ngồi ăn tại chỗ. Giá hơi đắt so với mặt bằng chung."
-Output: {{"SERVICE_QUALITY": 0.8, "NOISE_INTENSITY": 0.6, "DINE_IN": 0.7, "EXPENSIVENESS": -0.8}}
-
-[INPUT]
-Input: {review}"""
+    prompt = _PROMPTS.SENTIMENT_ANALYSIS.format(
+        attributes=json.dumps(attributes),
+        review=review,
+    )
 
     resp = await client.chat.completions.create(
         model=model,
@@ -280,7 +277,7 @@ def print_per_attr(per_attr: dict) -> None:
     print(f"{'='*W}")
     print(f"  Sentiment — Theo từng thuộc tính")
     print(f"{'='*W}")
-    print(f"  {'Thuộc tính':<22} {'P':>7} {'R':>7} {'F1':>7} {'MAE':>8}")
+    print(f"  {'Thuộc tính':<26} {'P':>7} {'R':>7} {'F1':>7} {'MAE':>8}")
     print(f"  {'-'*58}")
     rows = []
     for a, d in per_attr.items():
@@ -293,7 +290,7 @@ def print_per_attr(per_attr: dict) -> None:
     rows.sort(key=lambda x: x[3], reverse=True)
     for a, p, r, f1, mae in rows:
         mae_s = f"{mae:.4f}" if not math.isnan(mae) else "   —"
-        print(f"  {a:<22} {p:>7.4f} {r:>7.4f} {f1:>7.4f} {mae_s:>8}")
+        print(f"  {a:<26} {p:>7.4f} {r:>7.4f} {f1:>7.4f} {mae_s:>8}")
     print(f"{'='*W}\n")
 
 
@@ -370,11 +367,21 @@ async def main() -> None:
         print(f"[DB] {len(attributes)} thuộc tính: {attributes}")
     except Exception as exc:
         attributes = [
-            "SERVICE_QUALITY", "EXPENSIVENESS", "NOISE_INTENSITY",
-            "DINE_IN", "FOOD_QUALITY", "CLEANLINESS",
-            "ATMOSPHERE", "PARKING", "WIFI",
+            "TAKEAWAY", "DELIVERY", "INTERNET_CONNECTIVITY", "PET_FRIENDLINESS",
+            "VEGETARIAN_VARIETY", "SMOKING_ALLOWANCE", "RESTROOM_HYGIENE",
+            "WHEELCHAIR_ACCESSIBILITY", "LATE_NIGHT_AVAILABILITY", "RESERVATION_NECESSITY",
+            "DINE_IN", "NOISE_INTENSITY", "GROUP_SUITABILITY", "WORK_STUDY",
+            "ROMANTIC", "PHOTOGENIC", "SEATING_CAPACITY", "POWER_OUTLET_AVAILABILITY",
+            "EVENT_SUITABILITY", "ENTERTAINMENT_VARIETY", "MUSIC_ATMOSPHERE",
+            "EXPENSIVENESS", "CHILD_FRIENDLINESS", "PARKING_ACCESSIBILITY",
+            "PAYMENT_CONVENIENCE", "ALCOHOL_VARIETY", "DRESS_CODE_STRICTNESS",
+            "CUISINE_AUTHENTICITY", "DRIVE_THROUGH_EFFICIENCY", "HAPPY_HOUR_VALUE",
+            "PRIVACY", "SERVICE_QUALITY", "SPORTS_BROADCASTING", "SCENIC_VIEW",
+            "SAFETY", "LOYALTY_PROGRAM", "DIETARY_ACCOMMODATION", "SPACIOUSNESS",
+            "OUTDOOR_SPACE", "CROWD_DENSITY", "BOARD_GAME", "FREE_PARKING_LOT",
+            "DELICIOUSNESS",
         ]
-        print(f"[DB] Không thể kết nối ({exc}) — dùng danh sách dự phòng")
+        print(f"[DB] Không thể kết nối ({exc}) — dùng danh sách dự phòng ({len(attributes)} thuộc tính)")
 
     valid_attrs = set(attributes)
 

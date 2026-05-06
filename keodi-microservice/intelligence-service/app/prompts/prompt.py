@@ -47,7 +47,7 @@ class Prompts(BasePromptTemplate):
 
     [EXAMPLE]
     Input: "Quán phục vụ khá nhanh, nhân viên thân thiện. Không gian yên tĩnh, phù hợp ngồi ăn tại chỗ. Giá hơi đắt so với mặt bằng chung."
-    Output: {{"SERVICE_QUALITY": 0.8, "NOISE_INTENSITY": 0.6, "DINE_IN": 0.7, "EXPENSIVENESS": -0.8}}
+    Output: {{"SERVICE_QUALITY": 0.8, "NOISE_INTENSITY": -0.6, "DINE_IN": 0.7, "EXPENSIVENESS": -0.8}}
 
     [INPUT]
     Input: {review}

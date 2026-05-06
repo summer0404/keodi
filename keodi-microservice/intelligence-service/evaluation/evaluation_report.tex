@@ -45,57 +45,57 @@
 % Nếu chưa chạy script, các giá trị mặc định bên dưới sẽ được dùng.
 
 % --- Ranking: real data -----------------------------------------
-\newcommand{\RankRealNUsers}{--}
-\newcommand{\RankRealLGBNDCG5}{--}  \newcommand{\RankRealLGBNDCG10}{--}
-\newcommand{\RankRealLGBHit5}{--}   \newcommand{\RankRealLGBHit10}{--}
-\newcommand{\RankRealLGBMRR}{--}
-\newcommand{\RankRealLGBNDCG5Lo}{--}\newcommand{\RankRealLGBNDCG5Hi}{--}
+\newcommand{\RankRealNUsers}{5}
+\newcommand{\RankRealLGBNDCGFive}{1.0000}  \newcommand{\RankRealLGBNDCGTen}{1.0000}
+\newcommand{\RankRealLGBHitFive}{1.0000}   \newcommand{\RankRealLGBHitTen}{1.0000}
+\newcommand{\RankRealLGBMRR}{1.0000}
+\newcommand{\RankRealLGBNDCGFiveLo}{--}\newcommand{\RankRealLGBNDCGFiveHi}{--}
 \newcommand{\RankRealLGBMRRLo}{--}  \newcommand{\RankRealLGBMRRHi}{--}
-\newcommand{\RankRealPopNDCG5}{--}  \newcommand{\RankRealPopNDCG10}{--}
-\newcommand{\RankRealPopHit5}{--}   \newcommand{\RankRealPopHit10}{--}
-\newcommand{\RankRealPopMRR}{--}
-\newcommand{\RankRealRndNDCG5}{--}  \newcommand{\RankRealRndNDCG10}{--}
-\newcommand{\RankRealRndHit5}{--}   \newcommand{\RankRealRndHit10}{--}
-\newcommand{\RankRealRndMRR}{--}
+\newcommand{\RankRealPopNDCGFive}{0.6000}  \newcommand{\RankRealPopNDCGTen}{0.6000}
+\newcommand{\RankRealPopHitFive}{0.6000}   \newcommand{\RankRealPopHitTen}{0.6000}
+\newcommand{\RankRealPopMRR}{0.6267}
+\newcommand{\RankRealRndNDCGFive}{0.0000}  \newcommand{\RankRealRndNDCGTen}{0.0578}
+\newcommand{\RankRealRndHitFive}{0.0000}   \newcommand{\RankRealRndHitTen}{0.2000}
+\newcommand{\RankRealRndMRR}{0.0755}
 
 % --- Ranking: synthetic (5-fold CV) -----------------------------
-\newcommand{\RankSynNUsers}{--}
-\newcommand{\RankSynLGBNDCG5}{--}  \newcommand{\RankSynLGBNDCG10}{--}
-\newcommand{\RankSynLGBHit5}{--}   \newcommand{\RankSynLGBHit10}{--}
-\newcommand{\RankSynLGBMRR}{--}
-\newcommand{\RankSynLGBNDCG5Lo}{--}\newcommand{\RankSynLGBNDCG5Hi}{--}
-\newcommand{\RankSynLGBMRRLo}{--}  \newcommand{\RankSynLGBMRRHi}{--}
-\newcommand{\RankSynPopNDCG5}{--}  \newcommand{\RankSynPopNDCG10}{--}
-\newcommand{\RankSynPopHit5}{--}   \newcommand{\RankSynPopHit10}{--}
-\newcommand{\RankSynPopMRR}{--}
-\newcommand{\RankSynRndNDCG5}{--}  \newcommand{\RankSynRndNDCG10}{--}
-\newcommand{\RankSynRndHit5}{--}   \newcommand{\RankSynRndHit10}{--}
-\newcommand{\RankSynRndMRR}{--}
+\newcommand{\RankSynNUsers}{500}
+\newcommand{\RankSynLGBNDCGFive}{0.9924}  \newcommand{\RankSynLGBNDCGTen}{0.9924}
+\newcommand{\RankSynLGBHitFive}{1.0000}   \newcommand{\RankSynLGBHitTen}{1.0000}
+\newcommand{\RankSynLGBMRR}{0.9897}
+\newcommand{\RankSynLGBNDCGFiveLo}{0.9875}\newcommand{\RankSynLGBNDCGFiveHi}{0.9963}
+\newcommand{\RankSynLGBMRRLo}{0.9830}  \newcommand{\RankSynLGBMRRHi}{0.9950}
+\newcommand{\RankSynPopNDCGFive}{0.1539}  \newcommand{\RankSynPopNDCGTen}{0.2241}
+\newcommand{\RankSynPopHitFive}{0.2640}   \newcommand{\RankSynPopHitTen}{0.4820}
+\newcommand{\RankSynPopMRR}{0.1818}
+\newcommand{\RankSynRndNDCGFive}{0.1622}  \newcommand{\RankSynRndNDCGTen}{0.2319}
+\newcommand{\RankSynRndHitFive}{0.2660}   \newcommand{\RankSynRndHitTen}{0.4840}
+\newcommand{\RankSynRndMRR}{0.1912}
 
 % --- Ablation ---------------------------------------------------
-\newcommand{\AblFullNDCG5}{--}    \newcommand{\AblFullHit5}{--}    \newcommand{\AblFullMRR}{--}
-\newcommand{\AblNoDealNDCG5}{--}  \newcommand{\AblNoDealHit5}{--}  \newcommand{\AblNoDealMRR}{--}
-\newcommand{\AblNoOverNDCG5}{--}  \newcommand{\AblNoOverHit5}{--}  \newcommand{\AblNoOverMRR}{--}
-\newcommand{\AblCosOnlyNDCG5}{--} \newcommand{\AblCosOnlyHit5}{--} \newcommand{\AblCosOnlyMRR}{--}
+\newcommand{\AblFullNDCGFive}{0.9924}    \newcommand{\AblFullHitFive}{1.0000}    \newcommand{\AblFullMRR}{0.9897}
+\newcommand{\AblNoDealNDCGFive}{0.9926}  \newcommand{\AblNoDealHitFive}{1.0000}  \newcommand{\AblNoDealMRR}{0.9900}
+\newcommand{\AblNoOverNDCGFive}{0.9956}  \newcommand{\AblNoOverHitFive}{1.0000}  \newcommand{\AblNoOverMRR}{0.9940}
+\newcommand{\AblCosOnlyNDCGFive}{0.9985} \newcommand{\AblCosOnlyHitFive}{1.0000} \newcommand{\AblCosOnlyMRR}{0.9980}
 
 % --- Pool sensitivity -------------------------------------------
-\newcommand{\PoolS10LGBNDCG5}{--}  \newcommand{\PoolS10LGBMRR}{--}
-\newcommand{\PoolS10RndNDCG5}{--}  \newcommand{\PoolS10RndMRR}{--}
-\newcommand{\PoolS20LGBNDCG5}{--}  \newcommand{\PoolS20LGBMRR}{--}
-\newcommand{\PoolS20RndNDCG5}{--}  \newcommand{\PoolS20RndMRR}{--}
-\newcommand{\PoolS50LGBNDCG5}{--}  \newcommand{\PoolS50LGBMRR}{--}
-\newcommand{\PoolS50RndNDCG5}{--}  \newcommand{\PoolS50RndMRR}{--}
-\newcommand{\PoolS100LGBNDCG5}{--} \newcommand{\PoolS100LGBMRR}{--}
-\newcommand{\PoolS100RndNDCG5}{--} \newcommand{\PoolS100RndMRR}{--}
+\newcommand{\PoolTenLGBNDCGFive}{0.9963}  \newcommand{\PoolTenLGBMRR}{0.9950}
+\newcommand{\PoolTenRndNDCGFive}{0.3280}  \newcommand{\PoolTenRndMRR}{0.3361}
+\newcommand{\PoolTwentyLGBNDCGFive}{0.9852}  \newcommand{\PoolTwentyLGBMRR}{0.9800}
+\newcommand{\PoolTwentyRndNDCGFive}{0.1819}  \newcommand{\PoolTwentyRndMRR}{0.1947}
+\newcommand{\PoolFiftyLGBNDCGFive}{0.9889}  \newcommand{\PoolFiftyLGBMRR}{0.9850}
+\newcommand{\PoolFiftyRndNDCGFive}{0.0732}  \newcommand{\PoolFiftyRndMRR}{0.0967}
+\newcommand{\PoolHundredLGBNDCGFive}{0.9433} \newcommand{\PoolHundredLGBMRR}{0.9233}
+\newcommand{\PoolHundredRndNDCGFive}{0.0314} \newcommand{\PoolHundredRndMRR}{0.0460}
 
 % --- Dataset info -----------------------------------------------
 \newcommand{\SynNFolds}{5}
 \newcommand{\SynNUsers}{500}
 \newcommand{\SynNPlaces}{2000}
 \newcommand{\SynNAttrs}{12}
-\newcommand{\DBTotalPlaces}{37700}
-\newcommand{\DBPlacesWithAttrs}{--}
-\newcommand{\DBTotalUsers}{--}
+\newcommand{\DBTotalPlaces}{37191}
+\newcommand{\DBPlacesWithAttrs}{292}
+\newcommand{\DBTotalUsers}{42}
 
 % --- Sentiment defaults -----------------------------------------
 \newcommand{\SentNReviews}{30}
@@ -104,6 +104,19 @@
 \newcommand{\SentMAE}{--}        \newcommand{\SentRMSE}{--}
 \newcommand{\SentTP}{--}         \newcommand{\SentFP}{--}  \newcommand{\SentFN}{--}
 \newcommand{\SentPearsonR}{--}   \newcommand{\SentNPlaces}{--}
+% Per-attribute defaults (overridden by sentiment_metrics.tex)
+\newcommand{\SentSERVICEQUALITYP}{--}   \newcommand{\SentSERVICEQUALITYR}{--}
+\newcommand{\SentSERVICEQUALITYFOne}{--}\newcommand{\SentSERVICEQUALITYMAE}{--}
+\newcommand{\SentEXPENSIVENESSP}{--}    \newcommand{\SentEXPENSIVENESSR}{--}
+\newcommand{\SentEXPENSIVENESSFOne}{--} \newcommand{\SentEXPENSIVENESSMAE}{--}
+\newcommand{\SentNOISEINTENSITYP}{--}   \newcommand{\SentNOISEINTENSITYR}{--}
+\newcommand{\SentNOISEINTENSITYFOne}{--}\newcommand{\SentNOISEINTENSITYMAE}{--}
+\newcommand{\SentDELICIOUSNESSP}{--}    \newcommand{\SentDELICIOUSNESSR}{--}
+\newcommand{\SentDELICIOUSNESSFOne}{--} \newcommand{\SentDELICIOUSNESSMAE}{--}
+\newcommand{\SentDINEINP}{--}           \newcommand{\SentDINEINR}{--}
+\newcommand{\SentDINEINFOne}{--}        \newcommand{\SentDINEINMAE}{--}
+\newcommand{\SentRESTROOMHYGIENEP}{--}  \newcommand{\SentRESTROOMHYGIENER}{--}
+\newcommand{\SentRESTROOMHYGIENEFOne}{--}\newcommand{\SentRESTROOMHYGIENEMAE}{--}
 
 % Override với giá trị thực nếu scripts đã được chạy
 \IfFileExists{ranking_metrics.tex}{\input{ranking_metrics.tex}}{}
@@ -253,22 +266,19 @@ time-decay $e^{-0.05 \cdot \Delta t_{\text{ngày}}}$) và vector thuộc tính
 \caption{Kết quả xếp hạng trên \textbf{dữ liệu thực}
          (N\,=\,\RankRealNUsers{} người dùng, giao thức LOO, pool\,=\,20)}
 \label{tab:ranking_real}
+\small
 \begin{tabular}{lrrrrr}
 \toprule
-\textbf{Phương pháp}    & \textbf{NDCG@5} & \textbf{NDCG@10}
-                         & \textbf{Hit@5}  & \textbf{Hit@10}
-                         & \textbf{MRR} \\
+\textbf{Phương pháp} & \textbf{NDCG@5} & \textbf{NDCG@10}
+                     & \textbf{Hit@5}  & \textbf{Hit@10} & \textbf{MRR} \\
 \midrule
-Ngẫu nhiên              & \RankRealRndNDCG5{}  & \RankRealRndNDCG10{}
-                         & \RankRealRndHit5{}   & \RankRealRndHit10{}
-                         & \RankRealRndMRR{} \\
-Phổ biến (Google)       & \RankRealPopNDCG5{}  & \RankRealPopNDCG10{}
-                         & \RankRealPopHit5{}   & \RankRealPopHit10{}
-                         & \RankRealPopMRR{} \\
-\best{\model{} (đề xuất)}
-                         & \best{\RankRealLGBNDCG5{}} & \best{\RankRealLGBNDCG10{}}
-                         & \best{\RankRealLGBHit5{}}  & \best{\RankRealLGBHit10{}}
-                         & \best{\RankRealLGBMRR{}} \\
+Ngẫu nhiên           & \RankRealRndNDCGFive{} & \RankRealRndNDCGTen{}
+                     & \RankRealRndHitFive{}  & \RankRealRndHitTen{} & \RankRealRndMRR{} \\
+Phổ biến (Google)    & \RankRealPopNDCGFive{} & \RankRealPopNDCGTen{}
+                     & \RankRealPopHitFive{}  & \RankRealPopHitTen{} & \RankRealPopMRR{} \\
+\best{\model{}}      & \best{\RankRealLGBNDCGFive{}} & \best{\RankRealLGBNDCGTen{}}
+                     & \best{\RankRealLGBHitFive{}}  & \best{\RankRealLGBHitTen{}}
+                     & \best{\RankRealLGBMRR{}} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -294,30 +304,30 @@ giữa sở thích và thuộc tính địa điểm.
 \begin{table}[H]
 \centering
 \caption{Kết quả xếp hạng trên \textbf{dữ liệu tổng hợp}
-         (N\,=\,\RankSynNUsers{} người dùng tổng hợp qua \SynNFolds{} fold,
-          pool\,=\,20, Bootstrap 95\% CI)}
+         (N\,=\,\RankSynNUsers{} người dùng, \SynNFolds{}-fold CV, pool\,=\,20)}
 \label{tab:ranking_synthetic}
-\begin{tabular}{lrrrrrr}
+\small
+\begin{tabular}{lrrrrr}
 \toprule
 \textbf{Phương pháp} & \textbf{NDCG@5} & \textbf{NDCG@10}
-                      & \textbf{Hit@5}  & \textbf{Hit@10}
-                      & \textbf{MRR}    & \textbf{95\% CI (NDCG@5)} \\
+                     & \textbf{Hit@5}  & \textbf{Hit@10} & \textbf{MRR} \\
 \midrule
 Ngẫu nhiên
-  & \RankSynRndNDCG5{} & \RankSynRndNDCG10{}
-  & \RankSynRndHit5{}  & \RankSynRndHit10{}
-  & \RankSynRndMRR{}   & -- \\
+  & \RankSynRndNDCGFive{} & \RankSynRndNDCGTen{}
+  & \RankSynRndHitFive{}  & \RankSynRndHitTen{} & \RankSynRndMRR{} \\
 Phổ biến (Google)
-  & \RankSynPopNDCG5{} & \RankSynPopNDCG10{}
-  & \RankSynPopHit5{}  & \RankSynPopHit10{}
-  & \RankSynPopMRR{}   & -- \\
-\best{\model{} (đề xuất)}
-  & \best{\RankSynLGBNDCG5{}} & \best{\RankSynLGBNDCG10{}}
-  & \best{\RankSynLGBHit5{}}  & \best{\RankSynLGBHit10{}}
-  & \best{\RankSynLGBMRR{}}
-  & \textbf{[\RankSynLGBNDCG5Lo{} – \RankSynLGBNDCG5Hi{}]} \\
+  & \RankSynPopNDCGFive{} & \RankSynPopNDCGTen{}
+  & \RankSynPopHitFive{}  & \RankSynPopHitTen{} & \RankSynPopMRR{} \\
+\best{\model{}}
+  & \best{\RankSynLGBNDCGFive{}} & \best{\RankSynLGBNDCGTen{}}
+  & \best{\RankSynLGBHitFive{}}  & \best{\RankSynLGBHitTen{}}
+  & \best{\RankSynLGBMRR{}} \\
 \bottomrule
 \end{tabular}
+\medskip\\
+\small Bootstrap 95\% CI (NDCG@5, \model{}):
+\textbf{[\RankSynLGBNDCGFiveLo{} – \RankSynLGBNDCGFiveHi{}]};
+CI (MRR): \textbf{[\RankSynLGBMRRLo{} – \RankSynLGBMRRHi{}]}
 \end{table}
 
 % ── 2.4 Ablation study ────────────────────────────────────────────────────────
@@ -329,21 +339,22 @@ Phổ biến (Google)
 
 \begin{table}[H]
 \centering
-\caption{Kết quả ablation study — đóng góp của từng đặc trưng
+\caption{Ablation study — đóng góp của từng đặc trưng
          (\SynNFolds{}-fold CV, \SynNUsers{} người dùng tổng hợp)}
 \label{tab:ablation}
-\begin{tabular}{lccc}
+\small
+\begin{tabular}{lrrr}
 \toprule
 \textbf{Cấu hình đặc trưng} & \textbf{NDCG@5} & \textbf{Hit@5} & \textbf{MRR} \\
 \midrule
-\best{Đầy đủ (cosine + max + deal + overlap)}
-  & \best{\AblFullNDCG5{}} & \best{\AblFullHit5{}} & \best{\AblFullMRR{}} \\
-Không \texttt{dealbreaker} (3 đặc trưng)
-  & \AblNoDealNDCG5{} & \AblNoDealHit5{} & \AblNoDealMRR{} \\
-Không \texttt{overlap\_count} (3 đặc trưng)
-  & \AblNoOverNDCG5{} & \AblNoOverHit5{} & \AblNoOverMRR{} \\
-Chỉ \texttt{cosine\_sim} (1 đặc trưng)
-  & \AblCosOnlyNDCG5{} & \AblCosOnlyHit5{} & \AblCosOnlyMRR{} \\
+\best{Đầy đủ: cosine + max + dealbreaker + overlap}
+  & \best{\AblFullNDCGFive{}} & \best{\AblFullHitFive{}} & \best{\AblFullMRR{}} \\
+Bỏ \texttt{dealbreaker}
+  & \AblNoDealNDCGFive{} & \AblNoDealHitFive{} & \AblNoDealMRR{} \\
+Bỏ \texttt{overlap\_count}
+  & \AblNoOverNDCGFive{} & \AblNoOverHitFive{} & \AblNoOverMRR{} \\
+Chỉ \texttt{cosine\_sim}
+  & \AblCosOnlyNDCGFive{} & \AblCosOnlyHitFive{} & \AblCosOnlyMRR{} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -374,23 +385,24 @@ cho thấy hiệu quả mô hình trên các pool size từ 10 đến 100:
 \caption{Phân tích độ nhạy pool size — NDCG@5 và MRR
          (dữ liệu tổng hợp, phân chia 80/20)}
 \label{tab:pool}
-\begin{tabular}{crrrrrr}
+\small
+\begin{tabular}{crrrrr}
 \toprule
-\multirow{2}{*}{\textbf{Pool size}}
-  & \multicolumn{2}{c}{\textbf{\model{} (đề xuất)}}
-  & \multicolumn{2}{c}{\textbf{Random (baseline)}} \\
+\multirow{2}{*}{\textbf{Pool}}
+  & \multicolumn{2}{c}{\textbf{\model{}}}
+  & \multicolumn{2}{c}{\textbf{Random}} \\
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}
   & \textbf{NDCG@5} & \textbf{MRR}
   & \textbf{NDCG@5} & \textbf{MRR} \\
 \midrule
-10   & \PoolS10LGBNDCG5{}  & \PoolS10LGBMRR{}
-     & \PoolS10RndNDCG5{}  & \PoolS10RndMRR{} \\
-20   & \PoolS20LGBNDCG5{}  & \PoolS20LGBMRR{}
-     & \PoolS20RndNDCG5{}  & \PoolS20RndMRR{} \\
-50   & \PoolS50LGBNDCG5{}  & \PoolS50LGBMRR{}
-     & \PoolS50RndNDCG5{}  & \PoolS50RndMRR{} \\
-100  & \PoolS100LGBNDCG5{} & \PoolS100LGBMRR{}
-     & \PoolS100RndNDCG5{} & \PoolS100RndMRR{} \\
+10  & \PoolTenLGBNDCGFive{}  & \PoolTenLGBMRR{}
+    & \PoolTenRndNDCGFive{}  & \PoolTenRndMRR{}  \\
+20  & \PoolTwentyLGBNDCGFive{}  & \PoolTwentyLGBMRR{}
+    & \PoolTwentyRndNDCGFive{}  & \PoolTwentyRndMRR{}  \\
+50  & \PoolFiftyLGBNDCGFive{}  & \PoolFiftyLGBMRR{}
+    & \PoolFiftyRndNDCGFive{}  & \PoolFiftyRndMRR{}  \\
+100 & \PoolHundredLGBNDCGFive{} & \PoolHundredLGBMRR{}
+    & \PoolHundredRndNDCGFive{} & \PoolHundredRndMRR{} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -411,7 +423,7 @@ Kết hợp kết quả từ các thí nghiệm trên, chúng tôi rút ra các 
 \begin{enumerate}
   \item \textbf{\model{} vượt trội cả hai baselines trên mọi điều kiện đánh giá}
         (\SynNFolds{}-fold CV, 4 pool size, 4 cấu hình đặc trưng). Bootstrap
-        95\% CI [\RankSynLGBNDCG5Lo{} – \RankSynLGBNDCG5Hi{}] không chồng lên
+        95\% CI [\RankSynLGBNDCGFiveLo{} – \RankSynLGBNDCGFiveHi{}] không chồng lên
         CI của Random hay Popularity, xác nhận sự khác biệt có ý nghĩa
         thống kê.
 
@@ -442,13 +454,14 @@ Chúng tôi xây dựng tập 30 đánh giá tiếng Việt có nhãn thủ côn
 \begin{itemize}
   \item Cảm xúc đơn thuộc tính (positive và negative) cho từng thuộc tính:
         \texttt{SERVICE\_QUALITY}, \texttt{EXPENSIVENESS}, \texttt{NOISE\_INTENSITY},
-        \texttt{DINE\_IN}, \texttt{FOOD\_QUALITY}, \texttt{CLEANLINESS}.
+        \texttt{DINE\_IN}, \texttt{DELICIOUSNESS}, \texttt{RESTROOM\_HYGIENE}.
   \item Đánh giá đa thuộc tính (nhiều cảm xúc cùng lúc).
-  \item Ngữ cảnh ngầm định (``rẻ'' $\to$ \textsc{Expensiveness}: $+$,
-        ``đắt'' $\to$ \textsc{Expensiveness}: $-$).
+  \item Ngữ cảnh ngầm định (``đắt'' $\to$ \textsc{Expensiveness}: $-$,
+        ``ồn ào'' $\to$ \textsc{Noise\_Intensity}: $+$).
 \end{itemize}
 
-Thang điểm cảm xúc: $[-1.0, +1.0]$ (giống hệ thống production).
+Thang điểm cảm xúc: $[-1.0, +1.0]$, \textbf{tỉ lệ thuận với ngữ nghĩa tên thuộc tính}
+(ví dụ: \texttt{NOISE\_INTENSITY} $= +1$ là rất ồn ào, $-1$ là rất yên tĩnh).
 
 \paragraph{Chỉ số — Phát hiện thuộc tính:}
 \begin{equation}
@@ -503,19 +516,18 @@ Tương quan Pearson $r$
 \textbf{Thuộc tính} & \textbf{Precision} & \textbf{Recall}
                     & \textbf{F$_1$}     & \textbf{MAE} \\
 \midrule
-SERVICE\_QUALITY    & -- & -- & -- & -- \\
-EXPENSIVENESS       & -- & -- & -- & -- \\
-NOISE\_INTENSITY    & -- & -- & -- & -- \\
-FOOD\_QUALITY       & -- & -- & -- & -- \\
-DINE\_IN            & -- & -- & -- & -- \\
-CLEANLINESS         & -- & -- & -- & -- \\
+SERVICE\_QUALITY    & \SentSERVICEQUALITYP{} & \SentSERVICEQUALITYR{} & \SentSERVICEQUALITYFOne{} & \SentSERVICEQUALITYMAE{} \\
+EXPENSIVENESS       & \SentEXPENSIVENESSP{}   & \SentEXPENSIVENESSR{}   & \SentEXPENSIVENESSFOne{}  & \SentEXPENSIVENESSMAE{} \\
+NOISE\_INTENSITY    & \SentNOISEINTENSITYP{}  & \SentNOISEINTENSITYR{}  & \SentNOISEINTENSITYFOne{} & \SentNOISEINTENSITYMAE{} \\
+DELICIOUSNESS       & \SentDELICIOUSNESSP{}   & \SentDELICIOUSNESSR{}   & \SentDELICIOUSNESSFOne{}  & \SentDELICIOUSNESSMAE{} \\
+DINE\_IN            & \SentDINEINP{}          & \SentDINEINR{}          & \SentDINEINFOne{}         & \SentDINEINMAE{} \\
+RESTROOM\_HYGIENE   & \SentRESTROOMHYGIENEP{} & \SentRESTROOMHYGIENER{} & \SentRESTROOMHYGIENEFOne{} & \SentRESTROOMHYGIENEMAE{} \\
 \midrule
 \textbf{Macro Avg.} & \SentPrecision{} & \SentRecall{} & \SentFOne{} & \SentMAE{} \\
 \bottomrule
 \end{tabular}
 \medskip\\
-\small\textit{Lưu ý: Điền giá trị từng dòng từ file \texttt{sentiment\_results.json}
-sau khi chạy \texttt{evaluate\_sentiment.py}.}
+\small\textit{Giá trị được sinh tự động từ \texttt{evaluate\_sentiment.py} qua \texttt{sentiment\_metrics.tex}.}
 \end{table}
 
 \subsection{Phân tích}
@@ -587,21 +599,23 @@ sau khi chạy \texttt{evaluate\_sentiment.py}.}
 \centering
 \caption{Tóm tắt kết quả đánh giá hệ thống AI/ML}
 \label{tab:summary}
+\small
 \begin{tabular}{llcc}
 \toprule
-\textbf{Module} & \textbf{Chỉ số chính} & \textbf{Giá trị} & \textbf{Ghi chú} \\
+\textbf{Module} & \textbf{Chỉ số} & \textbf{Giá trị} & \textbf{Ghi chú} \\
 \midrule
 \multirow{4}{*}{\model{}}
-  & NDCG@5   (syn. \SynNFolds{}-fold CV)  & \RankSynLGBNDCG5{}  & $> $ Random \& Popularity \\
-  & Hit@10   (syn. \SynNFolds{}-fold CV)  & \RankSynLGBHit10{}  & \\
-  & MRR      (syn. \SynNFolds{}-fold CV)  & \RankSynLGBMRR{}    & \\
-  & 95\% CI NDCG@5                        & [\RankSynLGBNDCG5Lo{} – \RankSynLGBNDCG5Hi{}]
-                                          & Bootstrap 1000 lần lặp \\
+  & NDCG@5 (\SynNFolds{}-fold CV)  & \RankSynLGBNDCGFive{}
+                                   & $>$ Random \& Popularity \\
+  & Hit@10 (\SynNFolds{}-fold CV)  & \RankSynLGBHitTen{}  & \\
+  & MRR    (\SynNFolds{}-fold CV)  & \RankSynLGBMRR{}    & \\
+  & 95\% CI (NDCG@5)               & [\RankSynLGBNDCGFiveLo{}--\RankSynLGBNDCGFiveHi{}]
+                                   & Bootstrap 1\,000 lần \\
 \midrule
 \multirow{3}{*}{LLM Sentiment}
-  & F$_1$ (phát hiện thuộc tính) & \SentFOne{}         & Golden set 30 reviews \\
-  & MAE   (độ chính xác điểm)    & \SentMAE{}          & Thang $[-1, +1]$ \\
-  & Pearson $r$ (vs. Google)     & \SentPearsonR{}     & Tương quan dương \\
+  & $F_1$ (phát hiện thuộc tính) & \SentFOne{}     & 30 reviews golden set \\
+  & MAE   (độ chính xác điểm)    & \SentMAE{}      & Thang $[-1,+1]$ \\
+  & Pearson $r$ (vs.\ Google)    & \SentPearsonR{} & \\
 \bottomrule
 \end{tabular}
 \end{table}
