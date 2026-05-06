@@ -22,7 +22,10 @@ def create_tools(
     lat: float,
     lng: float,
 ) -> list:
-    @tool
+    @tool(
+        "search_places",
+        description="Search for places near the user's location based on a semantic query.",
+    )
     async def search_places(query: str, radius_km: float = 5.0, limit: int = 5) -> str:
         embedding = await asyncio.to_thread(embedding_service.get_embedding, query)
         if not embedding:
@@ -51,7 +54,14 @@ def create_tools(
             )
         return "\n".join(lines)
 
-    @tool
+    @tool(
+        "search_places_by_category",
+        description=(
+            "Search for places near the user filtered by one or more category names "
+            "(e.g. ['Coffee store', 'Restaurant', 'Dog cafe', 'Sauna club']). "
+            "Use when the user is looking for a specific place type."
+        ),
+    )
     async def search_places_by_category(
         category_names: List[str], radius_km: float = 5.0, limit: int = 5
     ) -> str:
@@ -75,7 +85,13 @@ def create_tools(
             )
         return "\n".join(lines)
 
-    @tool
+    @tool(
+        "search_places_by_text",
+        description=(
+            "Search for places near the user by matching their name or address against a specific "
+            "text keyword (e.g. a brand name, dish name, or exact place name)."
+        ),
+    )
     async def search_places_by_text(
         text: str, radius_km: float = 5.0, limit: int = 5
     ) -> str:
@@ -99,7 +115,14 @@ def create_tools(
             )
         return "\n".join(lines)
 
-    @tool
+    @tool(
+        "search_places_by_attributes",
+        description=(
+            "Search for places near the user that score highly on specific attributes "
+            "(e.g. ['SERVICE_QUALITY', 'NOISE_INTENSITY']). Only pass attribute names that exist in the system. "
+            "Use for quality-based requests like 'quiet', 'good service', 'cheap'."
+        ),
+    )
     async def search_places_by_attributes(
         attribute_names: List[str], radius_km: float = 5.0, limit: int = 5
     ) -> str:
@@ -124,7 +147,10 @@ def create_tools(
             )
         return "\n".join(lines)
 
-    @tool
+    @tool(
+        "get_user_profile",
+        description="Get the user's preference profile including top attributes and categories.",
+    )
     async def get_user_profile(user_id: str) -> str:
         try:
             user_attributes = await user_attribute_repository.get_top_user_attributes(user_id)
@@ -147,7 +173,13 @@ def create_tools(
         profile += "Preferred categories:\n" + ("\n".join(cat_lines) if cat_lines else "  None")
         return profile
 
-    @tool
+    @tool(
+        "get_user_onboarded_categories",
+        description=(
+            "Get the categories the user explicitly selected during onboarding. "
+            "Use this to understand the user's core interests when their interaction history is limited."
+        ),
+    )
     async def get_user_onboarded_categories(user_id: str) -> str:
         try:
             entries = await user_category_repository.get_onboarded_categories(user_id)
@@ -161,7 +193,13 @@ def create_tools(
         names = [e.category.name for e in entries if e.category]
         return "Onboarded categories: " + ", ".join(names)
 
-    @tool
+    @tool(
+        "get_place_details",
+        description=(
+            "Get detailed information about a place including its categories and attributes. "
+            "Use to verify or compare specific candidate places."
+        ),
+    )
     async def get_place_details(place_id: str) -> str:
         try:
             place = await place_repository.get_by_id_with_details(place_id)
@@ -190,7 +228,12 @@ def create_tools(
             f"Attributes: {', '.join(attributes) if attributes else 'None'}"
         )
 
-    @tool
+    @tool(
+        "get_place_reviews",
+        description=(
+            "Get recent user reviews for a specific place to understand its vibe, strengths, and weaknesses."
+        ),
+    )
     async def get_place_reviews(place_id: str, limit: int = 5) -> str:
         try:
             reviews = await review_repository.get_place_reviews(place_id, limit)
@@ -209,7 +252,10 @@ def create_tools(
             )
         return f"Reviews for place {place_id}:\n" + "\n".join(lines)
 
-    @tool
+    @tool(
+        "submit_answer",
+        description="Submit the final answer with a personalized Vietnamese message and recommended place IDs.",
+    )
     def submit_answer(message: str, place_ids: List[str]) -> str:
         return json.dumps({"message": message, "placeIds": place_ids})
 

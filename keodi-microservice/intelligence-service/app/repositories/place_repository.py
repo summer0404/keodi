@@ -84,11 +84,12 @@ class PlaceRepository(BaseRepository):
         distance_sql = self._get_distance_sql(lat, lng)
         sql = f"""
             SELECT p.id, p.name, p.rating, p.full_address, p.feature_image_url,
+                   ts_rank(p.fts_search_vector, plainto_tsquery('simple', '{safe_text}')) AS rank,
                    {distance_sql} AS distance_km
             FROM places p
-            WHERE (p.name ILIKE '%{safe_text}%' OR p.full_address ILIKE '%{safe_text}%')
+            WHERE p.fts_search_vector @@ plainto_tsquery('simple', '{safe_text}')
               AND {distance_sql} < {radius_km}
-            ORDER BY distance_km ASC
+            ORDER BY rank DESC, distance_km ASC
             LIMIT {limit}
         """
         return await self.db.query_raw(sql)

@@ -2,7 +2,6 @@ import json
 import logging
 from typing import Annotated, Optional
 
-import httpx
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, END
@@ -13,6 +12,7 @@ from typing_extensions import TypedDict
 from app.config.settings import get_settings
 from app.prompts.prompt import Prompts
 from app.repositories.place_repository import PlaceRepository
+from app.repositories.review_repository import ReviewRepository
 from app.repositories.user_attribute_repository import UserAttributeRepository
 from app.repositories.user_category_repository import UserCategoryRepository
 from app.services.agent.tools import create_tools
@@ -32,12 +32,14 @@ class AgentService:
     place_repository: Optional[PlaceRepository] = None
     user_attribute_repository: Optional[UserAttributeRepository] = None
     user_category_repository: Optional[UserCategoryRepository] = None
+    review_repository: Optional[ReviewRepository] = None
     embedding_service = None
 
     async def start(self):
         self.place_repository = await PlaceRepository.start()
         self.user_attribute_repository = await UserAttributeRepository.start()
         self.user_category_repository = await UserCategoryRepository.start()
+        self.review_repository = await ReviewRepository.start()
         self.embedding_service = get_embedding_service()
         return self
 
@@ -88,6 +90,7 @@ class AgentService:
             self.place_repository,
             self.user_attribute_repository,
             self.user_category_repository,
+            self.review_repository,
             self.embedding_service,
             latitude,
             longitude,
