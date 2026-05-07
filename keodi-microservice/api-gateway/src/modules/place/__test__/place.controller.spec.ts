@@ -51,7 +51,7 @@ describe('PlaceController (api-gateway)', () => {
 
   describe('getAllAdmin', () => {
     it('delegates to service.getAllAdmin with query', async () => {
-      const query = { page: 1, limit: 10, status: 'PENDING' };
+      const query = { page: 1, limit: 10, status: 'PENDING', sortOrder: 'ASC' } as any;
       const result = { data: [], total: 0 };
       mockPlaceService.getAllAdmin.mockResolvedValue(result);
 
@@ -63,7 +63,7 @@ describe('PlaceController (api-gateway)', () => {
 
     it('propagates error from service.getAllAdmin', async () => {
       mockPlaceService.getAllAdmin.mockRejectedValue(new Error('kafka error'));
-      await expect(controller.getAllAdmin({})).rejects.toThrow('kafka error');
+      await expect(controller.getAllAdmin({} as any)).rejects.toThrow('kafka error');
     });
   });
 

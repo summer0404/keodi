@@ -9,6 +9,7 @@ import {
   FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
+  IntelligenceTopics,
   NotificationInboxTopics,
   OwnerApplicationTopics,
   OwnershipClaimTopics,
@@ -79,6 +80,8 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Approve);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Reject);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Update);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetByIdsWithDistance);
+    this.kafkaClient.subscribeToResponseOf(IntelligenceTopics.AgentSearch);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);
     this.kafkaClient.subscribeToResponseOf(

@@ -1,5 +1,12 @@
 from app.repositories.base_repository import BaseRepository
 class UserAttributeRepository (BaseRepository):
+    async def get_top_user_attributes(self, user_id: str, limit: int = 5) -> list:
+        return await self.db.userattribute.find_many(
+            where={"userId": user_id},
+            order={"score": "desc"},
+            take=limit,
+        )
+
     async def get_user_attribute_by_id(self, user_id: str, attribute_id: str):
         return await self.db.userattribute.find_unique(
             where={
