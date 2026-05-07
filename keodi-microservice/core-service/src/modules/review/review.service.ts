@@ -17,6 +17,7 @@ import { PlaceService } from '../place/place.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { IntelligenceTopics, NotificationTopics } from 'src/shared/constants/topic.constant';
 import { ReviewFlagStatus } from '@prisma/client';
+import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
 
 @Injectable()
 export class ReviewService {
@@ -86,6 +87,17 @@ export class ReviewService {
                     placeName: existingPlace.name,
                     placeId,
                     reviewId,
+                });
+
+                this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
+                    eventId: `review-low-rating-${reviewId}`,
+                    userId: existingPlace.ownerId,
+                    type: NotificationType.REVIEW_LOW_RATING,
+                    title: `New ${rating}-star review on ${existingPlace.name}`,
+                    body: `${existingUser.lastName + ' ' + existingUser.firstName} left a ${rating}-star review. Tap to respond.`,
+                    preferredChannel: NotificationPreferredChannel.BOTH,
+                    data: { placeId, reviewId },
+                    createdAt: new Date().toISOString(),
                 });
             }
 

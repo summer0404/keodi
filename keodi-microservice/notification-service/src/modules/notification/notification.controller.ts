@@ -102,6 +102,6 @@ export class NotificationController {
 
   @EventPattern(NotificationTopics.ReviewLowRating)
   async reviewLowRating(@Payload() data: ReviewLowRatingDto) {
-    return await this.notificationService.sendReviewLowRatingNotification(data);
+    return await this.notificationService.sendReviewLowRatingEmail(data);
   }
 }

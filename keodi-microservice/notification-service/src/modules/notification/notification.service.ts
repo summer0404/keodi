@@ -14,10 +14,6 @@ import { NotificationHelper } from './notification.helper';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.utils';
 import { EmailPurpose } from 'src/shared/enums/email.enum';
 import { PrismaService } from 'src/database/prisma.service';
-import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { NotificationTopics } from 'src/shared/constants/topic.contant';
-import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
-import lowRatingReviewTemplate from 'src/shared/templates/low-rating-review.template';
 
 @Injectable()
 export class NotificationService {
@@ -27,7 +23,6 @@ export class NotificationService {
     private readonly emailService: EmailService,
     private readonly notificationHelper: NotificationHelper,
     private readonly prismaService: PrismaService,
-    private readonly kafkaService: KafkaService,
   ) { }
 
   async sendHtmlEmail(
@@ -148,7 +143,7 @@ export class NotificationService {
     );
   }
 
-  async sendReviewLowRatingNotification(data: ReviewLowRatingDto) {
+  async sendReviewLowRatingEmail(data: ReviewLowRatingDto) {
     const user = await this.prismaService.user.findUnique({
       where: { id: data.to },
       select: { email: true },
@@ -156,27 +151,12 @@ export class NotificationService {
 
     if (!user?.email) {
       this.logger.warn(`User ${data.to} email not found for low rating review notification`);
-    } else {
-      try {
-        await this.emailService.sendTransactionalEmail({
-          to: user.email,
-          subject: this.notificationHelper.getEmailSubject(EmailPurpose.REVIEW_LOW_RATING),
-          htmlContent: lowRatingReviewTemplate(data.reviewerName, data.rating, data.placeName),
-        });
-      } catch (error) {
-        this.logger.error(`Failed to send low rating email to ${user.email}`, error);
-      }
+      return;
     }
 
-    this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
-      eventId: `review-low-rating-${data.reviewId}`,
-      userId: data.to,
-      type: NotificationType.REVIEW_LOW_RATING,
-      title: `New ${data.rating}-star review on ${data.placeName}`,
-      body: `${data.reviewerName} left a ${data.rating}-star review. Tap to respond.`,
-      preferredChannel: NotificationPreferredChannel.BOTH,
-      data: { placeId: data.placeId, reviewId: data.reviewId },
-      createdAt: new Date().toISOString(),
-    });
+    return await this.sendHtmlEmail(
+      { to: user.email, reviewerName: data.reviewerName, rating: data.rating, placeName: data.placeName } as ReviewLowRatingDto,
+      EmailPurpose.REVIEW_LOW_RATING,
+    );
   }
 }

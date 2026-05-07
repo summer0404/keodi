@@ -11,6 +11,7 @@ import {
   OwnershipRevokedDto,
   ReviewFlagApprovedDto,
   ReviewFlagRejectedDto,
+  ReviewLowRatingDto,
   SendOTPDto,
   SendVerifyURLDto,
 } from 'src/shared/dtos/email.dto';
@@ -109,7 +110,12 @@ export class NotificationHelper {
         return reviewFlagRejectedTemplate(
           (data as ReviewFlagRejectedDto).placeName,
         );
-      // REVIEW_LOW_RATING is handled separately in NotificationService (not via getEmailContent)
+      case EmailPurpose.REVIEW_LOW_RATING:
+        return lowRatingReviewTemplate(
+          (data as ReviewLowRatingDto).reviewerName,
+          (data as ReviewLowRatingDto).rating,
+          (data as ReviewLowRatingDto).placeName,
+        );
     }
   };
 }
