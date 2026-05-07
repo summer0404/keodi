@@ -125,6 +125,13 @@ export const AttributeTopics = {
 export const ReviewTopics = {
   Create: 'review.create',
   GetByPlaceId: 'review.get_by_place_id',
+  GetOwnerReviews: 'review.get-owner-reviews',
+  Respond: 'review.respond',
+  UpdateResponse: 'review.update-response',
+  DeleteResponse: 'review.delete-response',
+  Flag: 'review.flag',
+  ApproveFlags: 'review.approve-flags',
+  RejectFlags: 'review.reject-flags',
 } as const;
 
 export const IntelligenceTopics = {

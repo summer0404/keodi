@@ -34,6 +34,25 @@ export class OwnershipClaimDisputedDto extends SendMailDto {
     placeName: string
 }
 
+export class ReviewFlagApprovedDto extends SendMailDto {
+    placeName: string
+    reviewId: string
+}
+
+export class ReviewFlagRejectedDto extends SendMailDto {
+    placeName: string
+    reviewId: string
+}
+
+export class ReviewLowRatingDto {
+    to: string
+    reviewerName: string
+    rating: number
+    placeName: string
+    placeId: string
+    reviewId: string
+}
+
 export type EmailPayloadDto =
     SendOTPDto |
     SendVerifyURLDto |
@@ -43,4 +62,6 @@ export type EmailPayloadDto =
     OwnershipClaimApprovedDto |
     OwnershipClaimRejectedDto |
     OwnershipRevokedDto |
-    OwnershipClaimDisputedDto;
+    OwnershipClaimDisputedDto |
+    ReviewFlagApprovedDto |
+    ReviewFlagRejectedDto;

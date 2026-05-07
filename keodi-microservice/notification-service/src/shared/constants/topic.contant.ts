@@ -12,6 +12,9 @@ export const NotificationTopics = {
   Dispatch: 'notification.dispatch',
   PersistInbox: 'notification.persist-inbox',
   RealtimePush: 'notification.realtime.push',
+  ReviewLowRating: 'notification.review.low-rating',
+  ReviewFlagApproved: 'notification.review.flag-approved',
+  ReviewFlagRejected: 'notification.review.flag-rejected',
 } as const;
 
 export const NotificationInboxTopics = {
