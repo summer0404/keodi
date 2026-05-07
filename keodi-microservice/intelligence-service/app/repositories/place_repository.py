@@ -19,7 +19,7 @@ class PlaceRepository(BaseRepository):
 
     async def get_by_id_with_details(self, place_id: str):
         return await self.db.place.find_unique(
-            where={"id": place_id},
+            where={"id": place_id, "status": "PUBLISHED"},
             include={
                 "placeCategories": {"include": {"category": True}},
                 "placeAttributes": True,
@@ -41,6 +41,7 @@ class PlaceRepository(BaseRepository):
                    1 - (p.embedding_full <=> '{embedding_str}'::vector) AS similarity
             FROM places p
             WHERE p.embedding_full IS NOT NULL
+              AND p.status = 'PUBLISHED'
               AND {distance_sql} < {radius_km}
             ORDER BY similarity DESC
             LIMIT {limit}
@@ -66,6 +67,7 @@ class PlaceRepository(BaseRepository):
             JOIN place_categories pc ON pc.place_id = p.id
             JOIN categories c ON c.id = pc.category_id
             WHERE c.name IN ({in_clause})
+              AND p.status = 'PUBLISHED'
               AND {distance_sql} < {radius_km}
             ORDER BY distance_km ASC
             LIMIT {limit}
@@ -88,6 +90,7 @@ class PlaceRepository(BaseRepository):
                    {distance_sql} AS distance_km
             FROM places p
             WHERE p.fts_search_vector @@ plainto_tsquery('simple', '{safe_text}')
+              AND p.status = 'PUBLISHED'
               AND {distance_sql} < {radius_km}
             ORDER BY rank DESC, distance_km ASC
             LIMIT {limit}
@@ -114,6 +117,7 @@ class PlaceRepository(BaseRepository):
             JOIN place_attributes pa ON pa.place_id = p.id
             JOIN attributes a ON a.id = pa.attribute_id
             WHERE a.name IN ({in_clause})
+              AND p.status = 'PUBLISHED'
               AND pa.score > 0
               AND {distance_sql} < {radius_km}
             GROUP BY p.id, p.name, p.rating, p.full_address, p.feature_image_url, p.latitude, p.longitude
