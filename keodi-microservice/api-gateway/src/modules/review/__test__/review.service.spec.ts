@@ -117,4 +117,112 @@ describe('ReviewService', () => {
       );
     });
   });
+
+  describe('getOwnerReviews', () => {
+    it('sends GetOwnerReviews topic with ownerId and query', async () => {
+      const query = { page: 1, limit: 10, sortOrder: 'desc', rating: 4 } as any;
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ reviews: [] });
+
+      await service.getOwnerReviews('owner-1', query);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.GetOwnerReviews,
+        { ownerId: 'owner-1', ...query },
+      );
+    });
+  });
+
+  describe('respondToReview', () => {
+    it('sends Respond topic with reviewId, ownerId, text', async () => {
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'Response added successfully' });
+
+      await service.respondToReview('rev-1', 'owner-1', { text: 'Thanks!' });
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.Respond,
+        { reviewId: 'rev-1', ownerId: 'owner-1', text: 'Thanks!' },
+      );
+    });
+  });
+
+  describe('updateResponse', () => {
+    it('sends UpdateResponse topic', async () => {
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'Response updated successfully' });
+
+      await service.updateResponse('rev-1', 'owner-1', { text: 'Updated!' });
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.UpdateResponse,
+        { reviewId: 'rev-1', ownerId: 'owner-1', text: 'Updated!' },
+      );
+    });
+  });
+
+  describe('deleteResponse', () => {
+    it('sends DeleteResponse topic', async () => {
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'Response deleted successfully' });
+
+      await service.deleteResponse('rev-1', 'owner-1');
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.DeleteResponse,
+        { reviewId: 'rev-1', ownerId: 'owner-1' },
+      );
+    });
+  });
+
+  describe('flagReview', () => {
+    it('sends Flag topic with reason', async () => {
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'Review flagged successfully' });
+
+      await service.flagReview('rev-1', 'owner-1', { reason: 'SPAM' as any });
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.Flag,
+        { reviewId: 'rev-1', ownerId: 'owner-1', reason: 'SPAM' },
+      );
+    });
+  });
+
+  describe('approveFlags', () => {
+    it('sends ApproveFlags topic', async () => {
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'Flag approved: review is now hidden' });
+
+      await service.approveFlags('rev-1');
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.ApproveFlags,
+        { reviewId: 'rev-1' },
+      );
+    });
+  });
+
+  describe('rejectFlags', () => {
+    it('sends RejectFlags topic', async () => {
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'Flag rejected: review remains visible' });
+
+      await service.rejectFlags('rev-1');
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.RejectFlags,
+        { reviewId: 'rev-1' },
+      );
+    });
+  });
+
+  describe('getAdminReviews', () => {
+    it('sends GetAdminReviews topic with query params', async () => {
+      const query = { page: 1, limit: 10, sortOrder: 'desc', flagStatus: 'PENDING' } as any;
+      const response = { reviews: [], total: 0, page: 1, limit: 10, totalPages: 0 };
+      mockKafkaService.sendWithTimeout.mockResolvedValue(response);
+
+      const result = await service.getAdminReviews(query);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.GetAdminReviews,
+        { ...query },
+      );
+      expect(result).toEqual(response);
+    });
+  });
 });

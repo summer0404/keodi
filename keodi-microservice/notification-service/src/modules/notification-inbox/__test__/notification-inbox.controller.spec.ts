@@ -4,6 +4,7 @@ import { NotificationInboxService } from '../notification-inbox.service';
 import {
   NotificationPreferredChannel,
   NotificationStatus,
+  NotificationType,
 } from 'src/shared/enums/notification.enum';
 
 const buildInboxResult = (overrides: Record<string, any> = {}) => ({
@@ -50,7 +51,7 @@ describe('NotificationInboxController', () => {
       const payload = {
         eventId: 'evt-1',
         userId: 'user-1',
-        type: 'SYSTEM',
+        type: NotificationType.SYSTEM,
         title: 'T',
         body: 'B',
         channel: NotificationPreferredChannel.BOTH,
@@ -67,7 +68,7 @@ describe('NotificationInboxController', () => {
     it('propagates service errors', async () => {
       inboxService.upsertByEventId.mockRejectedValue(new Error('db error'));
 
-      await expect(controller.persist({ eventId: 'x' })).rejects.toThrow('db error');
+      await expect(controller.persist({ eventId: 'x' } as any)).rejects.toThrow('db error');
     });
   });
 

@@ -114,6 +114,14 @@ export class KafkaService implements OnModuleInit {
     // review topic
     this.kafkaClient.subscribeToResponseOf(ReviewTopics.Create);
     this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetByPlaceId);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetOwnerReviews);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.Respond);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.UpdateResponse);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.DeleteResponse);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.Flag);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetAdminReviews);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.ApproveFlags);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.RejectFlags);
 
     //group session topic
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Create);

@@ -9,6 +9,9 @@ import {
   OwnershipClaimDisputedDto,
   OwnershipClaimRejectedDto,
   OwnershipRevokedDto,
+  ReviewFlagApprovedDto,
+  ReviewFlagRejectedDto,
+  ReviewLowRatingDto,
   SendOTPDto,
   SendVerifyURLDto,
 } from 'src/shared/dtos/email.dto';
@@ -23,6 +26,9 @@ import ownershipClaimRejectedTemplate from 'src/shared/templates/ownership-claim
 import ownershipRevokedTemplate from 'src/shared/templates/ownership-revoked.template';
 import resetPasswordTemplate from 'src/shared/templates/reset-password.template';
 import verifyAccountTemplate from 'src/shared/templates/verify-account.template';
+import reviewFlagApprovedTemplate from 'src/shared/templates/review-flag-approved.template';
+import reviewFlagRejectedTemplate from 'src/shared/templates/review-flag-rejected.template';
+import lowRatingReviewTemplate from 'src/shared/templates/low-rating-review.template';
 
 @Injectable()
 export class NotificationHelper {
@@ -55,6 +61,12 @@ export class NotificationHelper {
         return EmailSubject.OWNERSHIP_REVOKED;
       case EmailPurpose.OWNERSHIP_CLAIM_DISPUTED:
         return EmailSubject.OWNERSHIP_CLAIM_DISPUTED;
+      case EmailPurpose.REVIEW_FLAG_APPROVED:
+        return EmailSubject.REVIEW_FLAG_APPROVED;
+      case EmailPurpose.REVIEW_FLAG_REJECTED:
+        return EmailSubject.REVIEW_FLAG_REJECTED;
+      case EmailPurpose.REVIEW_LOW_RATING:
+        return EmailSubject.REVIEW_LOW_RATING;
     }
   };
 
@@ -89,6 +101,20 @@ export class NotificationHelper {
       case EmailPurpose.OWNERSHIP_CLAIM_DISPUTED:
         return ownershipClaimDisputedTemplate(
           (data as OwnershipClaimDisputedDto).placeName,
+        );
+      case EmailPurpose.REVIEW_FLAG_APPROVED:
+        return reviewFlagApprovedTemplate(
+          (data as ReviewFlagApprovedDto).placeName,
+        );
+      case EmailPurpose.REVIEW_FLAG_REJECTED:
+        return reviewFlagRejectedTemplate(
+          (data as ReviewFlagRejectedDto).placeName,
+        );
+      case EmailPurpose.REVIEW_LOW_RATING:
+        return lowRatingReviewTemplate(
+          (data as ReviewLowRatingDto).reviewerName,
+          (data as ReviewLowRatingDto).rating,
+          (data as ReviewLowRatingDto).placeName,
         );
     }
   };

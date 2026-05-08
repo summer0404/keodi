@@ -9,6 +9,9 @@ import {
   OwnershipClaimDisputedDto,
   OwnershipClaimRejectedDto,
   OwnershipRevokedDto,
+  ReviewFlagApprovedDto,
+  ReviewFlagRejectedDto,
+  ReviewLowRatingDto,
   SendOTPDto,
   SendVerifyURLDto,
 } from 'src/shared/dtos/email.dto';
@@ -85,5 +88,20 @@ export class NotificationController {
   @EventPattern(NotificationTopics.OwnershipClaimDisputed)
   async ownershipClaimDisputed(@Payload() data: OwnershipClaimDisputedDto) {
     return await this.notificationService.sendOwnershipClaimDisputedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.ReviewFlagApproved)
+  async reviewFlagApproved(@Payload() data: ReviewFlagApprovedDto) {
+    return await this.notificationService.sendReviewFlagApprovedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.ReviewFlagRejected)
+  async reviewFlagRejected(@Payload() data: ReviewFlagRejectedDto) {
+    return await this.notificationService.sendReviewFlagRejectedEmail(data);
+  }
+
+  @EventPattern(NotificationTopics.ReviewLowRating)
+  async reviewLowRating(@Payload() data: ReviewLowRatingDto) {
+    return await this.notificationService.sendReviewLowRatingEmail(data);
   }
 }

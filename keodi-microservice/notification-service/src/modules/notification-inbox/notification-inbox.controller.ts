@@ -4,6 +4,7 @@ import {
   NotificationInboxTopics,
   NotificationTopics,
 } from 'src/shared/constants/topic.contant';
+import { GetInboxPayload, MarkAsReadPayload, PersistInboxEvent, UserIdPayload } from 'src/shared/interfaces/notification.interface';
 import { NotificationInboxService } from './notification-inbox.service';
 
 @Controller()
@@ -11,37 +12,27 @@ export class NotificationInboxController {
   constructor(private readonly inboxService: NotificationInboxService) {}
 
   @EventPattern(NotificationTopics.PersistInbox)
-  async persist(@Payload() payload: any) {
+  async persist(@Payload() payload: PersistInboxEvent) {
     return this.inboxService.upsertByEventId(payload);
   }
 
   @MessagePattern(NotificationInboxTopics.GetInbox)
-  async getInbox(
-    @Payload()
-    payload: {
-      userId: string;
-      page: number;
-      limit: number;
-      unreadOnly?: boolean;
-    },
-  ) {
+  async getInbox(@Payload() payload: GetInboxPayload) {
     return this.inboxService.getByUserId(payload);
   }
 
   @MessagePattern(NotificationInboxTopics.MarkAsRead)
-  async markAsRead(
-    @Payload() payload: { userId: string; notificationId: string },
-  ) {
+  async markAsRead(@Payload() payload: MarkAsReadPayload) {
     return this.inboxService.markAsRead(payload);
   }
 
   @MessagePattern(NotificationInboxTopics.MarkAllAsRead)
-  async markAllAsRead(@Payload() payload: { userId: string }) {
+  async markAllAsRead(@Payload() payload: UserIdPayload) {
     return this.inboxService.markAllAsRead(payload);
   }
 
   @MessagePattern(NotificationInboxTopics.GetUnreadCount)
-  async getUnreadCount(@Payload() payload: { userId: string }) {
+  async getUnreadCount(@Payload() payload: UserIdPayload) {
     return this.inboxService.getUnreadCount(payload);
   }
 }

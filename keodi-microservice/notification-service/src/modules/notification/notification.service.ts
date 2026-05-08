@@ -1,5 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EmailPayloadDto, OwnershipClaimApprovedDto, OwnershipClaimDisputedDto, OwnershipClaimRejectedDto, OwnershipRevokedDto } from 'src/shared/dtos/email.dto';
+import {
+  EmailPayloadDto,
+  OwnershipClaimApprovedDto,
+  OwnershipClaimDisputedDto,
+  OwnershipClaimRejectedDto,
+  OwnershipRevokedDto,
+  ReviewFlagApprovedDto,
+  ReviewFlagRejectedDto,
+  ReviewLowRatingDto,
+} from 'src/shared/dtos/email.dto';
 import { EmailService } from 'src/providers/email/email.service';
 import { NotificationHelper } from './notification.helper';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.utils';
@@ -97,6 +106,57 @@ export class NotificationService {
     return await this.sendHtmlEmail(
       { to: user.email, placeName: data.placeName } as OwnershipClaimDisputedDto,
       EmailPurpose.OWNERSHIP_CLAIM_DISPUTED,
+    );
+  }
+
+  async sendReviewFlagApprovedEmail(data: ReviewFlagApprovedDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: data.to },
+      select: { email: true },
+    });
+
+    if (!user?.email) {
+      this.logger.warn(`User ${data.to} email not found for review flag approved notification`);
+      return;
+    }
+
+    return await this.sendHtmlEmail(
+      { to: user.email, placeName: data.placeName, reviewId: data.reviewId } as ReviewFlagApprovedDto,
+      EmailPurpose.REVIEW_FLAG_APPROVED,
+    );
+  }
+
+  async sendReviewFlagRejectedEmail(data: ReviewFlagRejectedDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: data.to },
+      select: { email: true },
+    });
+
+    if (!user?.email) {
+      this.logger.warn(`User ${data.to} email not found for review flag rejected notification`);
+      return;
+    }
+
+    return await this.sendHtmlEmail(
+      { to: user.email, placeName: data.placeName, reviewId: data.reviewId } as ReviewFlagRejectedDto,
+      EmailPurpose.REVIEW_FLAG_REJECTED,
+    );
+  }
+
+  async sendReviewLowRatingEmail(data: ReviewLowRatingDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: data.to },
+      select: { email: true },
+    });
+
+    if (!user?.email) {
+      this.logger.warn(`User ${data.to} email not found for low rating review notification`);
+      return;
+    }
+
+    return await this.sendHtmlEmail(
+      { to: user.email, reviewerName: data.reviewerName, rating: data.rating, placeName: data.placeName } as ReviewLowRatingDto,
+      EmailPurpose.REVIEW_LOW_RATING,
     );
   }
 }

@@ -49,6 +49,20 @@ enum OwnerApplicationStatus {
   REJECTED
 }
 
+enum ReviewFlagReason {
+  SPAM
+  FAKE
+  OFFENSIVE
+  IRRELEVANT
+  OTHER
+}
+
+enum ReviewFlagStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id          String    @id
   username    String    @unique @db.VarChar(20)
@@ -317,16 +331,24 @@ model UserAction {
 }
 
 model Review {
-  id                String  @id @default(cuid())
-  placeId           String  @map("place_id")
-  userId            String? @map("user_id")
-  fromGoogle        Boolean @default(false) @map("from_google")
-  reviewerName      String  @map("reviewer_name")
-  reviewerPicture   String? @map("reviewer_picture")
-  rating            Int
-  text              String?
-  originalLanguage  String? @map("original_language")
-  sentimentAnalyzed Boolean @default(false) @map("sentiment_analyzed")
+  id                    String           @id @default(cuid())
+  placeId               String           @map("place_id")
+  userId                String?          @map("user_id")
+  fromGoogle            Boolean          @default(false) @map("from_google")
+  reviewerName          String           @map("reviewer_name")
+  reviewerPicture       String?          @map("reviewer_picture")
+  rating                Int
+  text                  String?
+  originalLanguage      String?          @map("original_language")
+  sentimentAnalyzed     Boolean          @default(false) @map("sentiment_analyzed")
+
+  ownerResponse         String?          @map("owner_response")
+  ownerRespondedAt      DateTime?        @map("owner_responded_at")
+  ownerResponseEditedAt DateTime?        @map("owner_response_edited_at")
+
+  flagReason            ReviewFlagReason? @map("flag_reason")
+  flagStatus            ReviewFlagStatus? @map("flag_status")
+  hidden                Boolean          @default(false)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
