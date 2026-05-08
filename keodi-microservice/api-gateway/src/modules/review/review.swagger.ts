@@ -111,6 +111,32 @@ export function ApiFlagReview() {
   );
 }
 
+export function ApiGetAdminReviews() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get all reviews (admin)',
+      description: 'Admin-only. Returns all reviews across all places with optional filters for flagStatus, placeId, rating, and date range.',
+    }),
+    ApiOkResponse({
+      description: 'Paginated list of reviews',
+      schema: {
+        example: {
+          reviews: [],
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0,
+        },
+      },
+    }),
+    ApiQuery({ name: 'placeId', required: false, description: 'Filter by place ID' }),
+    ApiQuery({ name: 'flagStatus', required: false, enum: ['PENDING', 'APPROVED', 'REJECTED'], description: 'Filter by flag status' }),
+    ApiQuery({ name: 'rating', required: false, type: Number, description: 'Filter by rating (1-5)' }),
+    ApiQuery({ name: 'dateFrom', required: false, description: 'Start date (ISO 8601)' }),
+    ApiQuery({ name: 'dateTo', required: false, description: 'End date (ISO 8601)' }),
+  );
+}
+
 export function ApiApproveReviewFlags() {
   return applyDecorators(
     ApiOperation({

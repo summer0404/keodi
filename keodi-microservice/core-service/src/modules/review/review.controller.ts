@@ -5,6 +5,7 @@ import {
   CreateReviewDto,
   DeleteResponseDto,
   FlagReviewDto,
+  GetAdminReviewsDto,
   GetOwnerReviewsDto,
   GetReviewsDto,
   RespondToReviewDto,
@@ -50,6 +51,11 @@ export class ReviewController {
   @MessagePattern(ReviewTopics.Flag)
   async flagReview(@Payload() data: FlagReviewDto) {
     return await this.reviewService.flagReview(data);
+  }
+
+  @MessagePattern(ReviewTopics.GetAdminReviews)
+  async getAdminReviews(@Payload() data: GetAdminReviewsDto) {
+    return await this.reviewService.getAdminReviews(data);
   }
 
   @MessagePattern(ReviewTopics.ApproveFlags)

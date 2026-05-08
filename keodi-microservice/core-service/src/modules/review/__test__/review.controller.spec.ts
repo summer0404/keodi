@@ -5,6 +5,7 @@ import { ReviewService } from '../review.service';
 const mockReviewService = {
   create: jest.fn(),
   getByPlaceId: jest.fn(),
+  getAdminReviews: jest.fn(),
 };
 
 describe('ReviewController', () => {
@@ -59,6 +60,19 @@ describe('ReviewController', () => {
       mockReviewService.getByPlaceId.mockRejectedValue(new Error('Place not found'));
 
       await expect(controller.getReviewsById(dto)).rejects.toThrow('Place not found');
+    });
+  });
+
+  describe('getAdminReviews', () => {
+    it('delegates to service.getAdminReviews with DTO', async () => {
+      const dto = { page: 1, limit: 10, sortOrder: 'desc', flagStatus: 'PENDING' } as any;
+      const response = { reviews: [], total: 0, page: 1, limit: 10, totalPages: 0 };
+      mockReviewService.getAdminReviews.mockResolvedValue(response);
+
+      const result = await controller.getAdminReviews(dto);
+
+      expect(mockReviewService.getAdminReviews).toHaveBeenCalledWith(dto);
+      expect(result).toEqual(response);
     });
   });
 });

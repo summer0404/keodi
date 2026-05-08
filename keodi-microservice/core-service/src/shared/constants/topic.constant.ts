@@ -121,6 +121,7 @@ export const ReviewTopics = {
   Flag: 'review.flag',
   ApproveFlags: 'review.approve-flags',
   RejectFlags: 'review.reject-flags',
+  GetAdminReviews: 'review.get-admin-reviews',
 } as const;
 
 export const IntelligenceTopics = {

@@ -336,5 +336,72 @@ describe('ReviewService', () => {
       expect(result.message).toBe('Flag rejected: review remains visible');
     });
   });
+
+  // ──────────────────────────────────────────────
+  // getAdminReviews
+  // ──────────────────────────────────────────────
+  describe('getAdminReviews', () => {
+    const baseReview = {
+      id: 'r1', placeId: 'p1', userId: 'u1', fromGoogle: false, reviewerName: 'John',
+      reviewerPicture: null, rating: 3, text: null, hidden: false, flagReason: null,
+      flagStatus: null, ownerResponse: null, ownerRespondedAt: null,
+      createdAt: new Date(), updatedAt: new Date(),
+      place: { id: 'p1', name: 'Place', ownerId: 'o1' },
+    };
+
+    it('returns all reviews without filters', async () => {
+      mockPrismaService.review.findMany.mockResolvedValue([baseReview]);
+      mockPrismaService.review.count.mockResolvedValue(1);
+
+      const result = await service.getAdminReviews({ page: 1, limit: 10, sortOrder: 'desc' } as any) as any;
+
+      expect(mockPrismaService.review.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {}, take: 10, skip: 0 }),
+      );
+      expect(result.reviews).toHaveLength(1);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it('filters by flagStatus when provided', async () => {
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+      mockPrismaService.review.count.mockResolvedValue(0);
+
+      await service.getAdminReviews({ page: 1, limit: 10, sortOrder: 'asc', flagStatus: ReviewFlagStatus.PENDING } as any);
+
+      expect(mockPrismaService.review.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { flagStatus: ReviewFlagStatus.PENDING } }),
+      );
+    });
+
+    it('filters by placeId when provided', async () => {
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+      mockPrismaService.review.count.mockResolvedValue(0);
+
+      await service.getAdminReviews({ page: 1, limit: 10, sortOrder: 'asc', placeId: 'p1' } as any);
+
+      expect(mockPrismaService.review.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { placeId: 'p1' } }),
+      );
+    });
+
+    it('filters by rating and date range when provided', async () => {
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+      mockPrismaService.review.count.mockResolvedValue(0);
+
+      await service.getAdminReviews({
+        page: 1, limit: 10, sortOrder: 'asc',
+        rating: 2, dateFrom: '2024-01-01', dateTo: '2024-12-31',
+      } as any);
+
+      expect(mockPrismaService.review.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            rating: 2,
+            createdAt: { gte: new Date('2024-01-01'), lte: new Date('2024-12-31') },
+          }),
+        }),
+      );
+    });
+  });
 });
 

@@ -5,3 +5,9 @@ export enum ReviewFlagReason {
   IRRELEVANT = 'IRRELEVANT',
   OTHER = 'OTHER',
 }
+
+export enum ReviewFlagStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}

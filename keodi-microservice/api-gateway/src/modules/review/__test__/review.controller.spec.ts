@@ -14,6 +14,7 @@ const mockReviewService = {
   flagReview: jest.fn(),
   approveFlags: jest.fn(),
   rejectFlags: jest.fn(),
+  getAdminReviews: jest.fn(),
 };
 
 const ownerUser = { id: 'owner-1', role: 'OWNER' };
@@ -127,6 +128,19 @@ describe('ReviewController (api-gateway)', () => {
       await controller.rejectFlags('rev-1');
 
       expect(mockReviewService.rejectFlags).toHaveBeenCalledWith('rev-1');
+    });
+  });
+
+  describe('getAdminReviews', () => {
+    it('delegates to reviewService.getAdminReviews with query', async () => {
+      const query = { page: 1, limit: 10, sortOrder: 'desc', flagStatus: 'PENDING' } as any;
+      const response = { reviews: [], total: 0, page: 1, limit: 10, totalPages: 0 };
+      mockReviewService.getAdminReviews.mockResolvedValue(response);
+
+      const result = await controller.getAdminReviews(query);
+
+      expect(mockReviewService.getAdminReviews).toHaveBeenCalledWith(query);
+      expect(result).toEqual(response);
     });
   });
 });

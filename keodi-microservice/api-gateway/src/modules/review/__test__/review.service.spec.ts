@@ -209,4 +209,20 @@ describe('ReviewService', () => {
       );
     });
   });
+
+  describe('getAdminReviews', () => {
+    it('sends GetAdminReviews topic with query params', async () => {
+      const query = { page: 1, limit: 10, sortOrder: 'desc', flagStatus: 'PENDING' } as any;
+      const response = { reviews: [], total: 0, page: 1, limit: 10, totalPages: 0 };
+      mockKafkaService.sendWithTimeout.mockResolvedValue(response);
+
+      const result = await service.getAdminReviews(query);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        ReviewTopics.GetAdminReviews,
+        { ...query },
+      );
+      expect(result).toEqual(response);
+    });
+  });
 });

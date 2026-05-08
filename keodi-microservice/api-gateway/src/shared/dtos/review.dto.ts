@@ -3,7 +3,7 @@ import { IsString, IsNotEmpty, IsNumber, IsOptional, Max, Min, IsEnum, IsBoolean
 import { Type } from "class-transformer";
 import { SortBy } from "../enums/sort.enum";
 import { PaginationQueryDto, PaginationResponseDto } from "./pagination.dto";
-import { ReviewFlagReason } from "../enums/review.enum";
+import { ReviewFlagReason, ReviewFlagStatus } from "../enums/review.enum";
 
 export class CreateReviewDto {
     @ApiProperty({
@@ -122,4 +122,34 @@ export class ReviewDto {
 export class ReviewResponseDto extends PaginationResponseDto {
     @ApiProperty({ type: [ReviewDto], description: 'List of reviews' })
     reviews: ReviewDto[]
+}
+
+export class GetAdminReviewsQueryDto extends PaginationQueryDto {
+    @ApiProperty({ description: 'Filter by place ID', required: false })
+    @IsOptional()
+    @IsString()
+    placeId?: string;
+
+    @ApiProperty({ description: 'Filter by flag status', enum: ReviewFlagStatus, required: false })
+    @IsOptional()
+    @IsEnum(ReviewFlagStatus)
+    flagStatus?: ReviewFlagStatus;
+
+    @ApiProperty({ description: 'Filter by rating (1-5)', minimum: 1, maximum: 5, required: false })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    @Max(5)
+    rating?: number;
+
+    @ApiProperty({ description: 'Start of date range (ISO 8601)', example: '2024-01-01', required: false })
+    @IsOptional()
+    @IsDateString()
+    dateFrom?: string;
+
+    @ApiProperty({ description: 'End of date range (ISO 8601)', example: '2024-12-31', required: false })
+    @IsOptional()
+    @IsDateString()
+    dateTo?: string;
 }

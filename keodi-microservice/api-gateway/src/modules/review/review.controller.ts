@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ReviewService } from './review.service';
-import { CreateReviewDto, FlagReviewBodyDto, GetOwnerReviewsQueryDto, RespondToReviewBodyDto, UpdateReviewResponseBodyDto } from 'src/shared/dtos/review.dto';
+import { CreateReviewDto, FlagReviewBodyDto, GetAdminReviewsQueryDto, GetOwnerReviewsQueryDto, RespondToReviewBodyDto, UpdateReviewResponseBodyDto } from 'src/shared/dtos/review.dto';
 import {
   ApiApproveReviewFlags,
   ApiCreateReview,
   ApiDeleteReviewResponse,
   ApiFlagReview,
+  ApiGetAdminReviews,
   ApiGetOwnerReviews,
   ApiRejectReviewFlags,
   ApiRespondToReview,
@@ -25,6 +26,8 @@ import { Role } from 'src/shared/enums/role.enum';
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
+  @UseGuards(RoleGuard)
+  @Roles(Role.USER)
   @Post()
   @ApiCreateReview()
   async create(
@@ -90,6 +93,14 @@ export class ReviewController {
     @Body() dto: FlagReviewBodyDto,
   ) {
     return this.reviewService.flagReview(reviewId, user.id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin')
+  @ApiGetAdminReviews()
+  async getAdminReviews(@Query() query: GetAdminReviewsQueryDto) {
+    return this.reviewService.getAdminReviews(query);
   }
 
   @UseGuards(JwtAuthGuard, RoleGuard)

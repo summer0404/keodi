@@ -4,6 +4,7 @@ import {
   CreateReviewDto,
   DeleteResponseDto,
   FlagReviewDto,
+  GetAdminReviewsDto,
   GetOwnerReviewsDto,
   GetReviewsDto,
   RespondToReviewDto,
@@ -18,6 +19,7 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { IntelligenceTopics, NotificationTopics } from 'src/shared/constants/topic.constant';
 import { ReviewFlagStatus } from '@prisma/client';
 import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
+import { LOW_RATING_THRESHOLD } from 'src/shared/constants/review.constant';
 
 @Injectable()
 export class ReviewService {
@@ -79,7 +81,7 @@ export class ReviewService {
                 });
             }
 
-            if (rating <= 2 && existingPlace.ownerId) {
+            if (rating <= LOW_RATING_THRESHOLD && existingPlace.ownerId) {
                 this.kafkaService.getClient().emit(NotificationTopics.ReviewLowRating, {
                     to: existingPlace.ownerId,
                     reviewerName: existingUser.lastName + ' ' + existingUser.firstName,
@@ -385,6 +387,58 @@ export class ReviewService {
             });
 
             return { message: 'Review flagged successfully' };
+        } catch (error) {
+            return handleServiceErrorCatching(error);
+        }
+    }
+
+    async getAdminReviews(dto: GetAdminReviewsDto) {
+        const { limit, page, sortOrder, placeId, flagStatus, rating, dateFrom, dateTo } = dto;
+
+        try {
+            const where = {
+                ...(placeId && { placeId }),
+                ...(flagStatus !== undefined && { flagStatus }),
+                ...(rating !== undefined && { rating }),
+                ...(dateFrom || dateTo
+                    ? {
+                        createdAt: {
+                            ...(dateFrom && { gte: new Date(dateFrom) }),
+                            ...(dateTo && { lte: new Date(dateTo) }),
+                        },
+                    }
+                    : {}),
+            };
+
+            const [reviews, total] = await Promise.all([
+                this.prismaService.review.findMany({
+                    where,
+                    select: {
+                        id: true,
+                        placeId: true,
+                        userId: true,
+                        fromGoogle: true,
+                        reviewerName: true,
+                        reviewerPicture: true,
+                        rating: true,
+                        text: true,
+                        hidden: true,
+                        flagReason: true,
+                        flagStatus: true,
+                        ownerResponse: true,
+                        ownerRespondedAt: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        place: { select: { id: true, name: true, ownerId: true } },
+                    },
+                    orderBy: { createdAt: sortOrder },
+                    take: limit,
+                    skip: (page - 1) * limit,
+                }),
+                this.prismaService.review.count({ where }),
+            ]);
+
+            return { reviews, total, page, limit, totalPages: Math.ceil(total / limit) };
         } catch (error) {
             return handleServiceErrorCatching(error);
         }

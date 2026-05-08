@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from './pagination.dto';
 import { SortBy } from '../enums/sort.enum';
-import { ReviewFlagReason } from '@prisma/client';
+import { ReviewFlagReason, ReviewFlagStatus } from '@prisma/client';
 
 export class CreateReviewDto {
   @IsNotEmpty()
@@ -107,4 +107,28 @@ export class FlagReviewDto {
 export class ReviewIdDto {
   @IsNotEmpty()
   reviewId: string;
+}
+
+export class GetAdminReviewsDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  placeId?: string;
+
+  @IsOptional()
+  @IsEnum(ReviewFlagStatus)
+  flagStatus?: ReviewFlagStatus;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  rating?: number;
+
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
 }

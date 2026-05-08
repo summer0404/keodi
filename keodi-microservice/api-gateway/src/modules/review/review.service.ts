@@ -4,6 +4,7 @@ import { ratingActionMap } from 'src/shared/constants/review.constant';
 import {
   CreateReviewDto,
   FlagReviewBodyDto,
+  GetAdminReviewsQueryDto,
   GetOwnerReviewsQueryDto,
   GetReviewsDto,
   RespondToReviewBodyDto,
@@ -48,6 +49,10 @@ export class ReviewService {
 
     async flagReview(reviewId: string, ownerId: string, dto: FlagReviewBodyDto) {
         return await this.kafkaService.sendWithTimeout(ReviewTopics.Flag, { reviewId, ownerId, reason: dto.reason });
+    }
+
+    async getAdminReviews(query: GetAdminReviewsQueryDto) {
+        return await this.kafkaService.sendWithTimeout(ReviewTopics.GetAdminReviews, { ...query });
     }
 
     async approveFlags(reviewId: string) {
