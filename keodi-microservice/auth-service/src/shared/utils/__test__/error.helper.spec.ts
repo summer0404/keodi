@@ -1,5 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { INTERNAL_SERVER_ERROR } from '../../constants/error.constant';
 import { handleServiceErrorCatching } from '../error.helper';
 
 describe('handleServiceErrorCatching', () => {
@@ -11,16 +12,11 @@ describe('handleServiceErrorCatching', () => {
       message: 'some rpc error',
     });
 
-    expect(() => handleServiceErrorCatching(rpcError)).toThrow(RpcException);
     expect(() => handleServiceErrorCatching(rpcError)).toThrow(rpcError);
   });
 
-  it('wraps an unknown error with INTERNAL_SERVER_ERROR when no status present', () => {
-    const unknownError = new Error('unexpected failure');
-
-    expect(() => handleServiceErrorCatching(unknownError)).toThrow(
-      RpcException,
-    );
+  it('wraps an unknown error with INTERNAL_SERVER_ERROR and sanitized message', () => {
+    const unknownError = new Error('Can\'t reach database server at 127.0.0.1:5432');
 
     try {
       handleServiceErrorCatching(unknownError);
@@ -28,49 +24,35 @@ describe('handleServiceErrorCatching', () => {
       expect(e).toBeInstanceOf(RpcException);
       const payload = (e as RpcException).getError() as any;
       expect(payload.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(payload.message).toBe('unexpected failure');
+      expect(payload.message).toBe(INTERNAL_SERVER_ERROR);
     }
   });
 
-  it('wraps an error object that has a status property', () => {
+  it('does not expose the original error message for non-RpcException errors', () => {
+    const internalError = new Error('prisma: invalid field xyz');
+
+    try {
+      handleServiceErrorCatching(internalError);
+    } catch (e) {
+      const payload = (e as RpcException).getError() as any;
+      expect(payload.message).not.toBe(internalError.message);
+      expect(payload.message).toBe(INTERNAL_SERVER_ERROR);
+    }
+  });
+
+  it('always uses INTERNAL_SERVER_ERROR regardless of error.status', () => {
     const errorWithStatus = { status: HttpStatus.FORBIDDEN, message: 'forbidden resource' };
 
     try {
       handleServiceErrorCatching(errorWithStatus);
     } catch (e) {
-      expect(e).toBeInstanceOf(RpcException);
-      const payload = (e as RpcException).getError() as any;
-      expect(payload.status).toBe(HttpStatus.FORBIDDEN);
-      expect(payload.message).toBe('forbidden resource');
-    }
-  });
-
-  it('uses INTERNAL_SERVER_ERROR when wrapped error has no status', () => {
-    const plain = { message: 'no status here' };
-
-    try {
-      handleServiceErrorCatching(plain);
-    } catch (e) {
       const payload = (e as RpcException).getError() as any;
       expect(payload.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  });
-
-  it('handles error where message is the error itself (non-Error object)', () => {
-    const primitive = 'string error';
-
-    try {
-      handleServiceErrorCatching(primitive);
-    } catch (e) {
-      expect(e).toBeInstanceOf(RpcException);
-      const payload = (e as RpcException).getError() as any;
-      expect(payload.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(payload.message).toBe('string error');
+      expect(payload.message).toBe(INTERNAL_SERVER_ERROR);
     }
   });
 
   it('always throws — never returns normally', () => {
-    const rpc = new RpcException({ status: 400, message: 'err' });
-    expect(() => handleServiceErrorCatching(rpc)).toThrow();
+    expect(() => handleServiceErrorCatching(new RpcException({ status: 400, message: 'err' }))).toThrow();
   });
 });
