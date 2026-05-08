@@ -1,15 +1,15 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import {
-  CreateReviewDto,
-  DeleteResponseDto,
-  FlagReviewDto,
-  GetAdminReviewsDto,
-  GetOwnerReviewsDto,
-  GetReviewsDto,
-  RespondToReviewDto,
-  ReviewIdDto,
-  UpdateResponseDto,
+    CreateReviewDto,
+    DeleteResponseDto,
+    FlagReviewDto,
+    GetAdminReviewsDto,
+    GetOwnerReviewsDto,
+    GetReviewsDto,
+    RespondToReviewDto,
+    ReviewIdDto,
+    UpdateResponseDto,
 } from 'src/shared/dtos/review.dto';
 import { PlaceErrorMessages, ReviewErrorMessages, UserErrorMessages } from 'src/shared/constants/error.constant';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
@@ -19,7 +19,7 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { IntelligenceTopics, NotificationTopics } from 'src/shared/constants/topic.constant';
 import { ReviewFlagStatus } from '@prisma/client';
 import { NotificationPreferredChannel, NotificationType } from 'src/shared/enums/notification.enum';
-import { LOW_RATING_THRESHOLD } from 'src/shared/constants/review.constant';
+import { LOW_RATING_THRESHOLD, UNNAMED_REVIEWER } from 'src/shared/constants/review.constant';
 
 @Injectable()
 export class ReviewService {
@@ -55,11 +55,16 @@ export class ReviewService {
                 });
             }
 
+            const { lastName, firstName } = existingUser;
+            const reviewerName = lastName && firstName
+                ? `${lastName} ${firstName}`
+                : lastName || firstName || UNNAMED_REVIEWER;
+
             const reviewId = await this.prismaService.$transaction(async (prisma) => {
                 const review = await prisma.review.create({
                     data: {
                         userId,
-                        reviewerName: existingUser.lastName + ' ' + existingUser.firstName,
+                        reviewerName,
                         reviewerPicture: existingUser.pictureUrl,
                         placeId,
                         rating,
@@ -84,7 +89,7 @@ export class ReviewService {
             if (rating <= LOW_RATING_THRESHOLD && existingPlace.ownerId) {
                 this.kafkaService.getClient().emit(NotificationTopics.ReviewLowRating, {
                     to: existingPlace.ownerId,
-                    reviewerName: existingUser.lastName + ' ' + existingUser.firstName,
+                    reviewerName,
                     rating,
                     placeName: existingPlace.name,
                     placeId,
@@ -96,7 +101,7 @@ export class ReviewService {
                     userId: existingPlace.ownerId,
                     type: NotificationType.REVIEW_LOW_RATING,
                     title: `New ${rating}-star review on ${existingPlace.name}`,
-                    body: `${existingUser.lastName + ' ' + existingUser.firstName} left a ${rating}-star review. Tap to respond.`,
+                    body: `${reviewerName} left a ${rating}-star review. Tap to respond.`,
                     preferredChannel: NotificationPreferredChannel.BOTH,
                     data: { placeId, reviewId },
                     createdAt: new Date().toISOString(),
@@ -152,7 +157,7 @@ export class ReviewService {
                 where: { placeId, hidden: false },
             });
 
-            return { reviews, total, page, limit };
+            return { reviews, total, page, limit, totalPages: Math.ceil(total / limit) };
         } catch (error) {
             return handleServiceErrorCatching(error)
         }

@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString, IsNotEmpty, IsNumber, IsOptional, Max, Min, IsEnum, IsBoolean, IsDateString } from "class-validator";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import { SortBy } from "../enums/sort.enum";
 import { PaginationQueryDto, PaginationResponseDto } from "./pagination.dto";
 import { ReviewFlagReason, ReviewFlagStatus } from "../enums/review.enum";
@@ -71,9 +71,9 @@ export class GetOwnerReviewsQueryDto extends PaginationQueryDto {
     @IsDateString()
     dateTo?: string;
 
-    @ApiProperty({ description: 'Filter by response status. true = responded, false = not responded', required: false })
+    @ApiProperty({ description: 'Filter by response status. true = responded, false = not responded', required: false, type: Boolean })
     @IsOptional()
-    @Type(() => Boolean)
+    @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : undefined)
     @IsBoolean()
     responded?: boolean;
 }
