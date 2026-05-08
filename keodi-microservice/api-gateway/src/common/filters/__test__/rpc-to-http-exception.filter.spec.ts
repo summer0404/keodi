@@ -1,5 +1,6 @@
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { TimeoutError } from 'rxjs';
+import { INTERNAL_SERVER_ERROR } from 'src/shared/constants/error.constant';
 import { ConvertToHttpExceptionFilter } from '../rpc-to-http-exception.filter';
 
 const mockResponse = () => ({
@@ -140,7 +141,7 @@ describe('ConvertToHttpExceptionFilter', () => {
       });
     });
 
-    it('should default to 500 and "Unexpected error" for unknown objects without status/message', () => {
+    it('should return INTERNAL_SERVER_ERROR message for unknown objects without status/message', () => {
       const res = mockResponse();
       const host = mockHost(res);
       const exception = { stack: 'some stack', unrelated: true };
@@ -151,17 +152,17 @@ describe('ConvertToHttpExceptionFilter', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           status: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'Unexpected error',
+          message: INTERNAL_SERVER_ERROR,
         }),
       );
     });
   });
 
   describe('unknown / primitive exceptions', () => {
-    it('should default to 500 for a plain Error without status/response', () => {
+    it('should return INTERNAL_SERVER_ERROR message for plain errors — never expose internal details', () => {
       const res = mockResponse();
       const host = mockHost(res);
-      const exception = new Error('something went wrong');
+      const exception = new Error('Can\'t reach database server at 127.0.0.1:5432');
 
       filter.catch(exception, host);
 
@@ -169,9 +170,21 @@ describe('ConvertToHttpExceptionFilter', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           status: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'something went wrong',
+          message: INTERNAL_SERVER_ERROR,
         }),
       );
+    });
+
+    it('should not expose original error message for status 500 exceptions', () => {
+      const res = mockResponse();
+      const host = mockHost(res);
+      const exception = { status: 500, message: 'prisma error details here' };
+
+      filter.catch(exception, host);
+
+      const jsonCall = res.json.mock.calls[0][0];
+      expect(jsonCall.message).toBe(INTERNAL_SERVER_ERROR);
+      expect(jsonCall.message).not.toBe('prisma error details here');
     });
 
     it('should not include data key when exception.data is absent', () => {
