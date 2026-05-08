@@ -106,6 +106,8 @@ export const GroupSessionTopics = {
   UpdateRecommendationRadius: 'group-session.update-recommendation-radius',
   UpdateRecommendationCategories:
     'group-session.update-recommendation-categories',
+  GetActivities: 'group-session.get-activities',
+  LogRecommendationsRefreshed: 'group-session.log-recommendations-refreshed',
 } as const;
 
 export const SearchTopics = {

@@ -447,6 +447,7 @@ model GroupSession {
   votes                  SessionVote[]
   selectedCategories     GroupSessionCategory[]
   groupSessionCandidates GroupSessionCandidate[]
+  activities             GroupSessionActivity[]
 
   @@map("group_sessions")
 }
@@ -536,6 +537,30 @@ enum ProfileVisibility {
   PUBLIC
   FRIENDS_ONLY
   PRIVATE
+}
+
+enum GroupSessionActivityType {
+  MEMBER_JOINED
+  MEMBER_LEFT
+  CATEGORIES_UPDATED
+  RECOMMENDATIONS_REFRESHED
+  VOTE_FINALIZED
+  SESSION_CLOSED
+}
+
+model GroupSessionActivity {
+  id        String                   @id @default(cuid())
+  sessionId String                   @map("session_id")
+  type      GroupSessionActivityType
+  actorId   String?                  @map("actor_id")
+  actorName String?                  @map("actor_name")
+  metadata  Json?
+  createdAt DateTime                 @default(now()) @map("created_at")
+
+  session GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  @@index([sessionId, createdAt(sort: Desc)])
+  @@map("group_session_activities")
 }
 
 enum SearchRadius {

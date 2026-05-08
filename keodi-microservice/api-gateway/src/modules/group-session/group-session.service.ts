@@ -247,6 +247,20 @@ export class GroupSessionService {
       'MANUAL_REFRESH',
     );
 
+    this.kafkaService.getClient().emit(GroupSessionTopics.LogRecommendationsRefreshed, {
+      sessionId,
+      userId,
+      guestId: groupSessionRecommendationAccessDto?.guestId,
+    });
+
     return { accepted: true };
+  }
+
+  async getActivities(sessionId: string, userId?: string, guestId?: string) {
+    return await this.kafkaService.sendWithTimeout(GroupSessionTopics.GetActivities, {
+      sessionId,
+      userId,
+      guestId,
+    });
   }
 }

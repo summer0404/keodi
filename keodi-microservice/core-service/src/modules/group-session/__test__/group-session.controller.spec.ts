@@ -19,6 +19,8 @@ const mockGroupSessionService = {
   leaveSession: jest.fn(),
   updateRecommendationSearchRadius: jest.fn(),
   updateRecommendationCategories: jest.fn(),
+  getActivities: jest.fn(),
+  logRecommendationsRefreshed: jest.fn(),
 };
 
 describe('GroupSessionController', () => {
@@ -209,6 +211,28 @@ describe('GroupSessionController', () => {
       await controller.updateRecommendationCategories(data);
 
       expect(mockGroupSessionService.updateRecommendationCategories).toHaveBeenCalledWith(data);
+    });
+  });
+
+  describe('getActivities', () => {
+    it('delegates to service.getActivities', async () => {
+      const data = { sessionId: 'sess-1', userId: 'user-1', guestId: undefined };
+      mockGroupSessionService.getActivities.mockResolvedValue({ activities: [] });
+
+      const result = await controller.getActivities(data);
+
+      expect(mockGroupSessionService.getActivities).toHaveBeenCalledWith(data);
+      expect((result as any).activities).toEqual([]);
+    });
+  });
+
+  describe('logRecommendationsRefreshed', () => {
+    it('delegates to service.logRecommendationsRefreshed', async () => {
+      const data = { sessionId: 'sess-1', userId: 'user-1' };
+
+      await controller.logRecommendationsRefreshed(data);
+
+      expect(mockGroupSessionService.logRecommendationsRefreshed).toHaveBeenCalledWith(data);
     });
   });
 });

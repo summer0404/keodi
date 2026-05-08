@@ -55,6 +55,7 @@ import {
   ApiUpdateGroupSessionRecommendationRadius,
   ApiRefreshGroupSessionRecommendations,
   ApiLeaveSession,
+  ApiGetGroupSessionActivities,
   GroupSessionApiTags,
 } from './group-session.swagger';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
@@ -305,5 +306,16 @@ export class GroupSessionController {
       user?.id,
       updateRecommendationCategoriesDto,
     );
+  }
+
+  @Get(':sessionId/activities')
+  @OptionalAuth()
+  @ApiGetGroupSessionActivities()
+  async getActivities(
+    @CurrentUser() user: CurrentUserDto | undefined,
+    @Param('sessionId') sessionId: string,
+    @Query('guestId') guestId?: string,
+  ) {
+    return await this.groupSessionService.getActivities(sessionId, user?.id, guestId);
   }
 }
