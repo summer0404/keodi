@@ -28,18 +28,18 @@ describe('JwtAuthGuard (e2e)', () => {
     mockRedisService.has.mockResolvedValue(false);
   });
 
-  it('1. should return 401 with "Token not provided" when no Authorization header', async () => {
+  it('1. should return 401 with "TOKEN_NOT_PROVIDED" when no Authorization header', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/v1/auth/me')
       .expect(401);
 
     expect(res.body).toMatchObject({
       status: 401,
-      message: 'Token not provided',
+      message: 'TOKEN_NOT_PROVIDED',
     });
   });
 
-  it('2. should return 401 with "Invalid token" when JWT signed with wrong secret', async () => {
+  it('2. should return 401 with "INVALID_TOKEN" when JWT signed with wrong secret', async () => {
     const invalidToken = jwt.sign(TEST_USER_PAYLOAD, 'wrong-secret');
 
     const res = await request(app.getHttpServer())
@@ -49,11 +49,11 @@ describe('JwtAuthGuard (e2e)', () => {
 
     expect(res.body).toMatchObject({
       status: 401,
-      message: 'Invalid token',
+      message: 'INVALID_TOKEN',
     });
   });
 
-  it('3. should return 401 with "Token has expired" when JWT is expired', async () => {
+  it('3. should return 401 with "TOKEN_EXPIRED" when JWT is expired', async () => {
     const expiredToken = signTestToken(TEST_USER_PAYLOAD, { expiresIn: '-1s' });
 
     const res = await request(app.getHttpServer())
@@ -63,7 +63,7 @@ describe('JwtAuthGuard (e2e)', () => {
 
     expect(res.body).toMatchObject({
       status: 401,
-      message: 'Token has expired',
+      message: 'TOKEN_EXPIRED',
     });
   });
 
@@ -83,7 +83,7 @@ describe('JwtAuthGuard (e2e)', () => {
     expect([200, 201]).toContain(res.status);
   });
 
-  it('5. should return 401 with "Token has been revoked" when token is blacklisted', async () => {
+  it('5. should return 401 with "TOKEN_REVOKED" when token is blacklisted', async () => {
     const validToken = signTestToken(TEST_USER_PAYLOAD);
     mockRedisService.has.mockResolvedValue(true);
 
@@ -94,11 +94,11 @@ describe('JwtAuthGuard (e2e)', () => {
 
     expect(res.body).toMatchObject({
       status: 401,
-      message: 'Token has been revoked',
+      message: 'TOKEN_REVOKED',
     });
   });
 
-  it('6. should return 401 when Bearer prefix is missing', async () => {
+  it('6. should return 401 when *** is missing', async () => {
     const validToken = signTestToken(TEST_USER_PAYLOAD);
 
     const res = await request(app.getHttpServer())
@@ -108,7 +108,7 @@ describe('JwtAuthGuard (e2e)', () => {
 
     expect(res.body).toMatchObject({
       status: 401,
-      message: 'Token not provided',
+      message: 'TOKEN_NOT_PROVIDED',
     });
   });
 });
