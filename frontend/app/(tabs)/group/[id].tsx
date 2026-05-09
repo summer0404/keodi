@@ -25,6 +25,10 @@ import {
 } from '@/utils/chat';
 import type { MessageItem } from '@/types/chat';
 
+// Stable fallback references — must be module-level to avoid new array on each render
+const EMPTY_MESSAGES: MessageItem[] = [];
+const EMPTY_USERS: string[] = [];
+
 // ─── Internal render types ─────────────────────────────────────────────────────
 
 type ReceivedMsg = { kind: 'received'; id: string; text: string; senderName?: string };
@@ -410,8 +414,8 @@ export default function ChatScreen() {
     [historyPage],
   );
 
-  const socketMessages = useChatStore((s) => s.messages[conversationId] ?? []);
-  const typingUsers = useChatStore((s) => s.typingUsers[conversationId] ?? []);
+  const socketMessages = useChatStore((s) => s.messages[conversationId]) ?? EMPTY_MESSAGES;
+  const typingUsers = useChatStore((s) => s.typingUsers[conversationId]) ?? EMPTY_USERS;
 
   // Merge history + real-time, deduplicating by id
   const allMessages = useMemo(() => {

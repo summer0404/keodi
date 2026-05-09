@@ -18,7 +18,6 @@ export const chatService = {
     limit?: number;
   }): Promise<CursorPage<ConversationItem>> => {
     const response = await apiClient.get<CursorPage<ConversationItem>>(BASE, { params });
-    console.log('Fetched conversations:', response.data);
     return response.data;
   },
 
