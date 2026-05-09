@@ -26,6 +26,7 @@ export default function ReviewsPage() {
         handleRespond,
         handleDeleteResponse,
         handleFlag,
+        knownPlaces,
     } = useOwnerReviews()
 
     return (
@@ -63,6 +64,7 @@ export default function ReviewsPage() {
                         filters={filters}
                         onChange={setFilter}
                         onReset={resetFilters}
+                        places={knownPlaces}
                     />
                 </Card>
 

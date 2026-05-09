@@ -27,6 +27,9 @@ export function useOwnerReviews() {
     limit: DEFAULT_LIMIT,
     sortOrder: "desc",
   });
+  const [knownPlaces, setKnownPlaces] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +43,14 @@ export function useOwnerReviews() {
     try {
       const result = await getOwnerReviews(query, BASE_URL);
       setData(result);
+      // Accumulate unique places for the filter dropdown
+      setKnownPlaces((prev) => {
+        const map = new Map(prev.map((p) => [p.id, p]));
+        result.reviews.forEach((r) => {
+          if (r.place && !map.has(r.place.id)) map.set(r.place.id, r.place);
+        });
+        return Array.from(map.values());
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load reviews");
     } finally {
@@ -91,6 +102,7 @@ export function useOwnerReviews() {
 
   return {
     reviews: data.reviews,
+    knownPlaces,
     pagination: {
       page: data.page,
       totalPages: data.totalPages,

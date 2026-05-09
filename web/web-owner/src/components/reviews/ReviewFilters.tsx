@@ -18,11 +18,35 @@ interface ReviewFiltersProps {
         value: GetOwnerReviewsQuery[K]
     ) => void
     onReset: () => void
+    places: { id: string; name: string }[]
 }
 
-export function ReviewFilters({ filters, onChange, onReset }: ReviewFiltersProps) {
+export function ReviewFilters({ filters, onChange, onReset, places }: ReviewFiltersProps) {
     return (
         <div className="flex flex-wrap gap-3 items-end">
+            {/* Place */}
+            {places.length > 1 && (
+                <div className="flex flex-col gap-1 min-w-40">
+                    <Label className="text-xs text-neutral-500">Place</Label>
+                    <Select
+                        value={filters.placeId ?? "any"}
+                        onValueChange={(v) => onChange("placeId", v === "any" ? undefined : v)}
+                    >
+                        <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="any">All places</SelectItem>
+                            {places.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                    {p.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
+
             {/* Rating */}
             <div className="flex flex-col gap-1 min-w-27.5">
                 <Label className="text-xs text-neutral-500">Rating</Label>

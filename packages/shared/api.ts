@@ -41,6 +41,7 @@ export type ReviewDto = {
   createdAt: string;
   updatedAt: string;
   images: string[];
+  place: { id: string; name: string };
 };
 
 export type ReviewResponseDto = {
@@ -59,6 +60,7 @@ export type GetOwnerReviewsQuery = {
   dateTo?: string;
   responded?: boolean;
   sortOrder?: "asc" | "desc";
+  placeId?: string;
 };
 
 // ─── Utilities ──────────────────────────────────────────────────────────────

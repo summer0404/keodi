@@ -73,7 +73,12 @@ export function ReviewCard({ review, onRespond, onDeleteResponse, onFlag }: Revi
                             {formatDate(review.createdAt)}
                         </time>
                     </div>
-                    <StarRating rating={review.rating} />
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <StarRating rating={review.rating} />
+                        <span className="text-[11px] text-neutral-400 truncate" title={review.place?.name}>
+                            {review.place?.name}
+                        </span>
+                    </div>
                 </div>
             </div>
 
