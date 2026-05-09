@@ -6,11 +6,13 @@ import {
   AttributeTopics,
   AuthTopics,
   CategoryTopics,
-  ChatTopics,
+  ConversationTopics,
   FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
   IntelligenceTopics,
+  MemberTopics,
+  MessageTopics,
   NotificationInboxTopics,
   OwnerApplicationTopics,
   OwnershipClaimTopics,
@@ -169,16 +171,16 @@ export class KafkaService implements OnModuleInit {
     );
 
     // chat topics
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Conversation.Create);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Conversation.GetById);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Conversation.List);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Conversation.Update);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Message.Send);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Message.List);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Message.Delete);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Message.MarkRead);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Member.Add);
-    this.kafkaClient.subscribeToResponseOf(ChatTopics.Member.Leave);
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.GetById);
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.List);
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.Update);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.Send);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.List);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.Delete);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.MarkRead);
+    this.kafkaClient.subscribeToResponseOf(MemberTopics.Add);
+    this.kafkaClient.subscribeToResponseOf(MemberTopics.Leave);
 
     await this.kafkaClient.connect();
   }

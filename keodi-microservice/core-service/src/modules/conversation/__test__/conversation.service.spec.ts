@@ -16,8 +16,20 @@ const makeConversation = (overrides: Record<string, any> = {}) => ({
   createdAt: new Date(),
   updatedAt: new Date(),
   members: [
-    { id: 'cm-1', conversationId: 'conv-1', userId: 'user-1', joinedAt: new Date(), lastReadAt: null },
-    { id: 'cm-2', conversationId: 'conv-1', userId: 'user-2', joinedAt: new Date(), lastReadAt: null },
+    {
+      id: 'cm-1',
+      conversationId: 'conv-1',
+      userId: 'user-1',
+      joinedAt: new Date(),
+      lastReadAt: null,
+    },
+    {
+      id: 'cm-2',
+      conversationId: 'conv-1',
+      userId: 'user-2',
+      joinedAt: new Date(),
+      lastReadAt: null,
+    },
   ],
   ...overrides,
 });
@@ -89,8 +101,6 @@ describe('ConversationService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  // ── create ──────────────────────────────────────────────────────────────────
-
   describe('create', () => {
     it('DIRECT: returns existing conversation if already found', async () => {
       const existing = makeConversation();
@@ -137,7 +147,10 @@ describe('ConversationService', () => {
     });
 
     it('GROUP with sessionId: returns existing conversation if sessionId matches', async () => {
-      const existing = makeConversation({ type: ConversationType.GROUP, sessionId: 'sess-1' });
+      const existing = makeConversation({
+        type: ConversationType.GROUP,
+        sessionId: 'sess-1',
+      });
       prismaService.conversation.findFirst.mockResolvedValue(existing);
 
       const result = await service.create({
@@ -175,24 +188,28 @@ describe('ConversationService', () => {
     });
   });
 
-  // ── getById ──────────────────────────────────────────────────────────────────
-
   describe('getById', () => {
     it('returns conversation when user is a member', async () => {
       const conv = makeConversation();
       prismaService.conversation.findFirst.mockResolvedValue(conv);
 
-      const result = await service.getById({ conversationId: 'conv-1', userId: 'user-1' });
+      const result = await service.getById({
+        conversationId: 'conv-1',
+        userId: 'user-1',
+      });
 
       expect(prismaService.conversation.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ id: 'conv-1', members: { some: { userId: 'user-1' } } }),
+          where: expect.objectContaining({
+            id: 'conv-1',
+            members: { some: { userId: 'user-1' } },
+          }),
         }),
       );
       expect(result).toBe(conv);
     });
 
-    it('throws CONVERSATION_NOT_FOUND when user is not a member or conversation does not exist', async () => {
+    it('throws CONVERSATION_NOT_FOUND when user is not a member', async () => {
       prismaService.conversation.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -201,11 +218,11 @@ describe('ConversationService', () => {
     });
   });
 
-  // ── list ──────────────────────────────────────────────────────────────────
-
   describe('list', () => {
     it('returns conversations with unreadCount for each', async () => {
-      const conv = makeConversation({ members: [{ userId: 'user-1', lastReadAt: null }] });
+      const conv = makeConversation({
+        members: [{ userId: 'user-1', lastReadAt: null }],
+      });
       prismaService.conversation.findMany.mockResolvedValue([conv]);
       prismaService.message.count.mockResolvedValue(3);
 
@@ -218,7 +235,10 @@ describe('ConversationService', () => {
 
     it('sets nextCursor when there are more items than limit', async () => {
       const conversations = Array.from({ length: 21 }, (_, i) =>
-        makeConversation({ id: `conv-${i}`, members: [{ userId: 'user-1', lastReadAt: null }] }),
+        makeConversation({
+          id: `conv-${i}`,
+          members: [{ userId: 'user-1', lastReadAt: null }],
+        }),
       );
       prismaService.conversation.findMany.mockResolvedValue(conversations);
       prismaService.message.count.mockResolvedValue(0);
@@ -229,8 +249,6 @@ describe('ConversationService', () => {
       expect(result.nextCursor).toBe('conv-19');
     });
   });
-
-  // ── update ──────────────────────────────────────────────────────────────────
 
   describe('update', () => {
     it('updates name and avatarUrl and invalidates Redis cache', async () => {
@@ -245,11 +263,11 @@ describe('ConversationService', () => {
       });
 
       expect(prismaService.conversation.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ name: 'New Name' }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ name: 'New Name' }),
+        }),
       );
-      expect(redisService.del).toHaveBeenCalledWith(
-        expect.stringContaining('conv-1'),
-      );
+      expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
       expect(result).toBe(updatedConv);
     });
 
@@ -262,10 +280,8 @@ describe('ConversationService', () => {
     });
   });
 
-  // ── getMembers ──────────────────────────────────────────────────────────────
-
   describe('getMembers', () => {
-    it('returns cached member IDs from Redis without hitting the DB', async () => {
+    it('returns cached member IDs from Redis without hitting DB', async () => {
       redisService.get.mockResolvedValue(JSON.stringify(['user-1', 'user-2']));
 
       const result = await service.getMembers('conv-1');
@@ -275,7 +291,7 @@ describe('ConversationService', () => {
       expect(result).toEqual(['user-1', 'user-2']);
     });
 
-    it('fetches from DB on cache miss and caches the result', async () => {
+    it('fetches from DB on cache miss and caches result', async () => {
       redisService.get.mockResolvedValue(null);
       prismaService.conversationMember.findMany.mockResolvedValue([
         { userId: 'user-1' },

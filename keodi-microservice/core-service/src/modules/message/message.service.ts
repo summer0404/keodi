@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
-import { FcmService } from 'src/providers/fcm/fcm.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
-import { ChatTopics, DeviceTokenTopics } from 'src/shared/constants/topic.contant';
+import { ChatErrorMessages } from 'src/shared/constants/error.constant';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   DeleteMessagePayloadDto,
@@ -12,6 +12,10 @@ import {
   MarkReadPayloadDto,
   SendMessagePayloadDto,
 } from 'src/shared/dtos/chat.dto';
+import {
+  NotificationPreferredChannel,
+  NotificationType,
+} from 'src/shared/enums/notification.enum';
 import { MessageType } from 'src/shared/enums/chat.enum';
 import { ConversationService } from '../conversation/conversation.service';
 
@@ -21,22 +25,32 @@ export class MessageService {
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
-    private readonly fcmService: FcmService,
     private readonly conversationService: ConversationService,
   ) {}
 
   async send(payload: SendMessagePayloadDto) {
-    const { conversationId, senderId, content, type = MessageType.TEXT, replyToId } = payload;
+    const {
+      conversationId,
+      senderId,
+      content,
+      type = MessageType.TEXT,
+      replyToId,
+    } = payload;
 
     const memberIds = await this.conversationService.getMembers(conversationId);
-    if (!memberIds.includes(senderId)) throw new RpcException('NOT_A_MEMBER');
+    if (!memberIds.includes(senderId)) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: ChatErrorMessages.NOT_A_MEMBER,
+      });
+    }
 
     const message = await this.prismaService.message.create({
       data: {
         conversationId,
         senderId,
         content,
-        type: type as any,
+        type,
         ...(replyToId ? { replyToId } : {}),
       },
     });
@@ -49,7 +63,7 @@ export class MessageService {
     await this.redisService.del(RedisKeys.CHAT_RECENT(conversationId));
 
     const kafkaClient = this.kafkaService.getClient();
-    kafkaClient.emit(ChatTopics.RealtimePush, {
+    kafkaClient.emit(NotificationTopics.ChatRealtimePush, {
       conversationId,
       event: 'message.new',
       payload: message,
@@ -57,23 +71,25 @@ export class MessageService {
 
     for (const userId of memberIds) {
       if (userId === senderId) continue;
+
       const isOnline = await this.redisService.has(RedisKeys.PRESENCE(userId));
-      if (!isOnline) {
-        try {
-          const tokensRes = await this.kafkaService.sendWithTimeout(
-            DeviceTokenTopics.GetActiveTokens,
-            { userId },
-          );
-          const tokens: string[] = tokensRes?.tokens ?? [];
-          if (tokens.length) {
-            await this.fcmService.sendMulticast(tokens, {
-              title: 'New message',
-              body: content.slice(0, 100),
-              data: { conversationId, messageId: message.id },
-            });
-          }
-        } catch {}
-      }
+      if (isOnline) continue;
+
+      kafkaClient.emit(NotificationTopics.Dispatch, {
+        eventId: `chat-message-${message.id}-${userId}`,
+        userId,
+        type: NotificationType.CHAT_MESSAGE,
+        title: 'New message',
+        body: content.slice(0, 100),
+        data: {
+          conversationId,
+          messageId: message.id,
+          senderId,
+        },
+        deepLink: `frontend://chat/${conversationId}`,
+        preferredChannel: NotificationPreferredChannel.FCM,
+        createdAt: new Date().toISOString(),
+      });
     }
 
     return message;
@@ -83,7 +99,12 @@ export class MessageService {
     const { conversationId, userId, cursor, limit = 30 } = payload;
 
     const memberIds = await this.conversationService.getMembers(conversationId);
-    if (!memberIds.includes(userId)) throw new RpcException('NOT_A_MEMBER');
+    if (!memberIds.includes(userId)) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: ChatErrorMessages.NOT_A_MEMBER,
+      });
+    }
 
     if (!cursor) {
       const cacheKey = RedisKeys.CHAT_RECENT(conversationId);
@@ -92,7 +113,8 @@ export class MessageService {
         const messages = JSON.parse(cached) as any[];
         return {
           items: messages,
-          nextCursor: messages.length >= limit ? messages[messages.length - 1].id : null,
+          nextCursor:
+            messages.length >= limit ? messages[messages.length - 1].id : null,
         };
       }
     }
@@ -127,7 +149,12 @@ export class MessageService {
     const message = await this.prismaService.message.findFirst({
       where: { id: messageId, senderId: userId, deletedAt: null },
     });
-    if (!message) throw new RpcException('MESSAGE_NOT_FOUND');
+    if (!message) {
+      throw new RpcException({
+        status: HttpStatus.NOT_FOUND,
+        message: ChatErrorMessages.MESSAGE_NOT_FOUND,
+      });
+    }
 
     await this.prismaService.message.update({
       where: { id: messageId },
@@ -136,7 +163,7 @@ export class MessageService {
 
     await this.redisService.del(RedisKeys.CHAT_RECENT(message.conversationId));
 
-    this.kafkaService.getClient().emit(ChatTopics.RealtimePush, {
+    this.kafkaService.getClient().emit(NotificationTopics.ChatRealtimePush, {
       conversationId: message.conversationId,
       event: 'message.deleted',
       payload: { messageId },

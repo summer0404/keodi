@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { ChatErrorMessages } from 'src/shared/constants/error.constant';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   CreateConversationPayloadDto,
@@ -24,9 +25,16 @@ export class ConversationService {
 
     if (type === ConversationType.DIRECT) {
       if (allMemberIds.length !== 2) {
-        throw new RpcException('DIRECT conversation requires exactly 2 members');
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message:
+            ChatErrorMessages.DIRECT_CONVERSATION_REQUIRES_EXACTLY_TWO_MEMBERS,
+        });
       }
-      const existing = await this.findDirectConversation(allMemberIds[0], allMemberIds[1]);
+      const existing = await this.findDirectConversation(
+        allMemberIds[0],
+        allMemberIds[1],
+      );
       if (existing) return existing;
     }
 
@@ -40,7 +48,7 @@ export class ConversationService {
 
     return this.prismaService.conversation.create({
       data: {
-        type: type as any,
+        type,
         name,
         avatarUrl,
         createdById,
@@ -56,7 +64,7 @@ export class ConversationService {
   private async findDirectConversation(userId1: string, userId2: string) {
     const conversation = await this.prismaService.conversation.findFirst({
       where: {
-        type: ConversationType.DIRECT as any,
+        type: ConversationType.DIRECT,
         AND: [
           { members: { some: { userId: userId1 } } },
           { members: { some: { userId: userId2 } } },
@@ -77,11 +85,22 @@ export class ConversationService {
       include: {
         members: { select: { userId: true, joinedAt: true, lastReadAt: true } },
         lastMessage: {
-          select: { id: true, content: true, senderId: true, type: true, createdAt: true },
+          select: {
+            id: true,
+            content: true,
+            senderId: true,
+            type: true,
+            createdAt: true,
+          },
         },
       },
     });
-    if (!conversation) throw new RpcException('CONVERSATION_NOT_FOUND');
+    if (!conversation) {
+      throw new RpcException({
+        status: HttpStatus.NOT_FOUND,
+        message: ChatErrorMessages.CONVERSATION_NOT_FOUND,
+      });
+    }
     return conversation;
   }
 
@@ -96,7 +115,13 @@ export class ConversationService {
       include: {
         members: { select: { userId: true, lastReadAt: true } },
         lastMessage: {
-          select: { id: true, content: true, senderId: true, type: true, createdAt: true },
+          select: {
+            id: true,
+            content: true,
+            senderId: true,
+            type: true,
+            createdAt: true,
+          },
         },
       },
     });
@@ -131,7 +156,12 @@ export class ConversationService {
     const member = await this.prismaService.conversationMember.findUnique({
       where: { conversationId_userId: { conversationId, userId } },
     });
-    if (!member) throw new RpcException('NOT_A_MEMBER');
+    if (!member) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: ChatErrorMessages.NOT_A_MEMBER,
+      });
+    }
 
     const updated = await this.prismaService.conversation.update({
       where: { id: conversationId },

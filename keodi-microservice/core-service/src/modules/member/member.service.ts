@@ -1,9 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { ChatErrorMessages } from 'src/shared/constants/error.constant';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
-import { AddMembersPayloadDto, LeaveConversationPayloadDto } from 'src/shared/dtos/chat.dto';
+import {
+  AddMembersPayloadDto,
+  LeaveConversationPayloadDto,
+} from 'src/shared/dtos/chat.dto';
+import { ConversationType } from 'src/shared/enums/chat.enum';
 
 @Injectable()
 export class MemberService {
@@ -18,12 +23,22 @@ export class MemberService {
     const requester = await this.prismaService.conversationMember.findUnique({
       where: { conversationId_userId: { conversationId, userId: requesterId } },
     });
-    if (!requester) throw new RpcException('NOT_A_MEMBER');
+    if (!requester) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: ChatErrorMessages.NOT_A_MEMBER,
+      });
+    }
 
     const conversation = await this.prismaService.conversation.findFirst({
-      where: { id: conversationId, type: 'GROUP' as any },
+      where: { id: conversationId, type: ConversationType.GROUP },
     });
-    if (!conversation) throw new RpcException('CONVERSATION_NOT_FOUND_OR_NOT_GROUP');
+    if (!conversation) {
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: ChatErrorMessages.CONVERSATION_NOT_FOUND_OR_NOT_GROUP,
+      });
+    }
 
     await this.prismaService.conversationMember.createMany({
       data: memberIds.map((userId) => ({ conversationId, userId })),
@@ -40,7 +55,12 @@ export class MemberService {
     const member = await this.prismaService.conversationMember.findUnique({
       where: { conversationId_userId: { conversationId, userId } },
     });
-    if (!member) throw new RpcException('NOT_A_MEMBER');
+    if (!member) {
+      throw new RpcException({
+        status: HttpStatus.FORBIDDEN,
+        message: ChatErrorMessages.NOT_A_MEMBER,
+      });
+    }
 
     await this.prismaService.conversationMember.delete({
       where: { conversationId_userId: { conversationId, userId } },

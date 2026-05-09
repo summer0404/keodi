@@ -61,12 +61,13 @@ describe('MemberService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  // ── add ──────────────────────────────────────────────────────────────────
-
   describe('add', () => {
     it('adds new members and invalidates Redis cache', async () => {
       prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
-      prismaService.conversation.findFirst.mockResolvedValue({ id: 'conv-1', type: 'GROUP' });
+      prismaService.conversation.findFirst.mockResolvedValue({
+        id: 'conv-1',
+        type: 'GROUP',
+      });
       prismaService.conversationMember.createMany.mockResolvedValue({ count: 2 });
       redisService.del.mockResolvedValue(undefined);
 
@@ -87,7 +88,7 @@ describe('MemberService', () => {
       expect(result).toEqual({ success: true });
     });
 
-    it('throws NOT_A_MEMBER when requester is not in the conversation', async () => {
+    it('throws NOT_A_MEMBER when requester is not in conversation', async () => {
       prismaService.conversationMember.findUnique.mockResolvedValue(null);
 
       await expect(
@@ -101,7 +102,7 @@ describe('MemberService', () => {
       expect(prismaService.conversationMember.createMany).not.toHaveBeenCalled();
     });
 
-    it('throws CONVERSATION_NOT_FOUND_OR_NOT_GROUP when conversation is not GROUP type', async () => {
+    it('throws CONVERSATION_NOT_FOUND_OR_NOT_GROUP when conversation is not GROUP', async () => {
       prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
       prismaService.conversation.findFirst.mockResolvedValue(null);
 
@@ -117,24 +118,27 @@ describe('MemberService', () => {
     });
   });
 
-  // ── leave ──────────────────────────────────────────────────────────────────
-
   describe('leave', () => {
     it('removes member from conversation and invalidates Redis cache', async () => {
       prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
       prismaService.conversationMember.delete.mockResolvedValue({ id: 'cm-1' });
       redisService.del.mockResolvedValue(undefined);
 
-      const result = await service.leave({ conversationId: 'conv-1', userId: 'user-1' });
+      const result = await service.leave({
+        conversationId: 'conv-1',
+        userId: 'user-1',
+      });
 
       expect(prismaService.conversationMember.delete).toHaveBeenCalledWith({
-        where: { conversationId_userId: { conversationId: 'conv-1', userId: 'user-1' } },
+        where: {
+          conversationId_userId: { conversationId: 'conv-1', userId: 'user-1' },
+        },
       });
       expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
       expect(result).toEqual({ success: true });
     });
 
-    it('throws NOT_A_MEMBER when user is not in the conversation', async () => {
+    it('throws NOT_A_MEMBER when user is not in conversation', async () => {
       prismaService.conversationMember.findUnique.mockResolvedValue(null);
 
       await expect(

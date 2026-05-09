@@ -22,7 +22,7 @@ import {
   UpdateConversationDto,
 } from 'src/shared/dtos/chat.dto';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ChatTopics } from 'src/shared/constants/topic.constant';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 import {
@@ -137,7 +137,7 @@ export class ChatController {
 
   // ── Kafka EventPattern consumer ──────────────────────────────────────────────
 
-  @EventPattern(ChatTopics.RealtimePush)
+  @EventPattern(NotificationTopics.ChatRealtimePush)
   async realtimePush(
     @Payload() payload: { conversationId: string; event: string; payload: any },
   ) {

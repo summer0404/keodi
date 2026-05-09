@@ -151,6 +151,7 @@ export const NotificationTopics = {
   Dispatch: 'notification.dispatch',
   PersistInbox: 'notification.persist-inbox',
   RealtimePush: 'notification.realtime.push',
+  ChatRealtimePush: 'notification.realtime.chat',
 } as const;
 
 export const NotificationInboxTopics = {
@@ -166,22 +167,21 @@ export const DeviceTokenTopics = {
   DeactivateToken: 'device-token.deactivate',
 } as const;
 
-export const ChatTopics = {
-  Conversation: {
-    Create:  'chat.conversation.create',
-    GetById: 'chat.conversation.get-by-id',
-    List:    'chat.conversation.list',
-    Update:  'chat.conversation.update',
-  },
-  Message: {
-    Send:     'chat.message.send',
-    List:     'chat.message.list',
-    Delete:   'chat.message.delete',
-    MarkRead: 'chat.message.mark-read',
-  },
-  Member: {
-    Add:   'chat.member.add',
-    Leave: 'chat.member.leave',
-  },
-  RealtimePush: 'chat.realtime.push',
+export const ConversationTopics = {
+  Create: 'conversation.create',
+  GetById: 'conversation.get-by-id',
+  List: 'conversation.list',
+  Update: 'conversation.update',
+} as const;
+
+export const MessageTopics = {
+  Send: 'message.send',
+  List: 'message.list',
+  Delete: 'message.delete',
+  MarkRead: 'message.mark-read',
+} as const;
+
+export const MemberTopics = {
+  Add: 'member.add',
+  Leave: 'member.leave',
 } as const;

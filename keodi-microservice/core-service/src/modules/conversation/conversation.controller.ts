@@ -6,29 +6,29 @@ import {
   ListConversationsPayloadDto,
   UpdateConversationPayloadDto,
 } from 'src/shared/dtos/chat.dto';
-import { ChatTopics } from 'src/shared/constants/topic.contant';
+import { ConversationTopics } from 'src/shared/constants/topic.constant';
 import { ConversationService } from './conversation.service';
 
 @Controller()
 export class ConversationController {
   constructor(private readonly conversationService: ConversationService) {}
 
-  @MessagePattern(ChatTopics.Conversation.Create)
+  @MessagePattern(ConversationTopics.Create)
   async create(@Payload() payload: CreateConversationPayloadDto) {
     return this.conversationService.create(payload);
   }
 
-  @MessagePattern(ChatTopics.Conversation.GetById)
+  @MessagePattern(ConversationTopics.GetById)
   async getById(@Payload() payload: GetConversationByIdPayloadDto) {
     return this.conversationService.getById(payload);
   }
 
-  @MessagePattern(ChatTopics.Conversation.List)
+  @MessagePattern(ConversationTopics.List)
   async list(@Payload() payload: ListConversationsPayloadDto) {
     return this.conversationService.list(payload);
   }
 
-  @MessagePattern(ChatTopics.Conversation.Update)
+  @MessagePattern(ConversationTopics.Update)
   async update(@Payload() payload: UpdateConversationPayloadDto) {
     return this.conversationService.update(payload);
   }

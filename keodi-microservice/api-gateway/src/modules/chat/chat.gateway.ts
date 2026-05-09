@@ -10,7 +10,10 @@ import {
 import * as jwt from 'jsonwebtoken';
 import { Server, Socket } from 'socket.io';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { ChatTopics } from 'src/shared/constants/topic.constant';
+import {
+  ConversationTopics,
+  MessageTopics,
+} from 'src/shared/constants/topic.constant';
 
 @WebSocketGateway({ namespace: '/chat', cors: { origin: '*' } })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -60,7 +63,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!userId || !payload?.conversationId) return;
 
     try {
-      await this.kafkaService.sendWithTimeout(ChatTopics.Conversation.GetById, {
+      await this.kafkaService.sendWithTimeout(ConversationTopics.GetById, {
         conversationId: payload.conversationId,
         userId,
       });
@@ -95,7 +98,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const message = await this.kafkaService.sendWithTimeout(ChatTopics.Message.Send, {
+      const message = await this.kafkaService.sendWithTimeout(MessageTopics.Send, {
         conversationId: payload.conversationId,
         senderId: userId,
         content: payload.content,
@@ -114,7 +117,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!userId || !payload?.conversationId) return;
 
     try {
-      await this.kafkaService.sendWithTimeout(ChatTopics.Message.MarkRead, {
+      await this.kafkaService.sendWithTimeout(MessageTopics.MarkRead, {
         conversationId: payload.conversationId,
         userId,
       });

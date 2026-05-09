@@ -6,29 +6,29 @@ import {
   MarkReadPayloadDto,
   SendMessagePayloadDto,
 } from 'src/shared/dtos/chat.dto';
-import { ChatTopics } from 'src/shared/constants/topic.contant';
+import { MessageTopics } from 'src/shared/constants/topic.constant';
 import { MessageService } from './message.service';
 
 @Controller()
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
-  @MessagePattern(ChatTopics.Message.Send)
+  @MessagePattern(MessageTopics.Send)
   async send(@Payload() payload: SendMessagePayloadDto) {
     return this.messageService.send(payload);
   }
 
-  @MessagePattern(ChatTopics.Message.List)
+  @MessagePattern(MessageTopics.List)
   async list(@Payload() payload: ListMessagesPayloadDto) {
     return this.messageService.list(payload);
   }
 
-  @MessagePattern(ChatTopics.Message.Delete)
+  @MessagePattern(MessageTopics.Delete)
   async delete(@Payload() payload: DeleteMessagePayloadDto) {
     return this.messageService.delete(payload);
   }
 
-  @MessagePattern(ChatTopics.Message.MarkRead)
+  @MessagePattern(MessageTopics.MarkRead)
   async markRead(@Payload() payload: MarkReadPayloadDto) {
     return this.messageService.markRead(payload);
   }
