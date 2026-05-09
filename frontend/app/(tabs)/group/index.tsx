@@ -43,7 +43,7 @@ export default function MessagesScreen() {
     staleTime: 30 * 1000,
   });
 
-  const conversations = page?.data ?? [];
+  const conversations = page?.items ?? [];
 
   const groupCount = useMemo(
     () => conversations.filter((c) => c.type === 'GROUP' && !c.sessionId).length,

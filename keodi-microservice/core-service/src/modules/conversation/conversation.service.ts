@@ -83,7 +83,22 @@ export class ConversationService {
         members: { some: { userId } },
       },
       include: {
-        members: { select: { userId: true, joinedAt: true, lastReadAt: true } },
+        members: {
+          select: {
+            userId: true,
+            joinedAt: true,
+            lastReadAt: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
+          },
+        },
         lastMessage: {
           select: {
             id: true,
@@ -91,6 +106,14 @@ export class ConversationService {
             senderId: true,
             type: true,
             createdAt: true,
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -113,7 +136,21 @@ export class ConversationService {
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { updatedAt: 'desc' },
       include: {
-        members: { select: { userId: true, lastReadAt: true } },
+        members: {
+          select: {
+            userId: true,
+            lastReadAt: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
+          },
+        },
         lastMessage: {
           select: {
             id: true,
@@ -121,6 +158,14 @@ export class ConversationService {
             senderId: true,
             type: true,
             createdAt: true,
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },

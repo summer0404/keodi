@@ -1,6 +1,6 @@
 import type { AvatarData } from '@/components/ui/chat/AvatarGroup';
 import type { ChatItemData } from '@/components/ui/chat/ChatListItem';
-import type { ConversationItem, MessageItem } from '@/types/chat';
+import type { ConversationItem, MessageItem, UserProfile } from '@/types/chat';
 
 const AVATAR_COLORS = [
   '#EAEAEA',
@@ -33,7 +33,7 @@ export function getInitials(
   return '?';
 }
 
-export function getSenderDisplayName(sender?: MessageItem['sender']): string {
+export function getSenderDisplayName(sender?: UserProfile | null): string {
   if (!sender) return 'Unknown';
   if (sender.firstName && sender.lastName) return `${sender.firstName} ${sender.lastName}`;
   if (sender.firstName) return sender.firstName;

@@ -72,23 +72,25 @@ model User {
   dateOfBirth DateTime? @map("date_of_birth")
   pictureUrl  String?   @map("picture_url")
 
-  userImages         UserImage[]
-  userAttributes     UserAttribute[]
-  userActions        UserAction[]
-  reviews            Review[]
-  userCategories     UserCategory[]
-  places             Place[]
-  favorites          Favorite[]
-  sessionMemberships GroupSessionMember[]
-  searches           Search[]
-  sentRequests       FriendRequest[]      @relation("SentRequests")
-  receivedRequests   FriendRequest[]      @relation("ReceivedRequests")
-  friendships        Friendship[]         @relation("UserFriendships")
-  friendsOf          Friendship[]         @relation("FriendFriendships")
-  groupSessions      GroupSession[]       @relation("CreatedSessions")
-  setting            UserSetting?
-  ownerApplication   OwnerApplication?
-  ownershipClaims    OwnershipClaim[]
+  userImages            UserImage[]
+  userAttributes        UserAttribute[]
+  userActions           UserAction[]
+  reviews               Review[]
+  userCategories        UserCategory[]
+  places                Place[]
+  favorites             Favorite[]
+  sessionMemberships    GroupSessionMember[]
+  searches              Search[]
+  sentRequests          FriendRequest[]      @relation("SentRequests")
+  receivedRequests      FriendRequest[]      @relation("ReceivedRequests")
+  friendships           Friendship[]         @relation("UserFriendships")
+  friendsOf             Friendship[]         @relation("FriendFriendships")
+  groupSessions         GroupSession[]       @relation("CreatedSessions")
+  setting               UserSetting?
+  ownerApplication      OwnerApplication?
+  ownershipClaims       OwnershipClaim[]
+  conversationMembers   ConversationMember[]
+  sentMessages          Message[]            @relation("MessageSender")
 
   @@map("users")
 }
@@ -446,6 +448,7 @@ model ConversationMember {
   lastReadAt     DateTime?    @map("last_read_at")
 
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
   @@index([userId])
@@ -464,6 +467,7 @@ model Message {
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
   conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   replyTo        Message?      @relation("MessageReplyTo", fields: [replyToId], references: [id])
   replies        Message[]     @relation("MessageReplyTo")
   lastMessageFor Conversation? @relation("ConvLastMessage")

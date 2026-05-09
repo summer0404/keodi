@@ -1,17 +1,19 @@
 export type ConversationType = 'DIRECT' | 'GROUP';
 export type MessageType = 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
 
+export interface UserProfile {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  pictureUrl: string | null;
+}
+
 export interface ConversationMember {
   userId: string;
-  role: string;
-  joinedAt: string;
-  user?: {
-    id: string;
-    username: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    pictureUrl: string | null;
-  };
+  joinedAt?: string;
+  lastReadAt?: string | null;
+  user: UserProfile | null;
 }
 
 export interface MessageItem {
@@ -24,13 +26,7 @@ export interface MessageItem {
   replyTo?: MessageItem | null;
   isDeleted: boolean;
   createdAt: string;
-  sender?: {
-    id: string;
-    username: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    pictureUrl: string | null;
-  };
+  sender: UserProfile | null;
 }
 
 export interface ConversationItem {
@@ -47,9 +43,8 @@ export interface ConversationItem {
 }
 
 export interface CursorPage<T> {
-  data: T[];
+  items: T[];
   nextCursor: string | null;
-  hasMore: boolean;
 }
 
 export interface CreateConversationRequest {

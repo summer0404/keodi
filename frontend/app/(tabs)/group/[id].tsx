@@ -406,7 +406,7 @@ export default function ChatScreen() {
 
   // API returns newest-first; reverse for oldest-at-top display
   const historyMessages = useMemo(
-    () => [...(historyPage?.data ?? [])].reverse(),
+    () => [...(historyPage?.items ?? [])].reverse(),
     [historyPage],
   );
 
