@@ -30,6 +30,7 @@ import {
   GetSessionActivitiesDto,
   LogRecommendationsRefreshedDto,
 } from 'src/shared/dtos/group-session.dto';
+import { ActivityActor } from 'src/shared/interfaces/group-session.interface';
 import { ImageService } from '../image/image.service';
 import { GroupSessionHelper } from './group-session.helper';
 
@@ -48,17 +49,34 @@ export class GroupSessionService {
   private async logActivity(
     sessionId: string,
     type: GroupSessionActivityType,
-    actorId?: string | null,
-    actorName?: string | null,
+    actor?: ActivityActor | null,
     metadata?: Record<string, unknown> | null,
   ): Promise<void> {
     try {
+      const actorId = actor?.userId ?? null;
+      let actorName: string | null = actor?.nickname ?? null;
+
+      if (!actorName && actor?.user) {
+        actorName =
+          `${actor.user.lastName ?? ''} ${actor.user.firstName ?? ''}`.trim() || null;
+      }
+
+      if (!actorName && actorId) {
+        const user = await this.prismaService.user.findUnique({
+          where: { id: actorId },
+          select: { firstName: true, lastName: true },
+        });
+        actorName = user
+          ? `${user.lastName ?? ''} ${user.firstName ?? ''}`.trim() || null
+          : null;
+      }
+
       await this.prismaService.groupSessionActivity.create({
         data: {
           sessionId,
           type,
-          actorId: actorId ?? null,
-          actorName: actorName ?? null,
+          actorId,
+          actorName,
           metadata: metadata ? (metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
         },
       });
@@ -506,10 +524,7 @@ export class GroupSessionService {
         },
       );
 
-      const joinActorName = member.user
-        ? `${member.user.lastName ?? ''} ${member.user.firstName ?? ''}`.trim() || null
-        : member.nickname ?? null;
-      void this.logActivity(session.sessionId, GroupSessionActivityType.MEMBER_JOINED, member.userId ?? null, joinActorName, { isGuest: !member.userId });
+      void this.logActivity(session.sessionId, GroupSessionActivityType.MEMBER_JOINED, member, { isGuest: !member.userId });
 
       return {
         sessionId: session.sessionId,
@@ -660,14 +675,7 @@ export class GroupSessionService {
         sessionId,
       });
 
-      const closeCreator = await this.prismaService.user.findUnique({
-        where: { id: userId },
-        select: { firstName: true, lastName: true },
-      });
-      const closeActorName = closeCreator
-        ? `${closeCreator.lastName ?? ''} ${closeCreator.firstName ?? ''}`.trim() || null
-        : null;
-      void this.logActivity(sessionId, GroupSessionActivityType.SESSION_CLOSED, userId, closeActorName, null);
+      void this.logActivity(sessionId, GroupSessionActivityType.SESSION_CLOSED, { userId }, null);
 
       return updatedSession;
     } catch (error) {
@@ -965,8 +973,7 @@ export class GroupSessionService {
       void this.logActivity(
         sessionId,
         GroupSessionActivityType.VOTE_FINALIZED,
-        member.userId ?? null,
-        null,
+        member,
         { placeId: updatedVote.placeId, placeName: updatedVote.place?.name ?? null },
       );
 
@@ -1379,8 +1386,7 @@ export class GroupSessionService {
       void this.logActivity(
         sessionId,
         GroupSessionActivityType.CATEGORIES_UPDATED,
-        userId ?? null,
-        null,
+        { userId: userId ?? null },
         { categoryIds: validCategoryIds },
       );
 
@@ -1649,10 +1655,7 @@ export class GroupSessionService {
         userId: member.userId,
       });
 
-      const leaveActorName = member.user
-        ? `${member.user.lastName ?? ''} ${member.user.firstName ?? ''}`.trim() || null
-        : member.nickname ?? null;
-      void this.logActivity(sessionId, GroupSessionActivityType.MEMBER_LEFT, member.userId ?? null, leaveActorName, { isGuest: !member.userId });
+      void this.logActivity(sessionId, GroupSessionActivityType.MEMBER_LEFT, member, { isGuest: !member.userId });
 
       return { sessionId, memberId: member.id };
     } catch (error) {
@@ -1763,6 +1766,6 @@ export class GroupSessionService {
 
   async logRecommendationsRefreshed(dto: LogRecommendationsRefreshedDto) {
     const { sessionId, userId } = dto;
-    void this.logActivity(sessionId, GroupSessionActivityType.RECOMMENDATIONS_REFRESHED, userId ?? null, null, null);
+    void this.logActivity(sessionId, GroupSessionActivityType.RECOMMENDATIONS_REFRESHED, { userId: userId ?? null }, null);
   }
 }
