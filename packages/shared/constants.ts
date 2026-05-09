@@ -31,4 +31,9 @@ export const API_ENDPOINTS = (baseUrl: string) => ({
   CATEGORIES: {
     SEARCH: `${baseUrl}/categories/search`,
   },
+  REVIEWS: {
+    OWNER: `${baseUrl}/reviews/owner`,
+    RESPONSE: (id: string) => `${baseUrl}/reviews/${id}/response`,
+    FLAG: (id: string) => `${baseUrl}/reviews/${id}/flag`,
+  },
 });

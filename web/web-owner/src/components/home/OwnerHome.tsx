@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Building, Star, Store } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { Building, Store } from "lucide-react"
 
 export default function OwnerHome() {
     const navigate = useNavigate()
@@ -14,9 +14,9 @@ export default function OwnerHome() {
                         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900 mb-2">Welcome Back</h1>
                         <p className="text-sm text-neutral-600">What would you like to do today?</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <button 
+                        <button
                             onClick={() => navigate("/claim-place")}
                             className="flex flex-col items-center justify-center p-6 border border-neutral-200 rounded-xl hover:bg-neutral-50 hover:border-neutral-300 transition-all text-neutral-800"
                         >
@@ -24,14 +24,23 @@ export default function OwnerHome() {
                             <span className="font-semibold text-sm">Claim a Place</span>
                             <span className="text-xs text-neutral-500 mt-1 text-center">Take ownership of an existing business listing</span>
                         </button>
-                        
-                        <button 
+
+                        <button
                             onClick={() => navigate("/add-place")}
                             className="flex flex-col items-center justify-center p-6 border border-neutral-200 rounded-xl hover:bg-neutral-50 hover:border-neutral-300 transition-all text-neutral-800"
                         >
                             <Store className="w-8 h-8 mb-3 text-neutral-500" />
                             <span className="font-semibold text-sm">Add New Place</span>
                             <span className="text-xs text-neutral-500 mt-1 text-center">Create a completely new business listing</span>
+                        </button>
+
+                        <button
+                            onClick={() => navigate("/reviews")}
+                            className="flex flex-col items-center justify-center p-6 border border-neutral-200 rounded-xl hover:bg-neutral-50 hover:border-neutral-300 transition-all text-neutral-800 sm:col-span-2"
+                        >
+                            <Star className="w-8 h-8 mb-3 text-neutral-500" />
+                            <span className="font-semibold text-sm">My Reviews</span>
+                            <span className="text-xs text-neutral-500 mt-1 text-center">View and respond to customer reviews across your places</span>
                         </button>
                     </div>
 
