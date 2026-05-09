@@ -6,6 +6,7 @@ import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { UserTopics } from 'src/shared/constants/topic.constant';
+import { INTERNAL_SERVER_ERROR, UserErrorMessages } from 'src/shared/constants/error.constant';
 
 const makeUser = (overrides: Partial<any> = {}) => ({
   id: 'user-id',
@@ -94,7 +95,7 @@ describe('UserService', () => {
       } catch (e) {
         const payload = (e as RpcException).getError() as any;
         expect(payload.status).toBe(HttpStatus.BAD_REQUEST);
-        expect(payload.message).toBe('User not found');
+        expect(payload.message).toBe(UserErrorMessages.USER_NOT_FOUND);
       }
     });
 
@@ -142,7 +143,7 @@ describe('UserService', () => {
       } catch (e) {
         const payload = (e as RpcException).getError() as any;
         expect(payload.status).toBe(HttpStatus.BAD_REQUEST);
-        expect(payload.message).toBe('Username already used');
+        expect(payload.message).toBe(UserErrorMessages.USERNAME_ALREADY_EXISTS);
       }
     });
 
@@ -156,7 +157,7 @@ describe('UserService', () => {
       } catch (e) {
         const payload = (e as RpcException).getError() as any;
         expect(payload.status).toBe(HttpStatus.BAD_REQUEST);
-        expect(payload.message).toBe('User not found');
+        expect(payload.message).toBe(UserErrorMessages.USER_NOT_FOUND);
       }
     });
 
@@ -175,7 +176,7 @@ describe('UserService', () => {
       } catch (e) {
         const payload = (e as RpcException).getError() as any;
         expect(payload.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-        expect(payload.message).toContain('rolled back');
+        expect(payload.message).toBe(INTERNAL_SERVER_ERROR);
         // rollback update was called
         expect(prismaService.user.update).toHaveBeenCalledTimes(2);
       }
@@ -213,7 +214,7 @@ describe('UserService', () => {
       } catch (e) {
         const payload = (e as RpcException).getError() as any;
         expect(payload.status).toBe(HttpStatus.BAD_REQUEST);
-        expect(payload.message).toBe('User not found');
+        expect(payload.message).toBe(UserErrorMessages.USER_NOT_FOUND);
       }
     });
 

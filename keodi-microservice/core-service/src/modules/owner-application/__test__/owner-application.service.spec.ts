@@ -254,7 +254,7 @@ describe('OwnerApplicationService', () => {
       );
       await expect(
         service.getAll({ page: 1, limit: 10 } as any),
-      ).rejects.toThrow('db error');
+      ).rejects.toThrow(RpcException);
     });
   });
 
@@ -385,7 +385,7 @@ describe('OwnerApplicationService', () => {
         new Error('db error'),
       );
       await expect(service.getStatusByUserId('user-1')).rejects.toThrow(
-        'db error',
+        RpcException,
       );
     });
   });

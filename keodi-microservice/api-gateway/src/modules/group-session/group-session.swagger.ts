@@ -24,6 +24,7 @@ import {
   GroupSessionResponseDto,
   JoinGroupSessionResponseDto,
   GroupSessionRecommendationAccessDto,
+  GetSessionActivitiesResponseDto,
 } from 'src/shared/dtos/group-session.dto';
 import { PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 
@@ -317,6 +318,20 @@ export const ApiUpdateGroupSessionRecommendationCategories = () => {
   );
 };
   
+export const ApiGetGroupSessionActivities = () => {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get session activity feed',
+      description: 'Returns all activity events for the session ordered newest-first. Accessible by any session member. Guests must provide guestId query param.',
+    }),
+    ApiOkResponse({ description: 'Activity feed', type: GetSessionActivitiesResponseDto }),
+    ApiQuery({ name: 'guestId', required: false, description: 'Guest ID (required for guests)' }),
+    ApiNotFoundResponse({ description: 'Session not found' }),
+    ApiForbiddenResponse({ description: 'Not a session member' }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+  );
+};
+
 export const GroupSessionApiTags = () => {
   return applyDecorators(ApiTags('Group Sessions'));
 };
