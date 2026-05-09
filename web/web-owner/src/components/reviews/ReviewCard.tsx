@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { type ReviewDto } from "@keodi/shared"
+import defaultAvatar from "@keodi/shared/assets/default-avatar.webp"
 import { Flag, MessageSquare, Pencil, Trash2 } from "lucide-react"
 
 interface ReviewCardProps {
@@ -27,24 +28,13 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 function Avatar({ name, picture }: { name: string; picture: string | null }) {
-    if (picture) {
-        return (
-            <img
-                src={picture}
-                alt={name}
-                className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-neutral-200"
-            />
-        )
-    }
-    const initials = name
-        .split(" ")
-        .slice(0, 2)
-        .map((w) => w[0]?.toUpperCase() ?? "")
-        .join("")
     return (
-        <div className="w-9 h-9 rounded-full bg-neutral-100 ring-1 ring-neutral-200 flex items-center justify-center shrink-0">
-            <span className="text-xs font-semibold text-neutral-500">{initials}</span>
-        </div>
+        <img
+            src={picture ?? defaultAvatar}
+            alt={name}
+            className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-neutral-200"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = defaultAvatar }}
+        />
     )
 }
 

@@ -33,7 +33,10 @@ export const API_ENDPOINTS = (baseUrl: string) => ({
   },
   REVIEWS: {
     OWNER: `${baseUrl}/reviews/owner`,
+    ADMIN: `${baseUrl}/reviews/admin`,
     RESPONSE: (id: string) => `${baseUrl}/reviews/${id}/response`,
     FLAG: (id: string) => `${baseUrl}/reviews/${id}/flag`,
+    APPROVE_FLAG: (id: string) => `${baseUrl}/reviews/${id}/approve-flags`,
+    REJECT_FLAG: (id: string) => `${baseUrl}/reviews/${id}/reject-flags`,
   },
 });

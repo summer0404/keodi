@@ -63,6 +63,46 @@ export type GetOwnerReviewsQuery = {
   placeId?: string;
 };
 
+export type ReviewFlagStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export type AdminReviewDto = {
+  id: string;
+  placeId: string;
+  userId: string | null;
+  fromGoogle: boolean;
+  reviewerName: string;
+  reviewerPicture: string | null;
+  rating: number;
+  text: string | null;
+  hidden: boolean;
+  flagReason: ReviewFlagReason | null;
+  flagStatus: ReviewFlagStatus | null;
+  ownerResponse: string | null;
+  ownerRespondedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  place: { id: string; name: string; ownerId: string | null };
+};
+
+export type AdminReviewsResponseDto = {
+  reviews: AdminReviewDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type GetAdminReviewsQuery = {
+  page?: number;
+  limit?: number;
+  rating?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  flagStatus?: ReviewFlagStatus;
+  placeId?: string;
+  sortOrder?: "asc" | "desc";
+};
+
 // ─── Utilities ──────────────────────────────────────────────────────────────
 
 async function getErrorMessage(response: Response, fallbackMessage: string) {
@@ -624,6 +664,61 @@ export async function flagReview(
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to flag review"));
+  }
+
+  return response.json();
+}
+
+export async function getAdminReviews(
+  params: GetAdminReviewsQuery,
+  baseUrl: string,
+): Promise<AdminReviewsResponseDto> {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.rating) query.set("rating", String(params.rating));
+  if (params.flagStatus) query.set("flagStatus", params.flagStatus);
+  if (params.placeId) query.set("placeId", params.placeId);
+  if (params.dateFrom) query.set("dateFrom", params.dateFrom);
+  if (params.dateTo) query.set("dateTo", params.dateTo);
+  if (params.sortOrder) query.set("sortOrder", params.sortOrder);
+
+  const response = await fetchWithAuth(
+    `${API_ENDPOINTS(baseUrl).REVIEWS.ADMIN}?${query.toString()}`,
+    {},
+    TOKEN_KEYS.ADMIN,
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to fetch reviews"));
+  }
+
+  return response.json();
+}
+
+export async function approveReviewFlag(id: string, baseUrl: string) {
+  const response = await fetchWithAuth(
+    API_ENDPOINTS(baseUrl).REVIEWS.APPROVE_FLAG(id),
+    { method: "POST" },
+    TOKEN_KEYS.ADMIN,
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to approve flag"));
+  }
+
+  return response.json();
+}
+
+export async function rejectReviewFlag(id: string, baseUrl: string) {
+  const response = await fetchWithAuth(
+    API_ENDPOINTS(baseUrl).REVIEWS.REJECT_FLAG(id),
+    { method: "POST" },
+    TOKEN_KEYS.ADMIN,
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Failed to reject flag"));
   }
 
   return response.json();
