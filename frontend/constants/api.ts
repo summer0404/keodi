@@ -4,6 +4,7 @@ export const API_BASE_PATHS = {
   PLACES: '/api/v1/places',
   FAVORITES: '/api/v1/favorites',
   USERS: '/api/v1/users',
+  CONVERSATIONS: '/api/v1/conversations',
 } as const;
 
 export const API_ENDPOINTS = {
@@ -25,4 +26,5 @@ export const API_ENDPOINTS = {
   UPDATE_USERNAME: `${API_BASE_PATHS.USERS}/username`,
   UPDATE_PICTURE: `${API_BASE_PATHS.USERS}/picture`,
   UPDATE_PROFILE: API_BASE_PATHS.USERS,
+  CONVERSATIONS: API_BASE_PATHS.CONVERSATIONS,
 } as const;
