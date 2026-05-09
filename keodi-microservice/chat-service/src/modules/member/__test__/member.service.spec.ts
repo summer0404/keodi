@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
-import { MemberService } from '../member.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { MemberService } from '../member.service';
 
 describe('MemberService', () => {
   let service: MemberService;
@@ -61,12 +61,13 @@ describe('MemberService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  // ── add ──────────────────────────────────────────────────────────────────
-
   describe('add', () => {
     it('adds new members and invalidates Redis cache', async () => {
       prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
-      prismaService.conversation.findFirst.mockResolvedValue({ id: 'conv-1', type: 'GROUP' });
+      prismaService.conversation.findFirst.mockResolvedValue({
+        id: 'conv-1',
+        type: 'GROUP',
+      });
       prismaService.conversationMember.createMany.mockResolvedValue({ count: 2 });
       redisService.del.mockResolvedValue(undefined);
 
@@ -116,8 +117,6 @@ describe('MemberService', () => {
       expect(prismaService.conversationMember.createMany).not.toHaveBeenCalled();
     });
   });
-
-  // ── leave ──────────────────────────────────────────────────────────────────
 
   describe('leave', () => {
     it('removes member from conversation and invalidates Redis cache', async () => {

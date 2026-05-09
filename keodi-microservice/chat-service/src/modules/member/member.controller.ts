@@ -1,7 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { AddMembersPayloadDto, LeaveConversationPayloadDto } from 'src/shared/dtos/chat.dto';
-import { ChatTopics } from 'src/shared/constants/topic.contant';
+import { ChatTopics } from 'src/shared/constants/topic.constant';
+import {
+  AddMembersPayloadDto,
+  LeaveConversationPayloadDto,
+} from 'src/shared/dtos/chat.dto';
 import { MemberService } from './member.service';
 
 @Controller()

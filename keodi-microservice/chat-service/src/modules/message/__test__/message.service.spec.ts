@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
-import { MessageService } from '../message.service';
 import { PrismaService } from 'src/database/prisma.service';
-import { RedisService } from 'src/providers/redis/redis.service';
-import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { FcmService } from 'src/providers/fcm/fcm.service';
 import { ConversationService } from 'src/modules/conversation/conversation.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { RedisService } from 'src/providers/redis/redis.service';
 import { MessageType } from 'src/shared/enums/chat.enum';
+import { MessageService } from '../message.service';
 
 const makeMessage = (overrides: Record<string, any> = {}) => ({
   id: 'msg-1',
@@ -42,14 +41,9 @@ describe('MessageService', () => {
     set: jest.Mock;
     setEx: jest.Mock;
     del: jest.Mock;
-    has: jest.Mock;
   };
   let kafkaService: {
     getClient: jest.Mock;
-    sendWithTimeout: jest.Mock;
-  };
-  let fcmService: {
-    sendMulticast: jest.Mock;
   };
   let conversationService: {
     getMembers: jest.Mock;
@@ -85,20 +79,12 @@ describe('MessageService', () => {
             set: jest.fn(),
             setEx: jest.fn(),
             del: jest.fn(),
-            has: jest.fn(),
           },
         },
         {
           provide: KafkaService,
           useValue: {
             getClient: jest.fn().mockReturnValue({ emit: mockEmit }),
-            sendWithTimeout: jest.fn(),
-          },
-        },
-        {
-          provide: FcmService,
-          useValue: {
-            sendMulticast: jest.fn(),
           },
         },
         {
@@ -114,22 +100,18 @@ describe('MessageService', () => {
     prismaService = module.get(PrismaService);
     redisService = module.get(RedisService);
     kafkaService = module.get(KafkaService);
-    fcmService = module.get(FcmService);
     conversationService = module.get(ConversationService);
   });
 
   afterEach(() => jest.clearAllMocks());
 
-  // ── send ──────────────────────────────────────────────────────────────────
-
   describe('send', () => {
-    it('persists message, updates conversation, invalidates cache, and emits realtime push', async () => {
+    it('persists message, updates conversation, invalidates cache, emits realtime and notifications', async () => {
       const msg = makeMessage();
       conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);
       prismaService.message.create.mockResolvedValue(msg);
       prismaService.conversation.update.mockResolvedValue({});
       redisService.del.mockResolvedValue(undefined);
-      redisService.has.mockResolvedValue(true);
 
       const result = await service.send({
         conversationId: 'conv-1',
@@ -139,14 +121,33 @@ describe('MessageService', () => {
 
       expect(prismaService.message.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ conversationId: 'conv-1', senderId: 'user-1', content: 'Hello' }),
+          data: expect.objectContaining({
+            conversationId: 'conv-1',
+            senderId: 'user-1',
+            content: 'Hello',
+          }),
         }),
       );
       expect(prismaService.conversation.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'conv-1' }, data: expect.objectContaining({ lastMessageId: msg.id }) }),
+        expect.objectContaining({
+          where: { id: 'conv-1' },
+          data: expect.objectContaining({ lastMessageId: msg.id }),
+        }),
       );
       expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
-      expect(mockEmit).toHaveBeenCalledWith('chat.realtime.push', expect.objectContaining({ event: 'message.new' }));
+      expect(mockEmit).toHaveBeenNthCalledWith(
+        1,
+        'chat.realtime.push',
+        expect.objectContaining({ event: 'message.new' }),
+      );
+      expect(mockEmit).toHaveBeenNthCalledWith(
+        2,
+        'notification.dispatch',
+        expect.objectContaining({
+          userId: 'user-2',
+          data: expect.objectContaining({ conversationId: 'conv-1', messageId: 'msg-1' }),
+        }),
+      );
       expect(result).toBe(msg);
     });
 
@@ -160,20 +161,12 @@ describe('MessageService', () => {
       expect(prismaService.message.create).not.toHaveBeenCalled();
     });
 
-    it('sends FCM for offline members and skips online members', async () => {
+    it('emits notifications to all members except sender', async () => {
       const msg = makeMessage();
       conversationService.getMembers.mockResolvedValue(['user-1', 'user-2', 'user-3']);
       prismaService.message.create.mockResolvedValue(msg);
       prismaService.conversation.update.mockResolvedValue({});
       redisService.del.mockResolvedValue(undefined);
-      // user-2 is online, user-3 is offline
-      redisService.has.mockImplementation((key: string) => {
-        if (key.includes('user-2')) return Promise.resolve(true);
-        if (key.includes('user-3')) return Promise.resolve(false);
-        return Promise.resolve(false);
-      });
-      kafkaService.sendWithTimeout.mockResolvedValue({ tokens: ['token-abc'] });
-      fcmService.sendMulticast.mockResolvedValue([]);
 
       await service.send({
         conversationId: 'conv-1',
@@ -181,16 +174,11 @@ describe('MessageService', () => {
         content: 'Hello all',
       });
 
-      // FCM only called once for user-3 (offline), not for user-2 (online)
-      expect(fcmService.sendMulticast).toHaveBeenCalledTimes(1);
-      expect(fcmService.sendMulticast).toHaveBeenCalledWith(
-        ['token-abc'],
-        expect.objectContaining({ title: 'New message' }),
-      );
+      expect(
+        mockEmit.mock.calls.filter((call) => call[0] === 'notification.dispatch'),
+      ).toHaveLength(2);
     });
   });
-
-  // ── list ──────────────────────────────────────────────────────────────────
 
   describe('list', () => {
     it('returns cached messages on first page (no cursor) hit', async () => {
@@ -228,7 +216,11 @@ describe('MessageService', () => {
       conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);
       prismaService.message.findMany.mockResolvedValue(messages);
 
-      const result = await service.list({ conversationId: 'conv-1', userId: 'user-1', cursor: 'msg-0' });
+      const result = await service.list({
+        conversationId: 'conv-1',
+        userId: 'user-1',
+        cursor: 'msg-0',
+      });
 
       expect(redisService.get).not.toHaveBeenCalled();
       expect(prismaService.message.findMany).toHaveBeenCalledWith(
@@ -237,8 +229,6 @@ describe('MessageService', () => {
       expect(result.items).toHaveLength(1);
     });
   });
-
-  // ── delete ──────────────────────────────────────────────────────────────────
 
   describe('delete', () => {
     it('soft-deletes the message, invalidates cache, and emits message.deleted realtime push', async () => {
@@ -250,12 +240,18 @@ describe('MessageService', () => {
       const result = await service.delete({ messageId: 'msg-1', userId: 'user-1' });
 
       expect(prismaService.message.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'msg-1' }, data: expect.objectContaining({ deletedAt: expect.any(Date) }) }),
+        expect.objectContaining({
+          where: { id: 'msg-1' },
+          data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+        }),
       );
       expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
       expect(mockEmit).toHaveBeenCalledWith(
         'chat.realtime.push',
-        expect.objectContaining({ event: 'message.deleted', payload: { messageId: 'msg-1' } }),
+        expect.objectContaining({
+          event: 'message.deleted',
+          payload: { messageId: 'msg-1' },
+        }),
       );
       expect(result).toEqual({ success: true });
     });
@@ -270,8 +266,6 @@ describe('MessageService', () => {
       expect(prismaService.message.update).not.toHaveBeenCalled();
     });
   });
-
-  // ── markRead ──────────────────────────────────────────────────────────────
 
   describe('markRead', () => {
     it('updates lastReadAt for the member in the conversation', async () => {

@@ -3,7 +3,10 @@ import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
-import { AddMembersPayloadDto, LeaveConversationPayloadDto } from 'src/shared/dtos/chat.dto';
+import {
+  AddMembersPayloadDto,
+  LeaveConversationPayloadDto,
+} from 'src/shared/dtos/chat.dto';
 
 @Injectable()
 export class MemberService {

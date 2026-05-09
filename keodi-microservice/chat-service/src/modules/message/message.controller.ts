@@ -1,12 +1,12 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { ChatTopics } from 'src/shared/constants/topic.constant';
 import {
   DeleteMessagePayloadDto,
   ListMessagesPayloadDto,
   MarkReadPayloadDto,
   SendMessagePayloadDto,
 } from 'src/shared/dtos/chat.dto';
-import { ChatTopics } from 'src/shared/constants/topic.contant';
 import { MessageService } from './message.service';
 
 @Controller()

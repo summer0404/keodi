@@ -26,7 +26,10 @@ export class ConversationService {
       if (allMemberIds.length !== 2) {
         throw new RpcException('DIRECT conversation requires exactly 2 members');
       }
-      const existing = await this.findDirectConversation(allMemberIds[0], allMemberIds[1]);
+      const existing = await this.findDirectConversation(
+        allMemberIds[0],
+        allMemberIds[1],
+      );
       if (existing) return existing;
     }
 
@@ -77,7 +80,13 @@ export class ConversationService {
       include: {
         members: { select: { userId: true, joinedAt: true, lastReadAt: true } },
         lastMessage: {
-          select: { id: true, content: true, senderId: true, type: true, createdAt: true },
+          select: {
+            id: true,
+            content: true,
+            senderId: true,
+            type: true,
+            createdAt: true,
+          },
         },
       },
     });
@@ -96,7 +105,13 @@ export class ConversationService {
       include: {
         members: { select: { userId: true, lastReadAt: true } },
         lastMessage: {
-          select: { id: true, content: true, senderId: true, type: true, createdAt: true },
+          select: {
+            id: true,
+            content: true,
+            senderId: true,
+            type: true,
+            createdAt: true,
+          },
         },
       },
     });
