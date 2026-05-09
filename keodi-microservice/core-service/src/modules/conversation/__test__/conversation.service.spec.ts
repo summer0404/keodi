@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
-import { ConversationService } from '../conversation.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { ConversationType } from 'src/shared/enums/chat.enum';
+import { ConversationService } from '../conversation.service';
 
 const makeConversation = (overrides: Record<string, any> = {}) => ({
   id: 'conv-1',

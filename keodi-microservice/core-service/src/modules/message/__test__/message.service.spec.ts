@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
-import { MessageService } from '../message.service';
 import { PrismaService } from 'src/database/prisma.service';
-import { RedisService } from 'src/providers/redis/redis.service';
-import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ConversationService } from 'src/modules/conversation/conversation.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { RedisService } from 'src/providers/redis/redis.service';
 import { MessageType } from 'src/shared/enums/chat.enum';
 import { NotificationType } from 'src/shared/enums/notification.enum';
+import { MessageService } from '../message.service';
 
 const makeMessage = (overrides: Record<string, any> = {}) => ({
   id: 'msg-1',
@@ -105,7 +105,7 @@ describe('MessageService', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('send', () => {
-    it('persists message, updates conversation, invalidates cache, and emits realtime push', async () => {
+    it('persists message, updates conversation, invalidates cache, emits realtime and notifications', async () => {
       const msg = makeMessage();
       conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);
       prismaService.message.create.mockResolvedValue(msg);

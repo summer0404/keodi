@@ -1,10 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
-import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { ChatErrorMessages } from 'src/shared/constants/error.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
+import { ConversationService } from 'src/modules/conversation/conversation.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   DeleteMessagePayloadDto,
@@ -17,7 +18,6 @@ import {
   NotificationType,
 } from 'src/shared/enums/notification.enum';
 import { MessageType } from 'src/shared/enums/chat.enum';
-import { ConversationService } from '../conversation/conversation.service';
 
 @Injectable()
 export class MessageService {

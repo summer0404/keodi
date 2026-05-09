@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
-import { MemberService } from '../member.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { MemberService } from '../member.service';
 
 describe('MemberService', () => {
   let service: MemberService;

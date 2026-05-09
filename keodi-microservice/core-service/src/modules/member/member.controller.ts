@@ -5,6 +5,7 @@ import {
   LeaveConversationPayloadDto,
 } from 'src/shared/dtos/chat.dto';
 import { MemberTopics } from 'src/shared/constants/topic.constant';
+
 import { MemberService } from './member.service';
 
 @Controller()
