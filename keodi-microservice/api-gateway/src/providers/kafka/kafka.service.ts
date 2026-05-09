@@ -10,6 +10,7 @@ import {
   FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
+  IntelligenceTopics,
   NotificationInboxTopics,
   OwnerApplicationTopics,
   OwnershipClaimTopics,
@@ -80,6 +81,8 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Approve);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Reject);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Update);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetByIdsWithDistance);
+    this.kafkaClient.subscribeToResponseOf(IntelligenceTopics.AgentSearch);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);
     this.kafkaClient.subscribeToResponseOf(
@@ -112,6 +115,14 @@ export class KafkaService implements OnModuleInit {
     // review topic
     this.kafkaClient.subscribeToResponseOf(ReviewTopics.Create);
     this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetByPlaceId);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetOwnerReviews);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.Respond);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.UpdateResponse);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.DeleteResponse);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.Flag);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetAdminReviews);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.ApproveFlags);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.RejectFlags);
 
     //group session topic
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Create);
@@ -138,6 +149,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(
       GroupSessionTopics.UpdateRecommendationCategories,
     );
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetActivities);
 
     //search topic
     this.kafkaClient.subscribeToResponseOf(SearchTopics.Trending);

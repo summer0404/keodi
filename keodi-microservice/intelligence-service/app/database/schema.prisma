@@ -11,7 +11,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  extensions = [vector]
+  extensions = [vector, unaccent]
   url      = env("DATABASE_URL")
 }
 
@@ -38,9 +38,21 @@ enum UserActionType {
   GET_DIRECTION
 }
 
+enum PlaceStatus {
+  UNDER_REVIEW
+  PUBLISHED
+  SUSPENDED
+}
+
+enum OwnerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id          String    @id
-  username    String?   @unique @db.VarChar(20)
+  username    String    @unique @db.VarChar(20)
   phoneNumber String?   @unique @map("phone_number") @db.VarChar(12)
   firstName   String?   @map("first_name") @db.VarChar(50)
   lastName    String?   @map("last_name") @db.VarChar(50)
@@ -62,8 +74,56 @@ model User {
   friendsOf          Friendship[]         @relation("FriendFriendships")
   groupSessions      GroupSession[]       @relation("CreatedSessions")
   setting            UserSetting?
+  ownerApplication   OwnerApplication?
+  ownershipClaims    OwnershipClaim[]
 
   @@map("users")
+}
+
+model OwnerApplication {
+  id                String                 @id @default(cuid())
+  userId            String                 @unique @map("user_id")
+  businessName      String                 @map("business_name")
+  businessPhone     String                 @map("business_phone")
+  businessAddress   String                 @map("business_address")
+  taxId             String                 @map("tax_id")
+  businessWebsite   String?                @map("business_website")
+  proofDocumentUrls String[]               @map("proof_document_urls")
+  status            OwnerApplicationStatus @default(PENDING)
+  rejectionReason   String?                @map("rejection_reason")
+  reviewedAt        DateTime?              @map("reviewed_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("owner_applications")
+}
+
+enum OwnershipClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISPUTED
+}
+
+model OwnershipClaim {
+  id                String               @id @default(cuid())
+  userId            String               @map("user_id")
+  placeId           String               @map("place_id")
+  relationship      String
+  proofDocumentUrls String[]             @map("proof_document_urls")
+  note   String?              @map("additional_notes")
+  status            OwnershipClaimStatus @default(PENDING)
+  rejectionReason   String?              @map("rejection_reason")
+  reviewedAt        DateTime?            @map("reviewed_at")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@map("ownership_claims")
 }
 
 model Image {
@@ -119,6 +179,7 @@ model Place {
   fromGoogle      Boolean @default(false) @map("from_google")
   name            String
   description     String?
+  status          PlaceStatus @default(PUBLISHED)
   rating          Float
   googleMapLink   String  @map("google_map_link")
   website         String?
@@ -140,16 +201,18 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  placeAttributes  PlaceAttribute[]
-  userActions      UserAction[]
-  reviews          Review[]
-  placeImages      PlaceImage[]
-  openingHours     OpeningHour[]
-  placeCategories  PlaceCategory[]
-  owner            User?            @relation(fields: [ownerId], references: [id])
-  favorites        Favorite[]
-  sessionVotes     SessionVote[]
-  wonGroupSessions GroupSession[]   @relation("SessionWinningPlace")
+  placeAttributes        PlaceAttribute[]
+  userActions            UserAction[]
+  reviews                Review[]
+  placeImages            PlaceImage[]
+  openingHours           OpeningHour[]
+  placeCategories        PlaceCategory[]
+  owner                  User?                   @relation(fields: [ownerId], references: [id])
+  favorites              Favorite[]
+  sessionVotes           SessionVote[]
+  wonGroupSessions       GroupSession[]          @relation("SessionWinningPlace")
+  groupSessionCandidates GroupSessionCandidate[]
+  ownershipClaims        OwnershipClaim[]
 
   @@index([latitude, longitude])
   @@index([ftsSearchVector], type: Gin, map: "places_fts_vector_idx")
@@ -183,8 +246,9 @@ model Category {
   name         String  @unique
   isSelectable Boolean @default(false) @map("is_selectable")
 
-  placeCategories PlaceCategory[]
-  userCategories  UserCategory[]
+  placeCategories        PlaceCategory[]
+  userCategories         UserCategory[]
+  groupSessionCategories GroupSessionCategory[]
 
   @@map("categories")
 }
@@ -348,6 +412,7 @@ model GroupSession {
   createdBy      String             @map("created_by")
   shareCode      String             @unique @map("share_code")
   createdAt      DateTime           @default(now()) @map("created_at")
+  searchRadius   Float              @default(5) @map("search_radius")
   status         GroupSessionStatus @default(ACTIVE)
   voteStatus     VoteStatus         @default(OPEN) @map("vote_status")
   finalizedAt    DateTime?          @map("finalized_at")
@@ -357,10 +422,24 @@ model GroupSession {
   creator      User   @relation("CreatedSessions", fields: [createdBy], references: [id], onDelete: Cascade)
   winningPlace Place? @relation("SessionWinningPlace", fields: [winningPlaceId], references: [id], onDelete: SetNull)
 
-  members GroupSessionMember[]
-  votes   SessionVote[]
+  members                GroupSessionMember[]
+  votes                  SessionVote[]
+  selectedCategories     GroupSessionCategory[]
+  groupSessionCandidates GroupSessionCandidate[]
 
   @@map("group_sessions")
+}
+
+model GroupSessionCategory {
+  sessionId  String   @map("session_id")
+  categoryId String   @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session  GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  category Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, categoryId])
+  @@map("group_session_categories")
 }
 
 enum GroupSessionStatus {
@@ -379,7 +458,8 @@ model GroupSessionMember {
   session GroupSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
   user    User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  vote SessionVote?
+  vote                   SessionVote?
+  groupSessionCandidates GroupSessionCandidate[]
 
   @@unique([sessionId, userId])
   @@unique([sessionId, guestId])
@@ -396,6 +476,20 @@ model Search {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("searches")
+}
+
+model GroupSessionCandidate {
+  sessionId String   @map("session_id")
+  placeId   String   @map("place_id")
+  addedBy   String   @map("added_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session GroupSession       @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  place   Place              @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  member  GroupSessionMember @relation(fields: [addedBy], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, placeId])
+  @@map("group_session_candidates")
 }
 
 model UserSetting {

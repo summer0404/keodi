@@ -8,6 +8,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { IS_OPTIONAL_AUTH_KEY } from 'src/common/decorators/optional-auth.decorator';
 import { IS_PUBLIC_KEY } from 'src/common/decorators/skip-auth.decorator';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { TokenErrorMessages } from 'src/shared/constants/error.constant';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -25,14 +26,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     context: ExecutionContext,
     status?: any,
   ): TUser {
-    // Check if auth is optional
     const isOptionalAuth = this.reflector.getAllAndOverride<boolean>(
       IS_OPTIONAL_AUTH_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    // If optional auth and no user, no error, and no token failure info → truly no token (allow anonymous)
-    // A present but expired/invalid token must still return 401
     if (isOptionalAuth && !user && !err && !info) {
       return null as TUser;
     }
@@ -42,16 +40,16 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
       switch (info?.name) {
         case 'TokenExpiredError':
-          message = 'Token has expired';
+          message = TokenErrorMessages.TOKEN_EXPIRED;
           break;
         case 'JsonWebTokenError':
-          message = 'Invalid token';
+          message = TokenErrorMessages.INVALID_TOKEN;
           break;
         case 'NotBeforeError':
-          message = 'Token not active';
+          message = TokenErrorMessages.TOKEN_NOT_ACTIVE;
           break;
         default:
-          message = 'Token not provided';
+          message = TokenErrorMessages.TOKEN_NOT_PROVIDED;
           break;
       }
 
@@ -95,7 +93,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         .has(`blacklist_token:${token}`)
         .then((isBlacklisted) => {
           if (isBlacklisted) {
-            throw new UnauthorizedException('Token has been revoked');
+            throw new UnauthorizedException(TokenErrorMessages.TOKEN_REVOKED);
           }
           return super.canActivate(context) as Promise<boolean>;
         });

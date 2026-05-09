@@ -45,6 +45,13 @@ export class PlaceController {
         return await this.placeService.rejectPlace(data.placeId, data.data.reason);
     }
 
+    @MessagePattern(PlaceTopics.GetByIdsWithDistance)
+    async getByIdsWithDistance(
+        @Payload() data: { ids: string[]; userId: string; latitude: number; longitude: number },
+    ) {
+        return await this.placeService.getByIdsWithDistance(data.ids, data.userId, data.latitude, data.longitude);
+    }
+
     @MessagePattern(PlaceTopics.Update)
     async update(@Payload() data: UpdatePlaceDto) {
         return await this.placeService.update(data);

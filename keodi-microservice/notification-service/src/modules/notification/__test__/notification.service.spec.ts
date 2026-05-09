@@ -10,6 +10,7 @@ import {
   OwnershipClaimDisputedDto,
   OwnershipClaimRejectedDto,
   OwnershipRevokedDto,
+  ReviewLowRatingDto,
 } from 'src/shared/dtos/email.dto';
 
 describe('NotificationService', () => {
@@ -211,6 +212,51 @@ describe('NotificationService', () => {
       prismaService.user.findUnique.mockResolvedValue(null);
 
       await service.sendOwnershipClaimDisputedEmail({ to: 'x', placeName: 'p' } as any);
+
+      expect(emailService.sendTransactionalEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---- sendReviewLowRatingEmail ----
+
+  describe('sendReviewLowRatingEmail', () => {
+    it('sends low rating email when user is found', async () => {
+      prismaService.user.findUnique.mockResolvedValue({ email: 'owner@example.com' });
+      notificationHelper.getEmailSubject.mockReturnValue(EmailSubject.REVIEW_LOW_RATING);
+      notificationHelper.getEmailContent.mockReturnValue('<html></html>');
+      emailService.sendTransactionalEmail.mockResolvedValue(undefined);
+
+      const dto: ReviewLowRatingDto = {
+        to: 'user-id-5',
+        reviewerName: 'Nguyen Van A',
+        rating: 1,
+        placeName: 'Cafe XYZ',
+        placeId: 'place-1',
+        reviewId: 'review-1',
+      } as any;
+      await service.sendReviewLowRatingEmail(dto);
+
+      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 'user-id-5' },
+        select: { email: true },
+      });
+      expect(emailService.sendTransactionalEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'owner@example.com' }),
+      );
+    });
+
+    it('skips sending when user email not found', async () => {
+      prismaService.user.findUnique.mockResolvedValue(null);
+
+      await service.sendReviewLowRatingEmail({ to: 'x' } as any);
+
+      expect(emailService.sendTransactionalEmail).not.toHaveBeenCalled();
+    });
+
+    it('skips sending when user record has no email', async () => {
+      prismaService.user.findUnique.mockResolvedValue({ email: null });
+
+      await service.sendReviewLowRatingEmail({ to: 'x' } as any);
 
       expect(emailService.sendTransactionalEmail).not.toHaveBeenCalled();
     });

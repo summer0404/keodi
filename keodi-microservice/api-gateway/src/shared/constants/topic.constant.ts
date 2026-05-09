@@ -47,6 +47,7 @@ export const OwnershipClaimTopics = {
 
 export const PlaceTopics = {
   GetById: 'place.get-by-id',
+  GetByIdsWithDistance: 'place.get-by-ids-with-distance',
   NearMe: 'place.near-me',
   Search: 'place.search',
   Create: 'place.create',
@@ -105,6 +106,8 @@ export const GroupSessionTopics = {
   UpdateRecommendationRadius: 'group-session.update-recommendation-radius',
   UpdateRecommendationCategories:
     'group-session.update-recommendation-categories',
+  GetActivities: 'group-session.get-activities',
+  LogRecommendationsRefreshed: 'group-session.log-recommendations-refreshed',
 } as const;
 
 export const SearchTopics = {
@@ -125,6 +128,14 @@ export const AttributeTopics = {
 export const ReviewTopics = {
   Create: 'review.create',
   GetByPlaceId: 'review.get_by_place_id',
+  GetOwnerReviews: 'review.get-owner-reviews',
+  Respond: 'review.respond',
+  UpdateResponse: 'review.update-response',
+  DeleteResponse: 'review.delete-response',
+  Flag: 'review.flag',
+  ApproveFlags: 'review.approve-flags',
+  RejectFlags: 'review.reject-flags',
+  GetAdminReviews: 'review.get-admin-reviews',
 } as const;
 
 export const IntelligenceTopics = {
@@ -133,6 +144,7 @@ export const IntelligenceTopics = {
   UserAction: 'intelligence.user-action',
   TrainRankingModel: 'intelligence.train-ranking-model',
   Ranking: 'intelligence.ranking',
+  AgentSearch: 'intelligence.agent-search',
 } as const;
 
 export const NotificationTopics = {

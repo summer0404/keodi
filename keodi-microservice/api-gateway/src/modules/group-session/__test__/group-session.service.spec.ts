@@ -332,5 +332,42 @@ describe('GroupSessionService', () => {
 
       expect(result).toEqual({ accepted: true });
     });
+
+    it('should emit LogRecommendationsRefreshed event after invalidation', async () => {
+      mockCacheManager.del.mockResolvedValue(undefined);
+
+      await service.refreshRecommendations('session-1', 'user-1');
+
+      expect(mockKafkaClient.emit).toHaveBeenCalledWith(
+        GroupSessionTopics.LogRecommendationsRefreshed,
+        expect.objectContaining({ sessionId: 'session-1', userId: 'user-1' }),
+      );
+    });
+  });
+
+  describe('getActivities', () => {
+    it('sends GetActivities topic with sessionId, userId, guestId', async () => {
+      const expected = { activities: [] };
+      mockKafkaService.sendWithTimeout.mockResolvedValue(expected);
+
+      const result = await service.getActivities('sess-1', 'user-1', undefined);
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        GroupSessionTopics.GetActivities,
+        { sessionId: 'sess-1', userId: 'user-1', guestId: undefined },
+      );
+      expect(result).toEqual(expected);
+    });
+
+    it('sends GetActivities topic with guestId for guest access', async () => {
+      mockKafkaService.sendWithTimeout.mockResolvedValue({ activities: [] });
+
+      await service.getActivities('sess-1', undefined, 'guest-abc');
+
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
+        GroupSessionTopics.GetActivities,
+        { sessionId: 'sess-1', userId: undefined, guestId: 'guest-abc' },
+      );
+    });
   });
 });

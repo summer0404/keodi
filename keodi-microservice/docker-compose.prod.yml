@@ -254,8 +254,9 @@ services:
     container_name: grafana
     ports:
       - "3005:3000"
+    env_file:
+      - ./env/monitoring.env
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=keodi.app.vn
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning

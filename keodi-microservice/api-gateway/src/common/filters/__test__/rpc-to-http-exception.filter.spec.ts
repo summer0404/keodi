@@ -1,5 +1,6 @@
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { TimeoutError } from 'rxjs';
+import { SystemErrorMessage } from 'src/shared/constants/error.constant';
 import { ConvertToHttpExceptionFilter } from '../rpc-to-http-exception.filter';
 
 const mockResponse = () => ({
@@ -40,7 +41,7 @@ describe('ConvertToHttpExceptionFilter', () => {
       expect(res.status).toHaveBeenCalledWith(HttpStatus.GATEWAY_TIMEOUT);
       expect(res.json).toHaveBeenCalledWith({
         status: HttpStatus.GATEWAY_TIMEOUT,
-        message: 'Service request timed out',
+        message: SystemErrorMessage.SERVICE_REQUEST_TIMEOUT,
       });
     });
   });
@@ -140,7 +141,7 @@ describe('ConvertToHttpExceptionFilter', () => {
       });
     });
 
-    it('should default to 500 and "Unexpected error" for unknown objects without status/message', () => {
+    it('should default to 500 and INTERNAL_SERVER_ERROR message for unknown objects without status/message', () => {
       const res = mockResponse();
       const host = mockHost(res);
       const exception = { stack: 'some stack', unrelated: true };
@@ -151,7 +152,7 @@ describe('ConvertToHttpExceptionFilter', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           status: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'Unexpected error',
+          message: SystemErrorMessage.INTERNAL_SERVER_ERROR,
         }),
       );
     });

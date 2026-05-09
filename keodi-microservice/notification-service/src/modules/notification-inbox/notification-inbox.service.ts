@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
+import { GetInboxPayload, MarkAsReadPayload, PersistInboxEvent, UserIdPayload } from 'src/shared/interfaces/notification.interface';
 
 @Injectable()
 export class NotificationInboxService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async upsertByEventId(payload: any) {
+  async upsertByEventId(payload: PersistInboxEvent) {
     return await this.prismaService.notification.upsert({
       where: { eventId: payload.eventId },
       create: {
@@ -29,12 +30,7 @@ export class NotificationInboxService {
     });
   }
 
-  async getByUserId(payload: {
-    userId: string;
-    page: number;
-    limit: number;
-    unreadOnly?: boolean;
-  }) {
+  async getByUserId(payload: GetInboxPayload) {
     const { userId, page, limit, unreadOnly } = payload;
     const skip = (page - 1) * limit;
 
@@ -81,7 +77,7 @@ export class NotificationInboxService {
     };
   }
 
-  async markAsRead(payload: { userId: string; notificationId: string }) {
+  async markAsRead(payload: MarkAsReadPayload) {
     const now = new Date();
     return await this.prismaService.notification.updateMany({
       where: { id: payload.notificationId, userId: payload.userId },
@@ -89,7 +85,7 @@ export class NotificationInboxService {
     });
   }
 
-  async markAllAsRead(payload: { userId: string }) {
+  async markAllAsRead(payload: UserIdPayload) {
     const now = new Date();
     return await this.prismaService.notification.updateMany({
       where: { userId: payload.userId, isRead: false },
@@ -97,7 +93,7 @@ export class NotificationInboxService {
     });
   }
 
-  async getUnreadCount(payload: { userId: string }) {
+  async getUnreadCount(payload: UserIdPayload) {
     const count = await this.prismaService.notification.count({
       where: { userId: payload.userId, isRead: false },
     });

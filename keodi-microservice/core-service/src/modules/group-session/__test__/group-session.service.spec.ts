@@ -18,6 +18,10 @@ const mockPrismaService = {
     updateMany: jest.fn(),
     count: jest.fn(),
   },
+  groupSessionActivity: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+  },
   groupSessionMember: {
     findFirst: jest.fn(),
     findMany: jest.fn(),
@@ -378,6 +382,94 @@ describe('GroupSessionService', () => {
 
       expect((result as any).candidates).toEqual([]);
       expect((result as any).total).toBe(0);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // getActivities
+  // ──────────────────────────────────────────────
+  describe('getActivities', () => {
+    it('throws NOT_FOUND when session does not exist', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue(null);
+
+      await expect(service.getActivities({ sessionId: 'missing' })).rejects.toThrow(RpcException);
+    });
+
+    it('throws FORBIDDEN when caller is not a member', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        createdBy: 'owner-1',
+        members: [{ userId: 'other-user', guestId: null }],
+      });
+
+      await expect(service.getActivities({ sessionId: 'sess-1', userId: 'stranger' })).rejects.toThrow(RpcException);
+    });
+
+    it('returns activities ordered newest-first for a valid member', async () => {
+      const activities = [
+        { id: 'act-2', type: 'MEMBER_JOINED', createdAt: new Date('2026-01-02') },
+        { id: 'act-1', type: 'MEMBER_JOINED', createdAt: new Date('2026-01-01') },
+      ];
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        createdBy: 'owner-1',
+        members: [{ userId: 'owner-1', guestId: null }],
+      });
+      mockPrismaService.groupSessionActivity.findMany.mockResolvedValue(activities);
+
+      const result = await service.getActivities({ sessionId: 'sess-1', userId: 'owner-1' }) as any;
+
+      expect(result.activities).toEqual(activities);
+      expect(mockPrismaService.groupSessionActivity.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { sessionId: 'sess-1' }, orderBy: { createdAt: 'desc' } }),
+      );
+    });
+
+    it('allows creator access even if not in members array', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        createdBy: 'creator-1',
+        members: [],
+      });
+      mockPrismaService.groupSessionActivity.findMany.mockResolvedValue([]);
+
+      const result = await service.getActivities({ sessionId: 'sess-1', userId: 'creator-1' }) as any;
+
+      expect(result.activities).toEqual([]);
+    });
+
+    it('allows guest access by guestId', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        createdBy: 'owner-1',
+        members: [{ userId: null, guestId: 'guest-abc' }],
+      });
+      mockPrismaService.groupSessionActivity.findMany.mockResolvedValue([]);
+
+      const result = await service.getActivities({ sessionId: 'sess-1', guestId: 'guest-abc' }) as any;
+
+      expect(result.activities).toEqual([]);
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // logRecommendationsRefreshed
+  // ──────────────────────────────────────────────
+  describe('logRecommendationsRefreshed', () => {
+    it('calls logActivity with RECOMMENDATIONS_REFRESHED type', async () => {
+      mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
+
+      await service.logRecommendationsRefreshed({ sessionId: 'sess-1', userId: 'user-1' });
+
+      expect(mockPrismaService.groupSessionActivity.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            sessionId: 'sess-1',
+            type: 'RECOMMENDATIONS_REFRESHED',
+            actorId: 'user-1',
+          }),
+        }),
+      );
     });
   });
 });

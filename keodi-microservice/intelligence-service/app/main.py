@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
-from app.kafka.consumer import get_consumer_service
+
+import asyncio
 from fastapi import FastAPI
-import asyncio 
+
 from app.kafka.client import close_kafka_connections
-from app.kafka.topic import Topics
+from app.kafka.consumer import get_consumer_service
 from app.kafka.handler import get_handlers
+from app.kafka.topic import Topics
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,6 +36,11 @@ async def lifespan(app: FastAPI):
     consumer_service.register_handler(
         topic=Topics.RANKING,
         handler=handlers.ranking
+    )
+
+    consumer_service.register_handler(
+        topic=Topics.AGENT_SEARCH,
+        handler=handlers.agent_search
     )
 
     asyncio.create_task(consumer_service.start(

@@ -1,15 +1,16 @@
 import { HttpStatus, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { INTERNAL_SERVER_ERROR } from '../constants/error.constant';
 
 const logger = new Logger('ServiceErrorHandler');
 
 export const handleServiceErrorCatching = (error: any) => {
-  logger.error(error.message ?? error, error.stack);
   if (error instanceof RpcException) {
     throw error;
   }
+  logger.error(error.message ?? error, error.stack);
   throw new RpcException({
-    status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-    message: error.message ?? error,
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    message: INTERNAL_SERVER_ERROR,
   });
 };

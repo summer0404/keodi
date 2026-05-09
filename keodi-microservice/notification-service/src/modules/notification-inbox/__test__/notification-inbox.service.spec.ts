@@ -5,11 +5,12 @@ import { PrismaService } from 'src/database/prisma.service';
 import {
   NotificationPreferredChannel,
   NotificationStatus,
+  NotificationType,
 } from 'src/shared/enums/notification.enum';
 
 const makeNotification = (overrides: Record<string, any> = {}) => ({
   id: 'notif-1',
-  type: 'SYSTEM',
+  type: NotificationType.SYSTEM,
   title: 'Hello',
   body: 'World',
   data: null,
@@ -67,7 +68,7 @@ describe('NotificationInboxService', () => {
       const payload = {
         eventId: 'evt-1',
         userId: 'user-1',
-        type: 'SYSTEM',
+        type: NotificationType.SYSTEM,
         title: 'Title',
         body: 'Body',
         data: { key: 'val' },
@@ -102,7 +103,7 @@ describe('NotificationInboxService', () => {
       const payload = {
         eventId: 'evt-2',
         userId: 'user-1',
-        type: 'SYSTEM',
+        type: NotificationType.SYSTEM,
         title: 'T',
         body: 'B',
         data: null,
@@ -124,7 +125,7 @@ describe('NotificationInboxService', () => {
       const payload = {
         eventId: 'evt-3',
         userId: 'user-1',
-        type: 'SYSTEM',
+        type: NotificationType.SYSTEM,
         title: 'T',
         body: 'B',
         data: null,
@@ -143,7 +144,7 @@ describe('NotificationInboxService', () => {
     it('propagates Prisma errors', async () => {
       prismaService.notification.upsert.mockRejectedValue(new Error('db error'));
 
-      await expect(service.upsertByEventId({ eventId: 'x', userId: 'u' })).rejects.toThrow('db error');
+      await expect(service.upsertByEventId({ eventId: 'x', userId: 'u' } as any)).rejects.toThrow('db error');
     });
   });
 

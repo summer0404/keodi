@@ -1,7 +1,11 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { GroupSessionService } from './group-session.service';
 import { GroupSessionTopics } from 'src/shared/constants/topic.constant';
+import {
+  GetSessionActivitiesDto,
+  LogRecommendationsRefreshedDto,
+} from 'src/shared/dtos/group-session.dto';
 
 @Controller('group-session')
 export class GroupSessionController {
@@ -171,5 +175,15 @@ export class GroupSessionController {
     },
   ) {
     return await this.groupSessionService.updateRecommendationCategories(data);
+  }
+
+  @MessagePattern(GroupSessionTopics.GetActivities)
+  async getActivities(@Payload() data: GetSessionActivitiesDto) {
+    return await this.groupSessionService.getActivities(data);
+  }
+
+  @EventPattern(GroupSessionTopics.LogRecommendationsRefreshed)
+  async logRecommendationsRefreshed(@Payload() data: LogRecommendationsRefreshedDto) {
+    return await this.groupSessionService.logRecommendationsRefreshed(data);
   }
 }

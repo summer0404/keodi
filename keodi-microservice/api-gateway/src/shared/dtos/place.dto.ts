@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { ApiProperty, IntersectionType, PickType } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType, OmitType, PickType } from '@nestjs/swagger';
 import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
@@ -15,6 +15,7 @@ import {
 } from 'class-validator';
 import { PlaceConstants } from '../constants/place.constant';
 import { PlaceSortBy } from '../enums/sort.enum';
+import { PlaceStatus } from '../enums/place.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
 import { parseArray, parseStringArray } from '../utils/type.util';
 
@@ -559,4 +560,37 @@ export class UpdatePlaceDto {
 export class UpdatePlaceResponseDto {
   @ApiProperty({ example: 'Place updated successfully' })
   message: string;
+}
+
+export class GetAdminPlacesDto extends PaginationQueryDto {
+  @ApiProperty({
+    description: 'Filter by place status',
+    enum: PlaceStatus,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(PlaceStatus)
+  status?: PlaceStatus;
+}
+
+export class RejectPlaceBodyDto {
+  @ApiProperty({ description: 'Rejection reason', example: 'Incomplete information' })
+  @IsNotEmpty()
+  @IsString()
+  reason: string;
+}
+
+export class ChatSearchDto extends CoordinateDto {
+  @ApiProperty({ description: 'User message (can be emotional or abstract)', example: 'Tôi đang buồn, muốn đi đâu đó giải khuây' })
+  @IsNotEmpty()
+  @IsString()
+  message: string;
+}
+
+export class AgentSearchResponseDto {
+  @ApiProperty({ description: 'AI agent message in Vietnamese' })
+  message: string;
+
+  @ApiProperty({ type: [PlaceDistanceDto], description: 'Recommended places with full details including distance' })
+  places: PlaceDistanceDto[];
 }

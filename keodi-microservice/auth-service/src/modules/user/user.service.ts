@@ -5,6 +5,7 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.helper';
 import { UserTopics } from 'src/shared/constants/topic.constant';
+import { UserErrorMessages } from 'src/shared/constants/error.constant';
 
 @Injectable()
 export class UserService {
@@ -23,7 +24,7 @@ export class UserService {
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'User not found',
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
 
       if (existingUser.isVerified) {
@@ -55,7 +56,7 @@ export class UserService {
       if (existingUsername)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'Username already used',
+          message: UserErrorMessages.USERNAME_ALREADY_EXISTS,
         });
 
       const existingUser = await this.prismaService.user.findUnique({
@@ -64,7 +65,7 @@ export class UserService {
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'User not found',
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
 
       await this.prismaService.user.update({
@@ -86,11 +87,7 @@ export class UserService {
           data: { username: existingUser.username },
         });
 
-        throw new RpcException({
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-          message:
-            'Failed to sync username across services, changes rolled back.',
-        });
+        handleServiceErrorCatching(error);
       }
 
       await this.redisService.set(
@@ -119,7 +116,7 @@ export class UserService {
       if (!existingUser)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'User not found',
+          message: UserErrorMessages.USER_NOT_FOUND,
         });
 
       await this.kafkaService.sendWithTimeout(UserTopics.Create, {

@@ -7,9 +7,12 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
+  ApiCreatedResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
+  AgentSearchResponseDto,
   CreatePlaceResponseDto,
   NearMePlacesResponseDto,
   PlaceRecommendationResponseDto,
@@ -364,5 +367,93 @@ export function ApiUpdatePlace() {
     ApiBadRequestResponse({
       description: 'Invalid request payload',
     }),
+  );
+}
+
+export function ApiGetAdminPlaces() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Get all places (admin)',
+      description: 'Retrieve a paginated list of all places. Optionally filter by status. Requires ADMIN role.',
+    }),
+    ApiOkResponse({
+      description: 'List of places retrieved successfully',
+      type: NearMePlacesResponseDto,
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiForbiddenResponse({
+      description: 'Forbidden - Admin role is required',
+    }),
+  );
+}
+
+export function ApiApprovePlace() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Approve a place',
+      description: 'Approve a place submission and set its status to PUBLISHED. Requires ADMIN role.',
+    }),
+    ApiParam({ name: 'id', description: 'Place ID', example: 'clx123-place-id' }),
+    ApiCreatedResponse({
+      description: 'Place approved successfully',
+      schema: { example: { message: 'Place approved successfully' } },
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiForbiddenResponse({
+      description: 'Forbidden - Admin role is required',
+    }),
+    ApiNotFoundResponse({
+      description: 'Place not found with the specified ID',
+    }),
+  );
+}
+
+export function ApiRejectPlace() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'Reject a place',
+      description: 'Reject a place submission with a reason. Requires ADMIN role.',
+    }),
+    ApiParam({ name: 'id', description: 'Place ID', example: 'clx123-place-id' }),
+    ApiBody({
+      schema: {
+        type: 'object',
+        required: ['reason'],
+        properties: {
+          reason: { type: 'string', example: 'Incomplete or inaccurate information' },
+        },
+      },
+    }),
+    ApiCreatedResponse({
+      description: 'Place rejected successfully',
+      schema: { example: { message: 'Place rejected successfully' } },
+    }),
+    ApiUnauthorizedResponse({
+      description: 'Unauthorized - Invalid or missing authentication token',
+    }),
+    ApiForbiddenResponse({
+      description: 'Forbidden - Admin role is required',
+    }),
+    ApiNotFoundResponse({
+      description: 'Place not found with the specified ID',
+    }),
+    ApiBadRequestResponse({
+      description: 'Missing or invalid rejection reason',
+    }),
+  );
+}
+
+export function ApiChatSearch() {
+  return applyDecorators(
+    ApiOperation({
+      summary: 'AI Agent search (chat)',
+      description: 'Conversational place search powered by LLM agent. Supports emotional and abstract queries.',
+    }),
+    ApiOkResponse({ description: 'Agent recommendations', type: AgentSearchResponseDto }),
+    ApiUnauthorizedResponse({ description: 'Unauthorized' }),
   );
 }

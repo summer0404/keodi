@@ -436,3 +436,18 @@ export class LeaveSessionDto {
   })
   guestId?: string;
 }
+
+export class GroupSessionActivityDto {
+  @ApiProperty() id: string;
+  @ApiProperty() sessionId: string;
+  @ApiProperty() type: string;
+  @ApiProperty({ nullable: true }) actorId: string | null;
+  @ApiProperty({ nullable: true }) actorName: string | null;
+  @ApiProperty({ nullable: true, type: Object }) metadata: Record<string, unknown> | null;
+  @ApiProperty() createdAt: Date;
+}
+
+export class GetSessionActivitiesResponseDto {
+  @ApiProperty({ type: [GroupSessionActivityDto] })
+  activities: GroupSessionActivityDto[];
+}

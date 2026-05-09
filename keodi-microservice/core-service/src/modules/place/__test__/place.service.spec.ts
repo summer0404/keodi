@@ -1,6 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
 import { PlaceService } from '../place.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
@@ -76,6 +74,14 @@ const mockPlaceHelper = {
   normalizeOpeningHours: jest.fn().mockReturnValue([]),
   buildFullAddress: jest.fn().mockReturnValue('123 Street, Ward, City, VN'),
   toGoogleMapLink: jest.fn().mockReturnValue('https://maps.google.com/?q=10,106'),
+  calculateGeoDeltas: jest.fn().mockReturnValue({ latDelta: 0.045, longDelta: 0.048 }),
+  buildPaginationParams: jest.fn().mockReturnValue({ offset: 0, orderByClause: 'ORDER BY distance ASC' }),
+  buildSearchQueryConfig: jest.fn().mockReturnValue({
+    searchCondition: {},
+    similarityColumn: {},
+    searchOrderBy: 'ORDER BY distance ASC',
+  }),
+  buildSearchCondition: jest.fn().mockReturnValue({}),
 };
 
 describe('PlaceService - update', () => {
