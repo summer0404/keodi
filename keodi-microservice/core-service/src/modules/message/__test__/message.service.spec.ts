@@ -18,6 +18,13 @@ const makeMessage = (overrides: Record<string, any> = {}) => ({
   deletedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
+  sender: {
+    id: 'user-1',
+    username: 'testuser',
+    firstName: 'Test',
+    lastName: 'User',
+    pictureUrl: null,
+  },
   ...overrides,
 });
 
