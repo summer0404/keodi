@@ -16,7 +16,9 @@ describe('RecommendationController', () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RecommendationController],
-      providers: [{ provide: RecommendationService, useValue: mockRecommendationService }],
+      providers: [
+        { provide: RecommendationService, useValue: mockRecommendationService },
+      ],
     }).compile();
 
     controller = module.get<RecommendationController>(RecommendationController);
@@ -53,17 +55,25 @@ describe('RecommendationController', () => {
 
   it('getGroupSessionRecommendations – delegates to service with full payload', async () => {
     const data = { sessionId: 'sess-1', userId: 'u1', guestId: undefined };
-    mockRecommendationService.getGroupSessionRecommendations.mockResolvedValue([]);
+    mockRecommendationService.getGroupSessionRecommendations.mockResolvedValue(
+      [],
+    );
 
     await controller.getGroupSessionRecommendations(data);
 
-    expect(mockRecommendationService.getGroupSessionRecommendations).toHaveBeenCalledWith(data);
+    expect(
+      mockRecommendationService.getGroupSessionRecommendations,
+    ).toHaveBeenCalledWith(data);
   });
 
   it('invalidateGroupSessionRecommendationCache – delegates to service handler', async () => {
-    mockRecommendationService.handleGroupSessionRecommendationCacheInvalidationEvent.mockResolvedValue(undefined);
+    mockRecommendationService.handleGroupSessionRecommendationCacheInvalidationEvent.mockResolvedValue(
+      undefined,
+    );
 
-    await controller.invalidateGroupSessionRecommendationCache({ sessionId: 'sess-1' });
+    await controller.invalidateGroupSessionRecommendationCache({
+      sessionId: 'sess-1',
+    });
 
     expect(
       mockRecommendationService.handleGroupSessionRecommendationCacheInvalidationEvent,

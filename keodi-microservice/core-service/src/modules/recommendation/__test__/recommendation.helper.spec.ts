@@ -44,7 +44,11 @@ describe('RecommendationHelper', () => {
     });
 
     it('returns all places when there are no duplicates', () => {
-      const places = [{ id: 'a' } as any, { id: 'b' } as any, { id: 'c' } as any];
+      const places = [
+        { id: 'a' } as any,
+        { id: 'b' } as any,
+        { id: 'c' } as any,
+      ];
       expect(helper.deduplicatePlaces(places)).toHaveLength(3);
     });
   });
@@ -54,7 +58,11 @@ describe('RecommendationHelper', () => {
   // ──────────────────────────────────────────────
   describe('shufflePlaces', () => {
     it('returns array of the same length', () => {
-      const places = [{ id: 'a' } as any, { id: 'b' } as any, { id: 'c' } as any];
+      const places = [
+        { id: 'a' } as any,
+        { id: 'b' } as any,
+        { id: 'c' } as any,
+      ];
       expect(helper.shufflePlaces(places)).toHaveLength(3);
     });
 
@@ -87,7 +95,9 @@ describe('RecommendationHelper', () => {
     });
 
     it('returns the single location as centroid', () => {
-      const result = helper.calculateCentroid([{ memberId: 'm1', latitude: 10.5, longitude: 106.5 }]);
+      const result = helper.calculateCentroid([
+        { memberId: 'm1', latitude: 10.5, longitude: 106.5 },
+      ]);
 
       expect(result.latitude).toBeCloseTo(10.5);
       expect(result.longitude).toBeCloseTo(106.5);

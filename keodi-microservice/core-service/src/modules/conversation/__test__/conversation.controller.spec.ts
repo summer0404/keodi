@@ -29,7 +29,11 @@ describe('ConversationController', () => {
   });
 
   it('delegates create to service', async () => {
-    const payload = { createdById: 'u1', type: 'DIRECT', memberIds: ['u2'] } as any;
+    const payload = {
+      createdById: 'u1',
+      type: 'DIRECT',
+      memberIds: ['u2'],
+    } as any;
     mockConversationService.create.mockResolvedValue({ id: 'conv-1' });
 
     const result = await controller.create(payload);
@@ -59,7 +63,11 @@ describe('ConversationController', () => {
   });
 
   it('delegates update to service', async () => {
-    const payload = { conversationId: 'conv-1', userId: 'u1', name: 'New name' };
+    const payload = {
+      conversationId: 'conv-1',
+      userId: 'u1',
+      name: 'New name',
+    };
     mockConversationService.update.mockResolvedValue({ id: 'conv-1' });
 
     const result = await controller.update(payload);

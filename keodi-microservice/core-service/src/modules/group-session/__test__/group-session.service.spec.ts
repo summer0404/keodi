@@ -73,7 +73,9 @@ const mockKafkaService = {
 };
 
 const mockImageService = {
-  getImageViewUrl: jest.fn().mockResolvedValue('https://cdn.example.com/image.jpg'),
+  getImageViewUrl: jest
+    .fn()
+    .mockResolvedValue('https://cdn.example.com/image.jpg'),
 };
 
 const mockConfigService = {
@@ -119,7 +121,9 @@ describe('GroupSessionService', () => {
   // ──────────────────────────────────────────────
   describe('create', () => {
     it('throws CONFLICT when user already has an active session', async () => {
-      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({ id: 'existing-member' });
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({
+        id: 'existing-member',
+      });
 
       await expect(service.create('user-1')).rejects.toThrow(RpcException);
     });
@@ -132,10 +136,19 @@ describe('GroupSessionService', () => {
         sessionId: 'sess-1',
       });
 
-      const newSession = { sessionId: 'sess-1', shareCode: 'CODE01', createdBy: 'user-1', status: GroupSessionStatus.ACTIVE };
-      mockPrismaService.$transaction.mockImplementation(async (fn: any) => fn(mockPrismaService));
+      const newSession = {
+        sessionId: 'sess-1',
+        shareCode: 'CODE01',
+        createdBy: 'user-1',
+        status: GroupSessionStatus.ACTIVE,
+      };
+      mockPrismaService.$transaction.mockImplementation(async (fn: any) =>
+        fn(mockPrismaService),
+      );
       mockPrismaService.groupSession.create.mockResolvedValue(newSession);
-      mockPrismaService.groupSessionMember.create.mockResolvedValue({ id: 'm1' });
+      mockPrismaService.groupSessionMember.create.mockResolvedValue({
+        id: 'm1',
+      });
 
       const result = await service.create('user-1');
 
@@ -168,7 +181,9 @@ describe('GroupSessionService', () => {
     it('throws NOT_FOUND when session does not exist', async () => {
       mockPrismaService.groupSession.findUnique.mockResolvedValue(null);
 
-      await expect(service.join({ shareCode: 'INVALID' })).rejects.toThrow(RpcException);
+      await expect(service.join({ shareCode: 'INVALID' })).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws BAD_REQUEST when session is not active', async () => {
@@ -179,7 +194,9 @@ describe('GroupSessionService', () => {
         creator: null,
       });
 
-      await expect(service.join({ shareCode: 'CODE' })).rejects.toThrow(RpcException);
+      await expect(service.join({ shareCode: 'CODE' })).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('returns alreadyJoined=true when authenticated user is already a member', async () => {
@@ -189,13 +206,22 @@ describe('GroupSessionService', () => {
         status: GroupSessionStatus.ACTIVE,
         createdBy: 'user-1',
         createdAt: new Date(),
-        members: [{ id: 'm1', userId: 'user-1', user: { id: 'user-1', pictureUrl: null } }],
+        members: [
+          {
+            id: 'm1',
+            userId: 'user-1',
+            user: { id: 'user-1', pictureUrl: null },
+          },
+        ],
         creator: { id: 'user-1', pictureUrl: null },
       };
       mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
       mockPrismaService.groupSessionMember.findFirst.mockResolvedValue(null); // no other active session
 
-      const result = await service.join({ shareCode: 'CODE', userId: 'user-1' });
+      const result = await service.join({
+        shareCode: 'CODE',
+        userId: 'user-1',
+      });
 
       expect((result as any).alreadyJoined).toBe(true);
     });
@@ -209,7 +235,9 @@ describe('GroupSessionService', () => {
       };
       mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
 
-      await expect(service.join({ shareCode: 'CODE' })).rejects.toThrow(RpcException);
+      await expect(service.join({ shareCode: 'CODE' })).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('creates a new member and returns session data on successful join', async () => {
@@ -224,24 +252,38 @@ describe('GroupSessionService', () => {
       };
       mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
       mockPrismaService.groupSessionMember.findFirst.mockResolvedValue(null);
-      mockPrismaService.conversation.findFirst.mockResolvedValue({ id: 'conv-1' });
+      mockPrismaService.conversation.findFirst.mockResolvedValue({
+        id: 'conv-1',
+      });
       mockPrismaService.conversationMember.upsert.mockResolvedValue({
         conversationId: 'conv-1',
         userId: 'user-2',
       });
-      const newMember = { id: 'm2', userId: 'user-2', guestId: null, nickname: null, user: { id: 'user-2', pictureUrl: null } };
+      const newMember = {
+        id: 'm2',
+        userId: 'user-2',
+        guestId: null,
+        nickname: null,
+        user: { id: 'user-2', pictureUrl: null },
+      };
       mockPrismaService.groupSessionMember.create.mockResolvedValue(newMember);
       // stub notifySessionMembers
       mockPrismaService.groupSessionMember.findMany.mockResolvedValue([]);
 
-      const result = await service.join({ shareCode: 'CODE', userId: 'user-2' });
+      const result = await service.join({
+        shareCode: 'CODE',
+        userId: 'user-2',
+      });
 
       expect((result as any).alreadyJoined).toBe(false);
       expect((result as any).member).toBeDefined();
       expect(mockPrismaService.conversationMember.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            conversationId_userId: { conversationId: 'conv-1', userId: 'user-2' },
+            conversationId_userId: {
+              conversationId: 'conv-1',
+              userId: 'user-2',
+            },
           },
           create: { conversationId: 'conv-1', userId: 'user-2' },
         }),
@@ -268,10 +310,15 @@ describe('GroupSessionService', () => {
       });
       mockPrismaService.groupSessionMember.findMany.mockResolvedValue([]);
 
-      const result = await service.join({ shareCode: 'CODE', nickname: 'Guest' });
+      const result = await service.join({
+        shareCode: 'CODE',
+        nickname: 'Guest',
+      });
 
       expect((result as any).alreadyJoined).toBe(false);
-      expect(mockPrismaService.conversationMember.upsert).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.conversationMember.upsert,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -282,7 +329,9 @@ describe('GroupSessionService', () => {
     it('throws NOT_FOUND when session does not exist', async () => {
       mockPrismaService.groupSession.findUnique.mockResolvedValue(null);
 
-      await expect(service.close({ sessionId: 'sess-x', userId: 'user-1' })).rejects.toThrow(RpcException);
+      await expect(
+        service.close({ sessionId: 'sess-x', userId: 'user-1' }),
+      ).rejects.toThrow(RpcException);
     });
 
     it('throws FORBIDDEN when caller is not the session creator', async () => {
@@ -292,7 +341,9 @@ describe('GroupSessionService', () => {
         status: GroupSessionStatus.ACTIVE,
       });
 
-      await expect(service.close({ sessionId: 'sess-1', userId: 'not-owner' })).rejects.toThrow(RpcException);
+      await expect(
+        service.close({ sessionId: 'sess-1', userId: 'not-owner' }),
+      ).rejects.toThrow(RpcException);
     });
 
     it('throws BAD_REQUEST when session is already closed', async () => {
@@ -302,7 +353,9 @@ describe('GroupSessionService', () => {
         status: GroupSessionStatus.CLOSED,
       });
 
-      await expect(service.close({ sessionId: 'sess-1', userId: 'owner' })).rejects.toThrow(RpcException);
+      await expect(
+        service.close({ sessionId: 'sess-1', userId: 'owner' }),
+      ).rejects.toThrow(RpcException);
     });
 
     it('closes session and notifies members on happy path', async () => {
@@ -311,11 +364,17 @@ describe('GroupSessionService', () => {
         createdBy: 'owner',
         status: GroupSessionStatus.ACTIVE,
       });
-      const updated = { sessionId: 'sess-1', status: GroupSessionStatus.CLOSED };
+      const updated = {
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.CLOSED,
+      };
       mockPrismaService.groupSession.update.mockResolvedValue(updated);
       mockPrismaService.groupSessionMember.findMany.mockResolvedValue([]);
 
-      const result = await service.close({ sessionId: 'sess-1', userId: 'owner' });
+      const result = await service.close({
+        sessionId: 'sess-1',
+        userId: 'owner',
+      });
 
       expect(mockPrismaService.groupSession.update).toHaveBeenCalled();
       expect(result).toEqual(updated);
@@ -343,7 +402,9 @@ describe('GroupSessionService', () => {
 
       const result = await service.getSession('sess-1');
 
-      expect(mockImageService.getImageViewUrl).toHaveBeenCalledWith('s3://bucket/pic.jpg');
+      expect(mockImageService.getImageViewUrl).toHaveBeenCalledWith(
+        's3://bucket/pic.jpg',
+      );
       expect(result).toBeDefined();
     });
   });
@@ -358,7 +419,12 @@ describe('GroupSessionService', () => {
 
       const result = await service.getAll('user-1', 1, 10);
 
-      expect(result).toMatchObject({ sessions: [], total: 0, page: 1, limit: 10 });
+      expect(result).toMatchObject({
+        sessions: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+      });
     });
   });
 
@@ -368,7 +434,11 @@ describe('GroupSessionService', () => {
   describe('updateRecommendationSearchRadius', () => {
     it('throws BAD_REQUEST for invalid radius', async () => {
       await expect(
-        service.updateRecommendationSearchRadius({ sessionId: 'sess-1', searchRadius: -1, userId: 'u1' }),
+        service.updateRecommendationSearchRadius({
+          sessionId: 'sess-1',
+          searchRadius: -1,
+          userId: 'u1',
+        }),
       ).rejects.toThrow(RpcException);
     });
 
@@ -376,16 +446,32 @@ describe('GroupSessionService', () => {
       mockPrismaService.groupSession.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateRecommendationSearchRadius({ sessionId: 'sess-1', searchRadius: 5, userId: 'u1' }),
+        service.updateRecommendationSearchRadius({
+          sessionId: 'sess-1',
+          searchRadius: 5,
+          userId: 'u1',
+        }),
       ).rejects.toThrow(RpcException);
     });
 
     it('updates and returns search radius on happy path', async () => {
-      mockPrismaService.groupSession.findUnique.mockResolvedValue({ sessionId: 'sess-1', status: GroupSessionStatus.ACTIVE });
-      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({ id: 'm1' });
-      mockPrismaService.groupSession.update.mockResolvedValue({ sessionId: 'sess-1', searchRadius: 5 });
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.ACTIVE,
+      });
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({
+        id: 'm1',
+      });
+      mockPrismaService.groupSession.update.mockResolvedValue({
+        sessionId: 'sess-1',
+        searchRadius: 5,
+      });
 
-      const result = await service.updateRecommendationSearchRadius({ sessionId: 'sess-1', searchRadius: 5, userId: 'u1' });
+      const result = await service.updateRecommendationSearchRadius({
+        sessionId: 'sess-1',
+        searchRadius: 5,
+        userId: 'u1',
+      });
 
       expect(result).toMatchObject({ sessionId: 'sess-1', searchRadius: 5 });
     });
@@ -398,7 +484,9 @@ describe('GroupSessionService', () => {
     it('throws NOT_FOUND when session does not exist', async () => {
       mockPrismaService.groupSession.findUnique.mockResolvedValue(null);
 
-      await expect(service.leaveSession({ sessionId: 'x', userId: 'u1' })).rejects.toThrow(RpcException);
+      await expect(
+        service.leaveSession({ sessionId: 'x', userId: 'u1' }),
+      ).rejects.toThrow(RpcException);
     });
 
     it('throws FORBIDDEN when creator tries to leave', async () => {
@@ -408,7 +496,9 @@ describe('GroupSessionService', () => {
         createdBy: 'owner',
       });
 
-      await expect(service.leaveSession({ sessionId: 'sess-1', userId: 'owner' })).rejects.toThrow(RpcException);
+      await expect(
+        service.leaveSession({ sessionId: 'sess-1', userId: 'owner' }),
+      ).rejects.toThrow(RpcException);
     });
 
     it('removes member and returns on happy path', async () => {
@@ -417,11 +507,17 @@ describe('GroupSessionService', () => {
         status: GroupSessionStatus.ACTIVE,
         createdBy: 'owner',
       });
-      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({ id: 'm2', userId: 'user-2' });
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({
+        id: 'm2',
+        userId: 'user-2',
+      });
       mockPrismaService.groupSessionMember.delete.mockResolvedValue({});
       mockPrismaService.groupSessionMember.findMany.mockResolvedValue([]);
 
-      const result = await service.leaveSession({ sessionId: 'sess-1', userId: 'user-2' });
+      const result = await service.leaveSession({
+        sessionId: 'sess-1',
+        userId: 'user-2',
+      });
 
       expect(mockPrismaService.groupSessionMember.delete).toHaveBeenCalled();
       expect((result as any).memberId).toBe('m2');
@@ -435,11 +531,15 @@ describe('GroupSessionService', () => {
     it('throws NOT_FOUND when session does not exist', async () => {
       mockPrismaService.groupSession.findUnique.mockResolvedValue(null);
 
-      await expect(service.getCandidates('missing')).rejects.toThrow(RpcException);
+      await expect(service.getCandidates('missing')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('returns candidates for an existing session', async () => {
-      mockPrismaService.groupSession.findUnique.mockResolvedValue({ sessionId: 'sess-1' });
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+      });
       mockPrismaService.groupSessionCandidate.findMany.mockResolvedValue([]);
 
       const result = await service.getCandidates('sess-1');
@@ -456,7 +556,9 @@ describe('GroupSessionService', () => {
     it('throws NOT_FOUND when session does not exist', async () => {
       mockPrismaService.groupSession.findUnique.mockResolvedValue(null);
 
-      await expect(service.getActivities({ sessionId: 'missing' })).rejects.toThrow(RpcException);
+      await expect(
+        service.getActivities({ sessionId: 'missing' }),
+      ).rejects.toThrow(RpcException);
     });
 
     it('throws FORBIDDEN when caller is not a member', async () => {
@@ -466,26 +568,46 @@ describe('GroupSessionService', () => {
         members: [{ userId: 'other-user', guestId: null }],
       });
 
-      await expect(service.getActivities({ sessionId: 'sess-1', userId: 'stranger' })).rejects.toThrow(RpcException);
+      await expect(
+        service.getActivities({ sessionId: 'sess-1', userId: 'stranger' }),
+      ).rejects.toThrow(RpcException);
     });
 
     it('returns activities ordered newest-first for a valid member', async () => {
       const activities = [
-        { id: 'act-2', type: 'MEMBER_JOINED', createdAt: new Date('2026-01-02') },
-        { id: 'act-1', type: 'MEMBER_JOINED', createdAt: new Date('2026-01-01') },
+        {
+          id: 'act-2',
+          type: 'MEMBER_JOINED',
+          createdAt: new Date('2026-01-02'),
+        },
+        {
+          id: 'act-1',
+          type: 'MEMBER_JOINED',
+          createdAt: new Date('2026-01-01'),
+        },
       ];
       mockPrismaService.groupSession.findUnique.mockResolvedValue({
         sessionId: 'sess-1',
         createdBy: 'owner-1',
         members: [{ userId: 'owner-1', guestId: null }],
       });
-      mockPrismaService.groupSessionActivity.findMany.mockResolvedValue(activities);
+      mockPrismaService.groupSessionActivity.findMany.mockResolvedValue(
+        activities,
+      );
 
-      const result = await service.getActivities({ sessionId: 'sess-1', userId: 'owner-1' }) as any;
+      const result = (await service.getActivities({
+        sessionId: 'sess-1',
+        userId: 'owner-1',
+      })) as any;
 
       expect(result.activities).toEqual(activities);
-      expect(mockPrismaService.groupSessionActivity.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { sessionId: 'sess-1' }, orderBy: { createdAt: 'desc' } }),
+      expect(
+        mockPrismaService.groupSessionActivity.findMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { sessionId: 'sess-1' },
+          orderBy: { createdAt: 'desc' },
+        }),
       );
     });
 
@@ -497,7 +619,10 @@ describe('GroupSessionService', () => {
       });
       mockPrismaService.groupSessionActivity.findMany.mockResolvedValue([]);
 
-      const result = await service.getActivities({ sessionId: 'sess-1', userId: 'creator-1' }) as any;
+      const result = (await service.getActivities({
+        sessionId: 'sess-1',
+        userId: 'creator-1',
+      })) as any;
 
       expect(result.activities).toEqual([]);
     });
@@ -510,7 +635,10 @@ describe('GroupSessionService', () => {
       });
       mockPrismaService.groupSessionActivity.findMany.mockResolvedValue([]);
 
-      const result = await service.getActivities({ sessionId: 'sess-1', guestId: 'guest-abc' }) as any;
+      const result = (await service.getActivities({
+        sessionId: 'sess-1',
+        guestId: 'guest-abc',
+      })) as any;
 
       expect(result.activities).toEqual([]);
     });
@@ -523,9 +651,14 @@ describe('GroupSessionService', () => {
     it('calls logActivity with RECOMMENDATIONS_REFRESHED type', async () => {
       mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
 
-      await service.logRecommendationsRefreshed({ sessionId: 'sess-1', userId: 'user-1' });
+      await service.logRecommendationsRefreshed({
+        sessionId: 'sess-1',
+        userId: 'user-1',
+      });
 
-      expect(mockPrismaService.groupSessionActivity.create).toHaveBeenCalledWith(
+      expect(
+        mockPrismaService.groupSessionActivity.create,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             sessionId: 'sess-1',

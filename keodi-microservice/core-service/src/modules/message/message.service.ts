@@ -19,6 +19,8 @@ import {
   NotificationPreferredChannel,
   NotificationType,
 } from 'src/shared/enums/notification.enum';
+import { MessageWithSender } from 'src/shared/types/message.type';
+
 
 @Injectable()
 export class MessageService {
@@ -30,13 +32,14 @@ export class MessageService {
     private readonly imageService: ImageService,
   ) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-  private async resolveMessagePictureUrls(msg: any): Promise<any> {
+  private async resolveMessagePictureUrls(
+    msg: MessageWithSender,
+  ): Promise<MessageWithSender> {
     const resolvedSender = msg.sender?.pictureUrl
       ? {
           ...msg.sender,
           pictureUrl: await this.imageService.getImageViewUrl(
-            msg.sender.pictureUrl as string,
+            msg.sender.pictureUrl,
           ),
         }
       : msg.sender;
@@ -46,13 +49,17 @@ export class MessageService {
           sender: {
             ...msg.replyTo.sender,
             pictureUrl: await this.imageService.getImageViewUrl(
-              msg.replyTo.sender.pictureUrl as string,
+              msg.replyTo.sender.pictureUrl,
             ),
           },
         }
       : msg.replyTo;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return { ...msg, sender: resolvedSender, replyTo: resolvedReplyTo };
+
+    return {
+      ...msg,
+      sender: resolvedSender,
+      replyTo: resolvedReplyTo,
+    } as MessageWithSender;
   }
 
   async send(payload: SendMessagePayloadDto) {
@@ -163,10 +170,11 @@ export class MessageService {
       const cacheKey = RedisKeys.CHAT_RECENT(conversationId);
       const cached = await this.redisService.get(cacheKey);
       if (cached) {
-        const messages = JSON.parse(cached) as any[];
-        // Serve cache only when sender data is already present
+        const messages = JSON.parse(cached) as MessageWithSender[];
         if (messages.length === 0 || messages[0].sender !== undefined) {
-          const resolvedMessages = await Promise.all(messages.map((m) => this.resolveMessagePictureUrls(m)));
+          const resolvedMessages = await Promise.all(
+            messages.map((m) => this.resolveMessagePictureUrls(m)),
+          );
           return {
             items: resolvedMessages,
             nextCursor:
@@ -221,7 +229,9 @@ export class MessageService {
       );
     }
 
-    const resolvedItems = await Promise.all(items.map((m) => this.resolveMessagePictureUrls(m)));
+    const resolvedItems = await Promise.all(
+      items.map((m) => this.resolveMessagePictureUrls(m)),
+    );
 
     return {
       items: resolvedItems,

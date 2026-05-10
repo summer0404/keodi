@@ -61,7 +61,8 @@ export class GroupSessionService {
 
       if (!actorName && actor?.user) {
         actorName =
-          `${actor.user.lastName ?? ''} ${actor.user.firstName ?? ''}`.trim() || null;
+          `${actor.user.lastName ?? ''} ${actor.user.firstName ?? ''}`.trim() ||
+          null;
       }
 
       if (!actorName && actorId) {
@@ -80,7 +81,9 @@ export class GroupSessionService {
           type,
           actorId,
           actorName,
-          metadata: metadata ? (metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
+          metadata: metadata
+            ? (metadata as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         },
       });
     } catch (err) {
@@ -550,7 +553,12 @@ export class GroupSessionService {
         },
       );
 
-      void this.logActivity(session.sessionId, GroupSessionActivityType.MEMBER_JOINED, member, { isGuest: !member.userId });
+      void this.logActivity(
+        session.sessionId,
+        GroupSessionActivityType.MEMBER_JOINED,
+        member,
+        { isGuest: !member.userId },
+      );
 
       return {
         sessionId: session.sessionId,
@@ -701,7 +709,12 @@ export class GroupSessionService {
         sessionId,
       });
 
-      void this.logActivity(sessionId, GroupSessionActivityType.SESSION_CLOSED, { userId }, null);
+      void this.logActivity(
+        sessionId,
+        GroupSessionActivityType.SESSION_CLOSED,
+        { userId },
+        null,
+      );
 
       return updatedSession;
     } catch (error) {
@@ -998,7 +1011,10 @@ export class GroupSessionService {
         sessionId,
         GroupSessionActivityType.VOTE_FINALIZED,
         member,
-        { placeId: updatedVote.placeId, placeName: updatedVote.place?.name ?? null },
+        {
+          placeId: updatedVote.placeId,
+          placeName: updatedVote.place?.name ?? null,
+        },
       );
 
       return {
@@ -1679,7 +1695,12 @@ export class GroupSessionService {
         userId: member.userId,
       });
 
-      void this.logActivity(sessionId, GroupSessionActivityType.MEMBER_LEFT, member, { isGuest: !member.userId });
+      void this.logActivity(
+        sessionId,
+        GroupSessionActivityType.MEMBER_LEFT,
+        member,
+        { isGuest: !member.userId },
+      );
 
       return { sessionId, memberId: member.id };
     } catch (error) {
@@ -1767,7 +1788,8 @@ export class GroupSessionService {
       }
 
       const isMember = userId
-        ? session.members.some((m) => m.userId === userId) || session.createdBy === userId
+        ? session.members.some((m) => m.userId === userId) ||
+          session.createdBy === userId
         : session.members.some((m) => m.guestId === guestId);
 
       if (!isMember) {
@@ -1777,10 +1799,12 @@ export class GroupSessionService {
         });
       }
 
-      const activities = await this.prismaService.groupSessionActivity.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: 'desc' },
-      });
+      const activities = await this.prismaService.groupSessionActivity.findMany(
+        {
+          where: { sessionId },
+          orderBy: { createdAt: 'desc' },
+        },
+      );
 
       return { activities };
     } catch (error) {
@@ -1790,6 +1814,11 @@ export class GroupSessionService {
 
   async logRecommendationsRefreshed(dto: LogRecommendationsRefreshedDto) {
     const { sessionId, userId } = dto;
-    void this.logActivity(sessionId, GroupSessionActivityType.RECOMMENDATIONS_REFRESHED, { userId: userId ?? null }, null);
+    void this.logActivity(
+      sessionId,
+      GroupSessionActivityType.RECOMMENDATIONS_REFRESHED,
+      { userId: userId ?? null },
+      null,
+    );
   }
 }

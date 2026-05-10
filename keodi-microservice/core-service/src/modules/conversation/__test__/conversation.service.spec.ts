@@ -3,6 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { ConversationType } from 'src/shared/enums/chat.enum';
+import { ImageService } from 'src/modules/image/image.service';
 import { ConversationService } from '../conversation.service';
 
 const makeConversation = (overrides: Record<string, any> = {}) => ({
@@ -22,6 +23,7 @@ const makeConversation = (overrides: Record<string, any> = {}) => ({
       userId: 'user-1',
       joinedAt: new Date(),
       lastReadAt: null,
+      user: { id: 'user-1', username: 'user1', firstName: 'U', lastName: '1', pictureUrl: null },
     },
     {
       id: 'cm-2',
@@ -29,6 +31,7 @@ const makeConversation = (overrides: Record<string, any> = {}) => ({
       userId: 'user-2',
       joinedAt: new Date(),
       lastReadAt: null,
+      user: { id: 'user-2', username: 'user2', firstName: 'U', lastName: '2', pictureUrl: null },
     },
   ],
   ...overrides,
@@ -89,6 +92,12 @@ describe('ConversationService', () => {
             setEx: jest.fn(),
             del: jest.fn(),
             has: jest.fn(),
+          },
+        },
+        {
+          provide: ImageService,
+          useValue: {
+            getImageViewUrl: jest.fn().mockImplementation((url) => Promise.resolve(url)),
           },
         },
       ],
@@ -206,7 +215,7 @@ describe('ConversationService', () => {
           }),
         }),
       );
-      expect(result).toBe(conv);
+      expect(result).toEqual(conv);
     });
 
     it('throws CONVERSATION_NOT_FOUND when user is not a member', async () => {
@@ -221,7 +230,7 @@ describe('ConversationService', () => {
   describe('list', () => {
     it('returns conversations with unreadCount for each', async () => {
       const conv = makeConversation({
-        members: [{ userId: 'user-1', lastReadAt: null }],
+        members: [{ userId: 'user-1', lastReadAt: null, user: { id: 'user-1', username: 'user1', firstName: 'U', lastName: '1', pictureUrl: null } }],
       });
       prismaService.conversation.findMany.mockResolvedValue([conv]);
       prismaService.message.count.mockResolvedValue(3);
@@ -237,7 +246,7 @@ describe('ConversationService', () => {
       const conversations = Array.from({ length: 21 }, (_, i) =>
         makeConversation({
           id: `conv-${i}`,
-          members: [{ userId: 'user-1', lastReadAt: null }],
+          members: [{ userId: 'user-1', lastReadAt: null, user: { id: 'user-1', username: 'user1', firstName: 'U', lastName: '1', pictureUrl: null } }],
         }),
       );
       prismaService.conversation.findMany.mockResolvedValue(conversations);
@@ -253,7 +262,9 @@ describe('ConversationService', () => {
   describe('update', () => {
     it('updates name and avatarUrl and invalidates Redis cache', async () => {
       const updatedConv = makeConversation({ name: 'New Name' });
-      prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
+      prismaService.conversationMember.findUnique.mockResolvedValue({
+        id: 'cm-1',
+      });
       prismaService.conversation.update.mockResolvedValue(updatedConv);
 
       const result = await service.update({
@@ -267,7 +278,9 @@ describe('ConversationService', () => {
           data: expect.objectContaining({ name: 'New Name' }),
         }),
       );
-      expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
+      expect(redisService.del).toHaveBeenCalledWith(
+        expect.stringContaining('conv-1'),
+      );
       expect(result).toBe(updatedConv);
     });
 
@@ -275,7 +288,11 @@ describe('ConversationService', () => {
       prismaService.conversationMember.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update({ conversationId: 'conv-1', userId: 'user-x', name: 'Test' }),
+        service.update({
+          conversationId: 'conv-1',
+          userId: 'user-x',
+          name: 'Test',
+        }),
       ).rejects.toThrow(RpcException);
     });
   });

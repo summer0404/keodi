@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
 import { ConversationService } from 'src/modules/conversation/conversation.service';
+import { ImageService } from 'src/modules/image/image.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { MessageType } from 'src/shared/enums/chat.enum';
@@ -100,6 +101,12 @@ describe('MessageService', () => {
             getMembers: jest.fn(),
           },
         },
+        {
+          provide: ImageService,
+          useValue: {
+            getImageViewUrl: jest.fn().mockImplementation((url) => Promise.resolve(url)),
+          },
+        },
       ],
     }).compile();
 
@@ -141,7 +148,9 @@ describe('MessageService', () => {
           data: expect.objectContaining({ lastMessageId: msg.id }),
         }),
       );
-      expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
+      expect(redisService.del).toHaveBeenCalledWith(
+        expect.stringContaining('conv-1'),
+      );
 
       const realtimePushCalls = mockEmit.mock.calls.filter(
         ([topic]) => topic === 'notification.realtime.chat',
@@ -152,14 +161,18 @@ describe('MessageService', () => {
 
       expect(realtimePushCalls).toHaveLength(1);
       expect(dispatchCalls).toHaveLength(0);
-      expect(result).toBe(msg);
+      expect(result).toEqual({ ...msg, replyTo: undefined });
     });
 
     it('throws NOT_A_MEMBER when senderId is not in conversation', async () => {
       conversationService.getMembers.mockResolvedValue(['user-2', 'user-3']);
 
       await expect(
-        service.send({ conversationId: 'conv-1', senderId: 'user-x', content: 'Hi' }),
+        service.send({
+          conversationId: 'conv-1',
+          senderId: 'user-x',
+          content: 'Hi',
+        }),
       ).rejects.toThrow(RpcException);
 
       expect(prismaService.message.create).not.toHaveBeenCalled();
@@ -212,7 +225,10 @@ describe('MessageService', () => {
       conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);
       redisService.get.mockResolvedValue(JSON.stringify(cachedMessages));
 
-      const result = await service.list({ conversationId: 'conv-1', userId: 'user-1' });
+      const result = await service.list({
+        conversationId: 'conv-1',
+        userId: 'user-1',
+      });
 
       expect(redisService.get).toHaveBeenCalled();
       expect(prismaService.message.findMany).not.toHaveBeenCalled();
@@ -226,7 +242,10 @@ describe('MessageService', () => {
       prismaService.message.findMany.mockResolvedValue(messages);
       redisService.setEx.mockResolvedValue(undefined);
 
-      const result = await service.list({ conversationId: 'conv-1', userId: 'user-1' });
+      const result = await service.list({
+        conversationId: 'conv-1',
+        userId: 'user-1',
+      });
 
       expect(prismaService.message.findMany).toHaveBeenCalled();
       expect(redisService.setEx).toHaveBeenCalledWith(
@@ -266,7 +285,10 @@ describe('MessageService', () => {
       });
       redisService.del.mockResolvedValue(undefined);
 
-      const result = await service.delete({ messageId: 'msg-1', userId: 'user-1' });
+      const result = await service.delete({
+        messageId: 'msg-1',
+        userId: 'user-1',
+      });
 
       expect(prismaService.message.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -274,7 +296,9 @@ describe('MessageService', () => {
           data: expect.objectContaining({ deletedAt: expect.any(Date) }),
         }),
       );
-      expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
+      expect(redisService.del).toHaveBeenCalledWith(
+        expect.stringContaining('conv-1'),
+      );
       expect(mockEmit).toHaveBeenCalledWith(
         'notification.realtime.chat',
         expect.objectContaining({
@@ -298,9 +322,14 @@ describe('MessageService', () => {
 
   describe('markRead', () => {
     it('updates lastReadAt for the member in the conversation', async () => {
-      prismaService.conversationMember.updateMany.mockResolvedValue({ count: 1 });
+      prismaService.conversationMember.updateMany.mockResolvedValue({
+        count: 1,
+      });
 
-      const result = await service.markRead({ conversationId: 'conv-1', userId: 'user-1' });
+      const result = await service.markRead({
+        conversationId: 'conv-1',
+        userId: 'user-1',
+      });
 
       expect(prismaService.conversationMember.updateMany).toHaveBeenCalledWith({
         where: { conversationId: 'conv-1', userId: 'user-1' },

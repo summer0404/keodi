@@ -44,7 +44,7 @@ export class PlaceHelper {
 
     return openingHours.map((openingHour) => {
       const rawDay = openingHour.dayOfWeek;
-      let dayOfWeek: number = Number(rawDay);
+      const dayOfWeek: number = Number(rawDay);
 
       if (dayOfWeek < 0 || dayOfWeek > 6) {
         throw new RpcException({
@@ -60,7 +60,6 @@ export class PlaceHelper {
         });
       }
       usedDays.add(dayOfWeek);
-
 
       if (!openingHour.openTime && !openingHour.closeTime) {
         return {
@@ -101,12 +100,16 @@ export class PlaceHelper {
     city: string,
     countryCode: string,
   ): string {
-    return [street, ward, city, countryCode].map((item) => item.trim()).join(', ');
+    return [street, ward, city, countryCode]
+      .map((item) => item.trim())
+      .join(', ');
   }
 
   buildPlaceImageKey(contentType?: string): string {
     const extension =
-      contentType === 'image/jpeg' ? 'jpg' : contentType?.split('/')[1] ?? 'jpg';
+      contentType === 'image/jpeg'
+        ? 'jpg'
+        : (contentType?.split('/')[1] ?? 'jpg');
 
     return `${ImageConstants.IMAGE_FOLDERS.PLACE_IMAGES}/${Date.now()}.${extension}`;
   }
@@ -126,7 +129,9 @@ export class PlaceHelper {
           1,
           Math.max(
             -1,
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2) - toRad(lon1)) +
+            Math.cos(toRad(lat1)) *
+              Math.cos(toRad(lat2)) *
+              Math.cos(toRad(lon2) - toRad(lon1)) +
               Math.sin(toRad(lat1)) * Math.sin(toRad(lat2)),
           ),
         ),

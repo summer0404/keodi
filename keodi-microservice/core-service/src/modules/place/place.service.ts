@@ -39,8 +39,7 @@ export class PlaceService {
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
     private readonly placeHelper: PlaceHelper,
-  ) { }
-
+  ) {}
 
   private async enrichPlacesWithFavoriteAndImage(
     rawPlaces: (RawPlace & { distance: number })[],
@@ -117,7 +116,11 @@ export class PlaceService {
     keywords?: string,
   ): Promise<(RawPlace & { distance: number; similarity_score?: number })[]> {
     const { searchCondition, similarityColumn, searchOrderBy } =
-      this.placeHelper.buildSearchQueryConfig(embedding, keywords, orderByClause);
+      this.placeHelper.buildSearchQueryConfig(
+        embedding,
+        keywords,
+        orderByClause,
+      );
 
     return await this.prismaService.$queryRaw<
       (RawPlace & { distance: number; similarity_score?: number })[]
@@ -175,7 +178,10 @@ export class PlaceService {
     embedding?: number[],
     keywords?: string,
   ): Promise<number> {
-    const searchCondition = this.placeHelper.buildSearchCondition(embedding, keywords);
+    const searchCondition = this.placeHelper.buildSearchCondition(
+      embedding,
+      keywords,
+    );
 
     const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(*) as count
@@ -297,11 +303,11 @@ export class PlaceService {
         }),
         attributeIds.length > 0
           ? this.prismaService.attribute.findMany({
-            where: {
-              id: { in: attributeIds },
-            },
-            select: { id: true },
-          })
+              where: {
+                id: { in: attributeIds },
+              },
+              select: { id: true },
+            })
           : Promise.resolve([]),
       ]);
 
@@ -357,16 +363,16 @@ export class PlaceService {
           placeAttributes:
             attributeIds.length > 0
               ? {
-                create: attributeIds.map((attributeId) => ({
-                  attributeId,
-                })),
-              }
+                  create: attributeIds.map((attributeId) => ({
+                    attributeId,
+                  })),
+                }
               : undefined,
           openingHours:
             openingHours.length > 0
               ? {
-                create: openingHours,
-              }
+                  create: openingHours,
+                }
               : undefined,
           placeImages: {
             create: {
@@ -403,7 +409,10 @@ export class PlaceService {
       userId,
     } = nearMeDto;
 
-    const { latDelta, longDelta } = this.placeHelper.calculateGeoDeltas(latitude, radius);
+    const { latDelta, longDelta } = this.placeHelper.calculateGeoDeltas(
+      latitude,
+      radius,
+    );
 
     const { offset, orderByClause } = this.placeHelper.buildPaginationParams(
       page,
@@ -464,7 +473,10 @@ export class PlaceService {
       sortOrder,
     } = searchDto;
 
-    const { latDelta, longDelta } = this.placeHelper.calculateGeoDeltas(latitude, radius);
+    const { latDelta, longDelta } = this.placeHelper.calculateGeoDeltas(
+      latitude,
+      radius,
+    );
 
     const { offset, orderByClause } = this.placeHelper.buildPaginationParams(
       page,
@@ -647,7 +659,9 @@ export class PlaceService {
             ),
             isFavorite: favorites.length > 0,
             featureImageUrl: placeData.featureImageUrl
-              ? await this.imageService.getImageViewUrl(placeData.featureImageUrl)
+              ? await this.imageService.getImageViewUrl(
+                  placeData.featureImageUrl,
+                )
               : null,
             openingHours: placeData.openingHours.map((oh) => ({
               ...oh,
@@ -743,10 +757,11 @@ export class PlaceService {
           ),
         );
         if (attributeIds.length > 0) {
-          const existingAttributes = await this.prismaService.attribute.findMany({
-            where: { id: { in: attributeIds } },
-            select: { id: true },
-          });
+          const existingAttributes =
+            await this.prismaService.attribute.findMany({
+              where: { id: { in: attributeIds } },
+              select: { id: true },
+            });
           if (existingAttributes.length !== attributeIds.length) {
             throw new RpcException({
               status: HttpStatus.BAD_REQUEST,
@@ -766,7 +781,6 @@ export class PlaceService {
         Number.isFinite(updatePlaceDto.latitude) ||
         Number.isFinite(updatePlaceDto.longitude);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: Record<string, any> = {};
 
       if (updatePlaceDto.name !== undefined && updatePlaceDto.name.trim())
@@ -786,7 +800,8 @@ export class PlaceService {
         if (updatePlaceDto.street) updateData.street = updatePlaceDto.street;
         if (updatePlaceDto.ward) updateData.ward = updatePlaceDto.ward;
         if (updatePlaceDto.city) updateData.city = updatePlaceDto.city;
-        if (updatePlaceDto.countryCode) updateData.countryCode = updatePlaceDto.countryCode;
+        if (updatePlaceDto.countryCode)
+          updateData.countryCode = updatePlaceDto.countryCode;
         updateData.fullAddress = this.placeHelper.buildFullAddress(
           updatePlaceDto.street || place.street || '',
           updatePlaceDto.ward || place.ward || '',
@@ -801,8 +816,12 @@ export class PlaceService {
         if (Number.isFinite(updatePlaceDto.longitude))
           updateData.longitude = updatePlaceDto.longitude;
         if (!updatePlaceDto.googleMapLink) {
-          const lat = Number.isFinite(updatePlaceDto.latitude) ? updatePlaceDto.latitude! : place.latitude;
-          const lng = Number.isFinite(updatePlaceDto.longitude) ? updatePlaceDto.longitude! : place.longitude;
+          const lat = Number.isFinite(updatePlaceDto.latitude)
+            ? updatePlaceDto.latitude!
+            : place.latitude;
+          const lng = Number.isFinite(updatePlaceDto.longitude)
+            ? updatePlaceDto.longitude!
+            : place.longitude;
           updateData.googleMapLink = this.placeHelper.toGoogleMapLink(lat, lng);
         }
       }
@@ -832,7 +851,10 @@ export class PlaceService {
           await tx.placeAttribute.deleteMany({ where: { placeId } });
           if (attributeIds.length > 0) {
             await tx.placeAttribute.createMany({
-              data: attributeIds.map((attributeId) => ({ placeId, attributeId })),
+              data: attributeIds.map((attributeId) => ({
+                placeId,
+                attributeId,
+              })),
             });
           }
         }

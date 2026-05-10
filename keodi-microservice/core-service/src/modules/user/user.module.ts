@@ -6,8 +6,6 @@ import { ImageModule } from 'src/modules/image/image.module';
 @Module({
   controllers: [UserController],
   providers: [UserService],
-  imports: [
-    ImageModule
-  ],
+  imports: [ImageModule],
 })
 export class UserModule {}

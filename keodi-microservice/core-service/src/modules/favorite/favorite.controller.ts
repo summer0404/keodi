@@ -1,30 +1,30 @@
-import { Controller } from "@nestjs/common";
-import { FavoriteService } from "./favorite.service";
-import { MessagePattern, Payload } from "@nestjs/microservices";
-import { FavoritePlacesPaginationDto } from "src/shared/dtos/user.dto";
+import { Controller } from '@nestjs/common';
+import { FavoriteService } from './favorite.service';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { FavoritePlacesPaginationDto } from 'src/shared/dtos/user.dto';
 import { FavoriteTopics } from 'src/shared/constants/topic.constant';
 
 @Controller()
 export class FavoriteController {
-    constructor(private readonly favoriteService: FavoriteService) { }
+  constructor(private readonly favoriteService: FavoriteService) {}
 
-    @MessagePattern(FavoriteTopics.Add)
-    async addFavorite(@Payload() data: { userId: string; placeId: string }) {
-        return await this.favoriteService.addFavorite(data.userId, data.placeId);
-    }
+  @MessagePattern(FavoriteTopics.Add)
+  async addFavorite(@Payload() data: { userId: string; placeId: string }) {
+    return await this.favoriteService.addFavorite(data.userId, data.placeId);
+  }
 
-    @MessagePattern(FavoriteTopics.Remove)
-    async removeFavorite(@Payload() data: { userId: string; placeId: string }) {
-        return await this.favoriteService.removeFavorite(data.userId, data.placeId);
-    }
+  @MessagePattern(FavoriteTopics.Remove)
+  async removeFavorite(@Payload() data: { userId: string; placeId: string }) {
+    return await this.favoriteService.removeFavorite(data.userId, data.placeId);
+  }
 
-    @MessagePattern(FavoriteTopics.GetList)
-    async getUserFavorites(@Payload() data: FavoritePlacesPaginationDto) {
-        return await this.favoriteService.getUserFavorites(data);
-    }
+  @MessagePattern(FavoriteTopics.GetList)
+  async getUserFavorites(@Payload() data: FavoritePlacesPaginationDto) {
+    return await this.favoriteService.getUserFavorites(data);
+  }
 
-    @MessagePattern(FavoriteTopics.Check)
-    async isFavorite(@Payload() data: { userId: string; placeId: string }) {
-        return await this.favoriteService.isFavorite(data.userId, data.placeId);
-    }
+  @MessagePattern(FavoriteTopics.Check)
+  async isFavorite(@Payload() data: { userId: string; placeId: string }) {
+    return await this.favoriteService.isFavorite(data.userId, data.placeId);
+  }
 }

@@ -34,7 +34,12 @@ describe('UserController', () => {
   });
 
   it('create – delegates to service.create', async () => {
-    const dto = { userId: 'u1', username: 'john', firstName: 'John', lastName: 'Doe' } as any;
+    const dto = {
+      userId: 'u1',
+      username: 'john',
+      firstName: 'John',
+      lastName: 'Doe',
+    } as any;
     mockUserService.create.mockResolvedValue(undefined);
 
     await controller.create(dto);
@@ -56,7 +61,11 @@ describe('UserController', () => {
 
     await controller.updatePicture(data);
 
-    expect(mockUserService.updatePicture).toHaveBeenCalledWith(data.file, 'u1', 'image/jpeg');
+    expect(mockUserService.updatePicture).toHaveBeenCalledWith(
+      data.file,
+      'u1',
+      'image/jpeg',
+    );
   });
 
   it('getById – delegates to service.getById', async () => {
@@ -113,14 +122,24 @@ describe('UserController', () => {
   it('updateLocation – delegates to service.updateLocation', async () => {
     mockUserService.updateLocation.mockResolvedValue(undefined);
 
-    await controller.updateLocation({ userId: 'u1', latitude: 10.0, longitude: 106.0 });
+    await controller.updateLocation({
+      userId: 'u1',
+      latitude: 10.0,
+      longitude: 106.0,
+    });
 
-    expect(mockUserService.updateLocation).toHaveBeenCalledWith('u1', 10.0, 106.0);
+    expect(mockUserService.updateLocation).toHaveBeenCalledWith(
+      'u1',
+      10.0,
+      106.0,
+    );
   });
 
   it('syncUsername – delegates to service.syncUsername', async () => {
     const dto = { userId: 'u1', username: 'newname' } as any;
-    mockUserService.syncUsername.mockResolvedValue({ message: 'USERNAME_SYNCED' });
+    mockUserService.syncUsername.mockResolvedValue({
+      message: 'USERNAME_SYNCED',
+    });
 
     await controller.syncUsername(dto);
 

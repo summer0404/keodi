@@ -16,7 +16,7 @@ export class CategoryService {
   private fuse: Fuse<CategoryWithCount> | null = null;
   private categoriesCache: CategoryWithCount[] = [];
 
-  constructor(private readonly prismaService: PrismaService) { }
+  constructor(private readonly prismaService: PrismaService) {}
 
   async onModuleInit() {
     await this.loadCategories();

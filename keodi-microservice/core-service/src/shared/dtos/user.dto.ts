@@ -1,12 +1,12 @@
 import { PickType } from '@nestjs/mapped-types';
 import {
-    IsDate,
-    IsEnum,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-    MaxLength,
-    MinLength,
+  IsDate,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 import { FriendSortBy, PlaceSortBy } from '../enums/sort.enum';
 import { PaginationQueryDto } from './pagination.dto';
@@ -28,7 +28,10 @@ export class CreateUserDto {
   picture?: string;
 }
 
-export class SyncUsernameDto extends PickType(CreateUserDto, ['userId', 'username'] as const) {}
+export class SyncUsernameDto extends PickType(CreateUserDto, [
+  'userId',
+  'username',
+] as const) {}
 
 export class CreateUserProfileDto {
   @IsNotEmpty()

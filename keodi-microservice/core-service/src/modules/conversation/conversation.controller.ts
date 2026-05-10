@@ -5,7 +5,8 @@ import {
   GetConversationByIdPayloadDto,
   ListConversationsPayloadDto,
   UpdateConversationPayloadDto,
-} from 'src/shared/dtos/chat.dto';import { ConversationTopics } from 'src/shared/constants/topic.constant';
+} from 'src/shared/dtos/chat.dto';
+import { ConversationTopics } from 'src/shared/constants/topic.constant';
 import { ConversationService } from './conversation.service';
 
 @Controller()

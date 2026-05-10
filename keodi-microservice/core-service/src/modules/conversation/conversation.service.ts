@@ -24,7 +24,7 @@ export class ConversationService {
   private async resolveUserPictureUrl<T extends { pictureUrl: string | null }>(
     user: T,
   ): Promise<T> {
-    if (!user.pictureUrl) return user;
+    if (!user || !user.pictureUrl) return user;
     return {
       ...user,
       pictureUrl: await this.imageService.getImageViewUrl(user.pictureUrl),
@@ -140,9 +140,9 @@ export class ConversationService {
       });
     }
     const resolvedMembers = await Promise.all(
-      conversation.members.map(async (m) => ({
-        ...m,
-        user: await this.resolveUserPictureUrl(m.user),
+      conversation.members.map(async (member) => ({
+        ...member,
+        user: await this.resolveUserPictureUrl(member.user),
       })),
     );
     return { ...conversation, members: resolvedMembers };

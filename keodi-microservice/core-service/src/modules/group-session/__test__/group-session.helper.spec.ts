@@ -16,8 +16,16 @@ describe('GroupSessionHelper', () => {
 
     it('aggregates votes correctly for a single place', () => {
       const votes = [
-        { placeId: 'place-1', place: { id: 'place-1', name: 'Coffee Shop' }, member: { id: 'member-1' } },
-        { placeId: 'place-1', place: { id: 'place-1', name: 'Coffee Shop' }, member: { id: 'member-2' } },
+        {
+          placeId: 'place-1',
+          place: { id: 'place-1', name: 'Coffee Shop' },
+          member: { id: 'member-1' },
+        },
+        {
+          placeId: 'place-1',
+          place: { id: 'place-1', name: 'Coffee Shop' },
+          member: { id: 'member-2' },
+        },
       ];
 
       const result = helper.buildVoteResults(votes);
@@ -30,10 +38,26 @@ describe('GroupSessionHelper', () => {
 
     it('sorts results by vote count descending', () => {
       const votes = [
-        { placeId: 'place-1', place: { id: 'place-1', name: 'Place A' }, member: { id: 'member-1' } },
-        { placeId: 'place-2', place: { id: 'place-2', name: 'Place B' }, member: { id: 'member-2' } },
-        { placeId: 'place-2', place: { id: 'place-2', name: 'Place B' }, member: { id: 'member-3' } },
-        { placeId: 'place-2', place: { id: 'place-2', name: 'Place B' }, member: { id: 'member-4' } },
+        {
+          placeId: 'place-1',
+          place: { id: 'place-1', name: 'Place A' },
+          member: { id: 'member-1' },
+        },
+        {
+          placeId: 'place-2',
+          place: { id: 'place-2', name: 'Place B' },
+          member: { id: 'member-2' },
+        },
+        {
+          placeId: 'place-2',
+          place: { id: 'place-2', name: 'Place B' },
+          member: { id: 'member-3' },
+        },
+        {
+          placeId: 'place-2',
+          place: { id: 'place-2', name: 'Place B' },
+          member: { id: 'member-4' },
+        },
       ];
 
       const result = helper.buildVoteResults(votes);
@@ -76,7 +100,11 @@ describe('GroupSessionHelper', () => {
       const firstPlace = { id: 'p1', name: 'First' };
       const votes = [
         { placeId: 'p1', place: firstPlace, member: { id: 'm1' } },
-        { placeId: 'p1', place: { id: 'p1', name: 'Different' }, member: { id: 'm2' } },
+        {
+          placeId: 'p1',
+          place: { id: 'p1', name: 'Different' },
+          member: { id: 'm2' },
+        },
       ];
 
       const result = helper.buildVoteResults(votes);

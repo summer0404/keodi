@@ -27,16 +27,25 @@ describe('FavoriteController', () => {
   });
 
   it('addFavorite – delegates to service.addFavorite', async () => {
-    mockFavoriteService.addFavorite.mockResolvedValue({ userId: 'u1', placeId: 'p1' });
+    mockFavoriteService.addFavorite.mockResolvedValue({
+      userId: 'u1',
+      placeId: 'p1',
+    });
 
-    const result = await controller.addFavorite({ userId: 'u1', placeId: 'p1' });
+    const result = await controller.addFavorite({
+      userId: 'u1',
+      placeId: 'p1',
+    });
 
     expect(mockFavoriteService.addFavorite).toHaveBeenCalledWith('u1', 'p1');
     expect(result).toBeDefined();
   });
 
   it('removeFavorite – delegates to service.removeFavorite', async () => {
-    mockFavoriteService.removeFavorite.mockResolvedValue({ userId: 'u1', placeId: 'p1' });
+    mockFavoriteService.removeFavorite.mockResolvedValue({
+      userId: 'u1',
+      placeId: 'p1',
+    });
 
     await controller.removeFavorite({ userId: 'u1', placeId: 'p1' });
 
@@ -44,7 +53,13 @@ describe('FavoriteController', () => {
   });
 
   it('getUserFavorites – delegates to service.getUserFavorites with DTO', async () => {
-    const dto = { userId: 'u1', page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' } as any;
+    const dto = {
+      userId: 'u1',
+      page: 1,
+      limit: 10,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    } as any;
     mockFavoriteService.getUserFavorites.mockResolvedValue({ favorites: [] });
 
     const result = await controller.getUserFavorites(dto);

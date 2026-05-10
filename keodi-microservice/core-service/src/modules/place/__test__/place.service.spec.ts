@@ -73,9 +73,15 @@ const mockPlaceHelper = {
   buildPlaceImageKey: jest.fn().mockReturnValue('places/12345.jpg'),
   normalizeOpeningHours: jest.fn().mockReturnValue([]),
   buildFullAddress: jest.fn().mockReturnValue('123 Street, Ward, City, VN'),
-  toGoogleMapLink: jest.fn().mockReturnValue('https://maps.google.com/?q=10,106'),
-  calculateGeoDeltas: jest.fn().mockReturnValue({ latDelta: 0.045, longDelta: 0.048 }),
-  buildPaginationParams: jest.fn().mockReturnValue({ offset: 0, orderByClause: 'ORDER BY distance ASC' }),
+  toGoogleMapLink: jest
+    .fn()
+    .mockReturnValue('https://maps.google.com/?q=10,106'),
+  calculateGeoDeltas: jest
+    .fn()
+    .mockReturnValue({ latDelta: 0.045, longDelta: 0.048 }),
+  buildPaginationParams: jest
+    .fn()
+    .mockReturnValue({ offset: 0, orderByClause: 'ORDER BY distance ASC' }),
   buildSearchQueryConfig: jest.fn().mockReturnValue({
     searchCondition: {},
     similarityColumn: {},
@@ -120,7 +126,10 @@ describe('PlaceService - update', () => {
     it('throws NOT_FOUND when place does not exist', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(null);
 
-      const dto: UpdatePlaceDto = { placeId: 'nonexistent', requesterId: 'owner-1' };
+      const dto: UpdatePlaceDto = {
+        placeId: 'nonexistent',
+        requesterId: 'owner-1',
+      };
 
       await expect(service.update(dto)).rejects.toThrow(
         PlaceErrorMessages.PLACE_NOT_FOUND,
@@ -132,7 +141,10 @@ describe('PlaceService - update', () => {
     it('throws FORBIDDEN when requester is not the owner', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(basePlace);
 
-      const dto: UpdatePlaceDto = { placeId: 'place-1', requesterId: 'other-user' };
+      const dto: UpdatePlaceDto = {
+        placeId: 'place-1',
+        requesterId: 'other-user',
+      };
 
       await expect(service.update(dto)).rejects.toThrow(
         PlaceErrorMessages.PLACE_NOT_OWNER,
@@ -145,7 +157,11 @@ describe('PlaceService - update', () => {
       mockPrismaService.place.findUnique.mockResolvedValue(basePlace);
       mockTx.place.update.mockResolvedValue({});
 
-      const dto: UpdatePlaceDto = { placeId: 'place-1', requesterId: 'owner-1', name: 'New Name' };
+      const dto: UpdatePlaceDto = {
+        placeId: 'place-1',
+        requesterId: 'owner-1',
+        name: 'New Name',
+      };
       const result = await service.update(dto);
 
       expect(result).toEqual({ message: 'Place updated successfully' });
@@ -159,7 +175,10 @@ describe('PlaceService - update', () => {
 
     it('updates featureImageUrl when featureImage buffer is provided', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(basePlace);
-      mockImageService.uploadImage.mockResolvedValue({ key: 'places/new-image.jpg', id: 'img-1' });
+      mockImageService.uploadImage.mockResolvedValue({
+        key: 'places/new-image.jpg',
+        id: 'img-1',
+      });
       mockTx.place.update.mockResolvedValue({});
 
       const dto: UpdatePlaceDto = {
@@ -174,14 +193,18 @@ describe('PlaceService - update', () => {
       expect(result).toEqual({ message: 'Place updated successfully' });
       expect(mockTx.place.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ featureImageUrl: 'places/new-image.jpg' }),
+          data: expect.objectContaining({
+            featureImageUrl: 'places/new-image.jpg',
+          }),
         }),
       );
     });
 
     it('rebuilds fullAddress when any address field is updated', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(basePlace);
-      mockPlaceHelper.buildFullAddress.mockReturnValue('New Street, Ward A, City B, VN');
+      mockPlaceHelper.buildFullAddress.mockReturnValue(
+        'New Street, Ward A, City B, VN',
+      );
       mockTx.place.update.mockResolvedValue({});
 
       const dto: UpdatePlaceDto = {
@@ -199,7 +222,9 @@ describe('PlaceService - update', () => {
       );
       expect(mockTx.place.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ fullAddress: 'New Street, Ward A, City B, VN' }),
+          data: expect.objectContaining({
+            fullAddress: 'New Street, Ward A, City B, VN',
+          }),
         }),
       );
       expect(result).toEqual({ message: 'Place updated successfully' });
@@ -207,7 +232,9 @@ describe('PlaceService - update', () => {
 
     it('rebuilds googleMapLink when coordinates change and no googleMapLink provided', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(basePlace);
-      mockPlaceHelper.toGoogleMapLink.mockReturnValue('https://maps.google.com/?q=11,107');
+      mockPlaceHelper.toGoogleMapLink.mockReturnValue(
+        'https://maps.google.com/?q=11,107',
+      );
       mockTx.place.update.mockResolvedValue({});
 
       const dto: UpdatePlaceDto = {
@@ -221,7 +248,9 @@ describe('PlaceService - update', () => {
       expect(mockPlaceHelper.toGoogleMapLink).toHaveBeenCalledWith(11.0, 107.0);
       expect(mockTx.place.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ googleMapLink: 'https://maps.google.com/?q=11,107' }),
+          data: expect.objectContaining({
+            googleMapLink: 'https://maps.google.com/?q=11,107',
+          }),
         }),
       );
       expect(result).toEqual({ message: 'Place updated successfully' });
@@ -260,7 +289,9 @@ describe('PlaceService - update', () => {
 
     it('replaces opening hours when openingHours array is provided', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(basePlace);
-      const normalizedHours = [{ dayOfWeek: 1, openTime: new Date(), closeTime: new Date() }];
+      const normalizedHours = [
+        { dayOfWeek: 1, openTime: new Date(), closeTime: new Date() },
+      ];
       mockPlaceHelper.normalizeOpeningHours.mockReturnValue(normalizedHours);
       mockTx.openingHour.deleteMany.mockResolvedValue({});
       mockTx.openingHour.createMany.mockResolvedValue({});
@@ -273,7 +304,9 @@ describe('PlaceService - update', () => {
       };
       const result = await service.update(dto);
 
-      expect(mockTx.openingHour.deleteMany).toHaveBeenCalledWith({ where: { placeId: 'place-1' } });
+      expect(mockTx.openingHour.deleteMany).toHaveBeenCalledWith({
+        where: { placeId: 'place-1' },
+      });
       expect(mockTx.openingHour.createMany).toHaveBeenCalledWith({
         data: normalizedHours.map((oh) => ({ ...oh, placeId: 'place-1' })),
       });

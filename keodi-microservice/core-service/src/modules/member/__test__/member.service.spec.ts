@@ -63,12 +63,16 @@ describe('MemberService', () => {
 
   describe('add', () => {
     it('adds new members and invalidates Redis cache', async () => {
-      prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
+      prismaService.conversationMember.findUnique.mockResolvedValue({
+        id: 'cm-1',
+      });
       prismaService.conversation.findFirst.mockResolvedValue({
         id: 'conv-1',
         type: 'GROUP',
       });
-      prismaService.conversationMember.createMany.mockResolvedValue({ count: 2 });
+      prismaService.conversationMember.createMany.mockResolvedValue({
+        count: 2,
+      });
       redisService.del.mockResolvedValue(undefined);
 
       const result = await service.add({
@@ -84,7 +88,9 @@ describe('MemberService', () => {
         ],
         skipDuplicates: true,
       });
-      expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
+      expect(redisService.del).toHaveBeenCalledWith(
+        expect.stringContaining('conv-1'),
+      );
       expect(result).toEqual({ success: true });
     });
 
@@ -99,11 +105,15 @@ describe('MemberService', () => {
         }),
       ).rejects.toThrow(RpcException);
 
-      expect(prismaService.conversationMember.createMany).not.toHaveBeenCalled();
+      expect(
+        prismaService.conversationMember.createMany,
+      ).not.toHaveBeenCalled();
     });
 
     it('throws CONVERSATION_NOT_FOUND_OR_NOT_GROUP when conversation is not GROUP', async () => {
-      prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
+      prismaService.conversationMember.findUnique.mockResolvedValue({
+        id: 'cm-1',
+      });
       prismaService.conversation.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -114,13 +124,17 @@ describe('MemberService', () => {
         }),
       ).rejects.toThrow(RpcException);
 
-      expect(prismaService.conversationMember.createMany).not.toHaveBeenCalled();
+      expect(
+        prismaService.conversationMember.createMany,
+      ).not.toHaveBeenCalled();
     });
   });
 
   describe('leave', () => {
     it('removes member from conversation and invalidates Redis cache', async () => {
-      prismaService.conversationMember.findUnique.mockResolvedValue({ id: 'cm-1' });
+      prismaService.conversationMember.findUnique.mockResolvedValue({
+        id: 'cm-1',
+      });
       prismaService.conversationMember.delete.mockResolvedValue({ id: 'cm-1' });
       redisService.del.mockResolvedValue(undefined);
 
@@ -134,7 +148,9 @@ describe('MemberService', () => {
           conversationId_userId: { conversationId: 'conv-1', userId: 'user-1' },
         },
       });
-      expect(redisService.del).toHaveBeenCalledWith(expect.stringContaining('conv-1'));
+      expect(redisService.del).toHaveBeenCalledWith(
+        expect.stringContaining('conv-1'),
+      );
       expect(result).toEqual({ success: true });
     });
 

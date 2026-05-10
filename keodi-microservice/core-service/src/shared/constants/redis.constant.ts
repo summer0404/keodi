@@ -17,6 +17,7 @@ export const RedisKeys = {
   GROUP_SESSION: {
     MEMBER_LOCATION: (sessionId: string, userId: string) =>
       `session:${sessionId}:location:${userId}`,
-    MEMBER_VOTES: (sessionId: string) => `group-session:${sessionId}:member-votes`,
+    MEMBER_VOTES: (sessionId: string) =>
+      `group-session:${sessionId}:member-votes`,
   },
 } as const;
