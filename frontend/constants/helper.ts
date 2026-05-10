@@ -117,7 +117,8 @@ export type OpeningHoursGroup = {
   timeRangeLabel: string;
 };
 
-export const formatLocalTime = (timeStr: string) => {
+export const formatLocalTime = (timeStr: string | null | undefined) => {
+  if (!timeStr) return null;
   const match = timeStr.match(/^(\d{2}):(\d{2})/);
   if (!match) return null;
 
@@ -126,7 +127,8 @@ export const formatLocalTime = (timeStr: string) => {
   return `${hours}:${minutes}`;
 };
 
-const parseTimeToMinutes = (timeStr: string): number | null => {
+const parseTimeToMinutes = (timeStr: string | null | undefined): number | null => {
+  if (!timeStr) return null;
   const match = timeStr.match(/^(\d{2}):(\d{2})/);
   if (!match) return null;
   return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
