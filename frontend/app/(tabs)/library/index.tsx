@@ -48,6 +48,7 @@ export default function FavoriteScreen() {
 
   const requestVersionRef = useRef(0);
   const inFlightPageRef = useRef<number | null>(null);
+  const flatListRef = useRef<FlatList<FavoriteItem>>(null);
 
   const sortByRef = useRef(sortBy);
   const currentPageRef = useRef(currentPage);
@@ -164,6 +165,11 @@ export default function FavoriteScreen() {
     }, [reloadFavorites])
   );
 
+  // Scroll to top when sortBy or categoryFilter changes for better UX
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [sortBy, categoryFilter]);
+
   const handleLoadMore = useCallback(() => {
     if (
       activeSegment !== 'favorite' ||
@@ -270,7 +276,7 @@ export default function FavoriteScreen() {
           <Typography variant="h4">{t('library.title')}</Typography>
         </View>
 
-        <View className="mt-4 flex-row rounded-xl bg-[#EBEBEE] p-1">
+        <View className="mt-4 flex-row rounded-xl bg-gray-200 p-1">
           <Pressable
             className={`flex-1 items-center rounded-lg py-2 ${
               activeSegment === 'favorite' ? 'bg-white' : 'bg-transparent'
@@ -341,6 +347,7 @@ export default function FavoriteScreen() {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={favoritePlaces}
           keyExtractor={keyExtractor}
           renderItem={renderItem}

@@ -46,7 +46,7 @@ export default function TabsLayout() {
 
         tabBarStyle: {
           position: 'absolute',
-          bottom: insets.bottom + 4, 
+          bottom: insets.bottom + 4,
           left: 16,
           right: 16,
           height: 64,
@@ -101,14 +101,28 @@ export default function TabsLayout() {
 
       <Tabs.Screen
         name="search"
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/(tabs)/search');
+          },
+        }}
         options={{
+          popToTopOnBlur: true,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Search} />,
         }}
       />
 
       <Tabs.Screen
         name="group"
-        options={({ route }) => ({
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/(tabs)/group');
+          },
+        }}
+        options={{
+          popToTopOnBlur: true,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Users} />,
           tabBarStyle:
             getFocusedRouteNameFromRoute(route) === '[id]' ? { display: 'none' } : undefined,

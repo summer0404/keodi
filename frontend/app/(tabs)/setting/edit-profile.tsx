@@ -21,7 +21,16 @@ import { Button } from '@/components/ui/Button';
 import { ThreadsDatePicker } from '@/components/ui/DatePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette } from '@/constants/theme';
-import { sanitizeUsername, DEFAULT_AVATAR_SOURCE, MAX_AVATAR_FILE_BYTES, toApiDate, parseDateForPicker, toDisplayDate, toComparableDate, normalizeNullable } from '@/constants/helper';
+import {
+  sanitizeUsername,
+  DEFAULT_AVATAR_SOURCE,
+  MAX_AVATAR_FILE_BYTES,
+  toApiDate,
+  parseDateForPicker,
+  toDisplayDate,
+  toComparableDate,
+  normalizeNullable,
+} from '@/constants/helper';
 import { authService } from '@/api/auth';
 import { userService } from '@/api/user';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -123,7 +132,14 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const horizontalPadding = 16;
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const accessToken = useAuthStore(
+    (state: ReturnType<typeof useAuthStore.getState>) => state.accessToken
+  );
+  const fetchMe = useAuthStore((state: ReturnType<typeof useAuthStore.getState>) => state.fetchMe);
+  const setMe = useAuthStore((state: ReturnType<typeof useAuthStore.getState>) => state.setMe);
+  const setPostLogoutNoticeKey = useAuthStore(
+    (state: ReturnType<typeof useAuthStore.getState>) => state.setPostLogoutNoticeKey
+  );
   const successScale = useRef(new Animated.Value(1)).current;
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -176,8 +192,8 @@ export default function EditProfileScreen() {
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const profile = await authService.getMe();
-        if (!mounted) return;
+        const profile = await fetchMe({ force: true });
+        if (!mounted || !profile) return;
 
         setInitialProfile(profile);
         setUsername(profile.username ?? '');
@@ -203,7 +219,7 @@ export default function EditProfileScreen() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [fetchMe]);
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -353,10 +369,6 @@ export default function EditProfileScreen() {
 
     try {
       // Sequential update keeps errors easier to trace and avoids partial race conditions.
-      if (shouldUpdateUsername) {
-        await userService.updateUsername({ username: trimmedUsername });
-      }
-
       if (shouldUpdateProfile) {
         await userService.updateProfile(profilePayload);
       }
@@ -374,9 +386,18 @@ export default function EditProfileScreen() {
         await authService.resetPassword({ newPassword: nextPassword }, accessToken);
       }
 
+      if (shouldUpdateUsername) {
+        await userService.updateUsername({ username: trimmedUsername });
+        setPostLogoutNoticeKey('auth.usernameChangedReloginNotice');
+      }
+
       // Only refresh profile if there were actual changes
-      if (didUpdate) {
-        const refreshedProfile = await authService.getMe();
+      if (didUpdate && !shouldUpdateUsername) {
+        const refreshedProfile = await fetchMe({ force: true });
+        if (!refreshedProfile) {
+          setSubmitError(t('errors.unableToUpdateProfile'));
+          return;
+        }
         // console.log('[editProfile] refreshedProfile after update:', {
         //   pictureUrl: refreshedProfile.pictureUrl,
         //   username: refreshedProfile.username,
@@ -393,6 +414,7 @@ export default function EditProfileScreen() {
           refreshedProfile.pictureUrl ? { uri: refreshedProfile.pictureUrl } : DEFAULT_AVATAR_SOURCE
         );
         setAvatarFile(null);
+        setMe(refreshedProfile);
       }
 
       setIsSubmitSuccess(true);
@@ -413,6 +435,10 @@ export default function EditProfileScreen() {
 
       successTimeoutRef.current = setTimeout(() => {
         resetSubmitFeedback();
+        if (shouldUpdateUsername) {
+          router.replace('/(auth)/login');
+          return;
+        }
         router.replace('/(tabs)');
       }, 1000);
     } catch (error) {
@@ -678,9 +704,7 @@ export default function EditProfileScreen() {
             </View>
 
             {submitError ? (
-              <Typography className="mt-2 text-red-500 mb-2 leading-4">
-                {submitError}
-              </Typography>
+              <Typography className="mt-2 text-red-500 mb-2 leading-4">{submitError}</Typography>
             ) : null}
 
             <Animated.View

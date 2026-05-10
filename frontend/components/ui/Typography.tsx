@@ -22,24 +22,24 @@ const Typography = ({
     switch (variant) {
       case 'h3':
         // Montserrat SemiBold, 32pt, Spacing -5%
-        return 'font-montserrat-semibold text-[32px] tracking-[-0.05em]';
+        return 'font-montserrat-semibold text-[30px] tracking-[-0.05em]';
 
       case 'h4':
         // Montserrat SemiBold, 24pt, Spacing -5%
-        return 'font-montserrat-semibold text-[24px] tracking-[-0.05em]';
+        return 'font-montserrat-semibold text-[22px] tracking-[-0.05em]';
 
       case 'h5':
         // Poppins SemiBold, 16pt
-        return 'font-montserrat-semibold text-[16px]';
+        return 'font-montserrat-semibold text-[14px]';
 
       case 'caption-sm':
         // Poppins Regular, 12pt
-        return 'font-montserrat-reg text-[12px]';
+        return 'font-montserrat-reg text-[10px]';
 
       case 'caption':
       default:
         // Poppins Regular, 14pt
-        return 'font-montserrat-reg text-[14px]';
+        return 'font-montserrat-reg text-[12px]';
     }
   };
 

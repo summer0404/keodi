@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { useFonts } from 'expo-font';
 import { Montserrat_400Regular, Montserrat_600SemiBold } from '@expo-google-fonts/montserrat';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingStore } from '@/store/useSettingStore';
@@ -14,6 +15,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppQueryProvider } from '@/providers/query-provider';
 import { configureGoogleSignIn } from '@/api/google-signin';
+import { useNotificationRuntime } from '@/hooks/use-notification-runtime';
+import InAppNotificationCard from '@/components/ui/InAppNotificationCard';
 
 SplashScreen.preventAutoHideAsync();
 configureGoogleSignIn();
@@ -24,6 +27,11 @@ export default function RootLayout() {
   const authHydrated = useAuthStore((s) => s._hasHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const hydrateAuth = useAuthStore((s) => s.hydrate);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
+
+  const { banner, dismissBanner, openBanner, isPrimaryLoading } = useNotificationRuntime({
+    accessToken,
+  });
 
   const [fontsLoaded] = useFonts({
     'Montserrat-SemiBold': Montserrat_600SemiBold,
@@ -41,6 +49,14 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, settingsHydrated, authHydrated, language]);
+
+  useEffect(() => {
+    if (!authHydrated || !accessToken) {
+      return;
+    }
+
+    void fetchMe();
+  }, [accessToken, authHydrated, fetchMe]);
 
   // If fonts or settings or auth are not loaded yet, don't render anything
   if (!fontsLoaded || !settingsHydrated || !authHydrated) return null;
@@ -62,6 +78,21 @@ export default function RootLayout() {
             <Stack.Screen name="place/[id]" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
+
+          {banner ? (
+            <View
+              pointerEvents="box-none"
+              style={{ position: 'absolute', top: 56, left: 12, right: 12, zIndex: 999 }}
+            >
+              <InAppNotificationCard
+                model={banner}
+                onDismiss={dismissBanner}
+                onPrimary={openBanner}
+                primaryLoading={isPrimaryLoading}
+              />
+            </View>
+          ) : null}
+
           <StatusBar style="auto" />
         </ThemeProvider>
       </SafeAreaProvider>

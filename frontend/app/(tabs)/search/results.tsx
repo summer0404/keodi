@@ -39,6 +39,8 @@ export default function SearchResultsScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t } = useTranslation();
+  const cacheNearbyPlaces = usePlacesStore((s) => s.cacheNearbyPlaces);
+  const upsertPlace = usePlacesStore((s) => s.upsertPlace);
   const setPlaceFavorite = usePlacesStore((s) => s.setPlaceFavorite);
   const horizontalPadding = 16;
   const cardWidth = width - horizontalPadding * 2;
@@ -52,7 +54,6 @@ export default function SearchResultsScreen() {
     sortOrder: string;
     mode: string;
     minRating: string;
-    openFilter: string;
   }>();
 
   const searchTerm = params.search ?? '';
@@ -63,7 +64,6 @@ export default function SearchResultsScreen() {
   const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'asc';
   const searchMode = params.mode === 'contextual' ? 'contextual' : 'keyword';
   const minRating = Number(params.minRating) || 0;
-  const openFilter = params.openFilter ?? 'all';
 
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,20 +83,6 @@ export default function SearchResultsScreen() {
   hasMoreRef.current = hasMore;
   isLoadingRef.current = isLoading;
   isLoadingMoreRef.current = isLoadingMore;
-
-  const applyClientFilters = useCallback(
-    (items: PlaceItem[]) => {
-      let filtered = items;
-      if (minRating > 0) {
-        filtered = filtered.filter((p) => p.rating >= minRating);
-      }
-      if (openFilter === 'open') {
-        filtered = filtered.filter((p) => isPlaceOpenNow(p.openingHours));
-      }
-      return filtered;
-    },
-    [minRating, openFilter]
-  );
 
   const fetchPage = useCallback(
     async (page: number, mode: 'replace' | 'append', requestVersion: number) => {
@@ -126,6 +112,7 @@ export default function SearchResultsScreen() {
         if (requestVersion !== requestVersionRef.current) return;
 
         const received = response.places ?? [];
+        cacheNearbyPlaces(received);
         const totalPages = response.totalPages ?? page;
         const nextHasMore = page < totalPages && received.length > 0;
 
@@ -176,11 +163,13 @@ export default function SearchResultsScreen() {
     fetchPage(currentPageRef.current + 1, 'append', requestVersionRef.current);
   }, [fetchPage]);
 
-  const displayedPlaces = applyClientFilters(places);
+  // I want to show all results as they are without filtering/sorting
+  const displayedPlaces = places;
 
   const renderItem = useCallback(
     ({ item }: { item: PlaceItem }) => {
       const openingHoursLabel = formatOpeningHoursLabel(item.openingHours, t);
+      const hasOpeningHours = (item.openingHours?.length ?? 0) > 0;
       const isOpen = isPlaceOpenNow(item.openingHours);
       const primaryImageUrl = getPrimaryImageUrl(item.featureImageUrl);
       const tags = (item.categories ?? []).slice(0, 4).map((c) => ({
@@ -209,7 +198,12 @@ export default function SearchResultsScreen() {
       };
 
       return (
-        <Pressable onPress={() => router.push(`/place/${item.id}` as any)}>
+        <Pressable
+          onPress={() => {
+            upsertPlace(item);
+            router.push(`/place/${item.id}` as any);
+          }}
+        >
           <PlaceCard
             style={{ width: cardWidth, elevation: 0 }}
             imageSource={primaryImageUrl ? { uri: primaryImageUrl } : DEFAULT_PLACE_IMAGE}
@@ -224,6 +218,7 @@ export default function SearchResultsScreen() {
             description={item.description?.trim()}
             statusLabel={isOpen ? t('home.open') : t('home.close')}
             isOpen={isOpen}
+            showStatusChip={hasOpeningHours}
             tags={tags}
             defaultFavorite={!!item.isFavorite}
             onFavoriteChange={handleFavoriteChange}
@@ -231,7 +226,7 @@ export default function SearchResultsScreen() {
         </Pressable>
       );
     },
-    [cardWidth, router, setPlaceFavorite, t]
+    [cardWidth, router, setPlaceFavorite, t, upsertPlace]
   );
 
   const itemSeparator = useCallback(() => <View style={{ height: 16 }} />, []);

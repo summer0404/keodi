@@ -1,12 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   FlatList,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   Share,
+  TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -32,15 +36,17 @@ import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import { Palette } from '@/constants/theme';
 import { favoriteService } from '@/api/favorite';
+import { groupSessionsService } from '@/api/groupSessions';
 import { placesService } from '@/api/places';
 import { usePlacesStore } from '@/store/usePlacesStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   extractImageUrls,
   getLocalizedLocation,
   formatDistance,
   formatDateMonthYear,
-  getDayOfWeekLabel,
   groupOpeningHoursByRange,
+  formatOpeningHoursGroupLabel,
   isPlaceOpenNow,
   DEFAULT_PAGE,
   DEFAULT_LIMIT,
@@ -50,6 +56,11 @@ import type { PlaceItem, Review } from '@/types/api';
 const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
 
 type DetailTab = 'overview' | 'details' | 'reviews';
+type AddToGroupBlockedReason =
+  | 'noActiveGroup'
+  | 'groupFinalized'
+  | 'memberVoteFinalized'
+  | 'addFailed';
 
 const normalizeWebsiteUrl = (website: string) => {
   const trimmed = website.trim();
@@ -167,7 +178,10 @@ function PlaceDetailScreen() {
   const place = usePlacesStore((state) => (placeId ? state.placesById[placeId] : undefined));
   const lastNearbyParams = usePlacesStore((state) => state.lastNearbyParams);
   const cacheNearbyPlaces = usePlacesStore((state) => state.cacheNearbyPlaces);
+  const upsertPlace = usePlacesStore((state) => state.upsertPlace);
   const setPlaceFavorite = usePlacesStore((state) => state.setPlaceFavorite);
+  const currentUserId = useAuthStore((state) => state.me?.id ?? null);
+  const fetchMe = useAuthStore((state) => state.fetchMe);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [isRefreshingPlace, setIsRefreshingPlace] = useState(false);
@@ -176,7 +190,13 @@ function PlaceDetailScreen() {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isDescriptionOverflowing, setIsDescriptionOverflowing] = useState(false);
   const [isTopImageFailed, setIsTopImageFailed] = useState(false);
+  const [isVotingToGroup, setIsVotingToGroup] = useState(false);
+  const [isVoteSuccess, setIsVoteSuccess] = useState(false);
+  const [addToGroupBlockedReason, setAddToGroupBlockedReason] =
+    useState<AddToGroupBlockedReason | null>(null);
   const hasTriedRefetchRef = useRef(false);
+  const voteSuccessScale = useRef(new Animated.Value(1)).current;
+  const voteSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Review state & refs
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -287,6 +307,26 @@ function PlaceDetailScreen() {
   }, [place?.featureImageUrl, placeId]);
 
   useEffect(() => {
+    void fetchMe();
+  }, [fetchMe]);
+
+  const resetVoteFeedback = useCallback(() => {
+    if (voteSuccessTimeoutRef.current) {
+      clearTimeout(voteSuccessTimeoutRef.current);
+      voteSuccessTimeoutRef.current = null;
+    }
+    voteSuccessScale.stopAnimation();
+    voteSuccessScale.setValue(1);
+    setIsVoteSuccess(false);
+  }, [voteSuccessScale]);
+
+  useEffect(() => {
+    return () => {
+      resetVoteFeedback();
+    };
+  }, [resetVoteFeedback]);
+
+  useEffect(() => {
     // Load reviews when place is loaded
     if (!placeId) return;
     setCurrentReviewPage(DEFAULT_PAGE);
@@ -296,25 +336,34 @@ function PlaceDetailScreen() {
 
   useEffect(() => {
     const refetchPlace = async () => {
-      if (!placeId || place || !lastNearbyParams || hasTriedRefetchRef.current) {
+      if (!placeId || place || hasTriedRefetchRef.current) {
         return;
       }
 
       hasTriedRefetchRef.current = true;
       setIsRefreshingPlace(true);
       try {
-        const response = await placesService.getNearbyPlaces({
-          ...lastNearbyParams,
-          page: 1,
-        });
-        cacheNearbyPlaces(response.places ?? []);
+        const fetchedPlace = await placesService.getPlaceById(placeId);
+        upsertPlace(fetchedPlace);
+      } catch {
+        if (lastNearbyParams) {
+          try {
+            const response = await placesService.getNearbyPlaces({
+              ...lastNearbyParams,
+              page: 1,
+            });
+            cacheNearbyPlaces(response.places ?? []);
+          } catch {
+            // Silent fail
+          }
+        }
       } finally {
         setIsRefreshingPlace(false);
       }
     };
 
     refetchPlace();
-  }, [cacheNearbyPlaces, lastNearbyParams, place, placeId]);
+  }, [cacheNearbyPlaces, lastNearbyParams, place, placeId, upsertPlace]);
 
   const imageUrls = useMemo(
     () => extractImageUrls(place?.featureImageUrl),
@@ -425,6 +474,84 @@ function PlaceDetailScreen() {
     }
   };
 
+  const handleAddToGroup = useCallback(async () => {
+    if (!placeId || isVotingToGroup || isVoteSuccess) return;
+
+    setIsVotingToGroup(true);
+    try {
+      const sessionsResponse = await groupSessionsService.getGroupSessions();
+      const activeSession = sessionsResponse.sessions.find(
+        (session) => session.status === 'ACTIVE'
+      );
+
+      if (!activeSession?.sessionId) {
+        setAddToGroupBlockedReason('noActiveGroup');
+        return;
+      }
+
+      if (activeSession.voteStatus === 'FINALIZED') {
+        setAddToGroupBlockedReason('groupFinalized');
+        return;
+      }
+
+      let nextCurrentUserId = currentUserId;
+      if (!nextCurrentUserId) {
+        const me = await fetchMe({ force: true });
+        nextCurrentUserId = me?.id ?? null;
+      }
+
+      if (nextCurrentUserId) {
+        const voteData = await groupSessionsService.getVotes(activeSession.sessionId);
+        const currentUserVote =
+          voteData?.votes?.find((vote) => vote.member?.userId === nextCurrentUserId) ?? null;
+
+        if (currentUserVote?.isFinalized) {
+          setAddToGroupBlockedReason('memberVoteFinalized');
+          return;
+        }
+      }
+
+      await groupSessionsService.addCandidate(activeSession.sessionId, { placeId });
+
+      setIsVoteSuccess(true);
+      Animated.sequence([
+        Animated.timing(voteSuccessScale, {
+          toValue: 1.06,
+          duration: 180,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(voteSuccessScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      voteSuccessTimeoutRef.current = setTimeout(() => {
+        resetVoteFeedback();
+      }, 1000);
+    } catch {
+      setAddToGroupBlockedReason('addFailed');
+    } finally {
+      setIsVotingToGroup(false);
+    }
+  }, [
+    currentUserId,
+    fetchMe,
+    isVoteSuccess,
+    isVotingToGroup,
+    placeId,
+    resetVoteFeedback,
+    t,
+    voteSuccessScale,
+  ]);
+
+  const closeAddToGroupBlockedModal = useCallback(() => {
+    setAddToGroupBlockedReason(null);
+  }, []);
+
   const renderOverview = (target: PlaceItem) => (
     <View className="mt-5">
       {target.description?.trim() && (
@@ -485,10 +612,7 @@ function PlaceDetailScreen() {
 
           <View className="mt-2 gap-2 mb-5">
             {groupOpeningHoursByRange(target.openingHours).map((group) => {
-              const dayLabel =
-                group.startDay === group.endDay
-                  ? getDayOfWeekLabel(group.startDay, t)
-                  : `${getDayOfWeekLabel(group.startDay, t)} - ${getDayOfWeekLabel(group.endDay, t)}`;
+              const dayLabel = formatOpeningHoursGroupLabel(group, t);
 
               return (
                 <View
@@ -515,6 +639,7 @@ function PlaceDetailScreen() {
       i18n.language,
       t
     );
+    const hasOpeningHours = groupOpeningHoursByRange(target.openingHours).length > 0;
 
     return (
       <View className="mt-5 gap-2">
@@ -528,15 +653,17 @@ function PlaceDetailScreen() {
               </Typography>
             </View>
           </View>
-          <View className="flex-1 pl-3">
-            <Typography>{t('home.status')}:</Typography>
-            <Typography
-              variant="h5"
-              className={`mt-1 ${isPlaceOpenNow(target.openingHours) ? 'text-green-600' : 'text-red-600'}`}
-            >
-              {isPlaceOpenNow(target.openingHours) ? t('home.open') : t('home.close')}
-            </Typography>
-          </View>
+          {hasOpeningHours ? (
+            <View className="flex-1 pl-3">
+              <Typography>{t('home.status')}:</Typography>
+              <Typography
+                variant="h5"
+                className={`mt-1 ${isPlaceOpenNow(target.openingHours) ? 'text-green-600' : 'text-red-600'}`}
+              >
+                {isPlaceOpenNow(target.openingHours) ? t('home.open') : t('home.close')}
+              </Typography>
+            </View>
+          ) : null}
         </View>
 
         <View>
@@ -806,14 +933,24 @@ function PlaceDetailScreen() {
               ))}
           </View>
 
-          <Pressable className="mt-4 h-11 rounded-xl bg-black items-center justify-center">
-            <View className="flex-row items-center gap-5">
-              <UserPlus size={24} color={Palette.white} strokeWidth={2} />
-              <Typography variant="h5" className="text-white">
-                {t('home.addToGroup')}
-              </Typography>
-            </View>
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: voteSuccessScale }] }}>
+            <Button
+              className={`mt-4 ${isVoteSuccess ? 'bg-green-500' : ''}`}
+              onPress={handleAddToGroup}
+              disabled={isVotingToGroup || isVoteSuccess}
+            >
+              <View className="flex-row items-center gap-5">
+                <UserPlus size={24} color={Palette.white} strokeWidth={2} />
+                <Typography variant="h5" className="text-white">
+                  {isVoteSuccess
+                    ? t('home.addToGroupSuccess')
+                    : isVotingToGroup
+                      ? t('home.addingToGroup')
+                      : t('home.addToGroup')}
+                </Typography>
+              </View>
+            </Button>
+          </Animated.View>
 
           <View className="mt-4 rounded-xl bg-[#ECECF1] p-1 flex-row">
             <DetailTabButton
@@ -838,6 +975,53 @@ function PlaceDetailScreen() {
           {activeTab === 'reviews' ? renderReviews() : null}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={addToGroupBlockedReason !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={closeAddToGroupBlockedModal}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <TouchableWithoutFeedback onPress={closeAddToGroupBlockedModal}>
+            <View className="absolute inset-0" />
+          </TouchableWithoutFeedback>
+
+          <View
+            className="w-full rounded-t-[24px] bg-white px-4 pb-8 shadow-xl"
+            style={{ paddingBottom: insets.bottom + 32 }}
+          >
+            <View className="mb-2 mt-3 items-center">
+              <View className="h-1 w-10 rounded-full bg-gray-300" />
+            </View>
+
+            <View className="mb-5 items-center">
+              <Typography variant="h4" className="text-center">
+                {addToGroupBlockedReason === 'groupFinalized'
+                  ? t('home.groupAlreadyFinalizedTitle')
+                  : addToGroupBlockedReason === 'memberVoteFinalized'
+                    ? t('home.memberVoteFinalizedTitle')
+                    : addToGroupBlockedReason === 'addFailed'
+                      ? t('home.addToGroupFailedTitle')
+                      : t('home.groupSessionNotFoundTitle')}
+              </Typography>
+              <Typography className="mt-2 text-center text-gray-500">
+                {addToGroupBlockedReason === 'groupFinalized'
+                  ? t('home.groupAlreadyFinalizedDesc')
+                  : addToGroupBlockedReason === 'memberVoteFinalized'
+                    ? t('home.memberVoteFinalizedDesc')
+                    : addToGroupBlockedReason === 'addFailed'
+                      ? t('home.addToGroupFailedDesc')
+                      : t('home.groupSessionNotFoundDesc')}
+              </Typography>
+            </View>
+
+            <Button rounded="full" className="w-full" onPress={closeAddToGroupBlockedModal}>
+              {t('group.ok')}
+            </Button>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
