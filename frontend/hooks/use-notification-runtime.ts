@@ -153,11 +153,59 @@ const resolveTemplateKeysByType = (type: string | null) => {
         bodyKey: 'notification.memberVoteFinalizedBody',
         primaryLabelKey: 'notification.viewNow',
       };
+    case 'vote.session_finalized':
+      return {
+        titleKey: 'notification.sessionVoteFinalizedTitle',
+        bodyKey: 'notification.sessionVoteFinalizedBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
     case 'GROUP_VOTE_FINALIZED':
       return {
         titleKey: 'notification.groupVoteFinalizedTitle',
         bodyKey: 'notification.groupVoteFinalizedBody',
         primaryLabelKey: 'notification.openNow',
+      };
+    case 'session.member_joined':
+      return {
+        titleKey: 'notification.sessionMemberJoinedTitle',
+        bodyKey: 'notification.sessionMemberJoinedBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'session.closed':
+      return {
+        titleKey: 'notification.sessionClosedTitle',
+        bodyKey: 'notification.sessionClosedBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'session.member_left':
+      return {
+        titleKey: 'notification.sessionMemberLeftTitle',
+        bodyKey: 'notification.sessionMemberLeftBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'candidate.added':
+      return {
+        titleKey: 'notification.candidateAddedTitle',
+        bodyKey: 'notification.candidateAddedBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'candidate.removed':
+      return {
+        titleKey: 'notification.candidateRemovedTitle',
+        bodyKey: 'notification.candidateRemovedBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'NEARBY_PLACE':
+      return {
+        titleKey: 'notification.nearbyPlaceTitle',
+        bodyKey: 'notification.nearbyPlaceBody',
+        primaryLabelKey: 'notification.explorNow',
+      };
+    case 'RECOMMENDATION':
+      return {
+        titleKey: 'notification.recommendationTitle',
+        bodyKey: 'notification.recommendationBody',
+        primaryLabelKey: 'notification.explorNow',
       };
     default:
       return {
@@ -473,6 +521,82 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     [avatarCacheEpoch, currentUserAvatarVersion, currentUserId]
   );
 
+  const enrichSessionMemberJoinedName = useCallback(
+    async (parsed: ParsedNotification) => {
+      if (parsed.type !== 'session.member_joined' || !parsed.sessionId || !parsed.memberId) {
+        return parsed;
+      }
+
+      const store = useGroupSessionStore.getState();
+      const session = await store.fetchSessionById(parsed.sessionId, { force: false });
+      if (!session?.members?.length) {
+        return parsed;
+      }
+
+      const matchedMember = session.members.find((member) => member.id === parsed.memberId);
+      if (!matchedMember) {
+        return parsed;
+      }
+
+      const resolvedSenderName = resolveMemberDisplayName(matchedMember);
+      const resolvedAvatarUrl = resolveVersionedAvatarUrl({
+        rawUrl: matchedMember.user?.pictureUrl ?? parsed.senderAvatarUrl,
+        avatarCacheEpoch,
+        currentUserAvatarVersion,
+        isCurrentUser: Boolean(currentUserId && matchedMember.userId === currentUserId),
+      });
+
+      return {
+        ...parsed,
+        senderName: parsed.senderName ?? resolvedSenderName,
+        senderAvatarUrl: resolvedAvatarUrl ?? parsed.senderAvatarUrl,
+        i18nParams: {
+          ...parsed.i18nParams,
+          ...(resolvedSenderName ? { memberName: resolvedSenderName } : {}),
+        },
+      };
+    },
+    [avatarCacheEpoch, currentUserAvatarVersion, currentUserId]
+  );
+
+  const enrichSessionMemberLeftName = useCallback(
+    async (parsed: ParsedNotification) => {
+      if (parsed.type !== 'session.member_left' || !parsed.sessionId || !parsed.memberId) {
+        return parsed;
+      }
+
+      const store = useGroupSessionStore.getState();
+      const session = await store.fetchSessionById(parsed.sessionId, { force: false });
+      if (!session?.members?.length) {
+        return parsed;
+      }
+
+      const matchedMember = session.members.find((member) => member.id === parsed.memberId);
+      if (!matchedMember) {
+        return parsed;
+      }
+
+      const resolvedSenderName = resolveMemberDisplayName(matchedMember);
+      const resolvedAvatarUrl = resolveVersionedAvatarUrl({
+        rawUrl: matchedMember.user?.pictureUrl ?? parsed.senderAvatarUrl,
+        avatarCacheEpoch,
+        currentUserAvatarVersion,
+        isCurrentUser: Boolean(currentUserId && matchedMember.userId === currentUserId),
+      });
+
+      return {
+        ...parsed,
+        senderName: parsed.senderName ?? resolvedSenderName,
+        senderAvatarUrl: resolvedAvatarUrl ?? parsed.senderAvatarUrl,
+        i18nParams: {
+          ...parsed.i18nParams,
+          ...(resolvedSenderName ? { memberName: resolvedSenderName } : {}),
+        },
+      };
+    },
+    [avatarCacheEpoch, currentUserAvatarVersion, currentUserId]
+  );
+
   const parseEvent = useCallback((event: RealtimeNotificationEvent): ParsedNotification => {
     const eventData = toRecord(event.data);
     const payload = {
@@ -629,15 +753,23 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       const isGroupInvite = parsed.type === 'GROUP_INVITE';
       const isGroupVoteFinalized = parsed.type === 'GROUP_VOTE_FINALIZED';
       const isVoteCast = parsed.type === 'vote.cast';
+      const isSessionEvent =
+        parsed.type === 'session.member_joined' ||
+        parsed.type === 'session.member_left' ||
+        parsed.type === 'session.closed';
+      const isCandidateEvent =
+        parsed.type === 'candidate.added' || parsed.type === 'candidate.removed';
       const senderName = parsed.senderName || t('notification.someone');
       const template = resolveTemplateKeysByType(parsed.type);
       const forcedBodyKey = isGroupVoteFinalized
         ? resolveGroupVoteFinalizedBodyKey(parsed.body)
         : template.bodyKey;
-      const forceLocalizedTemplate = isGroupInvite || isGroupVoteFinalized || isVoteCast;
+      const forceLocalizedTemplate =
+        isGroupInvite || isGroupVoteFinalized || isVoteCast || isSessionEvent || isCandidateEvent;
       const i18nValues = {
         name: senderName,
         voterName: parsed.i18nParams.voterName ?? senderName,
+        memberName: parsed.i18nParams.memberName ?? senderName,
         placeName: parsed.i18nParams.placeName ?? t('notification.somePlace'),
         shareCode: parsed.shareCode ?? '',
         ...parsed.i18nParams,
@@ -688,10 +820,20 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         enrichedParsed = await enrichVoteCastSenderName(parsed);
       } else if (parsed.type === 'vote.member_finalized') {
         enrichedParsed = await enrichVoteMemberFinalizedSenderName(parsed);
+      } else if (parsed.type === 'session.member_joined') {
+        enrichedParsed = await enrichSessionMemberJoinedName(parsed);
+      } else if (parsed.type === 'session.member_left') {
+        enrichedParsed = await enrichSessionMemberLeftName(parsed);
       }
       setBanner(toBannerModel(enrichedParsed));
     },
-    [enrichVoteCastSenderName, enrichVoteMemberFinalizedSenderName, toBannerModel]
+    [
+      enrichVoteCastSenderName,
+      enrichVoteMemberFinalizedSenderName,
+      enrichSessionMemberJoinedName,
+      enrichSessionMemberLeftName,
+      toBannerModel,
+    ]
   );
 
   const bindForegroundMessage = useCallback(() => {
