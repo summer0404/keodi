@@ -1,4 +1,4 @@
-import { ApiProperty, PickType } from '@nestjs/swagger';
+import { ApiProperty, OmitType, PickType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDate,
@@ -14,6 +14,8 @@ import {
   MinLength,
 } from 'class-validator';
 import { ProfileVisibility } from '../enums/setting.enum';
+import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
+import { Role } from '../enums/role.enum';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: 'Username is required' })
@@ -67,6 +69,9 @@ export class CurrentUserDto {
 
   @ApiProperty({ example: '', description: 'Email' })
   email: string;
+
+  @ApiProperty({ enum: Role, example: Role.USER, description: 'User role' })
+  role: Role;
 }
 
 export class UpdateUserProfileDto {
@@ -123,6 +128,18 @@ export class UpdateLocationDto {
   longitude: number;
 }
 
+export class SearchUsersQueryDto extends OmitType(PaginationQueryDto, [
+  'sortOrder',
+] as const) {
+  @ApiProperty({
+    description: 'Keyword to search by username, first name, or last name',
+    example: 'john',
+  })
+  @IsNotEmpty()
+  @IsString()
+  keyword!: string;
+}
+
 export class UserBasicResponseDto {
   @ApiProperty({ example: 'clq2k3s9f000001l6gms61932' })
   id: string;
@@ -161,6 +178,31 @@ export class OtherUserProfileResponseDto extends UserBasicResponseDto {
 
   @ApiProperty({ example: false })
   canSendFriendRequest: boolean;
+}
+
+export class SearchUserResponseDto {
+  @ApiProperty({ example: 'clq2k3s9f000001l6gms61932' })
+  id!: string;
+
+  @ApiProperty({ example: '_john.doe', nullable: true })
+  username!: string | null;
+
+  @ApiProperty({ example: 'John', nullable: true })
+  firstName!: string | null;
+
+  @ApiProperty({ example: 'Doe', nullable: true })
+  lastName!: string | null;
+
+  @ApiProperty({ example: 'https://example.com/avatar.png', nullable: true })
+  pictureUrl!: string | null;
+}
+
+export class SearchUsersResponseDto extends PaginationResponseDto {
+  @ApiProperty({
+    type: [SearchUserResponseDto],
+    description: 'List of matched users',
+  })
+  users: SearchUserResponseDto[];
 }
 
 export class UserMessageResponseDto {

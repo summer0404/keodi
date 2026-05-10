@@ -11,7 +11,6 @@ from app.config.settings import get_settings
 from app.common.constant import TIME_DECAY, MIN_OVERLAP_THRESHOLD
 from app.repositories.base_repository import BaseRepository
 
-settings = get_settings()
 logger = logging.getLogger(__name__)
 
 class RankingService:
@@ -22,7 +21,7 @@ class RankingService:
         self.base_repository = await BaseRepository.start()
         
         try:
-            self.model = lgb.Booster(model_file=settings.ltr_model_path)
+            self.model = lgb.Booster(model_file=get_settings().ltr_model_path)
         except Exception as e:
             self.model = None
         return self
@@ -179,14 +178,15 @@ class RankingService:
         if df.empty:
             logger.warning("Training data is empty. Skipping model training.")
             return
-        
+
+        settings = get_settings()
         df = df.sort_values('user_id').reset_index(drop=True)
-        
+
         x = df[['cosine_sim', 'max_match', 'dealbreaker', 'overlap_count']]
         y = df['label']
-        
+
         group = df.groupby('user_id', sort=False).size().to_list()
-        
+
         params = {
             'objective': settings.ltr_objective,
             'metric': settings.ltr_metric,
@@ -196,13 +196,13 @@ class RankingService:
             'feature_fraction': settings.ltr_feature_fraction,
             'verbose': -1
         }
-        
+
         if len(df) < 100:
             params['min_data_in_leaf'] = 1
             params['min_data_in_bin'] = 1
-            
+
         training_data = lgb.Dataset(x, label=y, group=group)
-        
+
         self.model = lgb.train(params, training_data, num_boost_round=100)
         self.model.save_model(settings.ltr_model_path)
         logger.info(f"Model saved successfully to {settings.ltr_model_path}")

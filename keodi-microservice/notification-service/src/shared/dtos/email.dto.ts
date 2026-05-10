@@ -1,11 +1,67 @@
-import { OmitType } from "@nestjs/mapped-types"
-
-export class SendOTPMailDto {
+export class SendMailDto {
     to: string
-    code: string
-    subject?: string 
 }
 
-export class SendVerifyURLDto extends OmitType(SendOTPMailDto, ['code']) {
+export class SendOTPDto extends SendMailDto{
+    code: string
+}
+
+export class SendVerifyURLDto extends SendMailDto{
     url: string
 }
+
+export class OwnerApplicationReceivedDto extends SendMailDto {
+    businessDays: number
+}
+
+export class OwnerApplicationApprovedDto extends SendMailDto {}
+
+export class OwnerApplicationRejectedDto extends SendMailDto {
+    reason: string
+}
+
+export class OwnershipClaimApprovedDto extends SendMailDto {}
+
+export class OwnershipClaimRejectedDto extends SendMailDto {
+    reason: string
+}
+
+export class OwnershipRevokedDto extends SendMailDto {
+    placeName: string
+}
+
+export class OwnershipClaimDisputedDto extends SendMailDto {
+    placeName: string
+}
+
+export class ReviewFlagApprovedDto extends SendMailDto {
+    placeName: string
+    reviewId: string
+}
+
+export class ReviewFlagRejectedDto extends SendMailDto {
+    placeName: string
+    reviewId: string
+}
+
+export class ReviewLowRatingDto {
+    to: string
+    reviewerName: string
+    rating: number
+    placeName: string
+    placeId: string
+    reviewId: string
+}
+
+export type EmailPayloadDto =
+    SendOTPDto |
+    SendVerifyURLDto |
+    OwnerApplicationReceivedDto |
+    OwnerApplicationApprovedDto |
+    OwnerApplicationRejectedDto |
+    OwnershipClaimApprovedDto |
+    OwnershipClaimRejectedDto |
+    OwnershipRevokedDto |
+    OwnershipClaimDisputedDto |
+    ReviewFlagApprovedDto |
+    ReviewFlagRejectedDto;

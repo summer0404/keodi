@@ -4,11 +4,10 @@ from app.config.settings import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 class EmbeddingService:
     def __init__(self):
-        self.model = SentenceTransformer(settings.embedding_model)
+        self.model = SentenceTransformer(get_settings().embedding_model)
 
     def get_embedding(self, text: str) -> List[float]:
         try:

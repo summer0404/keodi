@@ -3,18 +3,22 @@ import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
 import {
+  AttributeTopics,
   AuthTopics,
-  UserTopics,
-  PlaceTopics,
-  RecommendationTopics,
-  FavoriteTopics,
   CategoryTopics,
+  FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
+  IntelligenceTopics,
+  NotificationInboxTopics,
+  OwnerApplicationTopics,
+  OwnershipClaimTopics,
+  PlaceTopics,
+  RecommendationTopics,
+  ReviewTopics,
   SearchTopics,
   SettingTopics,
-  AttributeTopics,
-  ReviewTopics,
+  UserTopics,
 } from 'src/shared/constants/topic.constant';
 
 @Injectable()
@@ -28,6 +32,7 @@ export class KafkaService implements OnModuleInit {
   async onModuleInit() {
     //auth topic
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Register);
+    this.kafkaClient.subscribeToResponseOf(AuthTopics.RegisterOwner);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Login);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.Google);
     this.kafkaClient.subscribeToResponseOf(AuthTopics.ForgotPasswordOtp);
@@ -50,11 +55,33 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(UserTopics.UpdateProfile);
     this.kafkaClient.subscribeToResponseOf(UserTopics.Onboarding);
     this.kafkaClient.subscribeToResponseOf(UserTopics.GetOtherProfile);
+    this.kafkaClient.subscribeToResponseOf(UserTopics.SearchOthers);
+
+    // owner application topic
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Approve);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Reject);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.GetAll);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Resubmit);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.GetMe);
+
+    // owner ship claim topic
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Approve);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.Reject);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.GetAll);
+    this.kafkaClient.subscribeToResponseOf(OwnershipClaimTopics.GetMyClaims);
 
     //place topic
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetById);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.NearMe);
     this.kafkaClient.subscribeToResponseOf(PlaceTopics.Search);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetAllAdmin);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Approve);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Reject);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.Update);
+    this.kafkaClient.subscribeToResponseOf(PlaceTopics.GetByIdsWithDistance);
+    this.kafkaClient.subscribeToResponseOf(IntelligenceTopics.AgentSearch);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.Trending);
     this.kafkaClient.subscribeToResponseOf(RecommendationTopics.ForYou);
     this.kafkaClient.subscribeToResponseOf(
@@ -87,6 +114,14 @@ export class KafkaService implements OnModuleInit {
     // review topic
     this.kafkaClient.subscribeToResponseOf(ReviewTopics.Create);
     this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetByPlaceId);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetOwnerReviews);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.Respond);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.UpdateResponse);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.DeleteResponse);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.Flag);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.GetAdminReviews);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.ApproveFlags);
+    this.kafkaClient.subscribeToResponseOf(ReviewTopics.RejectFlags);
 
     //group session topic
     this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.Create);
@@ -113,6 +148,7 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(
       GroupSessionTopics.UpdateRecommendationCategories,
     );
+    this.kafkaClient.subscribeToResponseOf(GroupSessionTopics.GetActivities);
 
     //search topic
     this.kafkaClient.subscribeToResponseOf(SearchTopics.Trending);
@@ -120,6 +156,16 @@ export class KafkaService implements OnModuleInit {
     //setting topics
     this.kafkaClient.subscribeToResponseOf(SettingTopics.Get);
     this.kafkaClient.subscribeToResponseOf(SettingTopics.Update);
+
+    // notification inbox topics
+    this.kafkaClient.subscribeToResponseOf(NotificationInboxTopics.GetInbox);
+    this.kafkaClient.subscribeToResponseOf(NotificationInboxTopics.MarkAsRead);
+    this.kafkaClient.subscribeToResponseOf(
+      NotificationInboxTopics.MarkAllAsRead,
+    );
+    this.kafkaClient.subscribeToResponseOf(
+      NotificationInboxTopics.GetUnreadCount,
+    );
 
     await this.kafkaClient.connect();
   }

@@ -1,0 +1,284 @@
+services:
+  auth-postgres:
+    image: postgres:17
+    container_name: auth-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: ${AUTH_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-admin} -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  core-postgres:
+    image: pgvector/pgvector:pg17
+    container_name: core-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: core_db
+      POSTGRES_USER: ${CORE_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${CORE_DB_PASSWORD}
+    volumes:
+      - core_postgres_data:/var/lib/postgresql/data
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CORE_DB_USER:-admin} -d core_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: 1073741824
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  api-gateway:
+    image: ghcr.io/${GITHUB_REPOSITORY}/api-gateway:${TAG:-latest}
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./env/api-gateway.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+
+  auth-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/auth-service:${TAG:-latest}
+    container_name: auth-service
+    restart: unless-stopped
+    env_file:
+      - ./env/auth-service.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      auth-postgres:
+        condition: service_healthy
+      notification-service:
+        condition: service_started
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+
+  notification-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/notification-service:${TAG:-latest}
+    container_name: notification-service
+    restart: unless-stopped
+    env_file:
+      - ./env/notification-service.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      core-postgres:
+        condition: service_healthy
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+
+  core-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/core-service:${TAG:-latest}
+    container_name: core-service
+    restart: unless-stopped
+    env_file:
+      - ./env/core-service.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      core-postgres:
+        condition: service_healthy
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+
+  intelligence-service:
+    image: ghcr.io/${GITHUB_REPOSITORY}/intelligence-service:${TAG:-latest}
+    container_name: intelligence-service
+    restart: unless-stopped
+    env_file:
+      - ./env/intelligence-service.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      core-postgres:
+        condition: service_healthy
+    networks:
+      - keodi-net
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    networks:
+      - keodi-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - keodi-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+  
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: grafana
+    ports:
+      - "3005:3000"
+    env_file:
+      - ./env/monitoring.env
+    environment:
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    networks:
+      - keodi-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+volumes:
+  auth_postgres_data:
+  core_postgres_data:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
+  loki_data:
+  grafana_data:
+
+
+networks:
+  keodi-net:
+    driver: bridge

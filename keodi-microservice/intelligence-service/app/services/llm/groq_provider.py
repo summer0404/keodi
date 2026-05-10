@@ -1,23 +1,19 @@
 from app.config.settings import get_settings
 from app.services.llm.base_provider import BaseLLMProvider
 
-settings = get_settings()
-
-
 class GroqProvider(BaseLLMProvider):
     def __init__(self):
+        settings = get_settings()
         try:
             from groq import AsyncGroq
+            import httpx
 
-            # Script for my company PC :))))
-            # import httpx
-            # http_client = httpx.AsyncClient(verify=False)
-            # self.client = AsyncGroq(
-            #     api_key=settings.groq_api_key,
-            #     http_client=http_client
-            # )
-
-            self.client = AsyncGroq(api_key=settings.groq_api_key)
+            # Bypass SSL verification for environments with self-signed certificates
+            http_client = httpx.AsyncClient(verify=False)
+            self.client = AsyncGroq(
+                api_key=settings.groq_api_key,
+                http_client=http_client
+            )
 
             self.model = settings.groq_model
         except ImportError:
@@ -28,6 +24,7 @@ class GroqProvider(BaseLLMProvider):
         prompt: str,
         **kwargs
     ) -> str:
+        settings = get_settings()
         temperature = settings.groq_temperature
         max_tokens = settings.groq_max_tokens
 

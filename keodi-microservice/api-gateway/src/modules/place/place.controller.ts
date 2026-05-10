@@ -1,34 +1,82 @@
 /* eslint-disable prettier/prettier */
 import {
+  Body,
   Controller,
+  FileTypeValidator,
   Get,
+  HttpStatus,
   Param,
+  ParseFilePipe,
+  Patch,
+  Post,
   Query,
+  UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiTags
 } from '@nestjs/swagger';
 import {
+  AgentSearchResponseDto,
+  ChatSearchDto,
   CoordinateDto,
+  CreatePlaceDto,
+  CreatePlaceResponseDto,
+  GetAdminPlacesDto,
   NearMePlacesResponseDto,
   NearMeQueryDto,
-  SearchDto
+  RejectPlaceBodyDto,
+  SearchDto,
+  UpdatePlaceDto,
+  UpdatePlaceResponseDto,
 } from 'src/shared/dtos/place.dto';
 import { PlaceService } from './place.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CurrentUserDto } from 'src/shared/dtos/user.dto';
-import { ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiSearchPlace } from './place.swagger';
+import { ApiApprovePlace, ApiChatSearch, ApiCreatePlace, ApiGetAdminPlaces, ApiGetForYouPlaces, ApiGetPlaceById, ApiGetPlaceReviews, ApiGetTrendingPlaces, ApiNearMePlace, ApiRejectPlace, ApiSearchPlace, ApiUpdatePlace } from './place.swagger';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
+import { RoleGuard } from 'src/common/guards/role.guard';
+import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
+import { Roles } from 'src/common/decorators/role.decorator';
+import { Role } from 'src/shared/enums/role.enum';
 
 @ApiTags('Places')
 @Controller('places')
 @ApiBearerAuth('access-token')
 export class PlaceController {
   constructor(private readonly placeService: PlaceService) { }
+
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @Roles(Role.OWNER)
+  @Post()
+  @UseInterceptors(FileInterceptor('featureImage'))
+  @ApiCreatePlace()
+  async create(
+    @CurrentUser() user: CurrentUserDto,
+    @Body() createPlaceDto: CreatePlaceDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: true,
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    featureImage: Express.Multer.File,
+  ): Promise<CreatePlaceResponseDto> {
+    return await this.placeService.create(
+      user.id,
+      createPlaceDto,
+      featureImage.buffer,
+      featureImage.mimetype,
+    );
+  }
 
   @Get('near-me')
   @ApiNearMePlace()
@@ -45,6 +93,16 @@ export class PlaceController {
     @Query() query: SearchDto
   ) {
     return await this.placeService.search(query, user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('chat-search')
+  @ApiChatSearch()
+  async chatSearch(
+    @CurrentUser() user: CurrentUserDto,
+    @Body() dto: ChatSearchDto,
+  ): Promise<AgentSearchResponseDto> {
+    return await this.placeService.chatSearch(dto, user.id);
   }
 
   @UseInterceptors(CacheInterceptor)
@@ -65,6 +123,33 @@ export class PlaceController {
     return await this.placeService.getForYou(user.id, query);
   }
 
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin')
+  @ApiGetAdminPlaces()
+  async getAllAdmin(@Query() query: GetAdminPlacesDto) {
+    return await this.placeService.getAllAdmin(query);
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  @Post(':id/approve')
+  @ApiApprovePlace()
+  async approvePlace(@Param('id') placeId: string) {
+    return await this.placeService.approvePlace(placeId);
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
+  @Post(':id/reject')
+  @ApiRejectPlace()
+  async rejectPlace(
+    @Param('id') placeId: string,
+    @Body() body: RejectPlaceBodyDto,
+  ) {
+    return await this.placeService.rejectPlace(placeId, body.reason);
+  }
+
   @Get(':id')
   @ApiGetPlaceById()
   async getById(
@@ -72,6 +157,35 @@ export class PlaceController {
     @Param('id') id: string
   ) {
     return await this.placeService.getById(id, user.id);
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles(Role.OWNER)
+  @Patch(':id')
+  @UseInterceptors(FileInterceptor('featureImage'))
+  @ApiUpdatePlace()
+  async update(
+    @CurrentUser() user: CurrentUserDto,
+    @Param('id') id: string,
+    @Body() updatePlaceDto: UpdatePlaceDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: false,
+        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      }),
+    )
+    featureImage?: Express.Multer.File,
+  ): Promise<UpdatePlaceResponseDto> {
+    return await this.placeService.update(
+      id,
+      user.id,
+      updatePlaceDto,
+      featureImage?.buffer,
+      featureImage?.mimetype,
+    );
   }
 
   @Get(':id/reviews')

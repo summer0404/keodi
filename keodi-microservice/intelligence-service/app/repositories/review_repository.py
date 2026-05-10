@@ -6,4 +6,11 @@ class ReviewRepository(BaseRepository):
             where={"id": review_id},
             data={"sentimentAnalyzed": True}
         )
+
+    async def get_place_reviews(self, place_id: str, limit: int = 5) -> list:
+        return await self.db.review.find_many(
+            where={"placeId": place_id},
+            order={"createdAt": "desc"},
+            take=limit,
+        )
     

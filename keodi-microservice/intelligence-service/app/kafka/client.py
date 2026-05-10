@@ -8,8 +8,6 @@ from app.kafka.config import KafkaConfig
 _producer: Optional[AIOKafkaProducer] = None
 _consumer: Optional[AIOKafkaConsumer] = None
 
-config = KafkaConfig()
-
 async def get_kafka_producer() -> AIOKafkaProducer:
     global _producer
     if _producer is None:

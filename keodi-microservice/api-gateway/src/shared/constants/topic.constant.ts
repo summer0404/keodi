@@ -1,5 +1,6 @@
 export const AuthTopics = {
   Register: 'auth.register',
+  RegisterOwner: 'auth.register-owner',
   Login: 'auth.login',
   Google: 'auth.google',
   ForgotPasswordOtp: 'auth.forgot-password-otp',
@@ -10,12 +11,15 @@ export const AuthTopics = {
   ExternalResendVerifyEmail: 'auth.external-resend-verify-email',
   ResendVerifyEmail: 'auth.resend-verify-email',
   Refresh: 'auth.refresh',
+  ApproveOwner: 'auth.approve-owner',
+  RejectOwner: 'auth.reject-owner',
 } as const;
 
 export const UserTopics = {
   Create: 'user.create',
   Get: 'user.get',
   GetAll: 'user.get-all',
+  SearchOthers: 'user.search-others',
   Unverify: 'user.unverify',
   UpdateUsername: 'user.update-username',
   UpdatePicture: 'user.update-picture',
@@ -25,10 +29,32 @@ export const UserTopics = {
   GetOtherProfile: 'user.get-other-profile',
 } as const;
 
+export const OwnerApplicationTopics = {
+  Approve: 'owner-application.approve',
+  Reject: 'owner-application.reject',
+  GetAll: 'owner-application.get-all',
+  Resubmit: 'owner-application.resubmit',
+  GetMe: 'owner-application.get-me',
+} as const;
+
+export const OwnershipClaimTopics = {
+  Create: 'ownership-claim.create',
+  Approve: 'ownership-claim.approve',
+  Reject: 'ownership-claim.reject',
+  GetAll: 'ownership-claim.get-all',
+  GetMyClaims: 'ownership-claim.get-my-claims',
+} as const;
+
 export const PlaceTopics = {
   GetById: 'place.get-by-id',
+  GetByIdsWithDistance: 'place.get-by-ids-with-distance',
   NearMe: 'place.near-me',
   Search: 'place.search',
+  Create: 'place.create',
+  Update: 'place.update',
+  GetAllAdmin: 'place.get-all-admin',
+  Approve: 'place.approve',
+  Reject: 'place.reject',
 } as const;
 
 export const RecommendationTopics = {
@@ -80,6 +106,8 @@ export const GroupSessionTopics = {
   UpdateRecommendationRadius: 'group-session.update-recommendation-radius',
   UpdateRecommendationCategories:
     'group-session.update-recommendation-categories',
+  GetActivities: 'group-session.get-activities',
+  LogRecommendationsRefreshed: 'group-session.log-recommendations-refreshed',
 } as const;
 
 export const SearchTopics = {
@@ -100,6 +128,14 @@ export const AttributeTopics = {
 export const ReviewTopics = {
   Create: 'review.create',
   GetByPlaceId: 'review.get_by_place_id',
+  GetOwnerReviews: 'review.get-owner-reviews',
+  Respond: 'review.respond',
+  UpdateResponse: 'review.update-response',
+  DeleteResponse: 'review.delete-response',
+  Flag: 'review.flag',
+  ApproveFlags: 'review.approve-flags',
+  RejectFlags: 'review.reject-flags',
+  GetAdminReviews: 'review.get-admin-reviews',
 } as const;
 
 export const IntelligenceTopics = {
@@ -108,12 +144,20 @@ export const IntelligenceTopics = {
   UserAction: 'intelligence.user-action',
   TrainRankingModel: 'intelligence.train-ranking-model',
   Ranking: 'intelligence.ranking',
+  AgentSearch: 'intelligence.agent-search',
 } as const;
 
 export const NotificationTopics = {
   Dispatch: 'notification.dispatch',
   PersistInbox: 'notification.persist-inbox',
   RealtimePush: 'notification.realtime.push',
+} as const;
+
+export const NotificationInboxTopics = {
+  GetInbox: 'notification.inbox.get',
+  MarkAsRead: 'notification.inbox.mark-as-read',
+  MarkAllAsRead: 'notification.inbox.mark-all-as-read',
+  GetUnreadCount: 'notification.inbox.unread-count',
 } as const;
 
 export const DeviceTokenTopics = {

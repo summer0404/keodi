@@ -1,2 +1,4 @@
 keodi-microservice/.DS_Store
 .DS_Store
+.vscode/settings.json
+node_modules/

@@ -8,7 +8,7 @@ export class SettingService {
   constructor(private readonly kafkaService: KafkaService) {}
 
   async get(userId: string) {
-    return await this.kafkaService.sendWithTimeout(SettingTopics.Get, userId);
+    return await this.kafkaService.sendWithTimeout(SettingTopics.Get, { userId });
   }
 
   async update(userId: string, updateUserSettingDto: UpdateUserSettingDto) {

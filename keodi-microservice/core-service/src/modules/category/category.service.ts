@@ -3,7 +3,7 @@ import { Category } from '@prisma/client';
 import Fuse from 'fuse.js';
 import { PrismaService } from 'src/database/prisma.service';
 import { CategoryConstant } from 'src/shared/constants/category.constant';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
 type CategoryWithCount = Category & { _count: { placeCategories: number } };
 type CategorySearchResult = Omit<Category, 'isSelectable'> & {
@@ -16,7 +16,7 @@ export class CategoryService {
   private fuse: Fuse<CategoryWithCount> | null = null;
   private categoriesCache: CategoryWithCount[] = [];
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async onModuleInit() {
     await this.loadCategories();

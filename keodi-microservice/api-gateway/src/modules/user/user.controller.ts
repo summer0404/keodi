@@ -7,7 +7,9 @@ import {
   Param,
   ParseFilePipe,
   Patch,
+  Query,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -18,6 +20,7 @@ import { SkipAuth } from 'src/common/decorators/skip-auth.decorator';
 import { CategoryOnboardingDto } from 'src/shared/dtos/category.dto';
 import {
   CurrentUserDto,
+  SearchUsersQueryDto,
   UpdateLocationDto,
   UpdateUsernameDto,
   UpdateUserProfileDto,
@@ -27,22 +30,42 @@ import {
   ApiGetAllUsers,
   ApiGetOtherProfile,
   ApiOnBoarding,
+  ApiSearchUsers,
   ApiUnverifyUser,
   ApiUpdateLocation,
   ApiUpdatePicture,
   ApiUpdateProfile,
   ApiUpdateUsername,
 } from './user.swagger';
+import { RoleGuard } from 'src/common/guards/role.guard';
+import { Role } from 'src/shared/enums/role.enum';
+import { Roles } from 'src/common/decorators/role.decorator';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @SkipAuth() //Used for testing purposes - need to authorization this endpoint to admin later
   @Get('all')
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
   @ApiGetAllUsers()
   async getAll() {
     return await this.userService.getAll();
+  }
+
+  @ApiBearerAuth('access-token')
+  @Get('search')
+  @ApiSearchUsers()
+  async searchUsers(
+    @CurrentUser() user: CurrentUserDto,
+    @Query() query: SearchUsersQueryDto,
+  ) {
+    return await this.userService.searchUsers(
+      user.id,
+      query.keyword,
+      query.page,
+      query.limit,
+    );
   }
 
   @ApiBearerAuth('access-token')
@@ -55,7 +78,8 @@ export class UserController {
     return await this.userService.getOtherProfile(user.id, userId);
   }
 
-  @SkipAuth() // Skip authentication for testing purposes - remove in production
+  @UseGuards(RoleGuard)
+  @Roles(Role.ADMIN)
   @Patch(':userId/unverify')
   @ApiUnverifyUser()
   async unverifyUser(@Param('userId') userId: string) {

@@ -1,9 +1,11 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import { createId } from '@paralleldrive/cuid2';
 import {
+  GroupSessionActivityType,
   GroupSessionStatus,
+  Prisma,
   VoteStatus,
   type GroupSession,
 } from '@prisma/client';
@@ -23,12 +25,19 @@ import {
   NotificationPreferredChannel,
   NotificationType,
 } from 'src/shared/enums/notification.enum';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
-import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
+import {
+  GetSessionActivitiesDto,
+  LogRecommendationsRefreshedDto,
+} from 'src/shared/dtos/group-session.dto';
+import { ActivityActor } from 'src/shared/interfaces/group-session.interface';
 import { ImageService } from '../image/image.service';
+import { GroupSessionHelper } from './group-session.helper';
 
 @Injectable()
 export class GroupSessionService {
+  private readonly logger = new Logger(GroupSessionService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
@@ -36,6 +45,45 @@ export class GroupSessionService {
     private readonly kafkaService: KafkaService,
     private readonly imageService: ImageService,
   ) {}
+
+  private async logActivity(
+    sessionId: string,
+    type: GroupSessionActivityType,
+    actor?: ActivityActor | null,
+    metadata?: Record<string, unknown> | null,
+  ): Promise<void> {
+    try {
+      const actorId = actor?.userId ?? null;
+      let actorName: string | null = actor?.nickname ?? null;
+
+      if (!actorName && actor?.user) {
+        actorName =
+          `${actor.user.lastName ?? ''} ${actor.user.firstName ?? ''}`.trim() || null;
+      }
+
+      if (!actorName && actorId) {
+        const user = await this.prismaService.user.findUnique({
+          where: { id: actorId },
+          select: { firstName: true, lastName: true },
+        });
+        actorName = user
+          ? `${user.lastName ?? ''} ${user.firstName ?? ''}`.trim() || null
+          : null;
+      }
+
+      await this.prismaService.groupSessionActivity.create({
+        data: {
+          sessionId,
+          type,
+          actorId,
+          actorName,
+          metadata: metadata ? (metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
+        },
+      });
+    } catch (err) {
+      this.logger.error('Failed to log group session activity', err);
+    }
+  }
 
   private async mapUserPictureUrl<T extends { pictureUrl: string | null }>(
     user: T,
@@ -143,7 +191,7 @@ export class GroupSessionService {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
         message: GroupSessionMessages.SESSION_ALREADY_ACTIVE,
-        });
+      });
     }
   }
 
@@ -220,7 +268,9 @@ export class GroupSessionService {
     }
 
     const normalizedCategoryIds = categoryIds
-      .filter((categoryId): categoryId is string => typeof categoryId === 'string')
+      .filter(
+        (categoryId): categoryId is string => typeof categoryId === 'string',
+      )
       .map((categoryId) => categoryId.trim())
       .filter((categoryId) => categoryId.length > 0);
 
@@ -474,6 +524,8 @@ export class GroupSessionService {
         },
       );
 
+      void this.logActivity(session.sessionId, GroupSessionActivityType.MEMBER_JOINED, member, { isGuest: !member.userId });
+
       return {
         sessionId: session.sessionId,
         shareCode: session.shareCode,
@@ -569,6 +621,7 @@ export class GroupSessionService {
           inviterName,
           inviterPictureUrl,
         },
+        deepLink: `frontend://group?shareCode=${session.shareCode}`,
         preferredChannel: NotificationPreferredChannel.BOTH,
         createdAt: new Date().toISOString(),
       });
@@ -621,6 +674,8 @@ export class GroupSessionService {
       void this.notifySessionMembers(sessionId, 'session.closed', {
         sessionId,
       });
+
+      void this.logActivity(sessionId, GroupSessionActivityType.SESSION_CLOSED, { userId }, null);
 
       return updatedSession;
     } catch (error) {
@@ -908,11 +963,19 @@ export class GroupSessionService {
             title: 'Vote Finalized!',
             body: 'All members have voted. Check out the results!',
             data: { sessionId },
+            deepLink: `frontend://group/session/${sessionId}/results`,
             preferredChannel: NotificationPreferredChannel.BOTH,
             createdAt: new Date().toISOString(),
           });
         }
       }
+
+      void this.logActivity(
+        sessionId,
+        GroupSessionActivityType.VOTE_FINALIZED,
+        member,
+        { placeId: updatedVote.placeId, placeName: updatedVote.place?.name ?? null },
+      );
 
       return {
         vote: updatedVote,
@@ -1026,6 +1089,7 @@ export class GroupSessionService {
           title: 'Vote Finalized!',
           body: 'The session host has finalized the vote. Check out the results!',
           data: { sessionId, winningPlaceId },
+          deepLink: `frontend://group/session/${sessionId}/results`,
           preferredChannel: NotificationPreferredChannel.BOTH,
           createdAt: new Date().toISOString(),
         });
@@ -1319,6 +1383,13 @@ export class GroupSessionService {
         }
       });
 
+      void this.logActivity(
+        sessionId,
+        GroupSessionActivityType.CATEGORIES_UPDATED,
+        { userId: userId ?? null },
+        { categoryIds: validCategoryIds },
+      );
+
       return {
         sessionId,
         categoryIds: validCategoryIds,
@@ -1564,6 +1635,7 @@ export class GroupSessionService {
 
       const member = await this.prismaService.groupSessionMember.findFirst({
         where: userId ? { userId, sessionId } : { guestId, sessionId },
+        include: { user: { select: { firstName: true, lastName: true } } },
       });
 
       if (!member) {
@@ -1582,6 +1654,8 @@ export class GroupSessionService {
         memberId: member.id,
         userId: member.userId,
       });
+
+      void this.logActivity(sessionId, GroupSessionActivityType.MEMBER_LEFT, member, { isGuest: !member.userId });
 
       return { sessionId, memberId: member.id };
     } catch (error) {
@@ -1651,5 +1725,47 @@ export class GroupSessionService {
     } catch (error) {
       handleServiceErrorCatching(error);
     }
+  }
+
+  async getActivities(dto: GetSessionActivitiesDto) {
+    const { sessionId, userId, guestId } = dto;
+    try {
+      const session = await this.prismaService.groupSession.findUnique({
+        where: { sessionId },
+        include: { members: { select: { userId: true, guestId: true } } },
+      });
+
+      if (!session) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: GroupSessionMessages.SESSION_NOT_FOUND,
+        });
+      }
+
+      const isMember = userId
+        ? session.members.some((m) => m.userId === userId) || session.createdBy === userId
+        : session.members.some((m) => m.guestId === guestId);
+
+      if (!isMember) {
+        throw new RpcException({
+          status: HttpStatus.FORBIDDEN,
+          message: GroupSessionMessages.NOT_A_MEMBER,
+        });
+      }
+
+      const activities = await this.prismaService.groupSessionActivity.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return { activities };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async logRecommendationsRefreshed(dto: LogRecommendationsRefreshedDto) {
+    const { sessionId, userId } = dto;
+    void this.logActivity(sessionId, GroupSessionActivityType.RECOMMENDATIONS_REFRESHED, { userId: userId ?? null }, null);
   }
 }

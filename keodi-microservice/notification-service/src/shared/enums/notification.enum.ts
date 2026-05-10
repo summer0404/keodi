@@ -7,6 +7,8 @@ export enum NotificationType {
   SYSTEM = 'SYSTEM',
   NEARBY_PLACE = 'NEARBY_PLACE',
   RECOMMENDATION = 'RECOMMENDATION',
+  REVIEW_LOW_RATING = 'REVIEW_LOW_RATING',
+  REVIEW_FLAG_OUTCOME = 'REVIEW_FLAG_OUTCOME',
 }
 
 export enum NotificationPreferredChannel {

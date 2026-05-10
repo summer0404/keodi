@@ -15,6 +15,7 @@ import {
   GroupSessionTopics,
   SettingTopics,
 } from 'src/shared/constants/topic.constant';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 
 @WebSocketGateway({ namespace: '/notifications', cors: { origin: '*' } })
 export class NotificationGateway
@@ -53,7 +54,7 @@ export class NotificationGateway
       client.data.userId = userId;
       await client.join('user:' + userId);
 
-      await this.redisService.set(`presence:${userId}`, 'online');
+      await this.redisService.set(RedisKeys.PRESENCE(userId), 'online');
 
       this.logger.log(`Client ${client.id} connected auth with User ${userId}`);
     } catch (e) {
@@ -69,7 +70,7 @@ export class NotificationGateway
         if (room.startsWith('session:')) {
           const sessionId = room.replace('session:', '');
           await this.redisService.del(
-            `session:${sessionId}:location:${userId}`,
+            RedisKeys.SESSION_MEMBER_LOCATION(sessionId, userId),
           );
           this.server.to(room).emit('location.offline', { userId });
         }
@@ -77,7 +78,7 @@ export class NotificationGateway
 
       const rooms = await this.server.in('user:' + userId).fetchSockets();
       if (rooms.length === 0) {
-        await this.redisService.del(`presence:${userId}`);
+        await this.redisService.del(RedisKeys.PRESENCE(userId));
       }
     }
     this.logger.log(`Client ${client.id} disconnected.`);
@@ -118,7 +119,7 @@ export class NotificationGateway
 
     // Send existing member locations to the joining client
     const keys = await this.redisService.keys(
-      `session:${payload.sessionId}:location:*`,
+      RedisKeys.SESSION_MEMBER_LOCATION_PATTERN(payload.sessionId),
     );
     const locations: {
       userId: string;
@@ -168,7 +169,7 @@ export class NotificationGateway
     }
 
     await this.redisService.setEx(
-      `session:${payload.sessionId}:location:${userId}`,
+      RedisKeys.SESSION_MEMBER_LOCATION(payload.sessionId, userId),
       JSON.stringify({
         latitude: payload.latitude,
         longitude: payload.longitude,

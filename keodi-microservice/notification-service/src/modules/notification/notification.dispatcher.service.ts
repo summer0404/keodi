@@ -4,8 +4,15 @@ import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { NOTIFICATION_SETTING_MAP } from 'src/shared/constants/notification.constant';
 import { NotificationHelper } from './notification.helper';
 import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
-import { DeviceTokenTopics, NotificationTopics, SettingTopics } from 'src/shared/constants/topic.contant';
-import { NotificationPreferredChannel, NotificationStatus } from 'src/shared/enums/notification.enum';
+import {
+  DeviceTokenTopics,
+  NotificationTopics,
+  SettingTopics,
+} from 'src/shared/constants/topic.contant';
+import {
+  NotificationPreferredChannel,
+  NotificationStatus,
+} from 'src/shared/enums/notification.enum';
 
 @Injectable()
 export class NotificationDispatcherService {
@@ -22,11 +29,14 @@ export class NotificationDispatcherService {
     const settingKey = NOTIFICATION_SETTING_MAP[event.type];
     if (settingKey) {
       try {
-        const settings = await this.kafkaService.sendWithTimeout(SettingTopics.Get, event.userId);
+        const settings = await this.kafkaService.sendWithTimeout(
+          SettingTopics.Get,
+          { userId: event.userId },
+        );
         if (settings?.[settingKey] === false) {
           return;
         }
-      } catch { }
+      } catch {}
     }
 
     const channel = event.preferredChannel ?? NotificationPreferredChannel.BOTH;
@@ -38,9 +48,7 @@ export class NotificationDispatcherService {
       status: NotificationStatus.PENDING,
     });
 
-    const isOnline = await this.notificationHelper.isOnline(
-      event.userId,
-    );
+    const isOnline = await this.notificationHelper.isOnline(event.userId);
     let delivered = false;
 
     //For online users: Websocket
@@ -61,9 +69,12 @@ export class NotificationDispatcherService {
       channel !== NotificationPreferredChannel.WEBSOCKET
     ) {
       try {
-        const tokensRes = await this.kafkaService.sendWithTimeout(DeviceTokenTopics.GetActiveTokens, {
-          userId: event.userId,
-        });
+        const tokensRes = await this.kafkaService.sendWithTimeout(
+          DeviceTokenTopics.GetActiveTokens,
+          {
+            userId: event.userId,
+          },
+        );
 
         const tokens: string[] = tokensRes?.tokens ?? [];
         if (tokens.length) {
@@ -82,7 +93,7 @@ export class NotificationDispatcherService {
           }
           delivered = true;
         }
-      } catch (error) { }
+      } catch (error) {}
     }
     if (delivered) {
       kafka.emit(NotificationTopics.PersistInbox, {

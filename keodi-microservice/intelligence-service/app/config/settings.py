@@ -123,7 +123,3 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
-
-
-# Convenience function for accessing settings
-settings = get_settings()

@@ -1,5 +1,6 @@
 export const AuthTopics = {
   Register: 'auth.register',
+  RegisterOwner: 'auth.register-owner',
   Login: 'auth.login',
   Google: 'auth.google',
   ForgotPasswordOtp: 'auth.forgot-password-otp',
@@ -10,17 +11,31 @@ export const AuthTopics = {
   ExternalResendVerifyEmail: 'auth.external-resend-verify-email',
   ResendVerifyEmail: 'auth.resend-verify-email',
   Refresh: 'auth.refresh',
+  ApproveOwner: 'auth.approve-owner',
+  RejectOwner: 'auth.reject-owner',
+  ResubmitOwner: 'auth.resubmit-owner',
 } as const;
 
 export const UserTopics = {
   Create: 'user.create',
+  Delete: 'user.delete',
   Unverify: 'user.unverify',
   UpdateUsername: 'user.update-username',
   UsernameSynced: 'user.username-synced',
+} as const;
+
+export const OwnerApplicationTopics = {
+  Create: 'owner-application.create',
+  GetAll: 'owner-application.get-all',
+  Resubmit: 'owner-application.resubmit',
+  GetMe: 'owner-application.get-me',
 } as const;
 
 export const NotificationTopics = {
   ForgotPassword: 'notification.forgot-password',
   ResetPassword: 'notification.reset-password',
   VerifyEmail: 'notification.verify-email',
+  OwnerApplicationReceived: 'notification.owner-application.received',
+  OwnerApplicationApproved: 'notification.owner-application.approved',
+  OwnerApplicationRejected: 'notification.owner-application.rejected',
 } as const;

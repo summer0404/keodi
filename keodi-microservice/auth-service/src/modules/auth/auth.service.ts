@@ -1,14 +1,23 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { RpcException } from '@nestjs/microservices';
+import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import type { StringValue } from 'ms';
 import { PrismaService } from 'src/database/prisma.service';
 import { UserService } from 'src/modules/user/user.service';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { AuthErrorMessages } from 'src/shared/constants/error.constant';
+import { OWNER_APPLICATION_REVIEW_DAYS } from 'src/shared/constants/owner.constant';
+import {
+  NotificationTopics,
+  OwnerApplicationTopics,
+  UserTopics,
+} from 'src/shared/constants/topic.constant';
 import {
   LoginDto,
   RegisterDto,
+  RegisterOwnerDto,
   ResetPasswordDto,
 } from 'src/shared/dtos/auth.dto';
 import { ValidateOTPDto } from 'src/shared/dtos/otp.dto';
@@ -25,6 +34,7 @@ import {
   failVerifyAccountTemplate,
   successVerifyAccountTemplate,
 } from 'src/shared/templates/verify-email-response.template';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.helper';
 import { timeLimitResend } from 'src/shared/utils/time-limit-resend';
 import { getTTLForPurpose } from 'src/shared/utils/ttl-redis.helper';
 import { OtpService } from './otp.service';
@@ -40,6 +50,7 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly verifyUrlService: VerifyUrlService,
     private readonly userService: UserService,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   private generateAccessAndRefreshToken(
@@ -51,6 +62,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       username: user.username,
+      role: user.role,
     };
 
     return {
@@ -77,7 +89,7 @@ export class AuthService {
   private async sendVerifyUrlWithPurpose(email: string, purpose: string) {
     const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
 
-    this.verifyUrlService.sendVerifyUrlWithPurpose(email, token, purpose);
+    await this.verifyUrlService.sendVerifyUrlWithPurpose(email, token, purpose);
   }
 
   async register(data: RegisterDto) {
@@ -89,7 +101,7 @@ export class AuthService {
       if (isExistingUsername)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'Username already exists',
+          message: AuthErrorMessages.USERNAME_ALREADY_EXISTS,
         });
 
       const isExistingEmail = await this.prismaService.user.findUnique({
@@ -99,7 +111,7 @@ export class AuthService {
       if (isExistingEmail)
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
-          message: 'Email already exists',
+          message: AuthErrorMessages.EMAIL_ALREADY_EXISTS,
         });
 
       const newUser = await this.prismaService.user.create({
@@ -110,13 +122,104 @@ export class AuthService {
             Number(process.env.SALT_ROUNDS),
           ),
           email: data.email,
+          role: Role.USER,
         },
       });
 
-      this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL);
-      this.userService.createUserInfomation(newUser.id);
+      await this.sendEmailVerifyUrl(newUser.email, VerifyUrlPurpose.VERIFY_EMAIL);
+      await this.userService.createUserInfomation(newUser.id);
 
       return { message: 'User created successfully', userId: newUser.id };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async registerOwner(data: RegisterOwnerDto) {
+    try {
+      const isExistingUsername = await this.prismaService.user.findUnique({
+        where: { username: data.username },
+      });
+
+      if (isExistingUsername)
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: AuthErrorMessages.USERNAME_ALREADY_EXISTS,
+        });
+
+      const isExistingEmail = await this.prismaService.user.findUnique({
+        where: { email: data.email },
+      });
+
+      if (isExistingEmail)
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: AuthErrorMessages.EMAIL_ALREADY_EXISTS,
+        });
+
+      const newOwner = await this.prismaService.user.create({
+        data: {
+          username: data.username,
+          password: await bcrypt.hash(
+            data.password,
+            Number(process.env.SALT_ROUNDS),
+          ),
+          email: data.email,
+          role: Role.OWNER_PENDING,
+        },
+      });
+
+      let ownerApplicationId: string | undefined;
+
+      try {
+        await this.userService.createUserInfomation(newOwner.id);
+
+        const ownerApplication = await this.kafkaService.sendWithTimeout(
+          OwnerApplicationTopics.Create,
+          {
+            userId: newOwner.id,
+            businessName: data.businessName,
+            businessPhone: data.businessPhone,
+            businessAddress: data.businessAddress,
+            taxId: data.taxId,
+            businessWebsite: data.businessWebsite,
+            proofDocumentUrls: data.proofDocumentUrls,
+          },
+        );
+
+        ownerApplicationId = ownerApplication?.ownerApplicationId;
+
+        if (!ownerApplicationId)
+          throw new RpcException({
+            status: HttpStatus.INTERNAL_SERVER_ERROR,
+            message: AuthErrorMessages.OWNER_APPLICATION_CREATE_FAILED,
+          });
+      } catch (error) {
+        await this.prismaService.user.delete({
+          where: {
+            id: newOwner.id,
+          },
+        });
+        this.kafkaService
+          .getClient()
+          .emit(UserTopics.Delete, { userId: newOwner.id });
+        throw error;
+      }
+
+      await this.sendEmailVerifyUrl(newOwner.email, VerifyUrlPurpose.VERIFY_EMAIL);
+
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationReceived, {
+          to: newOwner.email,
+          businessDays: OWNER_APPLICATION_REVIEW_DAYS,
+        });
+
+      return {
+        message: 'Owner application submitted successfully',
+        userId: newOwner.id,
+        ownerApplicationId,
+      };
     } catch (error) {
       handleServiceErrorCatching(error);
     }
@@ -263,7 +366,7 @@ export class AuthService {
           message: 'User with this email does not exist',
         });
 
-      this.sendVerifyUrlWithPurpose(email, purpose);
+      await this.sendVerifyUrlWithPurpose(email, purpose);
 
       return { message: 'Verification email has sent' };
     } catch (error) {
@@ -468,6 +571,101 @@ export class AuthService {
         status: HttpStatus.UNAUTHORIZED,
         message: 'Invalid or expired refresh token',
       });
+    }
+  }
+
+  async approveOwner(userId: string) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: AuthErrorMessages.USER_NOT_FOUND,
+        });
+
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: {
+          role: Role.OWNER,
+        },
+      });
+
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationApproved, {
+          to: user.email,
+        });
+
+      return { message: 'Owner approved successfully' };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async rejectOwner(userId: string, reason: string) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: AuthErrorMessages.USER_NOT_FOUND,
+        });
+
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: {
+          role: Role.USER,
+        },
+      });
+
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationRejected, {
+          to: user.email,
+          reason,
+        });
+
+      return { message: 'Owner rejected successfully' };
+    } catch (error) {
+      handleServiceErrorCatching(error);
+    }
+  }
+
+  async resubmitOwner(userId: string) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: AuthErrorMessages.USER_NOT_FOUND,
+        });
+
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: {
+          role: Role.OWNER_PENDING,
+        },
+      });
+
+      this.kafkaService
+        .getClient()
+        .emit(NotificationTopics.OwnerApplicationReceived, {
+          to: user.email,
+          businessDays: OWNER_APPLICATION_REVIEW_DAYS,
+        });
+
+      return { message: 'Owner role reset to pending successfully' };
+    } catch (error) {
+      handleServiceErrorCatching(error);
     }
   }
 }

@@ -1,10 +1,21 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { createId } from '@paralleldrive/cuid2';
 import { FriendRequestStatus } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
+import { KafkaService } from 'src/providers/kafka/kafka.service';
+import {
+  FriendErrorMessages,
+  UserErrorMessages,
+} from 'src/shared/constants/error.constant';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { FriendPaginationDto } from 'src/shared/dtos/user.dto';
+import {
+  NotificationPreferredChannel,
+  NotificationType,
+} from 'src/shared/enums/notification.enum';
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { ImageService } from '../image/image.service';
 
 @Injectable()
@@ -12,36 +23,34 @@ export class FriendService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   async sendRequest(senderId: string, receiverId: string) {
-    // Can't send invite to yourself
     if (senderId == receiverId) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Cannot send friend request to yourself',
+        message: FriendErrorMessages.CANNOT_SEND_REQUEST_TO_SELF,
       });
     }
 
-    // Check if receiver exists
     const receiver = await this.prismaService.user.findUnique({
       where: { id: receiverId },
     });
     if (!receiver) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'User not found',
+        message: UserErrorMessages.USER_NOT_FOUND,
       });
     }
 
-    //Check if already friends
     const existingFriendship = await this.prismaService.friendship.findUnique({
       where: { userId_friendId: { userId: senderId, friendId: receiverId } },
     });
     if (existingFriendship) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
-        message: 'Already friends with this user',
+        message: FriendErrorMessages.ALREADY_FRIENDS_WITH_USER,
       });
     }
 
@@ -60,12 +69,11 @@ export class FriendService {
     if (existingRequest) {
       throw new RpcException({
         status: HttpStatus.CONFLICT,
-        message: 'Friend request already exist',
+        message: FriendErrorMessages.FRIEND_REQUEST_ALREADY_EXISTS,
       });
     }
 
     try {
-      // Delete any old rejected/accepted requests to allow resending
       await this.prismaService.friendRequest.deleteMany({
         where: {
           senderId,
@@ -76,9 +84,31 @@ export class FriendService {
         },
       });
 
-      return await this.prismaService.friendRequest.create({
+      const request = await this.prismaService.friendRequest.create({
         data: { senderId, receiverId },
       });
+
+      const sender = await this.prismaService.user.findUnique({
+        where: { id: senderId },
+        select: { firstName: true, lastName: true },
+      });
+      const senderName =
+        [sender?.firstName, sender?.lastName].filter(Boolean).join(' ') ||
+        'Someone';
+
+      this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
+        eventId: createId(),
+        userId: receiverId,
+        type: NotificationType.FRIEND_REQUEST,
+        title: 'New Friend Request',
+        body: `${senderName} sent you a friend request`,
+        data: { senderId, requestId: request.id },
+        deepLink: `frontend://friends/requests`,
+        preferredChannel: NotificationPreferredChannel.BOTH,
+        createdAt: new Date().toISOString(),
+      });
+
+      return request;
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -92,22 +122,21 @@ export class FriendService {
     if (!request) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friend request not found',
+        message: FriendErrorMessages.FRIEND_REQUEST_NOT_FOUND,
       });
     }
 
-    // Only receiver can accept
     if (request.receiverId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,
-        message: 'Not authorized to accept this request',
+        message: FriendErrorMessages.NOT_AUTHORIZED_TO_ACCEPT_REQUEST,
       });
     }
 
     if (request.status !== FriendRequestStatus.PENDING) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Request is no longer valid',
+        message: FriendErrorMessages.REQUEST_IS_NO_LONGER_VALID,
       });
     }
 
@@ -125,6 +154,26 @@ export class FriendService {
           ],
         });
 
+        const accepter = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true },
+        });
+        const accepterName =
+          [accepter?.firstName, accepter?.lastName].filter(Boolean).join(' ') ||
+          'Someone';
+
+        this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
+          eventId: createId(),
+          userId: request.senderId,
+          type: NotificationType.FRIEND_ACCEPTED,
+          title: 'Friend Request Accepted',
+          body: `${accepterName} accepted your friend request`,
+          data: { accepterId: userId },
+          deepLink: `frontend://friends`,
+          preferredChannel: NotificationPreferredChannel.BOTH,
+          createdAt: new Date().toISOString(),
+        });
+
         return { success: true, message: 'Friend request accepted' };
       });
     } catch (error) {
@@ -139,22 +188,21 @@ export class FriendService {
     if (!request) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friend request not found',
+        message: FriendErrorMessages.FRIEND_REQUEST_NOT_FOUND,
       });
     }
 
-    // Only receiver can reject
     if (request.receiverId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,
-        message: 'Not authorized to reject this request',
+        message: FriendErrorMessages.NOT_AUTHORIZED_TO_REJECT_REQUEST,
       });
     }
 
     if (request.status !== FriendRequestStatus.PENDING) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Request is no longer valid',
+        message: FriendErrorMessages.REQUEST_IS_NO_LONGER_VALID,
       });
     }
 
@@ -178,7 +226,7 @@ export class FriendService {
     if (!request) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friend request not found',
+        message: FriendErrorMessages.FRIEND_REQUEST_NOT_FOUND,
       });
     }
 
@@ -187,14 +235,14 @@ export class FriendService {
     if (request.senderId !== userId) {
       throw new RpcException({
         status: HttpStatus.FORBIDDEN,
-        message: 'Not authorized to cancel this request',
+        message: FriendErrorMessages.NOT_AUTHORIZED_TO_CANCEL_REQUEST,
       });
     }
 
     if (request.status !== FriendRequestStatus.PENDING) {
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
-        message: 'Request is no longer valid',
+        message: FriendErrorMessages.REQUEST_IS_NO_LONGER_VALID,
       });
     }
     try {
@@ -349,7 +397,7 @@ export class FriendService {
     if (!friendship) {
       throw new RpcException({
         status: HttpStatus.NOT_FOUND,
-        message: 'Friendship not found',
+        message: FriendErrorMessages.FRIENDSHIP_NOT_FOUND,
       });
     }
 

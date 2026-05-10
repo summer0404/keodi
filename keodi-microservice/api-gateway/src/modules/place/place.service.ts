@@ -1,11 +1,12 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
-import { CoordinateDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto } from 'src/shared/dtos/place.dto';
+import { AgentSearchResponseDto, ChatSearchDto, CoordinateDto, CreatePlaceDto, CreatePlaceResponseDto, NearMePlacesResponseDto, NearMeQueryDto, PlaceDistanceDto, SearchDto, UpdatePlaceDto, UpdatePlaceResponseDto } from 'src/shared/dtos/place.dto';
 import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { ReviewService } from '../review/review.service';
 import { UserAction } from 'src/shared/enums/user.enum';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { IntelligenceTopics, PlaceTopics, RecommendationTopics } from 'src/shared/constants/topic.constant';
+import { AGENT_KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
 
 @Injectable()
 export class PlaceService {
@@ -16,6 +17,20 @@ export class PlaceService {
 
     async getNearbyPlaces(query: NearMeQueryDto, userId: string): Promise<NearMePlacesResponseDto> {
         return await this.kafkaService.sendWithTimeout(PlaceTopics.NearMe, { ...query, userId });
+    }
+
+    async create(
+        ownerId: string,
+        createPlaceDto: CreatePlaceDto,
+        featureImage: Buffer,
+        featureImageType: string,
+    ): Promise<CreatePlaceResponseDto> {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Create, {
+            ownerId,
+            ...createPlaceDto,
+            featureImage,
+            featureImageType,
+        });
     }
 
     async search(
@@ -51,5 +66,52 @@ export class PlaceService {
 
     async getForYou(userId: string, coordinateDto: CoordinateDto) {
         return await this.kafkaService.sendWithTimeout(RecommendationTopics.ForYou, { userId, coordinateDto });
+    }
+
+    async getAllAdmin(query: any) {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.GetAllAdmin, query);
+    }
+
+    async approvePlace(placeId: string) {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Approve, { placeId });
+    }
+
+    async rejectPlace(placeId: string, reason: string) {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Reject, { placeId, data: { reason } });
+    }
+
+    async update(
+        placeId: string,
+        requesterId: string,
+        updatePlaceDto: UpdatePlaceDto,
+        featureImage?: Buffer,
+        featureImageType?: string,
+    ): Promise<UpdatePlaceResponseDto> {
+        return await this.kafkaService.sendWithTimeout(PlaceTopics.Update, {
+            placeId,
+            requesterId,
+            ...updatePlaceDto,
+            featureImage,
+            featureImageType,
+        });
+    }
+
+    async chatSearch(dto: ChatSearchDto, userId: string): Promise<AgentSearchResponseDto> {
+        const { message, placeIds } = await this.kafkaService.sendWithTimeout(
+            IntelligenceTopics.AgentSearch,
+            { message: dto.message, userId, latitude: dto.latitude, longitude: dto.longitude },
+            AGENT_KAFKA_TIMEOUT_MS,
+        );
+
+        if (!placeIds?.length) {
+            return { message, places: [] };
+        }
+
+        const places = await this.kafkaService.sendWithTimeout(
+            PlaceTopics.GetByIdsWithDistance,
+            { ids: placeIds, userId, latitude: dto.latitude, longitude: dto.longitude },
+        );
+
+        return { message, places };
     }
 }

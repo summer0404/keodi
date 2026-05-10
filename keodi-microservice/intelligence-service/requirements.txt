@@ -30,10 +30,18 @@ python-dotenv==1.0.1
 httpx==0.27.2
 
 # LLM Providers
-groq==0.13.0
+groq>=0.30.0
 modal==0.65.0
 ollama==0.4.4
+langgraph>=0.2.0
+langchain-groq>=0.2.0
+langchain-core>=0.3.0
 
 # LTR
 lightgbm==4.5.0
 joblib==1.4.2
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0

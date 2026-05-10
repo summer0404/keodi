@@ -10,6 +10,7 @@ from app.kafka.consumer import KafkaConsumerService, get_consumer_service
 from app.services.llm.llm_service import LLMService, get_llm_service
 from app.services.embedding.embedding_service import EmbeddingService, get_embedding_service
 from app.services.ranking.ranking_service import RankingService, get_ranking_service
+from app.services.agent.agent_service import AgentService, get_agent_service
 from app.kafka.topic import Topics
 from app.kafka.decorators import request_response
 from app.repositories.place_repository import PlaceRepository
@@ -29,6 +30,7 @@ class Handlers:
     llm_service: Optional[LLMService] = None
     embedding_service: Optional[EmbeddingService] = None
     ranking_service: Optional[RankingService] = None
+    agent_service: Optional[AgentService] = None
     place_repository: Optional[PlaceRepository] = None
     attribute_repository: Optional[AttributeRepository] = None
     place_attribute_repository: Optional[PlaceAttributeRepository] = None
@@ -47,6 +49,7 @@ class Handlers:
         self.llm_service = await get_llm_service()
         self.embedding_service = get_embedding_service()
         self.ranking_service = await get_ranking_service()
+        self.agent_service = await get_agent_service()
         self.place_repository = await PlaceRepository.start()
         self.attribute_repository = await AttributeRepository.start()
         self.place_attribute_repository = await PlaceAttributeRepository.start()
@@ -200,6 +203,14 @@ class Handlers:
             return await self.ranking_service.ranking(user_id, place_ids)
         except Exception as e:
             raise Exception(f"Failed to get ranking: {str(e)}")
+
+    @request_response(topic=Topics.AGENT_SEARCH_REPLY, error_code="AGENT_SEARCH_FAILED")
+    async def agent_search(self, message: dict, headers: dict):
+        user_message = message.get("message", "")
+        user_id = message.get("userId", "")
+        latitude = float(message.get("latitude", 0))
+        longitude = float(message.get("longitude", 0))
+        return await self.agent_service.run(user_message, user_id, latitude, longitude)
 
 
 handlers: Optional[Handlers] = None

@@ -2,9 +2,10 @@ import { Controller } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { UserTopics } from 'src/shared/constants/topic.constant';
 import {
-  CreateUserDto,
-  UpdateUserProfileDto,
-  SyncUsernameDto,
+    CreateUserDto,
+    SearchOthersDto,
+    SyncUsernameDto,
+    UpdateUserProfileDto,
 } from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
 
@@ -15,6 +16,11 @@ export class UserController {
   @MessagePattern(UserTopics.Create)
   async create(@Payload() data: CreateUserDto) {
     return await this.userService.create(data);
+  }
+
+  @MessagePattern(UserTopics.Delete)
+  async delete(@Payload() data: { userId: string }) {
+    return await this.userService.delete(data.userId);
   }
 
   @MessagePattern(UserTopics.UpdatePicture)
@@ -36,6 +42,11 @@ export class UserController {
   @MessagePattern(UserTopics.GetAll)
   async getAll() {
     return await this.userService.getAll();
+  }
+
+  @MessagePattern(UserTopics.SearchOthers)
+  async searchOthers(@Payload() data: SearchOthersDto) {
+    return await this.userService.searchOthers(data);
   }
 
   @MessagePattern(UserTopics.UpdateProfile)

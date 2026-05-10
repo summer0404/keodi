@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ImageModule } from '../image/image.module';
-import { GroupSessionHelper } from 'src/shared/helpers/group-session.helper';
 import { GroupSessionController } from './group-session.controller';
+import { GroupSessionHelper } from './group-session.helper';
 import { GroupSessionScheduler } from './group-session.scheduler';
 import { GroupSessionService } from './group-session.service';
 

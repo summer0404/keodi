@@ -2,6 +2,7 @@ import { GetObjectCommand, GetObjectCommandInput, PutObjectCommand, PutObjectCom
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { FileErrorMessages } from "src/shared/constants/error.constant";
 import { ImageConstants } from "src/shared/constants/image.constant";
 
 @Injectable()
@@ -52,7 +53,7 @@ export class S3Service {
             if (!body || body.length === 0) {
                 throw new RpcException({
                     status: HttpStatus.BAD_REQUEST,
-                    message: 'File body is required'
+                    message: FileErrorMessages.FILE_BODY_REQUIRED
                 });
             }
 
@@ -71,7 +72,7 @@ export class S3Service {
 
             throw new RpcException({
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message || 'Failed to upload file to S3'
+                message: error.message || FileErrorMessages.FAILED_TO_UPLOAD_FILE
             });
         }
     }

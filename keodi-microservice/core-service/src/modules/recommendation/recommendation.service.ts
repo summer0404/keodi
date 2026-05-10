@@ -1,33 +1,35 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { GeoConstants } from 'src/shared/constants/place.constant';
 import {
   MAX_CANDINDATE_PLACES,
   MAX_RECOMMENDATIONS_BOUNDING_KM,
   PLACES_PER_SEARCH_TERM,
-  RecommendationRedisKeys,
   TIME_DECAY,
 } from 'src/shared/constants/recommendation.constant';
-import { GeoConstants } from 'src/shared/constants/place.constant';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { RecommendationHelper } from './recommendation.helper';
 // import { SEARCH_TRENDING_TTL_SECONDS } from 'src/shared/constants/search.constant';
 import { GroupSessionStatus, Prisma, UserActionType } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
-import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
-import { PlaceRecommendationResponseDto, RecommendationPlaceRow } from 'src/shared/dtos/recommendation.dto';
-import { SortOrder } from 'src/shared/enums/sort.enum';
-import { formatTimeOnly } from 'src/shared/helpers/time.helper';
 import {
   GROUP_SESSION_MAX_RECOMMENDATION_PLACES,
   GROUP_SESSION_RECOMMENDATION_MIN_MEMBERS,
   GROUP_SESSION_RECOMMENDATION_TTL_SECONDS,
   GroupSessionMessages,
-  GroupSessionRedisKeys,
 } from 'src/shared/constants/group-session.constant';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
+import { MAX_RECENT_SEARCHES_PER_USER } from 'src/shared/constants/search.constant';
+import { IntelligenceTopics } from 'src/shared/constants/topic.constant';
+import {
+  PlaceRecommendationResponseDto,
+  RecommendationPlaceRow,
+} from 'src/shared/dtos/recommendation.dto';
+import { SortOrder } from 'src/shared/enums/sort.enum';
 import { SessionLocation } from 'src/shared/types/group-session.type';
+import { formatTimeOnly } from 'src/shared/utils/time.utils';
 import { ImageService } from '../image/image.service';
 import { SearchService } from '../search/search.service';
 
@@ -42,8 +44,7 @@ export class RecommendationService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
-  ) { }
-
+  ) {}
 
   private async enrichPlacesWithRelations(
     places: RecommendationPlaceRow[],
@@ -142,7 +143,7 @@ export class RecommendationService {
           return null;
         }
 
-        const locationKey = GroupSessionRedisKeys.MEMBER_LOCATION(
+        const locationKey = RedisKeys.GROUP_SESSION.MEMBER_LOCATION(
           sessionId,
           userId,
         );
@@ -189,7 +190,9 @@ export class RecommendationService {
         `
         : Prisma.empty;
 
-    const placeRows = await this.prismaService.$queryRaw<RecommendationPlaceRow[]>`
+    const placeRows = await this.prismaService.$queryRaw<
+      RecommendationPlaceRow[]
+    >`
       SELECT
         id,
         name,
@@ -376,7 +379,9 @@ export class RecommendationService {
 
   async getPlacesFromSearchTerms(searchTerms: string[]) {
     try {
-      const placeRows = await this.prismaService.$queryRaw<RecommendationPlaceRow[]>`
+      const placeRows = await this.prismaService.$queryRaw<
+        RecommendationPlaceRow[]
+      >`
       SELECT DISTINCT ON (p.id)
         p.id,
         p.name,
@@ -416,12 +421,12 @@ export class RecommendationService {
     try {
       const places = await this.getPlacesFromSearchTerms(searchTerms);
       await this.redisService.set(
-        RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_SEARCH_TERMS,
         JSON.stringify(places),
       );
 
       // await this.redisService.expire(
-      //   RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
+      //   RedisKeys.RECOMMENDATION.PLACES_FROM_SEARCH_TERMS,
       //   SEARCH_TRENDING_TTL_SECONDS
       // );
     } catch (error) {
@@ -431,7 +436,9 @@ export class RecommendationService {
 
   async getTopPlacesFromUserActions() {
     try {
-      const placeRows = await this.prismaService.$queryRaw<RecommendationPlaceRow[]>`
+      const placeRows = await this.prismaService.$queryRaw<
+        RecommendationPlaceRow[]
+      >`
         WITH constants AS (
           SELECT NOW() AS current_time, ${TIME_DECAY}::float AS decay_rate
         ),
@@ -485,12 +492,12 @@ export class RecommendationService {
     try {
       const places = await this.getTopPlacesFromUserActions();
       await this.redisService.set(
-        RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_USER_ACTIONS,
         JSON.stringify(places),
       );
 
       // await this.redisService.expire(
-      //   RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
+      //   RedisKeys.RECOMMENDATION.PLACES_FROM_USER_ACTIONS,
       //   SEARCH_TRENDING_TTL_SECONDS
       // );
     } catch (error) {
@@ -503,7 +510,7 @@ export class RecommendationService {
     let rawCachedPlacesFromActions: string | null = null;
     try {
       rawCachedPlacesFromSearchTerms = await this.redisService.get(
-        RecommendationRedisKeys.PLACES_FROM_SEARCH_TERMS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_SEARCH_TERMS,
       );
     } catch (error: any) {
       this.logger.error(
@@ -514,7 +521,7 @@ export class RecommendationService {
 
     try {
       rawCachedPlacesFromActions = await this.redisService.get(
-        RecommendationRedisKeys.PLACES_FROM_USER_ACTIONS,
+        RedisKeys.RECOMMENDATION.PLACES_FROM_USER_ACTIONS,
       );
     } catch (error: any) {
       this.logger.error(
@@ -654,7 +661,8 @@ export class RecommendationService {
         });
       }
 
-      const cacheKey = RecommendationRedisKeys.GROUP_SESSION_RECOMMENDATIONS(sessionId);
+      const cacheKey =
+        RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS(sessionId);
       const rawCachedPlaces = await this.redisService.get(cacheKey);
 
       let cachedPlaces: PlaceRecommendationResponseDto[] | null = null;
@@ -669,24 +677,25 @@ export class RecommendationService {
       }
 
       if (cachedPlaces) {
-        return cachedPlaces
+        return cachedPlaces;
       }
 
       const categoryIds = session.selectedCategories.map(
         (category) => category.categoryId,
       );
 
-      const centroid = this.recommendationHelper.calculateCentroid(activeLocations);
+      const centroid =
+        this.recommendationHelper.calculateCentroid(activeLocations);
 
       const places =
         centroid.latitude === null || centroid.longitude === null
           ? []
           : await this.fetchGroupSessionRecommendationPlaces({
-            latitude: centroid.latitude,
-            longitude: centroid.longitude,
-            searchRadius: session.searchRadius,
-            categoryIds,
-          });
+              latitude: centroid.latitude,
+              longitude: centroid.longitude,
+              searchRadius: session.searchRadius,
+              categoryIds,
+            });
 
       if (places.length === 0) {
         throw new RpcException({
@@ -711,7 +720,9 @@ export class RecommendationService {
     sessionId: string;
   }) {
     try {
-      await this.redisService.del(RecommendationRedisKeys.GROUP_SESSION_RECOMMENDATIONS(data.sessionId));
+      await this.redisService.del(
+        RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS(data.sessionId),
+      );
     } catch (error) {
       handleServiceErrorCatching(error);
     }

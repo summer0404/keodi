@@ -1,1 +1,3 @@
 export const KAFKA_TIMEOUT_MS = 5000;
+
+export const AGENT_KAFKA_TIMEOUT_MS = KAFKA_TIMEOUT_MS + 55_000;

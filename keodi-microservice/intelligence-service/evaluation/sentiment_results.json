@@ -1,0 +1,103 @@
+{
+  "overall": {
+    "precision": 0.7254901960784313,
+    "recall": 0.9024390243902439,
+    "f1": 0.8043478260869564,
+    "mae": 0.0864864864864865,
+    "rmse": 0.11797846803090352,
+    "tp": 37,
+    "fp": 14,
+    "fn": 4,
+    "n_reviews": 30
+  },
+  "per_attribute": {
+    "SERVICE_QUALITY": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "mae": 0.11500000000000003
+    },
+    "EXPENSIVENESS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "mae": 0.08
+    },
+    "DELICIOUSNESS": {
+      "precision": 0.875,
+      "recall": 1.0,
+      "f1": 0.9333333333333333,
+      "mae": 0.10000000000000002
+    },
+    "LOYALTY_PROGRAM": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "NOISE_INTENSITY": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "mae": 0.03333333333333336
+    },
+    "WORK_STUDY": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "CROWD_DENSITY": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "SPACIOUSNESS": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "SCENIC_VIEW": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "DINE_IN": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "RESTROOM_HYGIENE": {
+      "precision": 1.0,
+      "recall": 0.8,
+      "f1": 0.888888888888889,
+      "mae": 0.08750000000000002
+    },
+    "GROUP_SUITABILITY": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "PHOTOGENIC": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    },
+    "ROMANTIC": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "mae": null
+    }
+  },
+  "rating_correlation": {
+    "pearson_r": 0.41174520229047484,
+    "n_places": 292
+  }
+}

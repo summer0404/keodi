@@ -16,6 +16,8 @@ import { UserModule } from './modules/user/user.module';
 import { ProviderModule } from './providers/provider.module';
 import { SettingModule } from './modules/setting/setting.module';
 import { NotificationPushModule } from './modules/notification-push/notification-push.module';
+import { OwnerApplicationModule } from './modules/owner-application/owner-application.module';
+import { OwnershipClaimModule } from './modules/ownership-claim/ownership-claim.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { NotificationPushModule } from './modules/notification-push/notification
     RecommendationModule,
     SettingModule,
     NotificationPushModule,
+    OwnerApplicationModule,
+    OwnershipClaimModule,
   ],
   controllers: [],
   providers: [],

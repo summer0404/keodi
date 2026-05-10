@@ -1,13 +1,20 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { Prisma } from '@prisma/client';
+import { PlaceImageType, PlaceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { PlaceErrorMessages } from 'src/shared/constants/error.constant';
 import { GeoConstants } from 'src/shared/constants/place.constant';
-import { NearMeDto, SearchDto } from 'src/shared/dtos/place.dto';
-import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
-import { formatTimeOnly } from 'src/shared/helpers/time.helper';
+import {
+  CreatePlaceDto,
+  NearMeDto,
+  SearchDto,
+  UpdatePlaceDto,
+} from 'src/shared/dtos/place.dto';
+import { GetAdminPlacesDto } from 'src/shared/dtos/admin-place.dto';
+import { SortOrder } from 'src/shared/enums/sort.enum';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
+import { formatTimeOnly } from 'src/shared/utils/time.utils';
 import {
   PlaceDetailResponse,
   PlacePaginatedResponse,
@@ -15,9 +22,13 @@ import {
   RawPlace,
 } from 'src/shared/interfaces/place.interface';
 import { ImageService } from '../image/image.service';
-import { IntelligenceTopics, SearchTopics } from 'src/shared/constants/topic.constant';
-import { LLM_THINKING_TAG, VECTOR_SIMILARITY_THRESHOLD } from 'src/shared/constants/search.constant';
-import { ExtractedIntent, SearchQueryConfig } from 'src/shared/types/search.type';
+import {
+  IntelligenceTopics,
+  SearchTopics,
+} from 'src/shared/constants/topic.constant';
+import { LLM_THINKING_TAG } from 'src/shared/constants/search.constant';
+import { ExtractedIntent } from 'src/shared/types/search.type';
+import { PlaceHelper } from './place.helper';
 
 @Injectable()
 export class PlaceService {
@@ -27,125 +38,9 @@ export class PlaceService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
-  ) {}
+    private readonly placeHelper: PlaceHelper,
+  ) { }
 
-  private calculateGeoDeltas(latitude: number, radius: number) {
-    const latDelta = radius / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE;
-    const longDelta =
-      radius /
-      (GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE *
-        Math.cos((latitude * Math.PI) / GeoConstants.DEGREES_IN_HALF_CIRCLE));
-    return { latDelta, longDelta };
-  }
-
-  private buildPaginationParams(
-    page: number,
-    limit: number,
-    sortBy: PlaceSortBy,
-    sortOrder: SortOrder,
-  ) {
-    const allowedSortBy: string[] = Object.values(PlaceSortBy);
-    const allowedSortOrder: string[] = Object.values(SortOrder);
-
-    if (!allowedSortBy.includes(sortBy)) {
-      throw new RpcException({
-        status: HttpStatus.BAD_REQUEST,
-        message: `Invalid sortBy value`,
-      });
-    }
-    if (!allowedSortOrder.includes(sortOrder)) {
-      throw new RpcException({
-        status: HttpStatus.BAD_REQUEST,
-        message: `Invalid sortOrder value`,
-      });
-    }
-
-    const offset = (page - 1) * limit;
-    const order = sortOrder.toUpperCase();
-    const orderByClause = `ORDER BY ${sortBy} ${order}`;
-    return { offset, orderByClause };
-  }
-
-  private buildEmbeddingSearchCondition(embedding?: number[]) {
-    if (!embedding || embedding.length === 0) {
-      return Prisma.empty;
-    }
-    const vectorStr = `[${embedding.join(',')}]`;
-    return Prisma.sql`
-            AND p.embedding_title IS NOT NULL
-            AND (
-                0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
-                + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
-            ) >= ${VECTOR_SIMILARITY_THRESHOLD}
-        `;
-  }
-
-  private buildKeywordSearchCondition(keywords?: string) {
-    if (!keywords?.trim()) {
-      return Prisma.empty;
-    }
-
-    return Prisma.sql`
-            AND p.fts_search_vector @@ websearch_to_tsquery('simple', f_unaccent(${keywords}))
-        `;
-  }
-
-  private buildSearchCondition(embedding?: number[], keywords?: string) {
-    if (keywords?.trim()) {
-      return this.buildKeywordSearchCondition(keywords);
-    }
-
-    return this.buildEmbeddingSearchCondition(embedding);
-  }
-
-  private buildEmbeddingQueryConfig(
-    embedding: number[] | undefined,
-    orderByClause: string,
-  ): SearchQueryConfig {
-    const hasEmbedding = embedding && embedding.length > 0;
-    const searchOrderBy = hasEmbedding
-      ? 'ORDER BY similarity_score DESC, distance ASC'
-      : orderByClause;
-
-    const vectorStr = hasEmbedding ? `[${embedding.join(',')}]` : null;
-    const similarityColumn = vectorStr ? Prisma.sql`,
-                    (
-                        0.65 * (1 - (p.embedding_title <=> CAST(${vectorStr} AS vector)))
-                        + 0.35 * COALESCE((1 - (p.embedding_full <=> CAST(${vectorStr} AS vector))), 0)
-                    ) AS similarity_score` : Prisma.sql`, NULL AS similarity_score`;
-
-    return {
-      searchCondition: this.buildEmbeddingSearchCondition(embedding),
-      similarityColumn,
-      searchOrderBy,
-    };
-  }
-
-  private buildKeywordQueryConfig(keywords: string): SearchQueryConfig {
-    const keywordRank = Prisma.sql`,
-                    ts_rank_cd(
-                        p.fts_search_vector,
-                        websearch_to_tsquery('simple', f_unaccent(${keywords}))
-                    ) AS similarity_score`;
-
-    return {
-      searchCondition: this.buildKeywordSearchCondition(keywords),
-      similarityColumn: keywordRank,
-      searchOrderBy: 'ORDER BY similarity_score DESC, distance ASC',
-    };
-  }
-
-  private buildSearchQueryConfig(
-    embedding: number[] | undefined,
-    keywords: string | undefined,
-    orderByClause: string,
-  ): SearchQueryConfig {
-    if (keywords?.trim()) {
-      return this.buildKeywordQueryConfig(keywords);
-    }
-
-    return this.buildEmbeddingQueryConfig(embedding, orderByClause);
-  }
 
   private async enrichPlacesWithFavoriteAndImage(
     rawPlaces: (RawPlace & { distance: number })[],
@@ -222,7 +117,7 @@ export class PlaceService {
     keywords?: string,
   ): Promise<(RawPlace & { distance: number; similarity_score?: number })[]> {
     const { searchCondition, similarityColumn, searchOrderBy } =
-      this.buildSearchQueryConfig(embedding, keywords, orderByClause);
+      this.placeHelper.buildSearchQueryConfig(embedding, keywords, orderByClause);
 
     return await this.prismaService.$queryRaw<
       (RawPlace & { distance: number; similarity_score?: number })[]
@@ -261,6 +156,7 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
+                    AND p.status = 'PUBLISHED'::"PlaceStatus"
                   ${searchCondition}
             ) AS places_with_distance
             WHERE distance <= ${radius}
@@ -279,7 +175,7 @@ export class PlaceService {
     embedding?: number[],
     keywords?: string,
   ): Promise<number> {
-    const searchCondition = this.buildSearchCondition(embedding, keywords);
+    const searchCondition = this.placeHelper.buildSearchCondition(embedding, keywords);
 
     const totalResult = await this.prismaService.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(*) as count
@@ -297,6 +193,7 @@ export class PlaceService {
                 FROM places p
                 WHERE p.latitude BETWEEN ${latitude - latDelta} AND ${latitude + latDelta}
                     AND p.longitude BETWEEN ${longitude - longDelta} AND ${longitude + longDelta}
+                    AND p.status = 'PUBLISHED'::"PlaceStatus"
                   ${searchCondition}
             ) as places_with_distance
             WHERE distance <= ${radius}
@@ -315,10 +212,9 @@ export class PlaceService {
     limit: number;
     offset: number;
     extractedIntent: ExtractedIntent;
-  }): Promise<[
-      (RawPlace & { distance: number; similarity_score?: number })[],
-      number,
-    ]> {
+  }): Promise<
+    [(RawPlace & { distance: number; similarity_score?: number })[], number]
+  > {
     const {
       latitude,
       longitude,
@@ -356,6 +252,145 @@ export class PlaceService {
     ]);
   }
 
+  async create(createPlaceDto: CreatePlaceDto) {
+    try {
+      const categoryIds = Array.from(
+        new Set(
+          [
+            createPlaceDto.mainCategoryId,
+            ...(createPlaceDto.secondaryCategoryIds ?? []).map((id) =>
+              id.trim(),
+            ),
+          ].filter((id) => !!id),
+        ),
+      );
+      const attributeIds = Array.from(
+        new Set(
+          (createPlaceDto.attributeIds ?? [])
+            .map((id) => id.trim())
+            .filter((id) => !!id),
+        ),
+      );
+
+      if (!createPlaceDto.featureImage) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: PlaceErrorMessages.PLACE_IMAGE_REQUIRED,
+        });
+      }
+
+      const featureImage = await this.imageService.uploadImage(
+        this.placeHelper.buildPlaceImageKey(createPlaceDto.featureImageType),
+        createPlaceDto.featureImage,
+        createPlaceDto.featureImageType,
+      );
+      const openingHours = this.placeHelper.normalizeOpeningHours(
+        createPlaceDto.openingHours,
+      );
+
+      const [existingCategories, existingAttributes] = await Promise.all([
+        this.prismaService.category.findMany({
+          where: {
+            id: { in: categoryIds },
+          },
+          select: { id: true },
+        }),
+        attributeIds.length > 0
+          ? this.prismaService.attribute.findMany({
+            where: {
+              id: { in: attributeIds },
+            },
+            select: { id: true },
+          })
+          : Promise.resolve([]),
+      ]);
+
+      if (existingCategories.length !== categoryIds.length) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: PlaceErrorMessages.PLACE_CATEGORY_NOT_FOUND,
+        });
+      }
+
+      if (existingAttributes.length !== attributeIds.length) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: PlaceErrorMessages.PLACE_ATTRIBUTE_NOT_FOUND,
+        });
+      }
+
+      const createdPlace = await this.prismaService.place.create({
+        data: {
+          fromGoogle: false,
+          status: PlaceStatus.UNDER_REVIEW,
+          name: createPlaceDto.name.trim(),
+          description: createPlaceDto.description,
+          rating: 0,
+          googleMapLink:
+            createPlaceDto.googleMapLink ||
+            this.placeHelper.toGoogleMapLink(
+              createPlaceDto.latitude,
+              createPlaceDto.longitude,
+            ),
+          website: createPlaceDto.website,
+          phoneNumber: createPlaceDto.phoneNumber,
+          featureImageUrl: featureImage.key,
+          ownerId: createPlaceDto.ownerId,
+          latitude: createPlaceDto.latitude,
+          longitude: createPlaceDto.longitude,
+          fullAddress: this.placeHelper.buildFullAddress(
+            createPlaceDto.street,
+            createPlaceDto.ward,
+            createPlaceDto.city,
+            createPlaceDto.countryCode,
+          ),
+          street: createPlaceDto.street,
+          ward: createPlaceDto.ward,
+          city: createPlaceDto.city,
+          countryCode: createPlaceDto.countryCode,
+          placeCategories: {
+            create: categoryIds.map((categoryId) => ({
+              categoryId,
+              isMain: categoryId === createPlaceDto.mainCategoryId,
+            })),
+          },
+          placeAttributes:
+            attributeIds.length > 0
+              ? {
+                create: attributeIds.map((attributeId) => ({
+                  attributeId,
+                })),
+              }
+              : undefined,
+          openingHours:
+            openingHours.length > 0
+              ? {
+                create: openingHours,
+              }
+              : undefined,
+          placeImages: {
+            create: {
+              type: PlaceImageType.FEATURE,
+              imageId: featureImage.id,
+            },
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      return {
+        message: 'Place created successfully and sent for review',
+        placeId: createdPlace.id,
+        status: createdPlace.status,
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
   async findNearby(nearMeDto: NearMeDto): Promise<PlacePaginatedResponse> {
     const {
       latitude,
@@ -368,9 +403,9 @@ export class PlaceService {
       userId,
     } = nearMeDto;
 
-    const { latDelta, longDelta } = this.calculateGeoDeltas(latitude, radius);
+    const { latDelta, longDelta } = this.placeHelper.calculateGeoDeltas(latitude, radius);
 
-    const { offset, orderByClause } = this.buildPaginationParams(
+    const { offset, orderByClause } = this.placeHelper.buildPaginationParams(
       page,
       limit,
       sortBy,
@@ -429,9 +464,9 @@ export class PlaceService {
       sortOrder,
     } = searchDto;
 
-    const { latDelta, longDelta } = this.calculateGeoDeltas(latitude, radius);
+    const { latDelta, longDelta } = this.placeHelper.calculateGeoDeltas(latitude, radius);
 
-    const { offset, orderByClause } = this.buildPaginationParams(
+    const { offset, orderByClause } = this.placeHelper.buildPaginationParams(
       page,
       limit,
       sortBy,
@@ -447,7 +482,8 @@ export class PlaceService {
           { search },
         );
       } catch (error: any) {
-        const errorMessage = error?.message ?? 'Unknown error when extracting user intent';
+        const errorMessage =
+          error?.message ?? 'Unknown error when extracting user intent';
         this.logger.warn(
           `ExtractUserIntent failed. Falling back to empty intent. reason=${errorMessage}`,
         );
@@ -455,7 +491,7 @@ export class PlaceService {
         if (error?.message?.includes('EMBEDDING_FAILED')) {
           throw new RpcException({
             status: HttpStatus.SERVICE_UNAVAILABLE,
-            message: 'Embedding service is unavailable',
+            message: PlaceErrorMessages.EMBEDDING_SERVICE_UNAVAILABLE,
           });
         }
       }
@@ -505,8 +541,11 @@ export class PlaceService {
 
   async getById(id: string, userId: string): Promise<PlaceDetailResponse> {
     try {
-      const place = await this.prismaService.place.findUnique({
-        where: { id },
+      const place = await this.prismaService.place.findFirst({
+        where: {
+          id,
+          status: PlaceStatus.PUBLISHED,
+        },
         include: {
           favorites: {
             where: { userId },
@@ -534,7 +573,7 @@ export class PlaceService {
       if (!place) {
         throw new RpcException({
           status: HttpStatus.NOT_FOUND,
-          message: `Place not found`,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
         });
       }
 
@@ -562,6 +601,254 @@ export class PlaceService {
     }
   }
 
+  async getByIdsWithDistance(
+    ids: string[],
+    userId: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<PlaceWithDistance[]> {
+    try {
+      const places = await this.prismaService.place.findMany({
+        where: { id: { in: ids }, status: PlaceStatus.PUBLISHED },
+        include: {
+          favorites: {
+            where: { userId },
+            select: { userId: true },
+          },
+          openingHours: {
+            select: { dayOfWeek: true, openTime: true, closeTime: true },
+            orderBy: { dayOfWeek: SortOrder.ASC },
+          },
+          placeCategories: {
+            select: {
+              isMain: true,
+              category: { select: { id: true, name: true } },
+            },
+          },
+        },
+      });
+
+      // Preserve agent ranking order
+      const placeMap = new Map(places.map((p) => [p.id, p]));
+      const ordered = ids
+        .map((id) => placeMap.get(id))
+        .filter((p): p is NonNullable<typeof p> => p !== undefined);
+
+      return await Promise.all(
+        ordered.map(async (place) => {
+          const { favorites, placeCategories, ...placeData } = place;
+          return {
+            ...placeData,
+            distance: this.placeHelper.calculateDistance(
+              latitude,
+              longitude,
+              place.latitude,
+              place.longitude,
+            ),
+            isFavorite: favorites.length > 0,
+            featureImageUrl: placeData.featureImageUrl
+              ? await this.imageService.getImageViewUrl(placeData.featureImageUrl)
+              : null,
+            openingHours: placeData.openingHours.map((oh) => ({
+              ...oh,
+              openTime: oh.openTime ? formatTimeOnly(oh.openTime) : null,
+              closeTime: oh.closeTime ? formatTimeOnly(oh.closeTime) : null,
+            })),
+            categories: placeCategories.map((pc) => ({
+              id: pc.category.id,
+              name: pc.category.name,
+              isMain: pc.isMain,
+            })),
+          };
+        }),
+      );
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async update(updatePlaceDto: UpdatePlaceDto) {
+    try {
+      const { placeId, requesterId } = updatePlaceDto;
+
+      const place = await this.prismaService.place.findUnique({
+        where: { id: placeId },
+        select: {
+          id: true,
+          ownerId: true,
+          street: true,
+          ward: true,
+          city: true,
+          countryCode: true,
+          latitude: true,
+          longitude: true,
+        },
+      });
+
+      if (!place) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
+        });
+      }
+
+      if (place.ownerId !== requesterId) {
+        throw new RpcException({
+          status: HttpStatus.FORBIDDEN,
+          message: PlaceErrorMessages.PLACE_NOT_OWNER,
+        });
+      }
+
+      let featureImageUrl: string | undefined;
+      if (updatePlaceDto.featureImage) {
+        const uploaded = await this.imageService.uploadImage(
+          this.placeHelper.buildPlaceImageKey(updatePlaceDto.featureImageType),
+          updatePlaceDto.featureImage,
+          updatePlaceDto.featureImageType,
+        );
+        featureImageUrl = uploaded.key;
+      }
+
+      const normalizedOpeningHours =
+        updatePlaceDto.openingHours !== undefined
+          ? this.placeHelper.normalizeOpeningHours(updatePlaceDto.openingHours)
+          : undefined;
+
+      let categoryIds: string[] | undefined;
+      if (updatePlaceDto.mainCategoryId) {
+        const secondaryIds = (updatePlaceDto.secondaryCategoryIds ?? [])
+          .map((id) => id.trim())
+          .filter(Boolean);
+        categoryIds = Array.from(
+          new Set([updatePlaceDto.mainCategoryId, ...secondaryIds]),
+        );
+
+        const existingCategories = await this.prismaService.category.findMany({
+          where: { id: { in: categoryIds } },
+          select: { id: true },
+        });
+        if (existingCategories.length !== categoryIds.length) {
+          throw new RpcException({
+            status: HttpStatus.BAD_REQUEST,
+            message: PlaceErrorMessages.PLACE_CATEGORY_NOT_FOUND,
+          });
+        }
+      }
+
+      let attributeIds: string[] | undefined;
+      if (updatePlaceDto.attributeIds !== undefined) {
+        attributeIds = Array.from(
+          new Set(
+            updatePlaceDto.attributeIds.map((id) => id.trim()).filter(Boolean),
+          ),
+        );
+        if (attributeIds.length > 0) {
+          const existingAttributes = await this.prismaService.attribute.findMany({
+            where: { id: { in: attributeIds } },
+            select: { id: true },
+          });
+          if (existingAttributes.length !== attributeIds.length) {
+            throw new RpcException({
+              status: HttpStatus.BAD_REQUEST,
+              message: PlaceErrorMessages.PLACE_ATTRIBUTE_NOT_FOUND,
+            });
+          }
+        }
+      }
+
+      const hasAddressChange =
+        !!updatePlaceDto.street ||
+        !!updatePlaceDto.ward ||
+        !!updatePlaceDto.city ||
+        !!updatePlaceDto.countryCode;
+
+      const hasCoordChange =
+        Number.isFinite(updatePlaceDto.latitude) ||
+        Number.isFinite(updatePlaceDto.longitude);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: Record<string, any> = {};
+
+      if (updatePlaceDto.name !== undefined && updatePlaceDto.name.trim())
+        updateData.name = updatePlaceDto.name.trim();
+      if (updatePlaceDto.description !== undefined)
+        updateData.description = updatePlaceDto.description || null;
+      if (updatePlaceDto.phoneNumber !== undefined)
+        updateData.phoneNumber = updatePlaceDto.phoneNumber || null;
+      if (updatePlaceDto.website !== undefined)
+        updateData.website = updatePlaceDto.website || null;
+      if (updatePlaceDto.googleMapLink)
+        updateData.googleMapLink = updatePlaceDto.googleMapLink;
+      if (featureImageUrl !== undefined)
+        updateData.featureImageUrl = featureImageUrl;
+
+      if (hasAddressChange) {
+        if (updatePlaceDto.street) updateData.street = updatePlaceDto.street;
+        if (updatePlaceDto.ward) updateData.ward = updatePlaceDto.ward;
+        if (updatePlaceDto.city) updateData.city = updatePlaceDto.city;
+        if (updatePlaceDto.countryCode) updateData.countryCode = updatePlaceDto.countryCode;
+        updateData.fullAddress = this.placeHelper.buildFullAddress(
+          updatePlaceDto.street || place.street || '',
+          updatePlaceDto.ward || place.ward || '',
+          updatePlaceDto.city || place.city || '',
+          updatePlaceDto.countryCode || place.countryCode || '',
+        );
+      }
+
+      if (hasCoordChange) {
+        if (Number.isFinite(updatePlaceDto.latitude))
+          updateData.latitude = updatePlaceDto.latitude;
+        if (Number.isFinite(updatePlaceDto.longitude))
+          updateData.longitude = updatePlaceDto.longitude;
+        if (!updatePlaceDto.googleMapLink) {
+          const lat = Number.isFinite(updatePlaceDto.latitude) ? updatePlaceDto.latitude! : place.latitude;
+          const lng = Number.isFinite(updatePlaceDto.longitude) ? updatePlaceDto.longitude! : place.longitude;
+          updateData.googleMapLink = this.placeHelper.toGoogleMapLink(lat, lng);
+        }
+      }
+
+      await this.prismaService.$transaction(async (tx) => {
+        if (normalizedOpeningHours !== undefined) {
+          await tx.openingHour.deleteMany({ where: { placeId } });
+          if (normalizedOpeningHours.length > 0) {
+            await tx.openingHour.createMany({
+              data: normalizedOpeningHours.map((oh) => ({ ...oh, placeId })),
+            });
+          }
+        }
+
+        if (categoryIds !== undefined) {
+          await tx.placeCategory.deleteMany({ where: { placeId } });
+          await tx.placeCategory.createMany({
+            data: categoryIds.map((categoryId) => ({
+              placeId,
+              categoryId,
+              isMain: categoryId === updatePlaceDto.mainCategoryId,
+            })),
+          });
+        }
+
+        if (attributeIds !== undefined) {
+          await tx.placeAttribute.deleteMany({ where: { placeId } });
+          if (attributeIds.length > 0) {
+            await tx.placeAttribute.createMany({
+              data: attributeIds.map((attributeId) => ({ placeId, attributeId })),
+            });
+          }
+        }
+
+        await tx.place.update({
+          where: { id: placeId },
+          data: updateData,
+        });
+      });
+
+      return { message: 'Place updated successfully' };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
   async updatePlaceRating(placeId: string, prisma?: Prisma.TransactionClient) {
     try {
       await (prisma || this.prismaService).$executeRaw`
@@ -573,6 +860,154 @@ export class PlaceService {
                 ), 0)
                 WHERE id = ${placeId}
             `;
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async getAllAdmin(data: GetAdminPlacesDto) {
+    try {
+      const page = Number(data.page) || 1;
+      const limit = Number(data.limit) || 10;
+      const sortOrder = data.sortOrder || 'desc';
+      const status = data.status;
+      const skip = (page - 1) * limit;
+
+      const where = status ? { status } : {};
+
+      const [places, total] = await Promise.all([
+        this.prismaService.place.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            status: true,
+            rating: true,
+            phoneNumber: true,
+            website: true,
+            featureImageUrl: true,
+            fullAddress: true,
+            street: true,
+            ward: true,
+            city: true,
+            countryCode: true,
+            ownerId: true,
+            createdAt: true,
+            updatedAt: true,
+            owner: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+              },
+            },
+            placeCategories: {
+              select: {
+                isMain: true,
+                category: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: sortOrder },
+          skip,
+          take: limit,
+        }),
+        this.prismaService.place.count({ where }),
+      ]);
+
+      // Resolve feature image URLs
+      const placesWithImages = await Promise.all(
+        places.map(async (place) => ({
+          ...place,
+          featureImageUrl: place.featureImageUrl
+            ? await this.imageService.getImageViewUrl(place.featureImageUrl)
+            : null,
+          categories: place.placeCategories.map((pc) => ({
+            id: pc.category.id,
+            name: pc.category.name,
+            isMain: pc.isMain,
+          })),
+          placeCategories: undefined,
+        })),
+      );
+
+      return {
+        data: placesWithImages,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async approvePlace(placeId: string) {
+    try {
+      const place = await this.prismaService.place.findUnique({
+        where: { id: placeId },
+      });
+
+      if (!place) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
+        });
+      }
+
+      if (place.status !== PlaceStatus.UNDER_REVIEW) {
+        throw new RpcException({
+          status: HttpStatus.CONFLICT,
+          message: PlaceErrorMessages.PLACE_NOT_UNDER_REVIEW,
+        });
+      }
+
+      await this.prismaService.place.update({
+        where: { id: placeId },
+        data: { status: PlaceStatus.PUBLISHED },
+      });
+
+      return {
+        message: 'Place approved and published successfully',
+      };
+    } catch (error) {
+      return handleServiceErrorCatching(error);
+    }
+  }
+
+  async rejectPlace(placeId: string, reason: string) {
+    try {
+      const place = await this.prismaService.place.findUnique({
+        where: { id: placeId },
+      });
+
+      if (!place) {
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: PlaceErrorMessages.PLACE_NOT_FOUND,
+        });
+      }
+
+      if (place.status !== PlaceStatus.UNDER_REVIEW) {
+        throw new RpcException({
+          status: HttpStatus.CONFLICT,
+          message: PlaceErrorMessages.PLACE_NOT_UNDER_REVIEW,
+        });
+      }
+
+      await this.prismaService.place.update({
+        where: { id: placeId },
+        data: { status: PlaceStatus.SUSPENDED },
+      });
+
+      return {
+        message: 'Place rejected successfully',
+      };
     } catch (error) {
       return handleServiceErrorCatching(error);
     }

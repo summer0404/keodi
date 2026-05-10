@@ -2,7 +2,10 @@ import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { firstValueFrom, timeout } from 'rxjs';
 import { KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
-import { UserTopics } from 'src/shared/constants/topic.constant';
+import {
+  OwnerApplicationTopics,
+  UserTopics,
+} from 'src/shared/constants/topic.constant';
 
 @Injectable()
 export class KafkaService implements OnModuleInit {
@@ -13,6 +16,7 @@ export class KafkaService implements OnModuleInit {
   async onModuleInit() {
     this.kafkaClient.subscribeToResponseOf(UserTopics.UsernameSynced);
     this.kafkaClient.subscribeToResponseOf(UserTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(OwnerApplicationTopics.Create);
     await this.kafkaClient.connect();
   }
 

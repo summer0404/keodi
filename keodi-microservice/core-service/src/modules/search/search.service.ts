@@ -4,32 +4,32 @@ import { RedisService } from 'src/providers/redis/redis.service';
 import {
   MAX_RECENT_SEARCHES_PER_USER,
   SEARCH_TRENDING_TTL_SECONDS,
-  SearchRedisKeys,
 } from 'src/shared/constants/search.constant';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   CreateSearchDto,
   SearchTrendingScoreDto,
 } from 'src/shared/dtos/search.dto';
-import { handleServiceErrorCatching } from 'src/shared/helpers/error.helper';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
 @Injectable()
 export class SearchService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
-  ) {}
+  ) { }
 
   async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
     try {
       await this.redisService.zadd(
-        SearchRedisKeys.TRENDING,
+        RedisKeys.SEARCH.TRENDING,
         trendingSearches.flatMap((search) => [
           search.score,
           search.extractedTerm,
         ]),
       );
       await this.redisService.expire(
-        SearchRedisKeys.TRENDING,
+        RedisKeys.SEARCH.TRENDING,
         SEARCH_TRENDING_TTL_SECONDS,
       );
     } catch (error) {
@@ -43,7 +43,7 @@ export class SearchService {
       extractedTerm,
       userId,
     } = createSearchDto;
-    
+
     const rawQuery = rawQueryInput.trim();
     const normalizedTerm = extractedTerm?.trim().toLowerCase();
 

@@ -2,8 +2,9 @@ import { HttpStatus, Injectable } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { FavoritePlacesPaginationDto, UserCommonPaginationDto } from "src/shared/dtos/user.dto";
 import { PlaceSortBy, SortBy, SortOrder } from "src/shared/enums/sort.enum";
-import { handleServiceErrorCatching } from "src/shared/helpers/error.helper";
+import { handleServiceErrorCatching } from "src/shared/utils/error.util";
 import { PrismaService } from "src/database/prisma.service";
+import { FavoriteErrorMessages, PlaceErrorMessages } from "src/shared/constants/error.constant";
 
 @Injectable()
 export class FavoriteService {
@@ -18,7 +19,7 @@ export class FavoriteService {
             if (!place) {
                 throw new RpcException({
                     status: HttpStatus.NOT_FOUND,
-                    message: "Place not found",
+                    message: PlaceErrorMessages.PLACE_NOT_FOUND,
                 });
             }
 
@@ -31,7 +32,7 @@ export class FavoriteService {
             if (existing) {
                 throw new RpcException({
                     status: HttpStatus.CONFLICT,
-                    message: 'Place already in favorites'
+                    message: FavoriteErrorMessages.PLACE_ALREADY_IN_FAVORITES
                 });
             }
 
@@ -55,7 +56,7 @@ export class FavoriteService {
             if (!favorite) {
                 throw new RpcException({
                     status: HttpStatus.NOT_FOUND,
-                    message: "Favorite not found",
+                    message: FavoriteErrorMessages.FAVORITE_NOT_FOUND,
                 });
             }
             return await this.prismaService.favorite.delete({

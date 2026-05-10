@@ -1,0 +1,5 @@
+export enum PlaceStatus {
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  PUBLISHED = 'PUBLISHED',
+  SUSPENDED = 'SUSPENDED',
+}

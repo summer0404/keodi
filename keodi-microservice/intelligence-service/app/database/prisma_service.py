@@ -3,8 +3,6 @@ from prisma import Prisma
 from typing import Optional
 
 
-settings = get_settings()
-
 __prisma_client: Optional[Prisma] = None
 
 
@@ -13,7 +11,7 @@ async def get_prisma_client() -> Prisma:
     if __prisma_client is None:
         __prisma_client = Prisma(
             datasource = {
-                "url": settings.database_url
+                "url": get_settings().database_url
             }
         )
         await __prisma_client.connect()
