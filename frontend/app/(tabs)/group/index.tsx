@@ -236,6 +236,17 @@ export default function GroupScreen() {
   const [isClosing, setIsClosing] = useState(false);
   const [blockedAction, setBlockedAction] = useState<'create' | 'join' | null>(null);
   const isRealtimeRefreshingRef = useRef(false);
+  const isJoiningRef = useRef(false);
+  const isCreatingRef = useRef(false);
+  const isClosingRef = useRef(false);
+  const isLoadingRef = useRef(false);
+  const isLoadingMoreListRef = useRef(false);
+
+  isJoiningRef.current = isJoining;
+  isCreatingRef.current = isCreating;
+  isClosingRef.current = isClosing;
+  isLoadingRef.current = isLoading;
+  isLoadingMoreListRef.current = isLoadingMoreList;
 
   const sessions = useMemo(
     () => sessionIds.map((sessionId) => sessionsById[sessionId]).filter(Boolean),
@@ -245,11 +256,11 @@ export default function GroupScreen() {
   const refreshSessionsRealtime = useCallback(async () => {
     if (
       isRealtimeRefreshingRef.current ||
-      isJoining ||
-      isCreating ||
-      isClosing ||
-      isLoading ||
-      isLoadingMoreList
+      isJoiningRef.current ||
+      isCreatingRef.current ||
+      isClosingRef.current ||
+      isLoadingRef.current ||
+      isLoadingMoreListRef.current
     ) {
       return;
     }
@@ -260,7 +271,7 @@ export default function GroupScreen() {
     } finally {
       isRealtimeRefreshingRef.current = false;
     }
-  }, [fetchList, isClosing, isCreating, isJoining, isLoading, isLoadingMoreList, listScopeKey]);
+  }, [fetchList, listScopeKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -530,7 +541,7 @@ export default function GroupScreen() {
   }, [fetchList, listScopeKey, removePinnedSessionId, isClosing, pinnedSessionIds, sessionToClose]);
 
   const emptyState = useMemo(() => {
-    if (isLoading || !hasLoadedInitialData) {
+    if (!hasLoadedInitialData) {
       return (
         <View className="flex-1 items-center justify-center">
           <Video
@@ -547,6 +558,18 @@ export default function GroupScreen() {
 
     return (
       <View className="justify-center px-4">
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <Video
+              source={require('@/assets/images/loading.mp4')}
+              style={{ width: '100%', maxWidth: 700, height: 700, alignSelf: 'center' }}
+              shouldPlay
+              isLooping
+              isMuted
+              resizeMode={ResizeMode.CONTAIN}
+            />
+          </View>
+        ) : null}
         <AlertScreen
           imageSrc={require('@/assets/images/nofriend.png')}
           heading="group.noGroups"

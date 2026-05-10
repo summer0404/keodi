@@ -1272,7 +1272,7 @@ export default function GroupDetailScreen() {
               isClosing={isClosing}
             />
 
-            {hasMembers && session?.members && session.members.length >= 3 ? (
+            {hasMembers && session?.members && session.members.length >= 2 ? (
               <>
                 <View className="flex-row items-center justify-between">
                   <View>
@@ -1547,7 +1547,7 @@ export default function GroupDetailScreen() {
                       </View>
                     )}
 
-                    {memberLocations.length >= 3 ? (
+                    {memberLocations.length >= 2 ? (
                       <>
                         {/* Recommendations */}
                         {recommendationsError ? (
