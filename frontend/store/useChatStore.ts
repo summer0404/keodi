@@ -97,11 +97,13 @@ export const useChatStore = create<ChatState>()((set) => ({
   setReadReceipt: (conversationId, userId, readAt) =>
     set((state) => {
       const current = state.readReceipts[conversationId] ?? [];
-      const filtered = current.filter((r) => r.userId !== userId);
+      const existing = current.find((r) => r.userId === userId);
+      // Don't downgrade a more recent readAt (e.g. real-time WebSocket arrived before REST seed)
+      if (existing && existing.readAt >= readAt) return state;
       return {
         readReceipts: {
           ...state.readReceipts,
-          [conversationId]: [...filtered, { userId, readAt }],
+          [conversationId]: [...current.filter((r) => r.userId !== userId), { userId, readAt }],
         },
       };
     }),

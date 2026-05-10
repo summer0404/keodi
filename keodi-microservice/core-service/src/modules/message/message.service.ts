@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
+import { ImageService } from 'src/modules/image/image.service';
 import { ConversationService } from 'src/modules/conversation/conversation.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
@@ -26,7 +27,33 @@ export class MessageService {
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
     private readonly conversationService: ConversationService,
+    private readonly imageService: ImageService,
   ) {}
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+  private async resolveMessagePictureUrls(msg: any): Promise<any> {
+    const resolvedSender = msg.sender?.pictureUrl
+      ? {
+          ...msg.sender,
+          pictureUrl: await this.imageService.getImageViewUrl(
+            msg.sender.pictureUrl as string,
+          ),
+        }
+      : msg.sender;
+    const resolvedReplyTo = msg.replyTo?.sender?.pictureUrl
+      ? {
+          ...msg.replyTo,
+          sender: {
+            ...msg.replyTo.sender,
+            pictureUrl: await this.imageService.getImageViewUrl(
+              msg.replyTo.sender.pictureUrl as string,
+            ),
+          },
+        }
+      : msg.replyTo;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return { ...msg, sender: resolvedSender, replyTo: resolvedReplyTo };
+  }
 
   async send(payload: SendMessagePayloadDto) {
     const {
@@ -86,11 +113,13 @@ export class MessageService {
 
     await this.redisService.del(RedisKeys.CHAT_RECENT(conversationId));
 
+    const resolvedMessage = await this.resolveMessagePictureUrls(message);
+
     const kafkaClient = this.kafkaService.getClient();
     kafkaClient.emit(NotificationTopics.ChatRealtimePush, {
       conversationId,
       event: 'message.new',
-      payload: message,
+      payload: resolvedMessage,
     });
 
     for (const userId of memberIds) {
@@ -116,7 +145,7 @@ export class MessageService {
       });
     }
 
-    return message;
+    return resolvedMessage;
   }
 
   async list(payload: ListMessagesPayloadDto) {
@@ -137,8 +166,9 @@ export class MessageService {
         const messages = JSON.parse(cached) as any[];
         // Serve cache only when sender data is already present
         if (messages.length === 0 || messages[0].sender !== undefined) {
+          const resolvedMessages = await Promise.all(messages.map((m) => this.resolveMessagePictureUrls(m)));
           return {
-            items: messages,
+            items: resolvedMessages,
             nextCursor:
               messages.length >= limit
                 ? messages[messages.length - 1].id
@@ -191,8 +221,10 @@ export class MessageService {
       );
     }
 
+    const resolvedItems = await Promise.all(items.map((m) => this.resolveMessagePictureUrls(m)));
+
     return {
-      items,
+      items: resolvedItems,
       nextCursor: hasNextPage ? items[items.length - 1].id : null,
     };
   }

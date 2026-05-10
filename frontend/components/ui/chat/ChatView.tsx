@@ -37,16 +37,17 @@ const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 // ─── Internal render types ─────────────────────────────────────────────────────
 
+type ReaderInfo = { userId: string; initials: string; pictureUrl?: string };
 type ReceivedMsg = { kind: 'received'; id: string; text: string; senderName?: string; time?: string; repliedTo?: { sender: string; text: string } };
 type SentMsg = {
     kind: 'sent';
     id: string;
     text: string;
     time?: string;
-    isRead?: boolean;
+    readers?: ReaderInfo[];
     repliedTo?: { sender: string; text: string };
 };
-type ImageMsg = { kind: 'image'; id: string; uri: string; isSentByMe: boolean; senderName?: string; time?: string; isRead?: boolean };
+type ImageMsg = { kind: 'image'; id: string; uri: string; isSentByMe: boolean; senderName?: string; time?: string; readers?: ReaderInfo[] };
 type DateDivider = { kind: 'date'; id: string; label: string };
 type SystemMsg = { kind: 'system'; id: string; text: string };
 type PlaceCard = { kind: 'place'; id: string };
@@ -67,7 +68,7 @@ function canBeGrouped(left: MessageItem | undefined, right: MessageItem | undefi
 function apiMessageToChat(
     msg: MessageItem,
     currentUserId: string,
-    options?: { showSenderName?: boolean; showTime?: boolean; isRead?: boolean },
+    options?: { showSenderName?: boolean; showTime?: boolean; readers?: ReaderInfo[] },
 ): ChatMessage {
     if (msg.type === 'SYSTEM') {
         return { kind: 'system', id: msg.id, text: msg.content };
@@ -83,7 +84,7 @@ function apiMessageToChat(
             isSentByMe,
             senderName: !isSentByMe && options?.showSenderName ? getSenderDisplayName(msg.sender) : undefined,
             time: options?.showTime ? formatMessageTime(msg.createdAt) : undefined,
-            isRead: options?.isRead ?? false,
+            readers: isSentByMe ? options?.readers : undefined,
         };
     }
 
@@ -93,7 +94,7 @@ function apiMessageToChat(
             id: msg.id,
             text: msg.content,
             time: options?.showTime ? formatMessageTime(msg.createdAt) : undefined,
-            isRead: options?.isRead ?? false,
+            readers: options?.readers,
             repliedTo: msg.replyTo
                 ? {
                     sender: getSenderDisplayName(msg.replyTo.sender),
@@ -122,7 +123,7 @@ function buildChatItems(
     messages: MessageItem[],
     currentUserId: string,
     hasTyping: boolean,
-    otherReadAt: string | null,
+    readersByMsgId: Record<string, ReaderInfo[]>,
 ): ChatMessage[] {
     const items: ChatMessage[] = [];
     let lastDate = '';
@@ -147,7 +148,7 @@ function buildChatItems(
             apiMessageToChat(msg, currentUserId, {
                 showSenderName: !isSentByMe && !groupedWithPrev,
                 showTime: !groupedWithNext,
-                isRead: isSentByMe && otherReadAt !== null && msg.createdAt <= otherReadAt,
+                readers: readersByMsgId[msg.id],
             }),
         );
     }
@@ -184,6 +185,33 @@ function SystemMessage({ text }: { text: string }) {
             <Text style={{ fontWeight: '400', fontSize: 11, color: '#5C5C5C', textAlign: 'center' }}>
                 {text}
             </Text>
+        </View>
+    );
+}
+
+function ReadAvatar({ reader }: { reader: ReaderInfo }) {
+    if (reader.pictureUrl) {
+        return (
+            <Image
+                source={{ uri: reader.pictureUrl }}
+                style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: 'white' }}
+            />
+        );
+    }
+    return (
+        <View
+            style={{
+                width: 16,
+                height: 16,
+                borderRadius: 8,
+                backgroundColor: '#9A9A9A',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: 'white',
+            }}
+        >
+            <Text style={{ fontSize: 7, fontWeight: '600', color: 'white' }}>{reader.initials}</Text>
         </View>
     );
 }
@@ -332,33 +360,15 @@ function SentBubble({ msg }: { msg: SentMsg }) {
             </View>
 
             {msg.time ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingRight: 6 }}>
+                <View style={{ paddingRight: 6 }}>
                     <Text style={{ fontWeight: '400', fontSize: 10, color: '#9A9A9A' }}>{msg.time}</Text>
-                    {msg.isRead ? (
-                        <View style={{ flexDirection: 'row', gap: -4 }}>
-                            <View
-                                style={{
-                                    width: 10,
-                                    height: 6,
-                                    borderBottomWidth: 1.5,
-                                    borderLeftWidth: 1.5,
-                                    borderColor: '#2D7FF9',
-                                    transform: [{ rotate: '-45deg' }],
-                                }}
-                            />
-                            <View
-                                style={{
-                                    width: 10,
-                                    height: 6,
-                                    borderBottomWidth: 1.5,
-                                    borderLeftWidth: 1.5,
-                                    borderColor: '#2D7FF9',
-                                    transform: [{ rotate: '-45deg' }],
-                                    marginLeft: -5,
-                                }}
-                            />
-                        </View>
-                    ) : null}
+                </View>
+            ) : null}
+            {msg.readers && msg.readers.length > 0 ? (
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 2, paddingRight: 6, paddingTop: 1 }}>
+                    {msg.readers.map((r) => (
+                        <ReadAvatar key={r.userId} reader={r} />
+                    ))}
                 </View>
             ) : null}
         </View>
@@ -467,24 +477,28 @@ function PlaceCardMsg() {
     );
 }
 
-function ImageBubble({ uri, isSentByMe, senderName, time, isRead }: { uri: string; isSentByMe: boolean; senderName?: string; time?: string; isRead?: boolean }) {
+function ImageBubble({ uri, isSentByMe, senderName, time, readers }: { uri: string; isSentByMe: boolean; senderName?: string; time?: string; readers?: ReaderInfo[] }) {
     return (
         <View style={{ flexDirection: isSentByMe ? 'row-reverse' : 'row', alignItems: 'flex-end', marginVertical: 2, paddingHorizontal: 12, gap: 6 }}>
             <View style={{ maxWidth: '70%', gap: 2, alignItems: isSentByMe ? 'flex-end' : 'flex-start' }}>
-                {senderName && (
+                {senderName ? (
                     <Text style={{ fontSize: 11, color: '#9ca3af', paddingHorizontal: 4 }}>{senderName}</Text>
-                )}
+                ) : null}
                 <Image
                     source={{ uri }}
                     style={{ width: 200, height: 200, borderRadius: 12 }}
                     resizeMode="cover"
                 />
-                {(time !== undefined || isRead !== undefined) && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 4 }}>
-                        {time && <Text style={{ fontSize: 10, color: '#9ca3af' }}>{time}</Text>}
-                        {isSentByMe && <Text style={{ fontSize: 11, color: isRead ? '#3b82f6' : '#9ca3af' }}>{isRead ? '✓✓' : '✓'}</Text>}
+                {time ? (
+                    <Text style={{ fontSize: 10, color: '#9ca3af', paddingHorizontal: 4 }}>{time}</Text>
+                ) : null}
+                {isSentByMe && readers && readers.length > 0 ? (
+                    <View style={{ flexDirection: 'row', gap: 2, paddingHorizontal: 4 }}>
+                        {readers.map((r) => (
+                            <ReadAvatar key={r.userId} reader={r} />
+                        ))}
                     </View>
-                )}
+                ) : null}
             </View>
         </View>
     );
@@ -562,6 +576,13 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
         staleTime: 30 * 1000,
     });
 
+    const { data: conversation } = useQuery({
+        queryKey: ['conversation', conversationId],
+        queryFn: () => chatService.getConversation(conversationId),
+        staleTime: 60 * 1000,
+        enabled: !!conversationId,
+    });
+
     // API returns newest-first; reverse for oldest-at-top display
     const historyMessages = useMemo(
         () => [...(historyPage?.items ?? [])].reverse(),
@@ -574,13 +595,7 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
     const addMessage = useChatStore((s) => s.addMessage);
     const removeMessage = useChatStore((s) => s.removeMessage);
     const replaceMessage = useChatStore((s) => s.replaceMessage);
-
-    // Latest readAt from anyone who is not the current user
-    const otherReadAt = useMemo(() => {
-        const others = readReceipts.filter((r) => r.userId !== currentUserId);
-        if (others.length === 0) return null;
-        return others.reduce((max, r) => (r.readAt > max ? r.readAt : max), others[0]!.readAt);
-    }, [readReceipts, currentUserId]);
+    const setReadReceipt = useChatStore((s) => s.setReadReceipt);
 
     // Merge history + real-time, deduplicating by id
     const allMessages = useMemo(() => {
@@ -589,9 +604,66 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
         return [...historyMessages, ...newFromSocket];
     }, [historyMessages, socketMessages]);
 
+    // Member profile map (userId → UserProfile) — covers readers who may never have sent a message
+    const memberMap = useMemo(() => {
+        const map: Record<string, NonNullable<MessageItem['sender']>> = {};
+        for (const m of conversation?.members ?? []) {
+            if (m.user) map[m.userId] = m.user;
+        }
+        // Supplement with sender info from messages
+        for (const msg of allMessages) {
+            if (msg.sender && !map[msg.senderId]) map[msg.senderId] = msg.sender;
+        }
+        return map;
+    }, [conversation?.members, allMessages]);
+
+    // Map from sent-message-id → readers who last read at that message
+    const readersByMsgId = useMemo(() => {
+        console.log('[ReadReceipt] readReceipts:', JSON.stringify(readReceipts));
+        console.log('[ReadReceipt] currentUserId:', currentUserId);
+        if (readReceipts.length === 0) {
+            console.log('[ReadReceipt] early-exit: no receipts');
+            return {} as Record<string, ReaderInfo[]>;
+        }
+        const sentByMe = allMessages.filter((m) => m.senderId === currentUserId);
+        console.log('[ReadReceipt] sentByMe count:', sentByMe.length, sentByMe.map((m) => ({ id: m.id, createdAt: m.createdAt })));
+        if (sentByMe.length === 0) {
+            console.log('[ReadReceipt] early-exit: no messages sent by me');
+            return {} as Record<string, ReaderInfo[]>;
+        }
+
+        const map: Record<string, ReaderInfo[]> = {};
+        for (const receipt of readReceipts) {
+            if (receipt.userId === currentUserId) continue;
+            console.log('[ReadReceipt] processing receipt:', receipt.userId, 'readAt:', receipt.readAt);
+            let latestReadMsg: MessageItem | undefined;
+            for (let i = sentByMe.length - 1; i >= 0; i--) {
+                console.log('[ReadReceipt]  comparing msg createdAt:', sentByMe[i]!.createdAt, '<= readAt:', receipt.readAt, '->', sentByMe[i]!.createdAt <= receipt.readAt);
+                if (sentByMe[i]!.createdAt <= receipt.readAt) {
+                    latestReadMsg = sentByMe[i];
+                    break;
+                }
+            }
+            if (!latestReadMsg) {
+                console.log('[ReadReceipt]  no matching message found for receipt', receipt.userId);
+                continue;
+            }
+            console.log('[ReadReceipt]  matched msg id:', latestReadMsg.id);
+            const profile = memberMap[receipt.userId];
+            const displayName = profile ? getSenderDisplayName(profile) : '';
+            const initials =
+                displayName.split(' ').filter(Boolean).map((w) => w[0]!).join('').slice(0, 2).toUpperCase() ||
+                receipt.userId.slice(0, 2).toUpperCase();
+            if (!map[latestReadMsg.id]) map[latestReadMsg.id] = [];
+            map[latestReadMsg.id]!.push({ userId: receipt.userId, initials, pictureUrl: profile?.pictureUrl ?? undefined });
+        }
+        console.log('[ReadReceipt] final map:', JSON.stringify(map));
+        return map;
+    }, [allMessages, currentUserId, readReceipts, memberMap]);
+
     const chatItems = useMemo(
-        () => buildChatItems(allMessages, currentUserId, typingUsers.length > 0, otherReadAt),
-        [allMessages, currentUserId, typingUsers.length, otherReadAt],
+        () => buildChatItems(allMessages, currentUserId, typingUsers.length > 0, readersByMsgId),
+        [allMessages, currentUserId, typingUsers.length, readersByMsgId],
     );
 
     const { sendMessage, startTyping, stopTyping, markRead } = useChatSocket(conversationId);
@@ -600,6 +672,21 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
         const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 100);
         return () => clearTimeout(timer);
     }, []);
+
+    // Seed readReceipts store from conversation members' lastReadAt on initial load
+    useEffect(() => {
+        console.log('[ReadReceipt] seed effect — conversation?.members:', JSON.stringify(conversation?.members?.map((m) => ({ userId: m.userId, lastReadAt: m.lastReadAt }))));
+        if (!conversation?.members) return;
+        for (const member of conversation.members) {
+            if (member.userId === currentUserId) continue;
+            if (!member.lastReadAt) {
+                console.log('[ReadReceipt] member', member.userId, 'has no lastReadAt, skipping');
+                continue;
+            }
+            console.log('[ReadReceipt] seeding receipt for', member.userId, 'readAt:', member.lastReadAt);
+            setReadReceipt(conversationId, member.userId, member.lastReadAt);
+        }
+    }, [conversation?.members, conversationId, currentUserId, setReadReceipt]);
 
     useEffect(() => {
         if (chatItems.length > 0) {
@@ -715,7 +802,7 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
                 const raw = allMessages.find((m) => m.id === msg.id);
                 return (
                     <SwipeableMessage key={msg.id} onReply={() => { if (raw) setReplyingTo(raw); }}>
-                        <ImageBubble uri={msg.uri} isSentByMe={msg.isSentByMe} senderName={msg.senderName} time={msg.time} isRead={msg.isRead} />
+                        <ImageBubble uri={msg.uri} isSentByMe={msg.isSentByMe} senderName={msg.senderName} time={msg.time} readers={msg.readers} />
                     </SwipeableMessage>
                 );
             }
@@ -728,6 +815,7 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
 
     return (
         <View style={[{ flex: 1 }, style]}>
+    
             {/* Messages */}
             {isLoading ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

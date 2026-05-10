@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+import { ImageModule } from '../image/image.module';
 import { ConversationController } from './conversation.controller';
 import { ConversationService } from './conversation.service';
 
 @Module({
+  imports: [ImageModule],
   controllers: [ConversationController],
   providers: [ConversationService],
   exports: [ConversationService],

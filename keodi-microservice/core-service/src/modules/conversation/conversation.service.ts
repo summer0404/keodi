@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
+import { ImageService } from 'src/modules/image/image.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { ChatErrorMessages } from 'src/shared/constants/error.constant';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
@@ -17,10 +18,22 @@ export class ConversationService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
+    private readonly imageService: ImageService,
   ) {}
 
+  private async resolveUserPictureUrl<T extends { pictureUrl: string | null }>(
+    user: T,
+  ): Promise<T> {
+    if (!user.pictureUrl) return user;
+    return {
+      ...user,
+      pictureUrl: await this.imageService.getImageViewUrl(user.pictureUrl),
+    };
+  }
+
   async create(payload: CreateConversationPayloadDto) {
-    const { type, createdById, memberIds, name, avatarUrl, sessionId } = payload;
+    const { type, createdById, memberIds, name, avatarUrl, sessionId } =
+      payload;
     const allMemberIds = [...new Set([createdById, ...memberIds])];
 
     if (type === ConversationType.DIRECT) {
@@ -72,7 +85,9 @@ export class ConversationService {
       },
       include: { members: true },
     });
-    return conversation && conversation.members.length === 2 ? conversation : null;
+    return conversation && conversation.members.length === 2
+      ? conversation
+      : null;
   }
 
   async getById(payload: GetConversationByIdPayloadDto) {
@@ -124,7 +139,13 @@ export class ConversationService {
         message: ChatErrorMessages.CONVERSATION_NOT_FOUND,
       });
     }
-    return conversation;
+    const resolvedMembers = await Promise.all(
+      conversation.members.map(async (m) => ({
+        ...m,
+        user: await this.resolveUserPictureUrl(m.user),
+      })),
+    );
+    return { ...conversation, members: resolvedMembers };
   }
 
   async list(payload: ListConversationsPayloadDto) {
@@ -185,7 +206,13 @@ export class ConversationService {
             ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
           },
         });
-        return { ...conversation, unreadCount };
+        const resolvedMembers = await Promise.all(
+          conversation.members.map(async (m) => ({
+            ...m,
+            user: await this.resolveUserPictureUrl(m.user),
+          })),
+        );
+        return { ...conversation, members: resolvedMembers, unreadCount };
       }),
     );
 
