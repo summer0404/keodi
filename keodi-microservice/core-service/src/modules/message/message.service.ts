@@ -1,23 +1,23 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
-import { RedisService } from 'src/providers/redis/redis.service';
-import { ChatErrorMessages } from 'src/shared/constants/error.constant';
-import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { ConversationService } from 'src/modules/conversation/conversation.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { RedisService } from 'src/providers/redis/redis.service';
+import { ChatErrorMessages } from 'src/shared/constants/error.constant';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
+import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import {
   DeleteMessagePayloadDto,
   ListMessagesPayloadDto,
   MarkReadPayloadDto,
   SendMessagePayloadDto,
 } from 'src/shared/dtos/chat.dto';
+import { MessageType } from 'src/shared/enums/chat.enum';
 import {
   NotificationPreferredChannel,
   NotificationType,
 } from 'src/shared/enums/notification.enum';
-import { MessageType } from 'src/shared/enums/chat.enum';
 
 @Injectable()
 export class MessageService {
@@ -61,6 +61,19 @@ export class MessageService {
             firstName: true,
             lastName: true,
             pictureUrl: true,
+          },
+        },
+        replyTo: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
           },
         },
       },
@@ -127,7 +140,9 @@ export class MessageService {
           return {
             items: messages,
             nextCursor:
-              messages.length >= limit ? messages[messages.length - 1].id : null,
+              messages.length >= limit
+                ? messages[messages.length - 1].id
+                : null,
           };
         }
         await this.redisService.del(cacheKey);
@@ -147,6 +162,19 @@ export class MessageService {
             firstName: true,
             lastName: true,
             pictureUrl: true,
+          },
+        },
+        replyTo: {
+          include: {
+            sender: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
           },
         },
       },

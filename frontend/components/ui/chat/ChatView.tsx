@@ -1,6 +1,7 @@
 import { authService } from '@/api/auth';
 import { chatService } from '@/api/chat';
 import { useChatSocket } from '@/hooks/useChatSocket';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useChatStore } from '@/store/useChatStore';
 import type { MessageItem } from '@/types/chat';
 import {
@@ -9,10 +10,12 @@ import {
     getSenderDisplayName,
 } from '@/utils/chat';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Plus, Send, Smile, Star } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { CornerUpLeft, Plus, Send, Star, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Image,
     Pressable,
     ScrollView,
@@ -21,17 +24,20 @@ import {
     View,
     ViewStyle,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ─── Stable fallbacks ──────────────────────────────────────────────────────────
 
 const EMPTY_MESSAGES: MessageItem[] = [];
 const EMPTY_USERS: string[] = [];
+const EMPTY_RECEIPTS: { userId: string; readAt: string }[] = [];
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 // ─── Internal render types ─────────────────────────────────────────────────────
 
-type ReceivedMsg = { kind: 'received'; id: string; text: string; senderName?: string; time?: string };
+type ReceivedMsg = { kind: 'received'; id: string; text: string; senderName?: string; time?: string; repliedTo?: { sender: string; text: string } };
 type SentMsg = {
     kind: 'sent';
     id: string;
@@ -40,11 +46,12 @@ type SentMsg = {
     isRead?: boolean;
     repliedTo?: { sender: string; text: string };
 };
+type ImageMsg = { kind: 'image'; id: string; uri: string; isSentByMe: boolean; senderName?: string; time?: string; isRead?: boolean };
 type DateDivider = { kind: 'date'; id: string; label: string };
 type SystemMsg = { kind: 'system'; id: string; text: string };
 type PlaceCard = { kind: 'place'; id: string };
 type TypingMsg = { kind: 'typing'; id: string };
-type ChatMessage = ReceivedMsg | SentMsg | DateDivider | SystemMsg | PlaceCard | TypingMsg;
+type ChatMessage = ReceivedMsg | SentMsg | ImageMsg | DateDivider | SystemMsg | PlaceCard | TypingMsg;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -60,19 +67,33 @@ function canBeGrouped(left: MessageItem | undefined, right: MessageItem | undefi
 function apiMessageToChat(
     msg: MessageItem,
     currentUserId: string,
-    options?: { showSenderName?: boolean; showTime?: boolean },
+    options?: { showSenderName?: boolean; showTime?: boolean; isRead?: boolean },
 ): ChatMessage {
     if (msg.type === 'SYSTEM') {
         return { kind: 'system', id: msg.id, text: msg.content };
     }
 
-    if (msg.senderId === currentUserId) {
+    const isSentByMe = msg.senderId === currentUserId;
+
+    if (msg.type === 'IMAGE') {
+        return {
+            kind: 'image',
+            id: msg.id,
+            uri: msg.content,
+            isSentByMe,
+            senderName: !isSentByMe && options?.showSenderName ? getSenderDisplayName(msg.sender) : undefined,
+            time: options?.showTime ? formatMessageTime(msg.createdAt) : undefined,
+            isRead: options?.isRead ?? false,
+        };
+    }
+
+    if (isSentByMe) {
         return {
             kind: 'sent',
             id: msg.id,
             text: msg.content,
             time: options?.showTime ? formatMessageTime(msg.createdAt) : undefined,
-            isRead: false,
+            isRead: options?.isRead ?? false,
             repliedTo: msg.replyTo
                 ? {
                     sender: getSenderDisplayName(msg.replyTo.sender),
@@ -88,6 +109,12 @@ function apiMessageToChat(
         text: msg.content,
         senderName: options?.showSenderName ? getSenderDisplayName(msg.sender) : undefined,
         time: options?.showTime ? formatMessageTime(msg.createdAt) : undefined,
+        repliedTo: msg.replyTo
+            ? {
+                sender: getSenderDisplayName(msg.replyTo.sender),
+                text: msg.replyTo.content,
+            }
+            : undefined,
     };
 }
 
@@ -95,6 +122,7 @@ function buildChatItems(
     messages: MessageItem[],
     currentUserId: string,
     hasTyping: boolean,
+    otherReadAt: string | null,
 ): ChatMessage[] {
     const items: ChatMessage[] = [];
     let lastDate = '';
@@ -119,6 +147,7 @@ function buildChatItems(
             apiMessageToChat(msg, currentUserId, {
                 showSenderName: !isSentByMe && !groupedWithPrev,
                 showTime: !groupedWithNext,
+                isRead: isSentByMe && otherReadAt !== null && msg.createdAt <= otherReadAt,
             }),
         );
     }
@@ -159,6 +188,54 @@ function SystemMessage({ text }: { text: string }) {
     );
 }
 
+const SWIPE_THRESHOLD = 60;
+
+function SwipeableMessage({ onReply, children }: { onReply: () => void; children: React.ReactNode }) {
+    const translateX = useSharedValue(0);
+
+    const pan = Gesture.Pan()
+        .activeOffsetX(10)
+        .failOffsetY([-10, 10])
+        .onUpdate((e) => {
+            if (e.translationX > 0) {
+                translateX.value = Math.min(e.translationX * 0.55, SWIPE_THRESHOLD + 12);
+            }
+        })
+        .onEnd(() => {
+            if (translateX.value >= SWIPE_THRESHOLD) {
+                runOnJS(onReply)();
+            }
+            translateX.value = withSpring(0, { damping: 20, stiffness: 300 });
+        });
+
+    const msgStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }],
+    }));
+
+    const iconStyle = useAnimatedStyle(() => {
+        const progress = Math.min(translateX.value / SWIPE_THRESHOLD, 1);
+        return {
+            opacity: progress,
+            transform: [{ scale: 0.6 + 0.4 * progress }],
+        };
+    });
+
+    return (
+        <View style={{ position: 'relative' }}>
+            <Animated.View
+                style={[{ position: 'absolute', left: 4, top: 0, bottom: 0, justifyContent: 'center' }, iconStyle]}
+            >
+                <CornerUpLeft size={18} color="#9A9A9A" strokeWidth={2} />
+            </Animated.View>
+            <GestureDetector gesture={pan}>
+                <Animated.View style={msgStyle}>
+                    {children}
+                </Animated.View>
+            </GestureDetector>
+        </View>
+    );
+}
+
 function ReceivedBubble({ msg }: { msg: ReceivedMsg }) {
     return (
         <View style={{ marginBottom: 4 }}>
@@ -168,6 +245,27 @@ function ReceivedBubble({ msg }: { msg: ReceivedMsg }) {
                 >
                     {msg.senderName}
                 </Text>
+            ) : null}
+            {msg.repliedTo ? (
+                <View
+                    style={{
+                        backgroundColor: '#D9D9D9',
+                        borderLeftWidth: 3,
+                        borderLeftColor: '#8A8A8A',
+                        borderRadius: 14,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        maxWidth: '75%',
+                        marginBottom: 2,
+                    }}
+                >
+                    <Text style={{ fontWeight: '600', fontSize: 11, color: '#2E2E2E' }}>
+                        {msg.repliedTo.sender}
+                    </Text>
+                    <Text style={{ fontWeight: '400', fontSize: 12, color: '#555555' }}>
+                        {msg.repliedTo.text}
+                    </Text>
+                </View>
             ) : null}
             <View
                 style={{
@@ -199,19 +297,19 @@ function SentBubble({ msg }: { msg: SentMsg }) {
             {msg.repliedTo ? (
                 <View
                     style={{
-                        backgroundColor: '#1F1F1F',
+                        backgroundColor: '#D9D9D9',
                         borderLeftWidth: 3,
-                        borderLeftColor: '#E63946',
+                        borderLeftColor: '#8A8A8A',
                         borderRadius: 14,
                         paddingHorizontal: 10,
                         paddingVertical: 6,
                         maxWidth: '75%',
                     }}
                 >
-                    <Text style={{ fontWeight: '600', fontSize: 11, color: 'white' }}>
+                    <Text style={{ fontWeight: '600', fontSize: 11, color: '#2E2E2E' }}>
                         {msg.repliedTo.sender}
                     </Text>
-                    <Text style={{ fontWeight: '400', fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                    <Text style={{ fontWeight: '400', fontSize: 12, color: '#555555' }}>
                         {msg.repliedTo.text}
                     </Text>
                 </View>
@@ -369,6 +467,29 @@ function PlaceCardMsg() {
     );
 }
 
+function ImageBubble({ uri, isSentByMe, senderName, time, isRead }: { uri: string; isSentByMe: boolean; senderName?: string; time?: string; isRead?: boolean }) {
+    return (
+        <View style={{ flexDirection: isSentByMe ? 'row-reverse' : 'row', alignItems: 'flex-end', marginVertical: 2, paddingHorizontal: 12, gap: 6 }}>
+            <View style={{ maxWidth: '70%', gap: 2, alignItems: isSentByMe ? 'flex-end' : 'flex-start' }}>
+                {senderName && (
+                    <Text style={{ fontSize: 11, color: '#9ca3af', paddingHorizontal: 4 }}>{senderName}</Text>
+                )}
+                <Image
+                    source={{ uri }}
+                    style={{ width: 200, height: 200, borderRadius: 12 }}
+                    resizeMode="cover"
+                />
+                {(time !== undefined || isRead !== undefined) && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 4 }}>
+                        {time && <Text style={{ fontSize: 10, color: '#9ca3af' }}>{time}</Text>}
+                        {isSentByMe && <Text style={{ fontSize: 11, color: isRead ? '#3b82f6' : '#9ca3af' }}>{isRead ? '✓✓' : '✓'}</Text>}
+                    </View>
+                )}
+            </View>
+        </View>
+    );
+}
+
 function TypingIndicator({ initials, color }: { initials: string; color: string }) {
     return (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 4 }}>
@@ -422,6 +543,11 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
     const scrollRef = useRef<ScrollView>(null);
     const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [inputText, setInputText] = useState('');
+    const [replyingTo, setReplyingTo] = useState<MessageItem | null>(null);
+
+    // Always reflects the currently logged-in user — avoids stale react-query cache
+    // causing sent messages to appear on the wrong side after account switching.
+    const currentUserId = useAuthStore((s) => s.me?.id ?? '');
 
     const { data: me } = useQuery({
         queryKey: ['me'],
@@ -444,6 +570,17 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
 
     const socketMessages = useChatStore((s) => s.messages[conversationId]) ?? EMPTY_MESSAGES;
     const typingUsers = useChatStore((s) => s.typingUsers[conversationId]) ?? EMPTY_USERS;
+    const readReceipts = useChatStore((s) => s.readReceipts[conversationId]) ?? EMPTY_RECEIPTS;
+    const addMessage = useChatStore((s) => s.addMessage);
+    const removeMessage = useChatStore((s) => s.removeMessage);
+    const replaceMessage = useChatStore((s) => s.replaceMessage);
+
+    // Latest readAt from anyone who is not the current user
+    const otherReadAt = useMemo(() => {
+        const others = readReceipts.filter((r) => r.userId !== currentUserId);
+        if (others.length === 0) return null;
+        return others.reduce((max, r) => (r.readAt > max ? r.readAt : max), others[0]!.readAt);
+    }, [readReceipts, currentUserId]);
 
     // Merge history + real-time, deduplicating by id
     const allMessages = useMemo(() => {
@@ -453,8 +590,8 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
     }, [historyMessages, socketMessages]);
 
     const chatItems = useMemo(
-        () => buildChatItems(allMessages, me?.id ?? '', typingUsers.length > 0),
-        [allMessages, me?.id, typingUsers.length],
+        () => buildChatItems(allMessages, currentUserId, typingUsers.length > 0, otherReadAt),
+        [allMessages, currentUserId, typingUsers.length, otherReadAt],
     );
 
     const { sendMessage, startTyping, stopTyping, markRead } = useChatSocket(conversationId);
@@ -493,11 +630,58 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
     const handleSend = useCallback(() => {
         const text = inputText.trim();
         if (!text) return;
-        sendMessage(text);
+        sendMessage(text, replyingTo?.id);
         setInputText('');
+        setReplyingTo(null);
         stopTyping();
         if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    }, [inputText, sendMessage, stopTyping]);
+    }, [inputText, sendMessage, stopTyping, replyingTo]);
+
+    const handlePickImage = useCallback(async () => {
+        if (!conversationId) return;
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) return;
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.5,
+            base64: true,
+        });
+
+        if (result.canceled || !result.assets[0]) return;
+
+        const asset = result.assets[0];
+
+        // Show the image immediately using the local file URI (no network needed)
+        const tempId = `temp-img-${Date.now()}`;
+        const tempMessage: MessageItem = {
+            id: tempId,
+            conversationId,
+            senderId: currentUserId,
+            content: asset.uri,
+            type: 'IMAGE',
+            replyToId: null,
+            replyTo: null,
+            isDeleted: false,
+            createdAt: new Date().toISOString(),
+            sender: null,
+        };
+        addMessage(conversationId, tempMessage);
+
+        if (!asset.base64) return;
+        const mimeType = asset.mimeType ?? 'image/jpeg';
+        const content = `data:${mimeType};base64,${asset.base64}`;
+
+        try {
+            const sent = await chatService.sendMessage(conversationId, { content, type: 'IMAGE' });
+            // Atomically swap the temp entry for the real server message (no flash gap).
+            // If the WebSocket message.ack already arrived, replaceMessage handles dedup.
+            replaceMessage(conversationId, tempId, sent);
+        } catch {
+            removeMessage(conversationId, tempId);
+            Alert.alert('Lỗi', 'Không thể gửi ảnh. Vui lòng thử lại.');
+        }
+    }, [conversationId, addMessage, removeMessage, replaceMessage, currentUserId]);
 
     const renderMessage = (msg: ChatMessage) => {
         switch (msg.kind) {
@@ -511,10 +695,30 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
                         <PlaceCardMsg />
                     </View>
                 );
-            case 'received':
-                return <ReceivedBubble key={msg.id} msg={msg} />;
-            case 'sent':
-                return <SentBubble key={msg.id} msg={msg} />;
+            case 'received': {
+                const raw = allMessages.find((m) => m.id === msg.id);
+                return (
+                    <SwipeableMessage key={msg.id} onReply={() => { if (raw) setReplyingTo(raw); }}>
+                        <ReceivedBubble msg={msg} />
+                    </SwipeableMessage>
+                );
+            }
+            case 'sent': {
+                const raw = allMessages.find((m) => m.id === msg.id);
+                return (
+                    <SwipeableMessage key={msg.id} onReply={() => { if (raw) setReplyingTo(raw); }}>
+                        <SentBubble msg={msg} />
+                    </SwipeableMessage>
+                );
+            }
+            case 'image': {
+                const raw = allMessages.find((m) => m.id === msg.id);
+                return (
+                    <SwipeableMessage key={msg.id} onReply={() => { if (raw) setReplyingTo(raw); }}>
+                        <ImageBubble uri={msg.uri} isSentByMe={msg.isSentByMe} senderName={msg.senderName} time={msg.time} isRead={msg.isRead} />
+                    </SwipeableMessage>
+                );
+            }
             case 'typing':
                 return <TypingIndicator key={msg.id} initials={initials} color={color} />;
             default:
@@ -541,6 +745,36 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
                 </ScrollView>
             )}
 
+            {/* Reply preview banner */}
+            {replyingTo ? (
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: '#D9D9D9',
+                        borderTopWidth: 1,
+                        borderTopColor: '#C8C8C8',
+                        borderLeftWidth: 3,
+                        borderLeftColor: '#8A8A8A',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        gap: 8,
+                    }}
+                >
+                    <View style={{ flex: 1 }}>
+                        <Text style={{ fontWeight: '600', fontSize: 11, color: '#0E0E0E' }}>
+                            {getSenderDisplayName(replyingTo.sender)}
+                        </Text>
+                        <Text style={{ fontWeight: '400', fontSize: 12, color: '#5C5C5C' }} numberOfLines={1}>
+                            {replyingTo.type === 'IMAGE' ? '📷 Ảnh' : replyingTo.content}
+                        </Text>
+                    </View>
+                    <Pressable onPress={() => setReplyingTo(null)} hitSlop={8}>
+                        <X size={16} color="#9A9A9A" strokeWidth={2} />
+                    </Pressable>
+                </View>
+            ) : null}
+
             {/* Input bar */}
             <View
                 style={{
@@ -556,6 +790,7 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
                 }}
             >
                 <Pressable
+                    onPress={handlePickImage}
                     style={{
                         width: 36,
                         height: 36,
@@ -588,21 +823,7 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
                         onChangeText={handleChangeText}
                         multiline
                     />
-                    <Smile size={18} color="#9A9A9A" strokeWidth={2} />
                 </View>
-
-                <Pressable
-                    style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: '#F4F4F4',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <MapPin size={18} color="#0E0E0E" strokeWidth={2} />
-                </Pressable>
 
                 <Pressable
                     onPress={handleSend}

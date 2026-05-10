@@ -68,12 +68,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId,
       });
     } catch {
-      client.emit('chat.error', { message: 'Conversation not found or not a member' });
+      client.emit('chat.error', {
+        message: 'Conversation not found or not a member',
+      });
       return;
     }
 
     await client.join(`conversation:${payload.conversationId}`);
-    this.logger.log(`User ${userId} joined conversation:${payload.conversationId}`);
+    this.logger.log(
+      `User ${userId} joined conversation:${payload.conversationId}`,
+    );
   }
 
   @SubscribeMessage('chat.leave')
@@ -81,13 +85,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data?.userId;
     if (!userId || !payload?.conversationId) return;
     await client.leave(`conversation:${payload.conversationId}`);
-    this.logger.log(`User ${userId} left conversation:${payload.conversationId}`);
+    this.logger.log(
+      `User ${userId} left conversation:${payload.conversationId}`,
+    );
   }
 
   @SubscribeMessage('chat.send')
   async handleSend(
     client: Socket,
-    payload: { conversationId: string; content: string; type?: string; replyToId?: string },
+    payload: {
+      conversationId: string;
+      content: string;
+      type?: string;
+      replyToId?: string;
+    },
   ) {
     const userId = client.data?.userId;
     if (!userId || !payload?.conversationId) return;
@@ -98,16 +109,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const message = await this.kafkaService.sendWithTimeout(MessageTopics.Send, {
-        conversationId: payload.conversationId,
-        senderId: userId,
-        content: payload.content,
-        type: payload.type,
-        replyToId: payload.replyToId,
-      });
+      const message = await this.kafkaService.sendWithTimeout(
+        MessageTopics.Send,
+        {
+          conversationId: payload.conversationId,
+          senderId: userId,
+          content: payload.content,
+          type: payload.type,
+          replyToId: payload.replyToId,
+        },
+      );
       client.emit('message.ack', message);
     } catch (e) {
-      client.emit('chat.error', { message: e.message ?? 'Failed to send message' });
+      client.emit('chat.error', {
+        message: e.message ?? 'Failed to send message',
+      });
     }
   }
 
@@ -120,6 +136,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.kafkaService.sendWithTimeout(MessageTopics.MarkRead, {
         conversationId: payload.conversationId,
         userId,
+      });
+      client.to(`conversation:${payload.conversationId}`).emit('message.read', {
+        userId,
+        conversationId: payload.conversationId,
+        readAt: new Date().toISOString(),
       });
     } catch {}
   }
