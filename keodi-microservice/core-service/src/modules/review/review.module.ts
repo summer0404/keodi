@@ -7,6 +7,6 @@ import { PlaceModule } from '../place/place.module';
   imports: [PlaceModule],
   controllers: [ReviewController],
   providers: [ReviewService],
-  exports: [ReviewService]
+  exports: [ReviewService],
 })
 export class ReviewModule {}

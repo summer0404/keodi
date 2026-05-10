@@ -8,6 +8,7 @@ export enum NotificationType {
   NEARBY_PLACE = 'NEARBY_PLACE',
   RECOMMENDATION = 'RECOMMENDATION',
   REVIEW_LOW_RATING = 'REVIEW_LOW_RATING',
+  CHAT_MESSAGE = 'CHAT_MESSAGE',
 }
 
 export enum NotificationPreferredChannel {

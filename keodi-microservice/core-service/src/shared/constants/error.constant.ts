@@ -71,3 +71,12 @@ export const ImageErrorMessages = {
   invalidFileType: (allowedMimeTypes: string[]) =>
     `Invalid file type. Only ${allowedMimeTypes.join(', ')} are allowed`,
 } as const;
+
+export const ChatErrorMessages = {
+  DIRECT_CONVERSATION_REQUIRES_EXACTLY_TWO_MEMBERS:
+    'DIRECT_CONVERSATION_REQUIRES_EXACTLY_TWO_MEMBERS',
+  CONVERSATION_NOT_FOUND: 'CONVERSATION_NOT_FOUND',
+  CONVERSATION_NOT_FOUND_OR_NOT_GROUP: 'CONVERSATION_NOT_FOUND_OR_NOT_GROUP',
+  NOT_A_MEMBER: 'NOT_A_MEMBER',
+  MESSAGE_NOT_FOUND: 'MESSAGE_NOT_FOUND',
+} as const;

@@ -16,7 +16,7 @@ import { ReviewTopics } from 'src/shared/constants/topic.constant';
 
 @Controller()
 export class ReviewController {
-  constructor(private readonly reviewService: ReviewService) { }
+  constructor(private readonly reviewService: ReviewService) {}
 
   @MessagePattern(ReviewTopics.Create)
   async create(@Payload() data: CreateReviewDto) {

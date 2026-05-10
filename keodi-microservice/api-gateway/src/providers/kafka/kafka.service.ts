@@ -6,10 +6,13 @@ import {
   AttributeTopics,
   AuthTopics,
   CategoryTopics,
+  ConversationTopics,
   FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
   IntelligenceTopics,
+  MemberTopics,
+  MessageTopics,
   NotificationInboxTopics,
   OwnerApplicationTopics,
   OwnershipClaimTopics,
@@ -166,6 +169,18 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(
       NotificationInboxTopics.GetUnreadCount,
     );
+
+    // chat topics
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.Create);
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.GetById);
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.List);
+    this.kafkaClient.subscribeToResponseOf(ConversationTopics.Update);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.Send);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.List);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.Delete);
+    this.kafkaClient.subscribeToResponseOf(MessageTopics.MarkRead);
+    this.kafkaClient.subscribeToResponseOf(MemberTopics.Add);
+    this.kafkaClient.subscribeToResponseOf(MemberTopics.Leave);
 
     await this.kafkaClient.connect();
   }

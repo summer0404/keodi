@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { API_ENDPOINTS } from '@/constants/api';
 import { router } from 'expo-router';
 
-const resolveApiBaseUrl = () => {
+export const resolveApiBaseUrl = () => {
   const configuredBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 
   if (configuredBaseUrl) {
@@ -18,7 +18,7 @@ const resolveApiBaseUrl = () => {
   return 'http://localhost:3000';
 };
 
-const API_BASE_URL = resolveApiBaseUrl();
+export const API_BASE_URL = resolveApiBaseUrl();
 
 const AUTH_BYPASS_REFRESH_ENDPOINTS = [
   API_ENDPOINTS.LOGIN,
@@ -45,6 +45,7 @@ const isRefreshBypassedRequest = (url?: string) => {
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -108,21 +109,15 @@ apiClient.interceptors.response.use(
     originalRequest._retry = true;
     isRefreshing = true;
 
-    const { refreshToken, clearTokens, setTokens } = useAuthStore.getState();
-
-    if (!refreshToken) {
-      isRefreshing = false;
-      await clearTokens();
-      router.replace('/login');
-      return Promise.reject(error);
-    }
+    const { clearTokens, setTokens } = useAuthStore.getState();
 
     try {
-      const { data } = await apiClient.post(API_ENDPOINTS.REFRESH, {
-        refreshToken,
-      });
+      // Call refresh endpoint without sending refresh token in body.
+      // Backend is expected to read httpOnly cookie and return a new access token.
+      const { data } = await apiClient.post(API_ENDPOINTS.REFRESH);
 
-      await setTokens(data.accessToken, data.refreshToken);
+      // Update access token in frontend state. Do not store refresh token client-side.
+      await setTokens(data.accessToken, data.refreshToken ?? '');
       processQueue(null, data.accessToken);
 
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;

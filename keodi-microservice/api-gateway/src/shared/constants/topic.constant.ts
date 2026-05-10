@@ -151,6 +151,7 @@ export const NotificationTopics = {
   Dispatch: 'notification.dispatch',
   PersistInbox: 'notification.persist-inbox',
   RealtimePush: 'notification.realtime.push',
+  ChatRealtimePush: 'notification.realtime.chat',
 } as const;
 
 export const NotificationInboxTopics = {
@@ -164,4 +165,23 @@ export const DeviceTokenTopics = {
   GetActiveTokens: 'device-token.get-active',
   UpsertToken: 'device-token.upsert',
   DeactivateToken: 'device-token.deactivate',
+} as const;
+
+export const ConversationTopics = {
+  Create: 'conversation.create',
+  GetById: 'conversation.get-by-id',
+  List: 'conversation.list',
+  Update: 'conversation.update',
+} as const;
+
+export const MessageTopics = {
+  Send: 'message.send',
+  List: 'message.list',
+  Delete: 'message.delete',
+  MarkRead: 'message.mark-read',
+} as const;
+
+export const MemberTopics = {
+  Add: 'member.add',
+  Leave: 'member.leave',
 } as const;

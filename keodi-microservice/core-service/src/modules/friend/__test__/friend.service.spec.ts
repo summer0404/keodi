@@ -5,6 +5,7 @@ import { FriendService } from '../friend.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ImageService } from 'src/modules/image/image.service';
+import { ConversationService } from 'src/modules/conversation/conversation.service';
 import { FriendRequestStatus } from '@prisma/client';
 import { FriendSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 
@@ -36,7 +37,13 @@ const mockKafkaService = {
 };
 
 const mockImageService = {
-  getImageViewUrl: jest.fn().mockResolvedValue('https://cdn.example.com/pic.jpg'),
+  getImageViewUrl: jest
+    .fn()
+    .mockResolvedValue('https://cdn.example.com/pic.jpg'),
+};
+
+const mockConversationService = {
+  create: jest.fn(),
 };
 
 describe('FriendService', () => {
@@ -52,6 +59,7 @@ describe('FriendService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: KafkaService, useValue: mockKafkaService },
         { provide: ImageService, useValue: mockImageService },
+        { provide: ConversationService, useValue: mockConversationService },
       ],
     }).compile();
 
@@ -67,33 +75,46 @@ describe('FriendService', () => {
   // ──────────────────────────────────────────────
   describe('sendRequest', () => {
     it('throws BAD_REQUEST when sender === receiver', async () => {
-      await expect(service.sendRequest('u1', 'u1')).rejects.toThrow(RpcException);
+      await expect(service.sendRequest('u1', 'u1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws NOT_FOUND when receiver does not exist', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(RpcException);
+      await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws CONFLICT when already friends', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u2' });
-      mockPrismaService.friendship.findUnique.mockResolvedValue({ userId: 'u1', friendId: 'u2' });
+      mockPrismaService.friendship.findUnique.mockResolvedValue({
+        userId: 'u1',
+        friendId: 'u2',
+      });
 
-      await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(RpcException);
+      await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws CONFLICT when pending request already exists', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u2' });
       mockPrismaService.friendship.findUnique.mockResolvedValue(null);
-      mockPrismaService.friendRequest.findFirst.mockResolvedValue({ id: 'req-1' });
+      mockPrismaService.friendRequest.findFirst.mockResolvedValue({
+        id: 'req-1',
+      });
 
-      await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(RpcException);
+      await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('creates friend request and emits notification on happy path', async () => {
       mockPrismaService.user.findUnique
-        .mockResolvedValueOnce({ id: 'u2' })              // receiver
+        .mockResolvedValueOnce({ id: 'u2' }) // receiver
         .mockResolvedValueOnce({ firstName: 'John', lastName: 'Doe' }); // sender info
       mockPrismaService.friendship.findUnique.mockResolvedValue(null);
       mockPrismaService.friendRequest.findFirst.mockResolvedValue(null);
@@ -115,34 +136,57 @@ describe('FriendService', () => {
     it('throws NOT_FOUND when request does not exist', async () => {
       mockPrismaService.friendRequest.findUnique.mockResolvedValue(null);
 
-      await expect(service.acceptRequest('u1', 'req-1')).rejects.toThrow(RpcException);
+      await expect(service.acceptRequest('u1', 'req-1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws FORBIDDEN when user is not the receiver', async () => {
-      mockPrismaService.friendRequest.findUnique.mockResolvedValue({ id: 'req-1', receiverId: 'u2', status: FriendRequestStatus.PENDING });
+      mockPrismaService.friendRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        receiverId: 'u2',
+        status: FriendRequestStatus.PENDING,
+      });
 
-      await expect(service.acceptRequest('u1', 'req-1')).rejects.toThrow(RpcException);
+      await expect(service.acceptRequest('u1', 'req-1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws BAD_REQUEST when request is no longer PENDING', async () => {
-      mockPrismaService.friendRequest.findUnique.mockResolvedValue({ id: 'req-1', receiverId: 'u1', status: FriendRequestStatus.ACCEPTED });
+      mockPrismaService.friendRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        receiverId: 'u1',
+        status: FriendRequestStatus.ACCEPTED,
+      });
 
-      await expect(service.acceptRequest('u1', 'req-1')).rejects.toThrow(RpcException);
+      await expect(service.acceptRequest('u1', 'req-1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('creates friendship and emits notification on happy path', async () => {
-      const request = { id: 'req-1', receiverId: 'u1', senderId: 'u2', status: FriendRequestStatus.PENDING };
+      const request = {
+        id: 'req-1',
+        receiverId: 'u1',
+        senderId: 'u2',
+        status: FriendRequestStatus.PENDING,
+      };
       mockPrismaService.friendRequest.findUnique.mockResolvedValue(request);
       mockPrismaService.$transaction.mockImplementation(async (fn: any) => {
         const tx = {
           friendRequest: { update: jest.fn().mockResolvedValue({}) },
           friendship: { createMany: jest.fn().mockResolvedValue({}) },
-          user: { findUnique: jest.fn().mockResolvedValue({ firstName: 'Jane', lastName: 'Doe' }) },
+          user: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValue({ firstName: 'Jane', lastName: 'Doe' }),
+          },
         };
         return fn(tx);
       });
 
-      const result = await service.acceptRequest('u1', 'req-1') as any;
+      const result = (await service.acceptRequest('u1', 'req-1')) as any;
 
       expect(result.success).toBe(true);
     });
@@ -155,21 +199,33 @@ describe('FriendService', () => {
     it('throws NOT_FOUND when request does not exist', async () => {
       mockPrismaService.friendRequest.findUnique.mockResolvedValue(null);
 
-      await expect(service.rejectRequest('u1', 'req-1')).rejects.toThrow(RpcException);
+      await expect(service.rejectRequest('u1', 'req-1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws FORBIDDEN when user is not the receiver', async () => {
-      mockPrismaService.friendRequest.findUnique.mockResolvedValue({ id: 'req-1', receiverId: 'u2', status: FriendRequestStatus.PENDING });
+      mockPrismaService.friendRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        receiverId: 'u2',
+        status: FriendRequestStatus.PENDING,
+      });
 
-      await expect(service.rejectRequest('u1', 'req-1')).rejects.toThrow(RpcException);
+      await expect(service.rejectRequest('u1', 'req-1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('rejects request on happy path', async () => {
-      const request = { id: 'req-1', receiverId: 'u1', status: FriendRequestStatus.PENDING };
+      const request = {
+        id: 'req-1',
+        receiverId: 'u1',
+        status: FriendRequestStatus.PENDING,
+      };
       mockPrismaService.friendRequest.findUnique.mockResolvedValue(request);
       mockPrismaService.friendRequest.update.mockResolvedValue({});
 
-      const result = await service.rejectRequest('u1', 'req-1') as any;
+      const result = (await service.rejectRequest('u1', 'req-1')) as any;
 
       expect(mockPrismaService.friendRequest.update).toHaveBeenCalled();
       expect(result.success).toBe(true);
@@ -183,14 +239,19 @@ describe('FriendService', () => {
     it('throws NOT_FOUND when friendship does not exist', async () => {
       mockPrismaService.friendship.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeFriend('u1', 'u2')).rejects.toThrow(RpcException);
+      await expect(service.removeFriend('u1', 'u2')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('removes both friendship records on happy path', async () => {
-      mockPrismaService.friendship.findUnique.mockResolvedValue({ userId: 'u1', friendId: 'u2' });
+      mockPrismaService.friendship.findUnique.mockResolvedValue({
+        userId: 'u1',
+        friendId: 'u2',
+      });
       mockPrismaService.friendship.deleteMany.mockResolvedValue({ count: 2 });
 
-      const result = await service.removeFriend('u1', 'u2') as any;
+      const result = (await service.removeFriend('u1', 'u2')) as any;
 
       expect(mockPrismaService.friendship.deleteMany).toHaveBeenCalled();
       expect(result.success).toBe(true);
@@ -204,20 +265,32 @@ describe('FriendService', () => {
     it('throws NOT_FOUND when request does not exist', async () => {
       mockPrismaService.friendRequest.findUnique.mockResolvedValue(null);
 
-      await expect(service.cancelRequest('u1', 'req-1')).rejects.toThrow(RpcException);
+      await expect(service.cancelRequest('u1', 'req-1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws FORBIDDEN when user is not the sender', async () => {
-      mockPrismaService.friendRequest.findUnique.mockResolvedValue({ id: 'req-1', senderId: 'u2', status: FriendRequestStatus.PENDING });
+      mockPrismaService.friendRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        senderId: 'u2',
+        status: FriendRequestStatus.PENDING,
+      });
 
-      await expect(service.cancelRequest('u1', 'req-1')).rejects.toThrow(RpcException);
+      await expect(service.cancelRequest('u1', 'req-1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('deletes request on happy path', async () => {
-      mockPrismaService.friendRequest.findUnique.mockResolvedValue({ id: 'req-1', senderId: 'u1', status: FriendRequestStatus.PENDING });
+      mockPrismaService.friendRequest.findUnique.mockResolvedValue({
+        id: 'req-1',
+        senderId: 'u1',
+        status: FriendRequestStatus.PENDING,
+      });
       mockPrismaService.friendRequest.delete.mockResolvedValue({});
 
-      const result = await service.cancelRequest('u1', 'req-1') as any;
+      const result = (await service.cancelRequest('u1', 'req-1')) as any;
 
       expect(mockPrismaService.friendRequest.delete).toHaveBeenCalled();
       expect(result.success).toBe(true);
@@ -233,7 +306,13 @@ describe('FriendService', () => {
       mockPrismaService.friendship.findMany.mockResolvedValue([friendship]);
       mockPrismaService.friendship.count.mockResolvedValue(1);
 
-      const result = await service.getFriends({ userId: 'u1', page: 1, limit: 10, sortBy: FriendSortBy.NAME, sortOrder: SortOrder.ASC } as any) as any;
+      const result = (await service.getFriends({
+        userId: 'u1',
+        page: 1,
+        limit: 10,
+        sortBy: FriendSortBy.NAME,
+        sortOrder: SortOrder.ASC,
+      } as any)) as any;
 
       expect(result.friends).toHaveLength(1);
       expect(result.total).toBe(1);

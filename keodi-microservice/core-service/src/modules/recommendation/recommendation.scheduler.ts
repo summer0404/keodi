@@ -14,7 +14,9 @@ export class RecommendationScheduler {
 
   @Cron('*/5 * * * *')
   async updateTrendingForRedis() {
-    this.logger.log('Running recommendation scheduler to update trending data in Redis...');
+    this.logger.log(
+      'Running recommendation scheduler to update trending data in Redis...',
+    );
     const trendingSearches = await this.searchService.getTrending();
     await this.searchService.updateTrendingForRedis(trendingSearches);
 
@@ -30,10 +32,9 @@ export class RecommendationScheduler {
   // @Cron('*/1 * * * *') // For testing, run every minute
   @Cron('0 3 * * 0', { disabled: true })
   async trainRankingModel() {
-    this.logger.log('Running recommendation scheduler to train ranking model...');
-    return this.recommendationService.trainRankingModel()
+    this.logger.log(
+      'Running recommendation scheduler to train ranking model...',
+    );
+    return this.recommendationService.trainRankingModel();
   }
 }
-
-
-

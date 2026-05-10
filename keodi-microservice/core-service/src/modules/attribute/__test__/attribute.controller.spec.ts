@@ -13,7 +13,9 @@ describe('AttributeController', () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AttributeController],
-      providers: [{ provide: AttributeService, useValue: mockAttributeService }],
+      providers: [
+        { provide: AttributeService, useValue: mockAttributeService },
+      ],
     }).compile();
 
     controller = module.get<AttributeController>(AttributeController);
@@ -26,7 +28,9 @@ describe('AttributeController', () => {
   describe('create', () => {
     it('delegates to service.create with DTO', async () => {
       const dto = { name: ['wifi', 'parking'] } as any;
-      mockAttributeService.create.mockResolvedValue({ message: 'Attributes created successfully' });
+      mockAttributeService.create.mockResolvedValue({
+        message: 'Attributes created successfully',
+      });
 
       const result = await controller.create(dto);
 

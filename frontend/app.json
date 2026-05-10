@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.keodi.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "supportsTablet": true,
       "icon": "./assets/images/icon.png",
@@ -19,6 +20,7 @@
     },
     "android": {
       "package": "com.keodi.app",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "icon": "./assets/images/icon-new.png",
       "adaptiveIcon": {
@@ -36,6 +38,7 @@
     },
     "plugins": [
       "expo-router",
+      "@rnmapbox/maps/app.plugin.js",
       [
         "expo-splash-screen",
         {

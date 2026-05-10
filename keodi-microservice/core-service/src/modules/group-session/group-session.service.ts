@@ -32,6 +32,8 @@ import {
 } from 'src/shared/dtos/group-session.dto';
 import { ActivityActor } from 'src/shared/interfaces/group-session.interface';
 import { ImageService } from '../image/image.service';
+import { ConversationService } from '../conversation/conversation.service';
+import { ConversationType } from 'src/shared/enums/chat.enum';
 import { GroupSessionHelper } from './group-session.helper';
 
 @Injectable()
@@ -44,6 +46,7 @@ export class GroupSessionService {
     private readonly groupSessionHelper: GroupSessionHelper,
     private readonly kafkaService: KafkaService,
     private readonly imageService: ImageService,
+    private readonly conversationService: ConversationService,
   ) {}
 
   private async logActivity(
@@ -58,7 +61,8 @@ export class GroupSessionService {
 
       if (!actorName && actor?.user) {
         actorName =
-          `${actor.user.lastName ?? ''} ${actor.user.firstName ?? ''}`.trim() || null;
+          `${actor.user.lastName ?? ''} ${actor.user.firstName ?? ''}`.trim() ||
+          null;
       }
 
       if (!actorName && actorId) {
@@ -77,7 +81,9 @@ export class GroupSessionService {
           type,
           actorId,
           actorName,
-          metadata: metadata ? (metadata as Prisma.InputJsonValue) : Prisma.JsonNull,
+          metadata: metadata
+            ? (metadata as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         },
       });
     } catch (err) {
@@ -364,6 +370,14 @@ export class GroupSessionService {
         });
       }
 
+      // Create group conversation tied to this session (idempotent)
+      await this.conversationService.create({
+        type: ConversationType.GROUP,
+        createdById: userId,
+        memberIds: [],
+        sessionId: session.sessionId,
+      });
+
       return session;
     } catch (error) {
       handleServiceErrorCatching(error);
@@ -463,7 +477,6 @@ export class GroupSessionService {
         }
       }
 
-      // Guest must provide a nickname
       if (!userId && !existingGuestId && !nickname) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
@@ -471,7 +484,6 @@ export class GroupSessionService {
         });
       }
 
-      // Check if returning guest
       if (!userId && existingGuestId) {
         const existingMember = session.members.find(
           (m) => m.guestId === existingGuestId,
@@ -515,6 +527,23 @@ export class GroupSessionService {
 
       const memberWithPictureUrl = await this.mapMemberPictureUrl(member);
 
+      // Add authenticated user to the session's group conversation
+      if (userId) {
+        const conv = await this.prismaService.conversation.findFirst({
+          where: { sessionId: session.sessionId },
+          select: { id: true },
+        });
+        if (conv) {
+          await this.prismaService.conversationMember.upsert({
+            where: {
+              conversationId_userId: { conversationId: conv.id, userId },
+            },
+            create: { conversationId: conv.id, userId },
+            update: {},
+          });
+        }
+      }
+
       void this.notifySessionMembers(
         session.sessionId,
         'session.member_joined',
@@ -524,7 +553,12 @@ export class GroupSessionService {
         },
       );
 
-      void this.logActivity(session.sessionId, GroupSessionActivityType.MEMBER_JOINED, member, { isGuest: !member.userId });
+      void this.logActivity(
+        session.sessionId,
+        GroupSessionActivityType.MEMBER_JOINED,
+        member,
+        { isGuest: !member.userId },
+      );
 
       return {
         sessionId: session.sessionId,
@@ -675,7 +709,12 @@ export class GroupSessionService {
         sessionId,
       });
 
-      void this.logActivity(sessionId, GroupSessionActivityType.SESSION_CLOSED, { userId }, null);
+      void this.logActivity(
+        sessionId,
+        GroupSessionActivityType.SESSION_CLOSED,
+        { userId },
+        null,
+      );
 
       return updatedSession;
     } catch (error) {
@@ -717,7 +756,6 @@ export class GroupSessionService {
         });
       }
 
-      // Resolve member: by userId for authenticated users, by guestId for guests
       const member = await this.prismaService.groupSessionMember.findFirst({
         where: userId ? { userId, sessionId } : { guestId, sessionId },
       });
@@ -784,7 +822,6 @@ export class GroupSessionService {
 
       const memberWithPictureUrl = await this.mapMemberPictureUrl(vote.member);
 
-      // Notify all session members about the new/updated vote in real time
       void this.notifySessionMembers(sessionId, 'vote.cast', {
         sessionId,
         vote: {
@@ -974,7 +1011,10 @@ export class GroupSessionService {
         sessionId,
         GroupSessionActivityType.VOTE_FINALIZED,
         member,
-        { placeId: updatedVote.placeId, placeName: updatedVote.place?.name ?? null },
+        {
+          placeId: updatedVote.placeId,
+          placeName: updatedVote.place?.name ?? null,
+        },
       );
 
       return {
@@ -1655,7 +1695,12 @@ export class GroupSessionService {
         userId: member.userId,
       });
 
-      void this.logActivity(sessionId, GroupSessionActivityType.MEMBER_LEFT, member, { isGuest: !member.userId });
+      void this.logActivity(
+        sessionId,
+        GroupSessionActivityType.MEMBER_LEFT,
+        member,
+        { isGuest: !member.userId },
+      );
 
       return { sessionId, memberId: member.id };
     } catch (error) {
@@ -1743,7 +1788,8 @@ export class GroupSessionService {
       }
 
       const isMember = userId
-        ? session.members.some((m) => m.userId === userId) || session.createdBy === userId
+        ? session.members.some((m) => m.userId === userId) ||
+          session.createdBy === userId
         : session.members.some((m) => m.guestId === guestId);
 
       if (!isMember) {
@@ -1753,10 +1799,12 @@ export class GroupSessionService {
         });
       }
 
-      const activities = await this.prismaService.groupSessionActivity.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: 'desc' },
-      });
+      const activities = await this.prismaService.groupSessionActivity.findMany(
+        {
+          where: { sessionId },
+          orderBy: { createdAt: 'desc' },
+        },
+      );
 
       return { activities };
     } catch (error) {
@@ -1766,6 +1814,11 @@ export class GroupSessionService {
 
   async logRecommendationsRefreshed(dto: LogRecommendationsRefreshedDto) {
     const { sessionId, userId } = dto;
-    void this.logActivity(sessionId, GroupSessionActivityType.RECOMMENDATIONS_REFRESHED, { userId: userId ?? null }, null);
+    void this.logActivity(
+      sessionId,
+      GroupSessionActivityType.RECOMMENDATIONS_REFRESHED,
+      { userId: userId ?? null },
+      null,
+    );
   }
 }

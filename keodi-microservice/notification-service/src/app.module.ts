@@ -13,7 +13,7 @@ import { DeviceTokenModule } from './modules/device-token/device-token.module';
     NotificationModule,
     NotificationInboxModule,
     DeviceTokenModule,
-    PrismaModule
+    PrismaModule,
   ],
 })
 export class AppModule {}

@@ -29,6 +29,10 @@ export class RedisService implements OnModuleDestroy {
     return (await this.redis.exists(key)) === 1;
   }
 
+  async setEx(key: string, value: string, ttlSeconds: number): Promise<void> {
+    await this.redis.set(key, value, 'EX', ttlSeconds);
+  }
+
   async onModuleDestroy() {
     await this.redis.quit();
   }

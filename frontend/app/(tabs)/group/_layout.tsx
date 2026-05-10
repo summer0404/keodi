@@ -6,6 +6,10 @@ export default function GroupLayout() {
       screenOptions={{
         headerShown: false,
       }}
-    />
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
+      <Stack.Screen name="create" />
+    </Stack>
   );
 }

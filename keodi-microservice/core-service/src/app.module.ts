@@ -18,6 +18,9 @@ import { SettingModule } from './modules/setting/setting.module';
 import { NotificationPushModule } from './modules/notification-push/notification-push.module';
 import { OwnerApplicationModule } from './modules/owner-application/owner-application.module';
 import { OwnershipClaimModule } from './modules/ownership-claim/ownership-claim.module';
+import { ConversationModule } from './modules/conversation/conversation.module';
+import { MessageModule } from './modules/message/message.module';
+import { MemberModule } from './modules/member/member.module';
 
 @Module({
   imports: [
@@ -40,6 +43,9 @@ import { OwnershipClaimModule } from './modules/ownership-claim/ownership-claim.
     NotificationPushModule,
     OwnerApplicationModule,
     OwnershipClaimModule,
+    ConversationModule,
+    MessageModule,
+    MemberModule,
   ],
   controllers: [],
   providers: [],

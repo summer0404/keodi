@@ -17,7 +17,9 @@ describe('OwnershipClaimController', () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [OwnershipClaimController],
-      providers: [{ provide: OwnershipClaimService, useValue: mockOwnershipClaimService }],
+      providers: [
+        { provide: OwnershipClaimService, useValue: mockOwnershipClaimService },
+      ],
     }).compile();
 
     controller = module.get<OwnershipClaimController>(OwnershipClaimController);
@@ -37,7 +39,9 @@ describe('OwnershipClaimController', () => {
   });
 
   it('approve – delegates to service.approve with claimId', async () => {
-    mockOwnershipClaimService.approve.mockResolvedValue({ message: 'approved' });
+    mockOwnershipClaimService.approve.mockResolvedValue({
+      message: 'approved',
+    });
 
     await controller.approve({ claimId: 'claim-1' });
 
@@ -50,7 +54,10 @@ describe('OwnershipClaimController', () => {
 
     await controller.reject({ claimId: 'claim-1', data: rejectDto });
 
-    expect(mockOwnershipClaimService.reject).toHaveBeenCalledWith('claim-1', rejectDto);
+    expect(mockOwnershipClaimService.reject).toHaveBeenCalledWith(
+      'claim-1',
+      rejectDto,
+    );
   });
 
   it('getClaims – delegates to service.getClaims with DTO', async () => {

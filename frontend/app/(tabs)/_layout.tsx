@@ -1,9 +1,10 @@
-import React from 'react';
-import { Tabs, useRouter } from 'expo-router';
-import { Pressable, View } from 'react-native';
-import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
-import { Home, Search, Users, Heart, Settings } from 'lucide-react-native';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { Tabs, useRouter } from 'expo-router';
+import { Heart, Home, Search, Settings, Users } from 'lucide-react-native';
+import React from 'react';
+import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabIcon({
@@ -45,7 +46,7 @@ export default function TabsLayout() {
 
         tabBarStyle: {
           position: 'absolute',
-          bottom: insets.bottom + 4, 
+          bottom: insets.bottom + 4,
           left: 16,
           right: 16,
           height: 64,
@@ -100,16 +101,32 @@ export default function TabsLayout() {
 
       <Tabs.Screen
         name="search"
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/(tabs)/search');
+          },
+        }}
         options={{
+          popToTopOnBlur: true,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Search} />,
         }}
       />
 
       <Tabs.Screen
         name="group"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Users} />,
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace('/(tabs)/group');
+          },
         }}
+        options={({ route }) => ({
+          popToTopOnBlur: true,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Users} />,
+          tabBarStyle:
+            getFocusedRouteNameFromRoute(route) === '[id]' ? { display: 'none' } : undefined,
+        })}
       />
 
       <Tabs.Screen

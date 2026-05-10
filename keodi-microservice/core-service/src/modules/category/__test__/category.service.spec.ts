@@ -52,7 +52,9 @@ describe('CategoryService', () => {
     });
 
     it('handles prisma errors', async () => {
-      mockPrismaService.category.findMany.mockRejectedValueOnce(new Error('DB error'));
+      mockPrismaService.category.findMany.mockRejectedValueOnce(
+        new Error('DB error'),
+      );
 
       await expect(service.getListOnBoarding()).rejects.toThrow();
     });
@@ -93,7 +95,14 @@ describe('CategoryService', () => {
   // ──────────────────────────────────────────────
   describe('invalidateCache', () => {
     it('calls loadCategories to refresh the cache', async () => {
-      const fresh = [{ id: 'cat-2', name: 'Drinks', isSelectable: true, _count: { placeCategories: 5 } }];
+      const fresh = [
+        {
+          id: 'cat-2',
+          name: 'Drinks',
+          isSelectable: true,
+          _count: { placeCategories: 5 },
+        },
+      ];
       mockPrismaService.category.findMany.mockResolvedValueOnce(fresh);
 
       await service.invalidateCache();

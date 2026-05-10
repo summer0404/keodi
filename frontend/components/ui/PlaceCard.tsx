@@ -31,6 +31,7 @@ type PlaceCardProps = {
   description?: string;
   statusLabel?: string;
   isOpen?: boolean;
+  showStatusChip?: boolean;
   defaultFavorite?: boolean;
   tags?: PlaceCardTag[];
   onFavoriteChange?: (isFavorite: boolean) => boolean | void | Promise<boolean | void>;
@@ -54,6 +55,7 @@ export default function PlaceCard({
   description,
   statusLabel,
   isOpen = true,
+  showStatusChip = true,
   defaultFavorite = false,
   tags = [],
   onFavoriteChange,
@@ -162,16 +164,18 @@ export default function PlaceCard({
           />
         </Pressable>
 
-        <View
-          className={clsx(
-            'rounded-full absolute bottom-4 left-4 px-3 py-1.5',
-            isOpen ? 'bg-green-500' : 'bg-red-500'
-          )}
-        >
-          <Typography variant="caption-sm" className="font-bold text-white">
-            {computedStatusLabel}
-          </Typography>
-        </View>
+        {showStatusChip ? (
+          <View
+            className={clsx(
+              'rounded-full absolute bottom-4 left-4 px-3 py-1.5',
+              isOpen ? 'bg-green-500' : 'bg-red-500'
+            )}
+          >
+            <Typography variant="caption-sm" className="font-bold text-white">
+              {computedStatusLabel}
+            </Typography>
+          </View>
+        ) : null}
         {distanceLabel && (
           <View className="absolute bottom-4 right-4 rounded-full bg-white/90 px-3 py-1.5 flex-row items-center gap-2">
             <MoveDiagonal size={iconSize} color={Palette.black} strokeWidth={2} />
@@ -192,21 +196,23 @@ export default function PlaceCard({
           </View>
         </View>
 
-        <View className="mt-3 pr-5 flex-row items-start gap-2">
-          <MapPin size={18} color={Palette.black} strokeWidth={2} />
-          <Typography variant="caption" className="flex-1">
-            {addressText}
-          </Typography>
-        </View>
+        {addressText && (
+          <View className="mt-3 pr-5 flex-row items-start gap-2">
+            <MapPin size={18} color={Palette.black} strokeWidth={2} />
+            <Typography variant="caption" className="flex-1">
+              {addressText}
+            </Typography>
+          </View>
+        )}
 
-        {openingHours ? (
+        {openingHours && (
           <View className="mt-3 pr-5 flex-row items-start gap-2">
             <Clock3 size={18} color={Palette.black} strokeWidth={2} />
             <Typography variant="caption" className="flex-1">
               {openingHours}
             </Typography>
           </View>
-        ) : null}
+        )}
 
         {description && (
           <Typography className="mt-4" numberOfLines={2}>

@@ -5,6 +5,7 @@ import type {
   UpdateUserProfileRequest,
   UpdateUserResponse,
   UpdateUsernameRequest,
+  UserSettings,
 } from '@/types/api';
 
 export const userService = {
@@ -41,6 +42,16 @@ export const userService = {
       API_ENDPOINTS.UPDATE_PROFILE,
       payload
     );
+    return response.data;
+  },
+
+  getSetting: async () => {
+    const response = await apiClient.get<UserSettings>(API_ENDPOINTS.SETTINGS);
+    return response.data;
+  },
+
+  updateSetting: async (payload: Partial<UserSettings>): Promise<UserSettings> => {
+    const response = await apiClient.patch<UserSettings>(`${API_ENDPOINTS.SETTINGS}`, payload);
     return response.data;
   },
 };

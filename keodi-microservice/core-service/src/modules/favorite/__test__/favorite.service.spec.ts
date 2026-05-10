@@ -42,20 +42,30 @@ describe('FavoriteService', () => {
     it('throws NOT_FOUND when place does not exist', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(null);
 
-      await expect(service.addFavorite('u1', 'missing')).rejects.toThrow(RpcException);
+      await expect(service.addFavorite('u1', 'missing')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('throws CONFLICT when favorite already exists', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue({ id: 'p1' });
-      mockPrismaService.favorite.findUnique.mockResolvedValue({ userId: 'u1', placeId: 'p1' });
+      mockPrismaService.favorite.findUnique.mockResolvedValue({
+        userId: 'u1',
+        placeId: 'p1',
+      });
 
-      await expect(service.addFavorite('u1', 'p1')).rejects.toThrow(RpcException);
+      await expect(service.addFavorite('u1', 'p1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('creates and returns new favorite', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue({ id: 'p1' });
       mockPrismaService.favorite.findUnique.mockResolvedValue(null);
-      mockPrismaService.favorite.create.mockResolvedValue({ userId: 'u1', placeId: 'p1' });
+      mockPrismaService.favorite.create.mockResolvedValue({
+        userId: 'u1',
+        placeId: 'p1',
+      });
 
       const result = await service.addFavorite('u1', 'p1');
 
@@ -71,7 +81,9 @@ describe('FavoriteService', () => {
     it('throws NOT_FOUND when favorite does not exist', async () => {
       mockPrismaService.favorite.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeFavorite('u1', 'p1')).rejects.toThrow(RpcException);
+      await expect(service.removeFavorite('u1', 'p1')).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('deletes favorite and returns it', async () => {
@@ -95,13 +107,13 @@ describe('FavoriteService', () => {
       mockPrismaService.favorite.findMany.mockResolvedValue([{ place }]);
       mockPrismaService.favorite.count.mockResolvedValue(1);
 
-      const result = await service.getUserFavorites({
+      const result = (await service.getUserFavorites({
         userId: 'u1',
         page: 1,
         limit: 10,
         sortBy: PlaceSortBy.CREATED_AT,
         sortOrder: SortOrder.DESC,
-      }) as any;
+      })) as any;
 
       expect(result.favorites).toEqual([place]);
       expect(result.total).toBe(1);
@@ -112,13 +124,13 @@ describe('FavoriteService', () => {
       mockPrismaService.favorite.findMany.mockResolvedValue([]);
       mockPrismaService.favorite.count.mockResolvedValue(0);
 
-      const result = await service.getUserFavorites({
+      const result = (await service.getUserFavorites({
         userId: 'u1',
         page: 1,
         limit: 10,
         sortBy: PlaceSortBy.CREATED_AT,
         sortOrder: SortOrder.ASC,
-      }) as any;
+      })) as any;
 
       expect(result.favorites).toEqual([]);
       expect(result.total).toBe(0);
@@ -130,9 +142,12 @@ describe('FavoriteService', () => {
   // ──────────────────────────────────────────────
   describe('isFavorite', () => {
     it('returns isFavorite=true when entry exists', async () => {
-      mockPrismaService.favorite.findUnique.mockResolvedValue({ userId: 'u1', placeId: 'p1' });
+      mockPrismaService.favorite.findUnique.mockResolvedValue({
+        userId: 'u1',
+        placeId: 'p1',
+      });
 
-      const result = await service.isFavorite('u1', 'p1') as any;
+      const result = (await service.isFavorite('u1', 'p1')) as any;
 
       expect(result.isFavorite).toBe(true);
     });
@@ -140,7 +155,7 @@ describe('FavoriteService', () => {
     it('returns isFavorite=false when entry does not exist', async () => {
       mockPrismaService.favorite.findUnique.mockResolvedValue(null);
 
-      const result = await service.isFavorite('u1', 'p1') as any;
+      const result = (await service.isFavorite('u1', 'p1')) as any;
 
       expect(result.isFavorite).toBe(false);
     });

@@ -49,7 +49,9 @@ describe('PlaceHelper', () => {
     });
 
     it('throws RpcException for non-time string', () => {
-      expect(() => helper.parseOpeningHourTime('not-a-time')).toThrow(RpcException);
+      expect(() => helper.parseOpeningHourTime('not-a-time')).toThrow(
+        RpcException,
+      );
     });
 
     it('throws RpcException for empty string', () => {
@@ -77,7 +79,9 @@ describe('PlaceHelper', () => {
 
     it('throws BAD_REQUEST for dayOfWeek out of range', () => {
       expect(() =>
-        helper.normalizeOpeningHours([{ dayOfWeek: 7, openTime: '09:00', closeTime: '18:00' }]),
+        helper.normalizeOpeningHours([
+          { dayOfWeek: 7, openTime: '09:00', closeTime: '18:00' },
+        ]),
       ).toThrow(RpcException);
     });
 
@@ -98,12 +102,16 @@ describe('PlaceHelper', () => {
 
     it('throws BAD_REQUEST when closeTime is not after openTime', () => {
       expect(() =>
-        helper.normalizeOpeningHours([{ dayOfWeek: 3, openTime: '18:00', closeTime: '09:00' }]),
+        helper.normalizeOpeningHours([
+          { dayOfWeek: 3, openTime: '18:00', closeTime: '09:00' },
+        ]),
       ).toThrow(RpcException);
     });
 
     it('returns correct parsed dates for valid opening hours', () => {
-      const result = helper.normalizeOpeningHours([{ dayOfWeek: 1, openTime: '08:00', closeTime: '22:00' }]);
+      const result = helper.normalizeOpeningHours([
+        { dayOfWeek: 1, openTime: '08:00', closeTime: '22:00' },
+      ]);
       expect(result).toHaveLength(1);
       expect(result[0].dayOfWeek).toBe(1);
       expect(result[0].openTime).toBeInstanceOf(Date);
@@ -116,15 +124,15 @@ describe('PlaceHelper', () => {
   // ──────────────────────────────────────────────
   describe('buildFullAddress', () => {
     it('joins address parts with commas', () => {
-      expect(helper.buildFullAddress('123 Main St', 'Ward 1', 'Ho Chi Minh', 'VN')).toBe(
-        '123 Main St, Ward 1, Ho Chi Minh, VN',
-      );
+      expect(
+        helper.buildFullAddress('123 Main St', 'Ward 1', 'Ho Chi Minh', 'VN'),
+      ).toBe('123 Main St, Ward 1, Ho Chi Minh, VN');
     });
 
     it('trims whitespace from each part', () => {
-      expect(helper.buildFullAddress('  Street  ', '  Ward  ', '  City  ', '  VN  ')).toBe(
-        'Street, Ward, City, VN',
-      );
+      expect(
+        helper.buildFullAddress('  Street  ', '  Ward  ', '  City  ', '  VN  '),
+      ).toBe('Street, Ward, City, VN');
     });
   });
 
@@ -154,13 +162,17 @@ describe('PlaceHelper', () => {
   describe('calculateGeoDeltas', () => {
     it('returns correct latDelta for given radius', () => {
       const { latDelta } = helper.calculateGeoDeltas(0, 5);
-      expect(latDelta).toBeCloseTo(5 / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE);
+      expect(latDelta).toBeCloseTo(
+        5 / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE,
+      );
     });
 
     it('returns correct longDelta for equator (latitude 0)', () => {
       const { longDelta } = helper.calculateGeoDeltas(0, 5);
       // cos(0) = 1, so longDelta equals latDelta at equator
-      expect(longDelta).toBeCloseTo(5 / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE);
+      expect(longDelta).toBeCloseTo(
+        5 / GeoConstants.KILOMETERS_PER_DEGREE_LATITUDE,
+      );
     });
 
     it('longDelta increases as latitude approaches poles', () => {
@@ -175,26 +187,46 @@ describe('PlaceHelper', () => {
   // ──────────────────────────────────────────────
   describe('buildPaginationParams', () => {
     it('returns correct offset and orderByClause for page 1', () => {
-      const result = helper.buildPaginationParams(1, 10, PlaceSortBy.DISTANCE, SortOrder.ASC);
+      const result = helper.buildPaginationParams(
+        1,
+        10,
+        PlaceSortBy.DISTANCE,
+        SortOrder.ASC,
+      );
       expect(result.offset).toBe(0);
       expect(result.orderByClause).toBe('ORDER BY distance ASC');
     });
 
     it('returns correct offset for page 3 with limit 10', () => {
-      const result = helper.buildPaginationParams(3, 10, PlaceSortBy.RATING, SortOrder.DESC);
+      const result = helper.buildPaginationParams(
+        3,
+        10,
+        PlaceSortBy.RATING,
+        SortOrder.DESC,
+      );
       expect(result.offset).toBe(20);
       expect(result.orderByClause).toBe('ORDER BY rating DESC');
     });
 
     it('throws RpcException for invalid sortBy', () => {
       expect(() =>
-        helper.buildPaginationParams(1, 10, 'invalid' as PlaceSortBy, SortOrder.ASC),
+        helper.buildPaginationParams(
+          1,
+          10,
+          'invalid' as PlaceSortBy,
+          SortOrder.ASC,
+        ),
       ).toThrow(RpcException);
     });
 
     it('throws RpcException for invalid sortOrder', () => {
       expect(() =>
-        helper.buildPaginationParams(1, 10, PlaceSortBy.DISTANCE, 'invalid' as SortOrder),
+        helper.buildPaginationParams(
+          1,
+          10,
+          PlaceSortBy.DISTANCE,
+          'invalid' as SortOrder,
+        ),
       ).toThrow(RpcException);
     });
   });
@@ -204,7 +236,9 @@ describe('PlaceHelper', () => {
   // ──────────────────────────────────────────────
   describe('buildEmbeddingSearchCondition', () => {
     it('returns Prisma.empty when embedding is undefined', () => {
-      expect(helper.buildEmbeddingSearchCondition(undefined)).toEqual(Prisma.empty);
+      expect(helper.buildEmbeddingSearchCondition(undefined)).toEqual(
+        Prisma.empty,
+      );
     });
 
     it('returns Prisma.empty when embedding is an empty array', () => {
@@ -222,7 +256,9 @@ describe('PlaceHelper', () => {
   // ──────────────────────────────────────────────
   describe('buildKeywordSearchCondition', () => {
     it('returns Prisma.empty when keywords is undefined', () => {
-      expect(helper.buildKeywordSearchCondition(undefined)).toEqual(Prisma.empty);
+      expect(helper.buildKeywordSearchCondition(undefined)).toEqual(
+        Prisma.empty,
+      );
     });
 
     it('returns Prisma.empty when keywords is blank', () => {
@@ -258,7 +294,9 @@ describe('PlaceHelper', () => {
     });
 
     it('returns Prisma.empty when both embedding and keywords are absent', () => {
-      expect(helper.buildSearchCondition(undefined, undefined)).toEqual(Prisma.empty);
+      expect(helper.buildSearchCondition(undefined, undefined)).toEqual(
+        Prisma.empty,
+      );
     });
   });
 
@@ -267,22 +305,36 @@ describe('PlaceHelper', () => {
   // ──────────────────────────────────────────────
   describe('buildEmbeddingQueryConfig', () => {
     it('uses provided orderByClause when embedding is absent', () => {
-      const result = helper.buildEmbeddingQueryConfig(undefined, 'ORDER BY distance ASC');
+      const result = helper.buildEmbeddingQueryConfig(
+        undefined,
+        'ORDER BY distance ASC',
+      );
       expect(result.searchOrderBy).toBe('ORDER BY distance ASC');
     });
 
     it('overrides orderByClause with similarity sort when embedding is present', () => {
-      const result = helper.buildEmbeddingQueryConfig([0.1, 0.2], 'ORDER BY distance ASC');
-      expect(result.searchOrderBy).toBe('ORDER BY similarity_score DESC, distance ASC');
+      const result = helper.buildEmbeddingQueryConfig(
+        [0.1, 0.2],
+        'ORDER BY distance ASC',
+      );
+      expect(result.searchOrderBy).toBe(
+        'ORDER BY similarity_score DESC, distance ASC',
+      );
     });
 
     it('returns a null similarity column when no embedding', () => {
-      const result = helper.buildEmbeddingQueryConfig(undefined, 'ORDER BY distance ASC');
+      const result = helper.buildEmbeddingQueryConfig(
+        undefined,
+        'ORDER BY distance ASC',
+      );
       expect(result.similarityColumn).not.toEqual(Prisma.empty);
     });
 
     it('returns all three config fields', () => {
-      const result = helper.buildEmbeddingQueryConfig([0.1], 'ORDER BY distance ASC');
+      const result = helper.buildEmbeddingQueryConfig(
+        [0.1],
+        'ORDER BY distance ASC',
+      );
       expect(result).toHaveProperty('searchCondition');
       expect(result).toHaveProperty('similarityColumn');
       expect(result).toHaveProperty('searchOrderBy');
@@ -295,7 +347,9 @@ describe('PlaceHelper', () => {
   describe('buildKeywordQueryConfig', () => {
     it('always sorts by similarity_score', () => {
       const result = helper.buildKeywordQueryConfig('coffee');
-      expect(result.searchOrderBy).toBe('ORDER BY similarity_score DESC, distance ASC');
+      expect(result.searchOrderBy).toBe(
+        'ORDER BY similarity_score DESC, distance ASC',
+      );
     });
 
     it('returns a non-empty searchCondition', () => {
@@ -317,18 +371,33 @@ describe('PlaceHelper', () => {
   describe('buildSearchQueryConfig', () => {
     it('delegates to keyword config when keywords are present', () => {
       const keywordSpy = jest.spyOn(helper, 'buildKeywordQueryConfig');
-      helper.buildSearchQueryConfig(undefined, 'coffee', 'ORDER BY distance ASC');
+      helper.buildSearchQueryConfig(
+        undefined,
+        'coffee',
+        'ORDER BY distance ASC',
+      );
       expect(keywordSpy).toHaveBeenCalledWith('coffee');
     });
 
     it('delegates to embedding config when keywords are absent', () => {
       const embeddingSpy = jest.spyOn(helper, 'buildEmbeddingQueryConfig');
-      helper.buildSearchQueryConfig([0.1, 0.2], undefined, 'ORDER BY distance ASC');
-      expect(embeddingSpy).toHaveBeenCalledWith([0.1, 0.2], 'ORDER BY distance ASC');
+      helper.buildSearchQueryConfig(
+        [0.1, 0.2],
+        undefined,
+        'ORDER BY distance ASC',
+      );
+      expect(embeddingSpy).toHaveBeenCalledWith(
+        [0.1, 0.2],
+        'ORDER BY distance ASC',
+      );
     });
 
     it('passes through orderByClause to embedding config', () => {
-      const result = helper.buildSearchQueryConfig(undefined, undefined, 'ORDER BY name ASC');
+      const result = helper.buildSearchQueryConfig(
+        undefined,
+        undefined,
+        'ORDER BY name ASC',
+      );
       expect(result.searchOrderBy).toBe('ORDER BY name ASC');
     });
   });

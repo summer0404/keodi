@@ -14,7 +14,9 @@ export class RecommendationController {
   }
 
   @MessagePattern(RecommendationTopics.ForYou)
-  async getForYou(@Payload() data: { userId: string; coordinateDto: CoordinateDto }) {
+  async getForYou(
+    @Payload() data: { userId: string; coordinateDto: CoordinateDto },
+  ) {
     const { userId, coordinateDto } = data;
     return await this.recommendationService.getForYou(
       userId,
@@ -32,13 +34,17 @@ export class RecommendationController {
       guestId?: string;
     },
   ) {
-    return await this.recommendationService.getGroupSessionRecommendations(data);
+    return await this.recommendationService.getGroupSessionRecommendations(
+      data,
+    );
   }
 
   @EventPattern(RecommendationTopics.GroupSessionInvalidateCache)
   async invalidateGroupSessionRecommendationCache(
     @Payload()
-    data: { sessionId: string },
+    data: {
+      sessionId: string;
+    },
   ) {
     await this.recommendationService.handleGroupSessionRecommendationCacheInvalidationEvent(
       data,

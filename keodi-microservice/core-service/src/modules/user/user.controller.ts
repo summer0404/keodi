@@ -2,10 +2,10 @@ import { Controller } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { UserTopics } from 'src/shared/constants/topic.constant';
 import {
-    CreateUserDto,
-    SearchOthersDto,
-    SyncUsernameDto,
-    UpdateUserProfileDto,
+  CreateUserDto,
+  SearchOthersDto,
+  SyncUsernameDto,
+  UpdateUserProfileDto,
 } from 'src/shared/dtos/user.dto';
 import { UserService } from './user.service';
 

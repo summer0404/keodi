@@ -18,7 +18,7 @@ export class OwnerApplicationService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly kafkaService: KafkaService,
-  ) { }
+  ) {}
 
   async create(createOwnerApplicationDto: CreateOwnerApplicationDto) {
     try {
@@ -32,12 +32,15 @@ export class OwnerApplicationService {
       if (existingOwnerApplication)
         throw new RpcException({
           status: HttpStatus.CONFLICT,
-          message: OwnerApplicationErrorMessages.OWNER_APPLICATION_ALREADY_EXISTS,
+          message:
+            OwnerApplicationErrorMessages.OWNER_APPLICATION_ALREADY_EXISTS,
         });
 
-      const ownerApplication = await this.prismaService.ownerApplication.create({
-        data: createOwnerApplicationDto,
-      });
+      const ownerApplication = await this.prismaService.ownerApplication.create(
+        {
+          data: createOwnerApplicationDto,
+        },
+      );
 
       return {
         message: 'Owner application created successfully',
@@ -50,11 +53,12 @@ export class OwnerApplicationService {
 
   async approve(applicationId: string) {
     try {
-      const ownerApplication = await this.prismaService.ownerApplication.findUnique({
-        where: {
-          id: applicationId,
-        },
-      });
+      const ownerApplication =
+        await this.prismaService.ownerApplication.findUnique({
+          where: {
+            id: applicationId,
+          },
+        });
 
       if (!ownerApplication)
         throw new RpcException({
@@ -106,13 +110,17 @@ export class OwnerApplicationService {
     }
   }
 
-  async reject(applicationId: string, rejectOwnerApplicationDto: RejectOwnerApplicationDto) {
+  async reject(
+    applicationId: string,
+    rejectOwnerApplicationDto: RejectOwnerApplicationDto,
+  ) {
     try {
-      const ownerApplication = await this.prismaService.ownerApplication.findUnique({
-        where: {
-          id: applicationId,
-        },
-      });
+      const ownerApplication =
+        await this.prismaService.ownerApplication.findUnique({
+          where: {
+            id: applicationId,
+          },
+        });
 
       if (!ownerApplication)
         throw new RpcException({
@@ -206,9 +214,10 @@ export class OwnerApplicationService {
 
   async resubmit(data: ResubmitOwnerApplicationDto) {
     try {
-      const existingApplication = await this.prismaService.ownerApplication.findUnique({
-        where: { userId: data.userId },
-      });
+      const existingApplication =
+        await this.prismaService.ownerApplication.findUnique({
+          where: { userId: data.userId },
+        });
 
       if (!existingApplication)
         throw new RpcException({

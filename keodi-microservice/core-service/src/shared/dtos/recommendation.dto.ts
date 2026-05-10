@@ -1,6 +1,5 @@
 import { CategoryInfo, OpeningHourInfo } from '../interfaces/place.interface';
 
-
 export class RecommendationPlaceRow {
   id: string;
   name: string;
@@ -13,7 +12,7 @@ export class RecommendationPlaceRow {
   googleMapLink: string | null;
   phoneNumber: string | null;
   website: string | null;
-}; 
+}
 
 export class PlaceRecommendationResponseDto extends RecommendationPlaceRow {
   openingHours: OpeningHourInfo[];

@@ -1,6 +1,15 @@
 import type { PlaceItem } from '@/types/api';
-import { Coffee, Dumbbell, Fuel, Hotel, ShoppingBag, TreePine, UtensilsCrossed, Wine } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import {
+  Coffee,
+  Dumbbell,
+  Fuel,
+  Hotel,
+  ShoppingBag,
+  TreePine,
+  UtensilsCrossed,
+  Wine,
+} from 'lucide-react-native';
 
 export const sanitizeUsername = (text: string) => {
   return text
@@ -67,23 +76,29 @@ export const getPrimaryImageUrl = (featureImageUrl: string | null | undefined) =
 };
 
 export const DAY_OF_WEEK_LABELS: Record<number, string> = {
+  0: 'Chủ nhật',
   1: 'Thứ 2',
   2: 'Thứ 3',
   3: 'Thứ 4',
   4: 'Thứ 5',
   5: 'Thứ 6',
   6: 'Thứ 7',
-  7: 'Chủ nhật',
 };
 
 const DAY_OF_WEEK_I18N_KEYS: Record<number, string> = {
+  0: 'dayOfWeek.sun',
   1: 'dayOfWeek.mon',
   2: 'dayOfWeek.tue',
   3: 'dayOfWeek.wed',
   4: 'dayOfWeek.thu',
   5: 'dayOfWeek.fri',
   6: 'dayOfWeek.sat',
-  7: 'dayOfWeek.sun',
+};
+
+const normalizeDayOfWeek = (dayOfWeek: number) => {
+  if (dayOfWeek === 7) return 0;
+  if (dayOfWeek >= 0 && dayOfWeek <= 6) return dayOfWeek;
+  return null;
 };
 
 export const getDayOfWeekLabel = (dayOfWeek: number, t?: (key: string) => string) => {
@@ -115,9 +130,11 @@ export type OpeningHoursGroup = {
   startDay: number;
   endDay: number;
   timeRangeLabel: string;
+  isAllWeek?: boolean;
 };
 
-export const formatLocalTime = (timeStr: string) => {
+export const formatLocalTime = (timeStr: string | null | undefined) => {
+  if (!timeStr) return null;
   const match = timeStr.match(/^(\d{2}):(\d{2})/);
   if (!match) return null;
 
@@ -126,7 +143,8 @@ export const formatLocalTime = (timeStr: string) => {
   return `${hours}:${minutes}`;
 };
 
-const parseTimeToMinutes = (timeStr: string): number | null => {
+const parseTimeToMinutes = (timeStr: string | null | undefined): number | null => {
+  if (!timeStr) return null;
   const match = timeStr.match(/^(\d{2}):(\d{2})/);
   if (!match) return null;
   return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
@@ -137,7 +155,8 @@ export const parseOpeningHours = (openingHours: PlaceItem['openingHours']): Pars
 
   return openingHours
     .map((item) => {
-      if (item.dayOfWeek < 1 || item.dayOfWeek > 7) return null;
+      const dayOfWeek = normalizeDayOfWeek(item.dayOfWeek);
+      if (dayOfWeek === null) return null;
 
       const openMinutes = parseTimeToMinutes(item.openTime);
       const closeMinutes = parseTimeToMinutes(item.closeTime);
@@ -148,7 +167,7 @@ export const parseOpeningHours = (openingHours: PlaceItem['openingHours']): Pars
       if (!openLabel || !closeLabel) return null;
 
       return {
-        dayOfWeek: item.dayOfWeek,
+        dayOfWeek,
         openMinutes,
         closeMinutes,
         timeRangeLabel: `${openLabel} - ${closeLabel}`,
@@ -164,6 +183,22 @@ export const groupOpeningHoursByRange = (
 ): OpeningHoursGroup[] => {
   const parsed = parseOpeningHours(openingHours);
   if (!parsed.length) return [];
+
+  const allWeekLabel = parsed[0]?.timeRangeLabel;
+  const isAllWeek =
+    parsed.length === 7 &&
+    parsed.every((item, index) => item.dayOfWeek === index && item.timeRangeLabel === allWeekLabel);
+
+  if (isAllWeek && allWeekLabel) {
+    return [
+      {
+        startDay: 0,
+        endDay: 6,
+        timeRangeLabel: allWeekLabel,
+        isAllWeek: true,
+      },
+    ];
+  }
 
   const groups: OpeningHoursGroup[] = [];
 
@@ -188,6 +223,21 @@ export const groupOpeningHoursByRange = (
   return groups;
 };
 
+export const formatOpeningHoursGroupLabel = (
+  group: OpeningHoursGroup,
+  t?: (key: string) => string
+) => {
+  if (group.isAllWeek) {
+    return t?.('home.allWeek') ?? 'Cả tuần';
+  }
+
+  if (group.startDay === group.endDay) {
+    return getDayOfWeekLabel(group.startDay, t);
+  }
+
+  return `${getDayOfWeekLabel(group.startDay, t)} - ${getDayOfWeekLabel(group.endDay, t)}`;
+};
+
 export const formatOpeningHoursLabel = (
   openingHours: PlaceItem['openingHours'],
   t?: (key: string) => string
@@ -197,10 +247,7 @@ export const formatOpeningHoursLabel = (
 
   return groups
     .map((group) => {
-      const dayLabel =
-        group.startDay === group.endDay
-          ? getDayOfWeekLabel(group.startDay, t)
-          : `${getDayOfWeekLabel(group.startDay, t)} - ${getDayOfWeekLabel(group.endDay, t)}`;
+      const dayLabel = formatOpeningHoursGroupLabel(group, t);
 
       return `${dayLabel}: ${group.timeRangeLabel}`;
     })
@@ -212,8 +259,8 @@ export const isPlaceOpenNow = (openingHours: PlaceItem['openingHours']) => {
   if (!parsed.length) return true;
 
   const now = new Date();
-  const currentDay = now.getDay() === 0 ? 7 : now.getDay();
-  const previousDay = currentDay === 1 ? 7 : currentDay - 1;
+  const currentDay = now.getDay();
+  const previousDay = currentDay === 0 ? 6 : currentDay - 1;
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const hasOpenWindowToday = parsed.some((entry) => {
@@ -388,11 +435,58 @@ export const normalizeCityLabel = (cityValue: string) => {
   return hcmAliases.has(normalized) ? 'TPHCM' : cityValue;
 };
 
+const COUNTRY_NAME_ALIASES = new Set(['viet nam', 'vietnam', 'vn']);
+
+export const extractWardCityFromFormattedAddress = (
+  formattedAddress: string | null | undefined
+) => {
+  const raw = formattedAddress?.trim();
+  if (!raw) {
+    return { ward: '', city: '' };
+  }
+
+  const parts = raw
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return { ward: '', city: '' };
+  }
+
+  const meaningfulParts = parts.filter((part) => {
+    const normalized = toAsciiLower(part).replace(/[.]/g, '').trim();
+    return !COUNTRY_NAME_ALIASES.has(normalized);
+  });
+
+  if (meaningfulParts.length === 0) {
+    return { ward: '', city: '' };
+  }
+
+  const city = meaningfulParts[meaningfulParts.length - 1] ?? '';
+  const ward = meaningfulParts.length >= 2 ? meaningfulParts[meaningfulParts.length - 2] : '';
+
+  return { ward, city };
+};
+
 export const buildSortOrder = (value: 'distance' | 'rating' | 'name' | 'createdAt') =>
   value === 'rating' || value === 'createdAt' ? 'desc' : 'asc';
 
 export const DEFAULT_RADIUS = 5;
 export const DEFAULT_SORT_BY = 'distance';
+
+// Map API setting values to numeric radius values for places search
+export const getRadiusValueFromSettings = (
+  apiValue: 'KM_2' | 'KM_5' | 'KM_10' | 'KM_20'
+): number => {
+  const radiusMap: Record<'KM_2' | 'KM_5' | 'KM_10' | 'KM_20', number> = {
+    KM_2: 2,
+    KM_5: 5,
+    KM_10: 15,
+    KM_20: 50,
+  };
+  return radiusMap[apiValue] ?? DEFAULT_RADIUS;
+};
 
 export interface Category {
   id: string;

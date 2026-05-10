@@ -2,12 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { MapPin, MoveDiagonal, ArrowUpDown } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import PlaceCard from '@/components/ui/PlaceCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authService } from '@/api/auth';
 import { placesService } from '@/api/places';
 import { Select } from '@/components/ui/Select';
 import type { PlaceItem, PlaceSortBy } from '@/types/api';
@@ -16,6 +15,7 @@ import {
   DEFAULT_PAGE,
   normalizeDistrictLabel,
   normalizeCityLabel,
+  extractWardCityFromFormattedAddress,
   buildSortOrder,
   formatDistance,
   formatOpeningHoursLabel,
@@ -33,6 +33,9 @@ import { Palette } from '@/constants/theme';
 import AlertScreen from '@/components/ui/AlertScreen';
 import { favoriteService } from '@/api/favorite';
 import { usePlacesStore } from '@/store/usePlacesStore';
+import { useLocationStore } from '@/store/useLocationStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useSettingStore } from '@/store/useSettingStore';
 import { isAxiosError } from 'axios';
 
 const appendUniquePlaces = (prev: PlaceItem[], next: PlaceItem[]) => {
@@ -54,20 +57,26 @@ export default function HomeScreen() {
   const cacheNearbyPlaces = usePlacesStore((s) => s.cacheNearbyPlaces);
   const setLastNearbyParams = usePlacesStore((s) => s.setLastNearbyParams);
   const setPlaceFavorite = usePlacesStore((s) => s.setPlaceFavorite);
+  const coords = useLocationStore((s) => s.coords);
+  const isLocationLoading = useLocationStore((s) => s.isLocationLoading);
+  const locationPermissionDenied = useLocationStore((s) => s.locationPermissionDenied);
+  const ensureLocation = useLocationStore((s) => s.ensureLocation);
+  const me = useAuthStore((s) => s.me);
+  const meFetchedAt = useAuthStore((s) => s.meFetchedAt);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
   const sortOptions = useMemo(() => getSortOptions(t), [t]);
   const radiusOptions = useMemo(() => getRadiusOptions(t), [t]);
   const horizontalPadding = 20;
   const cardWidth = width - horizontalPadding * 2;
+  const username = me?.username?.trim() || 'bạn';
+  const avatarUri = me?.pictureUrl?.trim();
 
   const [locationLabel, setLocationLabel] = useState(t('home.loadingLocation'));
-  const [username, setUsername] = useState('bạn');
-  const [avatarSource, setAvatarSource] = useState<any>(DEFAULT_AVATAR_SOURCE);
   const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
-  const [radius, setRadius] = useState(DEFAULT_RADIUS);
-  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const settingRadius = useSettingStore((s) => s.defaultRadius);
+  const [radius, setRadius] = useState(settingRadius ?? DEFAULT_RADIUS);
   const [nearbyPlaces, setNearbyPlaces] = useState<PlaceItem[]>([]);
   const [isPlacesLoading, setIsPlacesLoading] = useState(false);
-  const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(DEFAULT_PAGE);
   const [hasMorePlaces, setHasMorePlaces] = useState(true);
@@ -75,6 +84,7 @@ export default function HomeScreen() {
   // Refs to avoid recreate fetchPlacesPage on every render due to changing dependencies
   const requestVersionRef = useRef(0);
   const inFlightPageRef = useRef<number | null>(null);
+  const flatListRef = useRef<FlatList<PlaceItem>>(null);
 
   // Sync refs with latest state — does not cause re-render
   const coordsRef = useRef(coords);
@@ -183,91 +193,73 @@ export default function HomeScreen() {
     fetchPlacesPage(currentPageRef.current + 1, 'append', requestVersionRef.current);
   }, [fetchPlacesPage]);
 
-  const fetchCurrentLocation = async () => {
-    setIsLocationLoading(true);
-    setLocationLabel(t('home.loadingLocation'));
+  const fetchCurrentLocation = useCallback(
+    async (options?: { force?: boolean }) => {
+      setLocationLabel(t('home.loadingLocation'));
+      const nextCoords = await ensureLocation({ force: options?.force ?? false });
 
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== 'granted') {
-        setLocationLabel(t('home.locationDisabled'));
-        setCoords(null);
+      if (!nextCoords) {
+        setLocationLabel(
+          locationPermissionDenied ? t('home.locationDisabled') : t('home.locationUndefined')
+        );
         setNearbyPlaces([]);
         return;
       }
 
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // console.log('[GPS] coords:', {
+      //   latitude: nextCoords.latitude,
+      //   longitude: nextCoords.longitude,
+      // });
 
-      const nextCoords = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      };
+      try {
+        const places = await Location.reverseGeocodeAsync(nextCoords);
+        const place = places[0];
 
-      // Log coordinates to debug issues with missing or invalid location data
-      // console.log(`[GPS] latitude=${nextCoords.latitude} longitude=${nextCoords.longitude}`);
+        // Debug raw reverse-geocode payload from device.
+        // console.log('[GPS] reverseGeocodeAsync raw:', JSON.stringify(places, null, 2));
 
-      setCoords(nextCoords);
-
-      const places = await Location.reverseGeocodeAsync(nextCoords);
-      const place = places[0];
-
-      // Log full location object to debug missing fields
-      // console.log('[GPS] reverseGeocodeAsync result:', JSON.stringify(place, null, 2));
-
-      if (!place) {
-        setLocationLabel(t('home.locationUndefined'));
-        return;
-      }
-
-      const districtRaw = place.district ?? place.subregion ?? '';
-      const cityRaw = place.city ?? place.region ?? '';
-      const districtLabel = normalizeDistrictLabel(districtRaw, cityRaw);
-      const cityLabel = cityRaw ? normalizeCityLabel(cityRaw) : '';
-      const nextLabel = [districtLabel, cityLabel].filter(Boolean).join(', ');
-
-      setLocationLabel(nextLabel || t('home.locationUndefined'));
-    } catch {
-      setLocationLabel(t('home.locationUndefined'));
-      setCoords(null);
-      setNearbyPlaces([]);
-    } finally {
-      setIsLocationLoading(false);
-    }
-  };
-
-  // Fetch avatar on screen focus to catch updates from edit-profile
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-
-      const fetchMe = async () => {
-        try {
-          const profile = await authService.getMe();
-          if (!active) return;
-          if (profile.username?.trim()) setUsername(profile.username.trim());
-          setAvatarSource(
-            profile.pictureUrl ? { uri: profile.pictureUrl.trim() } : DEFAULT_AVATAR_SOURCE
-          );
-        } catch {
-          if (active) {
-            setAvatarSource(DEFAULT_AVATAR_SOURCE);
-          }
+        if (!place) {
+          setLocationLabel(t('home.locationUndefined'));
+          return;
         }
-      };
 
-      fetchMe();
-      return () => {
-        active = false;
-      };
-    }, [])
+        const placeAny = place as unknown as {
+          formattedAddress?: string;
+          name?: string;
+        };
+
+        const districtRaw = place.district ?? place.subregion ?? '';
+        const fromFormatted = extractWardCityFromFormattedAddress(
+          placeAny.formattedAddress ?? placeAny.name
+        );
+        const cityRaw = place.city ?? place.region ?? fromFormatted.city ?? '';
+
+        const nextLabel = districtRaw
+          ? [
+              normalizeDistrictLabel(districtRaw, cityRaw),
+              cityRaw ? normalizeCityLabel(cityRaw) : '',
+            ]
+              .filter(Boolean)
+              .join(', ')
+          : [fromFormatted.ward, cityRaw ? normalizeCityLabel(cityRaw) : '']
+              .filter(Boolean)
+              .join(', ');
+
+        setLocationLabel(nextLabel || t('home.locationUndefined'));
+      } catch {
+        setLocationLabel(t('home.locationUndefined'));
+      }
+    },
+    [ensureLocation, locationPermissionDenied, t]
   );
 
   useEffect(() => {
-    fetchCurrentLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void fetchMe();
+  }, [fetchMe]);
+
+  useEffect(() => {
+    void fetchCurrentLocation();
+  }, [fetchCurrentLocation]);
 
   // Effect only depends on coords/radius/sortBy — fetchPlacesPage is now stable so no need to include it in deps
   useEffect(() => {
@@ -287,10 +279,20 @@ export default function HomeScreen() {
     fetchPlacesPage(DEFAULT_PAGE, 'replace', requestVersion);
   }, [coords, radius, sortBy, fetchPlacesPage]);
 
+  useEffect(() => {
+    setRadius(settingRadius ?? DEFAULT_RADIUS);
+  }, [settingRadius]);
+
+  // Scroll to top when radius or sortBy changes for better UX
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [radius, sortBy]);
+
   // Render item separated out to avoid inline closure that gets recreated every render
   const renderItem = useCallback(
     ({ item }: { item: PlaceItem }) => {
       const openingHoursLabel = formatOpeningHoursLabel(item.openingHours, t);
+      const hasOpeningHours = (item.openingHours?.length ?? 0) > 0;
       const isOpen = isPlaceOpenNow(item.openingHours);
       const primaryImageUrl = getPrimaryImageUrl(item.featureImageUrl);
       const tags = (item.categories ?? []).slice(0, 4).map((category) => ({
@@ -338,6 +340,7 @@ export default function HomeScreen() {
             description={item.description?.trim()}
             statusLabel={isOpen ? t('home.open') : t('home.close')}
             isOpen={isOpen}
+            showStatusChip={hasOpeningHours}
             tags={tags}
             defaultFavorite={!!item.isFavorite}
             onFavoriteChange={handleFavoriteChange}
@@ -382,7 +385,9 @@ export default function HomeScreen() {
 
           <View className="flex-row items-center gap-3">
             <Pressable
-              onPress={fetchCurrentLocation}
+              onPress={() => {
+                void fetchCurrentLocation({ force: true });
+              }}
               disabled={isLocationLoading}
               className="flex-row items-center gap-1.5"
             >
@@ -394,9 +399,9 @@ export default function HomeScreen() {
               <View className="h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">
                 <Image
                   source={
-                    avatarSource && typeof avatarSource === 'object' && 'uri' in avatarSource
-                      ? { uri: `${avatarSource.uri}?t=${Date.now()}` }
-                      : avatarSource
+                    avatarUri
+                      ? { uri: `${avatarUri}?t=${meFetchedAt || 0}` }
+                      : DEFAULT_AVATAR_SOURCE
                   }
                   style={{ width: '100%', height: '100%' }}
                   contentFit="cover"
@@ -409,13 +414,13 @@ export default function HomeScreen() {
         <View className="mt-5 flex-row items-end justify-between">
           <View className="flex-1">
             <Typography variant="h4">{t('home.greeting', { username })}</Typography>
-            <Typography variant="h3" className="mt-1">
+            <Typography variant="h3" className="mt-1 text-[28px]">
               {t('home.subGreeting')}
             </Typography>
           </View>
         </View>
 
-        <View className="mt-4 flex-row gap-3 items-center">
+        <View className="mt-3 flex-row gap-3 items-center">
           <ArrowUpDown size={18} color={Palette.black} strokeWidth={2} />
           <Select
             value={sortBy}
@@ -448,14 +453,14 @@ export default function HomeScreen() {
             description="home.subNoPlaces"
             primaryButtonText="button.retry"
             primaryButtonAction={() => {
-              fetchCurrentLocation();
-              fetchPlacesPage(DEFAULT_PAGE, 'replace', requestVersionRef.current);
+              void fetchCurrentLocation({ force: true });
             }}
           />
         ) : null}
       </View>
 
       <FlatList
+        ref={flatListRef}
         data={nearbyPlaces}
         keyExtractor={keyExtractor}
         renderItem={renderItem}

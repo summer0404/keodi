@@ -32,7 +32,10 @@ describe('FriendController', () => {
   it('sendRequest – delegates to service.sendRequest', async () => {
     mockFriendService.sendRequest.mockResolvedValue({ id: 'req-1' });
 
-    const result = await controller.sendRequest({ userId: 'u1', receiverId: 'u2' });
+    const result = await controller.sendRequest({
+      userId: 'u1',
+      receiverId: 'u2',
+    });
 
     expect(mockFriendService.sendRequest).toHaveBeenCalledWith('u1', 'u2');
     expect(result).toBeDefined();
@@ -55,7 +58,13 @@ describe('FriendController', () => {
   });
 
   it('getFriends – delegates to service.getFriends with DTO', async () => {
-    const dto = { userId: 'u1', page: 1, limit: 10, sortBy: 'name', sortOrder: 'asc' } as any;
+    const dto = {
+      userId: 'u1',
+      page: 1,
+      limit: 10,
+      sortBy: 'name',
+      sortOrder: 'asc',
+    } as any;
     mockFriendService.getFriends.mockResolvedValue({ friends: [] });
 
     await controller.getFriends(dto);
@@ -64,7 +73,13 @@ describe('FriendController', () => {
   });
 
   it('getPendingRequests – delegates to service.getPendingRequests', async () => {
-    const dto = { userId: 'u1', page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' } as any;
+    const dto = {
+      userId: 'u1',
+      page: 1,
+      limit: 10,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    } as any;
     mockFriendService.getPendingRequests.mockResolvedValue({ requests: [] });
 
     await controller.getPendingRequests(dto);

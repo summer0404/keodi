@@ -50,7 +50,9 @@ describe('CategoryController', () => {
     it('propagates service errors', async () => {
       mockCategoryService.search.mockRejectedValue(new Error('Search failed'));
 
-      await expect(controller.search({ query: 'test', limit: 10 })).rejects.toThrow('Search failed');
+      await expect(
+        controller.search({ query: 'test', limit: 10 }),
+      ).rejects.toThrow('Search failed');
     });
   });
 });
