@@ -53,6 +53,17 @@ export class MessageService {
         type,
         ...(replyToId ? { replyToId } : {}),
       },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            pictureUrl: true,
+          },
+        },
+      },
     });
 
     await this.prismaService.conversation.update({
@@ -111,11 +122,15 @@ export class MessageService {
       const cached = await this.redisService.get(cacheKey);
       if (cached) {
         const messages = JSON.parse(cached) as any[];
-        return {
-          items: messages,
-          nextCursor:
-            messages.length >= limit ? messages[messages.length - 1].id : null,
-        };
+        // Serve cache only when sender data is already present
+        if (messages.length === 0 || messages[0].sender !== undefined) {
+          return {
+            items: messages,
+            nextCursor:
+              messages.length >= limit ? messages[messages.length - 1].id : null,
+          };
+        }
+        await this.redisService.del(cacheKey);
       }
     }
 
@@ -124,6 +139,17 @@ export class MessageService {
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: 'desc' },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            pictureUrl: true,
+          },
+        },
+      },
     });
 
     const hasNextPage = messages.length > limit;
