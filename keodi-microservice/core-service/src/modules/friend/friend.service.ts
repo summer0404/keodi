@@ -17,6 +17,8 @@ import {
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { ImageService } from '../image/image.service';
+import { ConversationService } from '../conversation/conversation.service';
+import { ConversationType } from 'src/shared/enums/chat.enum';
 
 @Injectable()
 export class FriendService {
@@ -24,6 +26,7 @@ export class FriendService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
+    private readonly conversationService: ConversationService,
   ) {}
 
   async sendRequest(senderId: string, receiverId: string) {
@@ -175,6 +178,13 @@ export class FriendService {
         });
 
         return { success: true, message: 'Friend request accepted' };
+      });
+
+      // Create DIRECT conversation between the two new friends (idempotent)
+      await this.conversationService.create({
+        type: ConversationType.DIRECT,
+        createdById: userId,
+        memberIds: [request.senderId],
       });
     } catch (error) {
       return handleServiceErrorCatching(error);

@@ -5,6 +5,7 @@ import { FriendService } from '../friend.service';
 import { PrismaService } from 'src/database/prisma.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ImageService } from 'src/modules/image/image.service';
+import { ConversationService } from 'src/modules/conversation/conversation.service';
 import { FriendRequestStatus } from '@prisma/client';
 import { FriendSortBy, SortOrder } from 'src/shared/enums/sort.enum';
 
@@ -39,6 +40,10 @@ const mockImageService = {
   getImageViewUrl: jest.fn().mockResolvedValue('https://cdn.example.com/pic.jpg'),
 };
 
+const mockConversationService = {
+  create: jest.fn(),
+};
+
 describe('FriendService', () => {
   let service: FriendService;
 
@@ -52,6 +57,7 @@ describe('FriendService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: KafkaService, useValue: mockKafkaService },
         { provide: ImageService, useValue: mockImageService },
+        { provide: ConversationService, useValue: mockConversationService },
       ],
     }).compile();
 

@@ -32,6 +32,8 @@ import {
 } from 'src/shared/dtos/group-session.dto';
 import { ActivityActor } from 'src/shared/interfaces/group-session.interface';
 import { ImageService } from '../image/image.service';
+import { ConversationService } from '../conversation/conversation.service';
+import { ConversationType } from 'src/shared/enums/chat.enum';
 import { GroupSessionHelper } from './group-session.helper';
 
 @Injectable()
@@ -44,6 +46,7 @@ export class GroupSessionService {
     private readonly groupSessionHelper: GroupSessionHelper,
     private readonly kafkaService: KafkaService,
     private readonly imageService: ImageService,
+    private readonly conversationService: ConversationService,
   ) {}
 
   private async logActivity(
@@ -364,6 +367,14 @@ export class GroupSessionService {
         });
       }
 
+      // Create group conversation tied to this session (idempotent)
+      await this.conversationService.create({
+        type: ConversationType.GROUP,
+        createdById: userId,
+        memberIds: [],
+        sessionId: session.sessionId,
+      });
+
       return session;
     } catch (error) {
       handleServiceErrorCatching(error);
@@ -463,7 +474,6 @@ export class GroupSessionService {
         }
       }
 
-      // Guest must provide a nickname
       if (!userId && !existingGuestId && !nickname) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
@@ -471,7 +481,6 @@ export class GroupSessionService {
         });
       }
 
-      // Check if returning guest
       if (!userId && existingGuestId) {
         const existingMember = session.members.find(
           (m) => m.guestId === existingGuestId,
@@ -514,6 +523,23 @@ export class GroupSessionService {
       });
 
       const memberWithPictureUrl = await this.mapMemberPictureUrl(member);
+
+      // Add authenticated user to the session's group conversation
+      if (userId) {
+        const conv = await this.prismaService.conversation.findFirst({
+          where: { sessionId: session.sessionId },
+          select: { id: true },
+        });
+        if (conv) {
+          await this.prismaService.conversationMember.upsert({
+            where: {
+              conversationId_userId: { conversationId: conv.id, userId },
+            },
+            create: { conversationId: conv.id, userId },
+            update: {},
+          });
+        }
+      }
 
       void this.notifySessionMembers(
         session.sessionId,
@@ -717,7 +743,6 @@ export class GroupSessionService {
         });
       }
 
-      // Resolve member: by userId for authenticated users, by guestId for guests
       const member = await this.prismaService.groupSessionMember.findFirst({
         where: userId ? { userId, sessionId } : { guestId, sessionId },
       });
@@ -784,7 +809,6 @@ export class GroupSessionService {
 
       const memberWithPictureUrl = await this.mapMemberPictureUrl(vote.member);
 
-      // Notify all session members about the new/updated vote in real time
       void this.notifySessionMembers(sessionId, 'vote.cast', {
         sessionId,
         vote: {

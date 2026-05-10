@@ -8,6 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import { GroupSessionHelper } from '../group-session.helper';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ImageService } from 'src/modules/image/image.service';
+import { ConversationService } from 'src/modules/conversation/conversation.service';
+import { ConversationType } from 'src/shared/enums/chat.enum';
 
 const mockPrismaService = {
   groupSession: {
@@ -27,6 +29,12 @@ const mockPrismaService = {
     findMany: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
+  },
+  conversation: {
+    findFirst: jest.fn(),
+  },
+  conversationMember: {
+    upsert: jest.fn(),
   },
   groupSessionCandidate: {
     findUnique: jest.fn(),
@@ -76,6 +84,10 @@ const mockGroupSessionHelper = {
   buildVoteResults: jest.fn(),
 };
 
+const mockConversationService = {
+  create: jest.fn(),
+};
+
 describe('GroupSessionService', () => {
   let service: GroupSessionService;
 
@@ -91,6 +103,7 @@ describe('GroupSessionService', () => {
         { provide: GroupSessionHelper, useValue: mockGroupSessionHelper },
         { provide: KafkaService, useValue: mockKafkaService },
         { provide: ImageService, useValue: mockImageService },
+        { provide: ConversationService, useValue: mockConversationService },
       ],
     }).compile();
 
@@ -114,6 +127,10 @@ describe('GroupSessionService', () => {
     it('creates session and member in a transaction on happy path', async () => {
       mockPrismaService.groupSessionMember.findFirst.mockResolvedValue(null);
       mockConfigService.get.mockReturnValue('ABCDEFGHIJ0123456789');
+      mockConversationService.create.mockResolvedValue({
+        id: 'conv-1',
+        sessionId: 'sess-1',
+      });
 
       const newSession = { sessionId: 'sess-1', shareCode: 'CODE01', createdBy: 'user-1', status: GroupSessionStatus.ACTIVE };
       mockPrismaService.$transaction.mockImplementation(async (fn: any) => fn(mockPrismaService));
@@ -123,6 +140,14 @@ describe('GroupSessionService', () => {
       const result = await service.create('user-1');
 
       expect(result).toBeDefined();
+      expect(mockConversationService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: ConversationType.GROUP,
+          createdById: 'user-1',
+          sessionId: 'sess-1',
+          memberIds: [],
+        }),
+      );
     });
 
     it('throws INTERNAL_SERVER_ERROR when share-code generation exhausts retries', async () => {
@@ -199,6 +224,11 @@ describe('GroupSessionService', () => {
       };
       mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
       mockPrismaService.groupSessionMember.findFirst.mockResolvedValue(null);
+      mockPrismaService.conversation.findFirst.mockResolvedValue({ id: 'conv-1' });
+      mockPrismaService.conversationMember.upsert.mockResolvedValue({
+        conversationId: 'conv-1',
+        userId: 'user-2',
+      });
       const newMember = { id: 'm2', userId: 'user-2', guestId: null, nickname: null, user: { id: 'user-2', pictureUrl: null } };
       mockPrismaService.groupSessionMember.create.mockResolvedValue(newMember);
       // stub notifySessionMembers
@@ -208,6 +238,40 @@ describe('GroupSessionService', () => {
 
       expect((result as any).alreadyJoined).toBe(false);
       expect((result as any).member).toBeDefined();
+      expect(mockPrismaService.conversationMember.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            conversationId_userId: { conversationId: 'conv-1', userId: 'user-2' },
+          },
+          create: { conversationId: 'conv-1', userId: 'user-2' },
+        }),
+      );
+    });
+
+    it('does not upsert conversation member when guest joins successfully', async () => {
+      const session = {
+        sessionId: 'sess-1',
+        shareCode: 'CODE',
+        status: GroupSessionStatus.ACTIVE,
+        createdBy: 'owner',
+        createdAt: new Date(),
+        members: [],
+        creator: null,
+      };
+      mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
+      mockPrismaService.groupSessionMember.create.mockResolvedValue({
+        id: 'm-guest',
+        userId: null,
+        guestId: 'guest-1',
+        nickname: 'Guest',
+        user: null,
+      });
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([]);
+
+      const result = await service.join({ shareCode: 'CODE', nickname: 'Guest' });
+
+      expect((result as any).alreadyJoined).toBe(false);
+      expect(mockPrismaService.conversationMember.upsert).not.toHaveBeenCalled();
     });
   });
 
