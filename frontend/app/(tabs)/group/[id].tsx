@@ -28,10 +28,11 @@ import type { MessageItem } from '@/types/chat';
 // Stable fallback references — must be module-level to avoid new array on each render
 const EMPTY_MESSAGES: MessageItem[] = [];
 const EMPTY_USERS: string[] = [];
+const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 // ─── Internal render types ─────────────────────────────────────────────────────
 
-type ReceivedMsg = { kind: 'received'; id: string; text: string; senderName?: string };
+type ReceivedMsg = { kind: 'received'; id: string; text: string; senderName?: string; time?: string };
 type SentMsg = {
   kind: 'sent';
   id: string;
@@ -48,7 +49,20 @@ type ChatMessage = ReceivedMsg | SentMsg | DateDivider | SystemMsg | PlaceCard |
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function apiMessageToChat(msg: MessageItem, currentUserId: string): ChatMessage {
+function canBeGrouped(left: MessageItem | undefined, right: MessageItem | undefined): boolean {
+  if (!left || !right) return false;
+  if (left.type === 'SYSTEM' || right.type === 'SYSTEM') return false;
+  if (left.senderId !== right.senderId) return false;
+
+  const diffMs = new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  return diffMs >= 0 && diffMs <= GROUP_WINDOW_MS;
+}
+
+function apiMessageToChat(
+  msg: MessageItem,
+  currentUserId: string,
+  options?: { showSenderName?: boolean; showTime?: boolean },
+): ChatMessage {
   if (msg.type === 'SYSTEM') {
     return { kind: 'system', id: msg.id, text: msg.content };
   }
@@ -58,7 +72,7 @@ function apiMessageToChat(msg: MessageItem, currentUserId: string): ChatMessage 
       kind: 'sent',
       id: msg.id,
       text: msg.content,
-      time: formatMessageTime(msg.createdAt),
+      time: options?.showTime ? formatMessageTime(msg.createdAt) : undefined,
       isRead: false,
       repliedTo: msg.replyTo
         ? {
@@ -73,7 +87,8 @@ function apiMessageToChat(msg: MessageItem, currentUserId: string): ChatMessage 
     kind: 'received',
     id: msg.id,
     text: msg.content,
-    senderName: getSenderDisplayName(msg.sender),
+    senderName: options?.showSenderName ? getSenderDisplayName(msg.sender) : undefined,
+    time: options?.showTime ? formatMessageTime(msg.createdAt) : undefined,
   };
 }
 
@@ -85,13 +100,28 @@ function buildChatItems(
   const items: ChatMessage[] = [];
   let lastDate = '';
 
-  for (const msg of messages) {
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    const prevMsg = i > 0 ? messages[i - 1] : undefined;
+    const nextMsg = i < messages.length - 1 ? messages[i + 1] : undefined;
     const dateLabel = getDateLabel(msg.createdAt);
     if (dateLabel !== lastDate) {
       items.push({ kind: 'date', id: `date-${msg.id}`, label: dateLabel });
       lastDate = dateLabel;
     }
-    items.push(apiMessageToChat(msg, currentUserId));
+
+    const prevDateLabel = prevMsg ? getDateLabel(prevMsg.createdAt) : '';
+    const nextDateLabel = nextMsg ? getDateLabel(nextMsg.createdAt) : '';
+    const groupedWithPrev = prevDateLabel === dateLabel && canBeGrouped(prevMsg, msg);
+    const groupedWithNext = nextDateLabel === dateLabel && canBeGrouped(msg, nextMsg);
+    const isSentByMe = msg.senderId === currentUserId;
+
+    items.push(
+      apiMessageToChat(msg, currentUserId, {
+        showSenderName: !isSentByMe && !groupedWithPrev,
+        showTime: !groupedWithNext,
+      }),
+    );
   }
 
   if (hasTyping) {
@@ -132,7 +162,7 @@ function SystemMessage({ text }: { text: string }) {
 
 function ReceivedBubble({ msg }: { msg: ReceivedMsg }) {
   return (
-    <View style={{ marginBottom: 2 }}>
+    <View style={{ marginBottom: 4 }}>
       {msg.senderName ? (
         <Text
           style={{ fontWeight: '400', fontSize: 11, color: '#5C5C5C', paddingLeft: 12, paddingBottom: 2 }}
@@ -155,13 +185,18 @@ function ReceivedBubble({ msg }: { msg: ReceivedMsg }) {
           {msg.text}
         </Text>
       </View>
+      {msg.time ? (
+        <View style={{ paddingLeft: 12, paddingTop: 2 }}>
+          <Text style={{ fontWeight: '400', fontSize: 10, color: '#9A9A9A' }}>{msg.time}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 function SentBubble({ msg }: { msg: SentMsg }) {
   return (
-    <View style={{ alignItems: 'flex-end', gap: 2 }}>
+    <View style={{ alignItems: 'flex-end', gap: 2, marginBottom: 4 }}>
       {msg.repliedTo ? (
         <View
           style={{
