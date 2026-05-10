@@ -27,7 +27,7 @@ export class FriendService {
     private readonly imageService: ImageService,
     private readonly kafkaService: KafkaService,
     private readonly conversationService: ConversationService,
-  ) {}
+  ) { }
 
   async sendRequest(senderId: string, receiverId: string) {
     if (senderId == receiverId) {
@@ -161,6 +161,13 @@ export class FriendService {
           where: { id: userId },
           select: { firstName: true, lastName: true },
         });
+
+        await this.conversationService.create({
+          type: ConversationType.DIRECT,
+          createdById: userId,
+          memberIds: [request.senderId],
+        });
+        
         const accepterName =
           [accepter?.firstName, accepter?.lastName].filter(Boolean).join(' ') ||
           'Someone';
@@ -180,12 +187,6 @@ export class FriendService {
         return { success: true, message: 'Friend request accepted' };
       });
 
-      // Create DIRECT conversation between the two new friends (idempotent)
-      await this.conversationService.create({
-        type: ConversationType.DIRECT,
-        createdById: userId,
-        memberIds: [request.senderId],
-      });
     } catch (error) {
       return handleServiceErrorCatching(error);
     }
@@ -311,8 +312,8 @@ export class FriendService {
             ...friendship.friend,
             pictureUrl: friendship.friend.pictureUrl
               ? await this.imageService.getImageViewUrl(
-                  friendship.friend.pictureUrl,
-                )
+                friendship.friend.pictureUrl,
+              )
               : null,
           },
         })),
@@ -380,8 +381,8 @@ export class FriendService {
             ...request.sender,
             pictureUrl: request.sender.pictureUrl
               ? await this.imageService.getImageViewUrl(
-                  request.sender.pictureUrl,
-                )
+                request.sender.pictureUrl,
+              )
               : null,
           },
         })),
