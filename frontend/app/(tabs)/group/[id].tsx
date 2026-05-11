@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Copy, Heart, Search, Share2, Star, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, Copy, Heart, Share2, Star, Trash2, X } from 'lucide-react-native';
 import { isAxiosError } from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +34,7 @@ import { Card } from '@/components/ui/Card';
 import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
 import AlertScreen from '@/components/ui/AlertScreen';
 import GroupLocationMapbox from '@/components/ui/GroupLocationMapbox';
+import GroupAddLocationSheet from '@/components/ui/GroupAddLocationSheet';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useGroupSessionStore } from '@/store/useGroupSessionStore';
@@ -436,6 +437,8 @@ export default function GroupDetailScreen() {
   );
   const [isDeletingCandidateId, setIsDeletingCandidateId] = useState<string | null>(null);
   const [swipedCandidateId, setSwipedCandidateId] = useState<string | null>(null);
+  const [isAddLocationSheetVisible, setIsAddLocationSheetVisible] = useState(false);
+  const [isAddingPlaceId, setIsAddingPlaceId] = useState<string | null>(null);
   const swipeAnimations = useRef<Record<string, Animated.Value>>({});
 
   // Recommendations API
@@ -525,6 +528,7 @@ export default function GroupDetailScreen() {
   );
 
   const hasMembers = useMemo(() => (session?.members?.length ?? 0) > 1, [session?.members?.length]);
+  const isActiveSession = session?.status === 'ACTIVE';
 
   const mergeCurrentUserAvatar = useCallback(
     (members: GroupSessionMember[] | undefined) => {
@@ -952,9 +956,13 @@ export default function GroupDetailScreen() {
     [router]
   );
 
-  const handleSearchPress = useCallback(() => {
-    router.push('/(tabs)/search' as any);
+  const openAddLocationSheet = useCallback(() => {
+    setIsAddLocationSheetVisible(true);
   }, [router]);
+
+  const closeAddLocationSheet = useCallback(() => {
+    setIsAddLocationSheetVisible(false);
+  }, []);
 
   const handleInvitePress = useCallback(() => {
     if (!session) return;
@@ -985,6 +993,34 @@ export default function GroupDetailScreen() {
       }
     },
     [isVotingPlaceId, session]
+  );
+
+  const handleAddPlaceToSession = useCallback(
+    async (placeId: string) => {
+      if (!session || isAddingPlaceId || session.status !== 'ACTIVE') {
+        return;
+      }
+
+      setIsAddingPlaceId(placeId);
+      try {
+        const guestId = !currentUserId ? (session.members?.[0]?.guestId ?? undefined) : undefined;
+        await groupSessionsService.addCandidate(session.sessionId, {
+          placeId,
+          guestId,
+        });
+        await refreshGroupSessionData(session.sessionId);
+      } finally {
+        setIsAddingPlaceId(null);
+      }
+    },
+    [currentUserId, isAddingPlaceId, refreshGroupSessionData, session]
+  );
+
+  const handleNavigateToPlace = useCallback(
+    (placeId: string) => {
+      router.push(`/place/${placeId}` as any);
+    },
+    [router]
   );
 
   const closeSubmitConfirmModal = useCallback(() => {
@@ -1272,45 +1308,16 @@ export default function GroupDetailScreen() {
               isClosing={isClosing}
             />
 
-            {hasMembers && session?.members && session.members.length >= 2 ? (
+            {hasMembers ? (
               <>
                 <View className="flex-row items-center justify-between">
                   <View>
                     <Typography variant="h5">{t('group.placeCandidates')}</Typography>
                     <Typography className="mt-1 text-gray-500">
                       {t('group.totalPlaces', {
-                        count: sortedResults.length + recommendedPlaces.length,
+                        count: sortedResults.length,
                       })}
                     </Typography>
-                  </View>
-
-                  <View className="flex-row items-center gap-5">
-                    {sortedResults.length > 0 && votedPlaceId && !isCurrentUserVoteFinalized && (
-                      <Button
-                        variant="outline"
-                        rounded="full"
-                        size="sm"
-                        onPress={() => setIsSubmitConfirmVisible(true)}
-                        disabled={isFinalizingVote}
-                      >
-                        {isFinalizingVote ? t('group.submittingVote') : t('group.submit')}
-                      </Button>
-                    )}
-
-                    <Pressable
-                      accessibilityRole="button"
-                      className="h-10 w-10 items-center justify-center rounded-full bg-white"
-                      onPress={handleSearchPress}
-                      style={{
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.12,
-                        shadowRadius: 4,
-                        elevation: 2,
-                      }}
-                    >
-                      <Search size={18} color={Palette.black} strokeWidth={2} />
-                    </Pressable>
                   </View>
                 </View>
 
@@ -1320,19 +1327,22 @@ export default function GroupDetailScreen() {
                   </View>
                 ) : (
                   <>
-                    <GroupLocationMapbox
-                      userCoords={coords}
-                      userAvatarUrl={currentUserPictureUrl}
-                      currentUserId={currentUserId}
-                      currentUserAvatarVersion={currentUserAvatarVersion}
-                      avatarCacheEpoch={avatarCacheEpoch}
-                      memberAvatarUrls={memberAvatarUrls}
-                      memberLocations={memberLocations}
-                      places={mapPlaces}
-                      onSearchPress={handleSearchPress}
-                      onMapInteractionStart={() => setIsMapInteracting(true)}
-                      onMapInteractionEnd={() => setIsMapInteracting(false)}
-                    />
+                    {isActiveSession ? (
+                      <GroupLocationMapbox
+                        userCoords={coords}
+                        userAvatarUrl={currentUserPictureUrl}
+                        currentUserId={currentUserId}
+                        currentUserAvatarVersion={currentUserAvatarVersion}
+                        avatarCacheEpoch={avatarCacheEpoch}
+                        memberAvatarUrls={memberAvatarUrls}
+                        memberLocations={memberLocations}
+                        places={mapPlaces}
+                        height={280}
+                        onSearchPress={openAddLocationSheet}
+                        onMapInteractionStart={() => setIsMapInteracting(true)}
+                        onMapInteractionEnd={() => setIsMapInteracting(false)}
+                      />
+                    ) : null}
 
                     {/* Vote Results */}
                     {sortedResults.length > 0 && (
@@ -1378,6 +1388,7 @@ export default function GroupDetailScreen() {
                           const isVoted = votedPlaceId === result.place.id;
                           const isVotedFinalized = isVoted && isCurrentUserVoteFinalized;
                           const isWinningPlace = session.winningPlaceId === result.place.id;
+                          const isFeaturedWinner = !isActiveSession && index === 0;
                           const voters = mergeCurrentUserAvatar(
                             toAvatarMembers(session.sessionId, result.voters)
                           );
@@ -1410,16 +1421,28 @@ export default function GroupDetailScreen() {
                                     shadowRadius: 8,
                                     elevation: 3,
                                     boxShadow: '0px 2px 8px rgba(0,0,0,0.18)',
-                                    borderWidth: isWinningPlace ? 2 : 0,
-                                    borderColor: isWinningPlace ? '#FACC15' : 'transparent',
+                                    borderWidth: isFeaturedWinner ? 3 : isWinningPlace ? 2 : 0,
+                                    borderColor: isFeaturedWinner
+                                      ? '#FACC15'
+                                      : isWinningPlace
+                                        ? '#FACC15'
+                                        : 'transparent',
                                   }}
                                 >
                                   <Pressable
-                                    className="relative rounded-3xl p-3"
+                                    className={clsx('relative rounded-3xl', {
+                                      'p-4': isFeaturedWinner,
+                                      'p-3': !isFeaturedWinner,
+                                    })}
                                     onPress={() => router.push(`/place/${result.place.id}` as any)}
                                   >
                                     {index === 0 ? (
-                                      <View className="absolute left-[-30px] top-[10px] w-[104px] -rotate-45 bg-[#FACC15] py-1 items-center z-10">
+                                      <View
+                                        className={clsx(
+                                          'absolute left-[-30px] top-[10px] w-[104px] -rotate-45 py-1 items-center z-10',
+                                          isFeaturedWinner ? 'bg-[#FACC15]' : 'bg-[#FACC15]'
+                                        )}
+                                      >
                                         <Typography variant="h5">{t('group.rank1')}</Typography>
                                       </View>
                                     ) : null}
@@ -1431,14 +1454,18 @@ export default function GroupDetailScreen() {
                                             ? { uri: placeImageUrl }
                                             : DEFAULT_PLACE_IMAGE
                                         }
-                                        style={{ width: 135, height: 95, borderRadius: 12 }}
+                                        style={{
+                                          width: isFeaturedWinner ? 160 : 135,
+                                          height: isFeaturedWinner ? 112 : 95,
+                                          borderRadius: 12,
+                                        }}
                                         contentFit="cover"
                                       />
 
                                       <View className="flex-1">
                                         <View className="flex-row items-center justify-between gap-2">
                                           <Typography
-                                            variant="h5"
+                                            variant={isFeaturedWinner ? 'h4' : 'h5'}
                                             className="flex-1"
                                             numberOfLines={2}
                                           >
@@ -1482,60 +1509,95 @@ export default function GroupDetailScreen() {
                                           </Typography>
                                         </View>
 
-                                        {result.place.fullAddress ? (
-                                          <Typography
-                                            className="mt-1 text-[#6B7280]"
-                                            numberOfLines={1}
-                                          >
-                                            {result.place.fullAddress}
-                                          </Typography>
-                                        ) : null}
+                                        {(() => {
+                                          const addressFromCandidate =
+                                            result.place.fullAddress?.trim() ?? null;
+                                          const addressFromCache =
+                                            placesById[result.place.id]?.fullAddress?.trim() ??
+                                            null;
+                                          const displayAddress =
+                                            addressFromCandidate || addressFromCache;
+
+                                          return displayAddress ? (
+                                            <Typography
+                                              className="mt-1 text-[#6B7280]"
+                                              numberOfLines={1}
+                                            >
+                                              {displayAddress}
+                                            </Typography>
+                                          ) : null;
+                                        })()}
 
                                         <View className="mt-2 flex-row items-center justify-between gap-2">
                                           <GroupSessionAvatarStack
                                             members={voters}
-                                            size={24}
+                                            size={isFeaturedWinner ? 28 : 24}
                                             currentUserId={currentUserId}
                                             currentUserAvatarVersion={currentUserAvatarVersion}
                                             avatarCacheEpoch={avatarCacheEpoch}
                                           />
 
-                                          <Pressable
-                                            className={clsx(
-                                              'min-w-[86px] items-center justify-center rounded-full border px-4 py-1.5',
-                                              isVoted
-                                                ? 'border-black bg-black'
-                                                : 'border-black bg-white'
-                                            )}
-                                            style={
-                                              isVotedFinalized
-                                                ? {
-                                                    borderColor: Palette.green,
-                                                    backgroundColor: Palette.green,
-                                                  }
-                                                : undefined
-                                            }
-                                            onPress={(event) => {
-                                              event.stopPropagation();
-                                              void handleVotePress(result.place.id);
-                                            }}
-                                            disabled={
-                                              isVotingPlaceId !== null ||
-                                              session.voteStatus === 'FINALIZED' ||
-                                              (isCurrentUserVoteFinalized && !isVoted)
-                                            }
-                                          >
-                                            <Typography
-                                              className={isVoted ? 'text-white' : 'text-black'}
+                                          {isActiveSession ? (
+                                            <Pressable
+                                              className={clsx(
+                                                'min-w-[86px] items-center justify-center rounded-full border px-4 py-1.5',
+                                                isVoted
+                                                  ? 'border-black bg-black'
+                                                  : 'border-black bg-white'
+                                              )}
+                                              style={
+                                                isVotedFinalized
+                                                  ? {
+                                                      borderColor: Palette.green,
+                                                      backgroundColor: Palette.green,
+                                                    }
+                                                  : undefined
+                                              }
+                                              onPress={(event) => {
+                                                event.stopPropagation();
+                                                void handleVotePress(result.place.id);
+                                              }}
+                                              disabled={
+                                                isVotingPlaceId !== null ||
+                                                session.voteStatus === 'FINALIZED' ||
+                                                (isCurrentUserVoteFinalized && !isVoted)
+                                              }
                                             >
-                                              {isVotingPlaceId === result.place.id
-                                                ? '...'
-                                                : isVoted
-                                                  ? t('group.voted')
-                                                  : t('group.vote')}
-                                            </Typography>
-                                          </Pressable>
+                                              <Typography
+                                                className={isVoted ? 'text-white' : 'text-black'}
+                                              >
+                                                {isVotingPlaceId === result.place.id
+                                                  ? '...'
+                                                  : isVoted
+                                                    ? t('group.voted')
+                                                    : t('group.vote')}
+                                              </Typography>
+                                            </Pressable>
+                                          ) : null}
                                         </View>
+
+                                        {isFeaturedWinner ? (
+                                          <View className="mt-3 flex-row gap-3">
+                                            <Button
+                                              variant="outline"
+                                              rounded="full"
+                                              className="flex-1"
+                                              onPress={() => handleNavigateToPlace(result.place.id)}
+                                            >
+                                              Navigate
+                                            </Button>
+
+                                            <Button
+                                              rounded="full"
+                                              className="flex-1"
+                                              onPress={() => {
+                                                void handleShare(session);
+                                              }}
+                                            >
+                                              Share
+                                            </Button>
+                                          </View>
+                                        ) : null}
                                       </View>
                                     </View>
                                   </Pressable>
@@ -1547,133 +1609,31 @@ export default function GroupDetailScreen() {
                       </View>
                     )}
 
-                    {memberLocations.length >= 2 ? (
-                      <>
-                        {/* Recommendations */}
-                        {recommendationsError ? (
-                          <AlertScreen
-                            imageSrc={require('@/assets/images/404.png')}
-                            heading={recommendationsError}
-                            primaryButtonText="group.inviteFriends"
-                            primaryButtonAction={handleInvitePress}
-                          />
-                        ) : isLoadingRecommendations ? (
-                          <Typography className="mt-4 text-center text-gray-500">
-                            {t('group.loadingPlaces')}
-                          </Typography>
-                        ) : recommendedPlaces.length > 0 ? (
-                          <View className="gap-3">
-                            <View className="mt-3">
-                              <Typography variant="h5" className="text-gray-600">
-                                {t('group.recommendations')}
-                              </Typography>
-                            </View>
-                            {recommendedPlaces.map((place) => {
-                              const isFavorite = favoriteMap[place.id] ?? false;
-                              const placeImageUrl = place.featureImageUrl;
+                    {isActiveSession ? (
+                      <View className="mt-4 rounded-[28px] bg-white p-3 flex-row gap-3">
+                        <Button
+                          variant="outline"
+                          rounded="full"
+                          className="flex-1"
+                          onPress={openAddLocationSheet}
+                        >
+                          Add location
+                        </Button>
 
-                              return (
-                                <Card
-                                  key={place.id}
-                                  className="overflow-hidden self-center w-full bg-white"
-                                  style={{
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 2 },
-                                    shadowOpacity: 0.18,
-                                    shadowRadius: 8,
-                                    elevation: 3,
-                                    boxShadow: '0px 2px 8px rgba(0,0,0,0.18)',
-                                  }}
-                                >
-                                  <Pressable
-                                    className="rounded-2xl p-3"
-                                    onPress={() => router.push(`/place/${place.id}` as any)}
-                                  >
-                                    <View className="flex-row gap-3 items-center">
-                                      <Image
-                                        source={
-                                          placeImageUrl
-                                            ? { uri: placeImageUrl }
-                                            : DEFAULT_PLACE_IMAGE
-                                        }
-                                        style={{ width: 135, height: 95, borderRadius: 12 }}
-                                        contentFit="cover"
-                                      />
-
-                                      <View className="flex-1">
-                                        <View className="flex-row items-center justify-between gap-2">
-                                          <Typography
-                                            variant="h5"
-                                            className="flex-1"
-                                            numberOfLines={2}
-                                          >
-                                            {place.name}
-                                          </Typography>
-
-                                          <Pressable
-                                            onPress={(event) => {
-                                              event.stopPropagation();
-                                              void handleFavoriteToggle(place.id);
-                                            }}
-                                            disabled={favoriteLoadingMap[place.id]}
-                                            className="h-8 w-8 items-center justify-center rounded-full bg-white"
-                                          >
-                                            <Heart
-                                              size={18}
-                                              color={isFavorite ? Palette.red : Palette.black}
-                                              fill={isFavorite ? Palette.red : 'transparent'}
-                                              strokeWidth={2}
-                                            />
-                                          </Pressable>
-                                        </View>
-
-                                        <View className="mt-1 flex-row items-center justify-between">
-                                          <View className="flex-row items-center gap-1">
-                                            <Star
-                                              size={14}
-                                              color={Palette.star}
-                                              fill={Palette.star}
-                                              strokeWidth={1.8}
-                                            />
-                                            <Typography className="text-[#4B5563]">
-                                              {place.rating > 0 ? place.rating.toFixed(1) : 'N/A'}
-                                            </Typography>
-                                          </View>
-                                        </View>
-
-                                        {place.fullAddress ? (
-                                          <Typography
-                                            className="mt-1 text-[#6B7280]"
-                                            numberOfLines={1}
-                                          >
-                                            {place.fullAddress}
-                                          </Typography>
-                                        ) : null}
-                                      </View>
-                                    </View>
-                                  </Pressable>
-                                </Card>
-                              );
-                            })}
-                          </View>
+                        {sortedResults.length > 0 && votedPlaceId && !isCurrentUserVoteFinalized ? (
+                          <Button
+                            rounded="full"
+                            className="flex-1"
+                            onPress={() => setIsSubmitConfirmVisible(true)}
+                            disabled={isFinalizingVote}
+                          >
+                            {isFinalizingVote ? t('group.submittingVote') : 'Submit'}
+                          </Button>
                         ) : null}
+                      </View>
+                    ) : null}
 
-                        {sortedResults.length === 0 &&
-                          recommendedPlaces.length === 0 &&
-                          !recommendationsError && (
-                            <View className="mt-3 rounded-2xl border border-[#ECECF0] bg-white p-4">
-                              <Typography className="text-gray-500">
-                                {t('group.noPlacesDesc')}
-                              </Typography>
-                              <Button rounded="full" className="mt-3" onPress={handleSearchPress}>
-                                {t('group.goToSearch')}
-                              </Button>
-                            </View>
-                          )}
-                      </>
-                    ) : sortedResults.length === 0 &&
-                      recommendedPlaces.length === 0 &&
-                      !recommendationsError ? (
+                    {sortedResults.length === 0 ? (
                       <AlertScreen
                         imageSrc={require('@/assets/images/nofriend.png')}
                         heading="group.needActiveMembers"
@@ -1699,6 +1659,23 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       <WinnerFireworks visible={celebratingWinnerPlaceId !== null} />
+
+      <GroupAddLocationSheet
+        visible={isAddLocationSheetVisible}
+        onClose={closeAddLocationSheet}
+        userCoords={coords}
+        memberLocations={memberLocations}
+        memberAvatarUrls={memberAvatarUrls}
+        currentUserId={currentUserId}
+        userAvatarUrl={currentUserPictureUrl}
+        currentUserAvatarVersion={currentUserAvatarVersion}
+        avatarCacheEpoch={avatarCacheEpoch}
+        recommendedPlaces={recommendedPlaces}
+        isLoadingRecommendations={isLoadingRecommendations}
+        recommendationsError={recommendationsError}
+        isAddingPlaceId={isAddingPlaceId}
+        onAddPlace={handleAddPlaceToSession}
+      />
 
       <Modal
         visible={Boolean(sessionToClose)}

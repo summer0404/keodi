@@ -40,6 +40,7 @@ type GroupLocationMapboxProps = {
   avatarCacheEpoch?: number;
   memberAvatarUrls?: MemberAvatarMap;
   places: MapPlace[];
+  height?: number;
   onSearchPress: () => void;
   onMapInteractionStart?: () => void;
   onMapInteractionEnd?: () => void;
@@ -335,6 +336,7 @@ export default function GroupLocationMapbox({
   avatarCacheEpoch,
   memberAvatarUrls,
   places,
+  height = 220,
   onSearchPress,
   onMapInteractionStart,
   onMapInteractionEnd,
@@ -404,7 +406,7 @@ export default function GroupLocationMapbox({
   return (
     <>
       <View className="overflow-hidden rounded-2xl border border-[#ECECF0] bg-white">
-        <View style={{ height: 220 }}>
+        <View style={{ height }}>
           <MapCanvas
             fullScreen={false}
             mapbox={mapbox}
