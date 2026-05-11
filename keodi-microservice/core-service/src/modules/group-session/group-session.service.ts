@@ -22,18 +22,18 @@ import {
 } from 'src/shared/constants/group-session.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import {
-  NotificationPreferredChannel,
-  NotificationType,
-} from 'src/shared/enums/notification.enum';
-import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
-import {
   GetSessionActivitiesDto,
   LogRecommendationsRefreshedDto,
 } from 'src/shared/dtos/group-session.dto';
-import { ActivityActor } from 'src/shared/interfaces/group-session.interface';
-import { ImageService } from '../image/image.service';
-import { ConversationService } from '../conversation/conversation.service';
 import { ConversationType } from 'src/shared/enums/chat.enum';
+import {
+  NotificationPreferredChannel,
+  NotificationType,
+} from 'src/shared/enums/notification.enum';
+import { ActivityActor } from 'src/shared/interfaces/group-session.interface';
+import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
+import { ConversationService } from '../conversation/conversation.service';
+import { ImageService } from '../image/image.service';
 import { GroupSessionHelper } from './group-session.helper';
 
 @Injectable()
@@ -1732,6 +1732,10 @@ export class GroupSessionService {
                 featureImageUrl: true,
                 rating: true,
                 fullAddress: true,
+                street: true,
+                ward: true,
+                city: true,
+                countryCode: true,
               },
             },
             member: {
