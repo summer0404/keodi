@@ -243,8 +243,8 @@
     "placeCandidates": "Địa điểm đề cử",
     "totalPlaces": "{{count}} địa điểm",
     "totalVotes": "{{count}} lượt vote",
-    "vote": "Vote",
-    "voted": "Đã vote",
+    "vote": "Bỏ phiếu",
+    "voted": "Đã bỏ phiếu",
     "submit": "Chốt kèo",
     "submitConfirmTitle": "Xác nhận chốt vote?",
     "submitConfirmMessage": "Bạn có chắc chắn muốn chốt vote của mình không?",
@@ -282,7 +282,8 @@
     "loadingMore": "Đang tải thêm...",
     "recommendations": "Gợi ý địa điểm",
     "needActiveMembers": "Cần dữ liệu vị trí",
-    "needActiveMembersDesc": "Cần ít nhất 3 thành viên bật GPS để nhận gợi ý. Hãy chắc chắn tất cả thành viên đã bật vị trí!"
+    "needActiveMembersDesc": "Cần ít nhất 2 thành viên bật GPS để nhận gợi ý. Hãy chắc chắn tất cả thành viên đã bật vị trí!",
+    "addLocation": "Thêm địa điểm"
   },
   "notification": {
     "groupInviteTitle": "Lời mời tham gia nhóm",

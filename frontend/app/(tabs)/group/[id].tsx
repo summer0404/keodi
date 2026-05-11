@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { ArrowLeft, Copy, Heart, Share2, Star, Trash2, X } from 'lucide-react-native';
 import { isAxiosError } from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -393,10 +393,10 @@ const WinnerFireworks = ({ visible }: { visible: boolean }) => {
 
 export default function GroupDetailScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const horizontalPadding = 16;
-  const tabBarReservedSpace = 110;
   const { id } = useLocalSearchParams<{ id?: string }>();
   const currentUserId = useAuthStore((state) => state.me?.id ?? null);
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -440,6 +440,42 @@ export default function GroupDetailScreen() {
   const [isAddLocationSheetVisible, setIsAddLocationSheetVisible] = useState(false);
   const [isAddingPlaceId, setIsAddingPlaceId] = useState<string | null>(null);
   const swipeAnimations = useRef<Record<string, Animated.Value>>({});
+
+  const tabBarStyle = useMemo(
+    () => ({
+      position: 'absolute' as const,
+      bottom: insets.bottom + 4,
+      left: 16,
+      right: 16,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: 'white',
+      paddingBottom: 0,
+      paddingTop: 0,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      elevation: 10,
+    }),
+    [insets.bottom]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const parentNavigation = navigation.getParent();
+
+      parentNavigation?.setOptions({
+        tabBarStyle: { ...tabBarStyle, display: 'none' },
+      });
+
+      return () => {
+        parentNavigation?.setOptions({
+          tabBarStyle,
+        });
+      };
+    }, [navigation, tabBarStyle])
+  );
 
   // Recommendations API
   const [recommendedPlaces, setRecommendedPlaces] = useState<PlaceRecommendationItem[]>([]);
@@ -602,12 +638,13 @@ export default function GroupDetailScreen() {
 
   const loadRecommendations = useCallback(
     async (isActiveRef: { current: boolean }) => {
-      if (!id || !session) {
+      const currentSession = id ? useGroupSessionStore.getState().sessionsById[id] : null;
+      if (!id || !currentSession) {
         return;
       }
 
       // Only load recommendations if session is ACTIVE
-      if (session.status !== 'ACTIVE') {
+      if (currentSession.status !== 'ACTIVE') {
         setRecommendationsError(null);
         setRecommendedPlaces([]);
         return;
@@ -618,7 +655,7 @@ export default function GroupDetailScreen() {
 
       try {
         // Only send guestId if no currentUserId
-        const guestId = !currentUserId ? (session.members?.[0]?.guestId ?? undefined) : undefined;
+        const guestId = !currentUserId ? (currentSession.members?.[0]?.guestId ?? undefined) : undefined;
         const recommendations = await groupSessionsService.getRecommendations(id, guestId);
 
         if (isActiveRef.current) {
@@ -628,7 +665,7 @@ export default function GroupDetailScreen() {
         if (isActiveRef.current) {
           if (isAxiosError(error) && error.response?.status === 422) {
             // NOT_ENOUGH_MEMBERS_FOR_RECOMMENDATION
-            setRecommendationsError('group.needMinMembersForRecommendations');
+            setRecommendationsError('group.needActiveMembersDesc');
           } else {
             setRecommendationsError('group.failedToLoadRecommendations');
           }
@@ -640,7 +677,7 @@ export default function GroupDetailScreen() {
         }
       }
     },
-    [currentUserId, id, session]
+    [currentUserId, id]
   );
 
   useFocusEffect(
@@ -764,6 +801,10 @@ export default function GroupDetailScreen() {
         return;
       }
 
+      // Check if this is a new member location (first time seeing this userId)
+      const isNewMember = !memberLocationsById[userId];
+
+      // Update member location immediately
       setMemberLocationsById((prev) => ({
         ...prev,
         [userId]: {
@@ -771,6 +812,14 @@ export default function GroupDetailScreen() {
           longitude,
         },
       }));
+
+      // Refresh session data when a new member joins to sync member info
+      // This ensures new members are properly added to the session members list
+      if (isNewMember) {
+        setTimeout(() => {
+          void refreshGroupSessionData(id);
+        }, 300);
+      }
     };
 
     const handleLocationOffline = (payload: RealtimeLocationOffline) => {
@@ -1279,7 +1328,7 @@ export default function GroupDetailScreen() {
         scrollEnabled={!isMapInteracting}
         contentContainerStyle={{
           paddingHorizontal: horizontalPadding,
-          paddingBottom: insets.bottom + tabBarReservedSpace,
+          paddingBottom: insets.bottom,
         }}
       >
         {isLoading ? (
@@ -1337,8 +1386,10 @@ export default function GroupDetailScreen() {
                         memberAvatarUrls={memberAvatarUrls}
                         memberLocations={memberLocations}
                         places={mapPlaces}
+                        recommendedPlaces={recommendedPlaces}
+                        onAddRecommendPlace={handleAddPlaceToSession}
+                        isAddingPlaceId={isAddingPlaceId}
                         height={280}
-                        onSearchPress={openAddLocationSheet}
                         onMapInteractionStart={() => setIsMapInteracting(true)}
                         onMapInteractionEnd={() => setIsMapInteracting(false)}
                       />
@@ -1610,14 +1661,14 @@ export default function GroupDetailScreen() {
                     )}
 
                     {isActiveSession ? (
-                      <View className="mt-4 rounded-[28px] bg-white p-3 flex-row gap-3">
+                      <View className="mt-3 p-3 flex-row gap-3">
                         <Button
                           variant="outline"
                           rounded="full"
                           className="flex-1"
                           onPress={openAddLocationSheet}
                         >
-                          Add location
+                          {t('group.addLocation')}
                         </Button>
 
                         {sortedResults.length > 0 && votedPlaceId && !isCurrentUserVoteFinalized ? (
@@ -1627,7 +1678,7 @@ export default function GroupDetailScreen() {
                             onPress={() => setIsSubmitConfirmVisible(true)}
                             disabled={isFinalizingVote}
                           >
-                            {isFinalizingVote ? t('group.submittingVote') : 'Submit'}
+                            {isFinalizingVote ? t('group.submittingVote') : t('group.submit')}
                           </Button>
                         ) : null}
                       </View>

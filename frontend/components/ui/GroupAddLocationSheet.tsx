@@ -8,7 +8,6 @@ import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import SearchBar from '@/components/ui/SearchBar';
 import AlertScreen from '@/components/ui/AlertScreen';
-import GroupLocationMapbox from '@/components/ui/GroupLocationMapbox';
 import { Card } from '@/components/ui/Card';
 import { DEFAULT_PLACE_IMAGE, getPrimaryImageUrl } from '@/constants/helper';
 import type { MemberLocation, PlaceRecommendationItem } from '@/types/api';
@@ -167,18 +166,6 @@ export default function GroupAddLocationSheet({
     [query, recommendedPlaces]
   );
 
-  // Filter memberLocations to ensure valid memberId for GroupLocationMapbox
-  const validMemberLocations = useMemo(
-    () =>
-      memberLocations
-        .filter((loc) => loc.memberId)
-        .map((loc) => ({
-          ...loc,
-          memberId: loc.memberId as string,
-        })),
-    [memberLocations]
-  );
-
   useEffect(() => {
     if (!visible) {
       setQuery('');
@@ -235,32 +222,6 @@ export default function GroupAddLocationSheet({
 
     return (
       <View className="mt-4 gap-3">
-        <View className="overflow-hidden rounded-[28px] border border-[#ECECF0] bg-white">
-          <View style={{ height: 300 }}>
-            {activePlace ? (
-              <GroupLocationMapbox
-                userCoords={userCoords}
-                userAvatarUrl={userAvatarUrl}
-                currentUserId={currentUserId}
-                currentUserAvatarVersion={currentUserAvatarVersion}
-                avatarCacheEpoch={avatarCacheEpoch}
-                memberAvatarUrls={memberAvatarUrls}
-                memberLocations={validMemberLocations}
-                places={[
-                  {
-                    id: activePlace.id,
-                    name: activePlace.name,
-                    latitude: activePlace.latitude,
-                    longitude: activePlace.longitude,
-                  },
-                ]}
-                height={300}
-                onSearchPress={onClose}
-              />
-            ) : null}
-          </View>
-        </View>
-
         <FlatList
           data={filteredPlaces}
           keyExtractor={(item) => item.id}

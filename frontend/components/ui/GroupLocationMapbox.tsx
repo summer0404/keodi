@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, View } from 'react-native';
+import { Modal, Platform, Pressable, View, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
-import { Expand, Navigation, X } from 'lucide-react-native';
+import { Expand, Navigation, Sparkles, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import { DEFAULT_AVATAR_SOURCE } from '@/constants/helper';
 import { Palette } from '@/constants/theme';
+import type { PlaceRecommendationItem } from '@/types/api';
 
 type Coordinates = {
   latitude: number;
@@ -40,8 +41,10 @@ type GroupLocationMapboxProps = {
   avatarCacheEpoch?: number;
   memberAvatarUrls?: MemberAvatarMap;
   places: MapPlace[];
+  recommendedPlaces?: PlaceRecommendationItem[];
+  onAddRecommendPlace?: (placeId: string) => void;
+  isAddingPlaceId?: string | null;
   height?: number;
-  onSearchPress: () => void;
   onMapInteractionStart?: () => void;
   onMapInteractionEnd?: () => void;
 };
@@ -216,6 +219,42 @@ const AvatarMarker = ({
   );
 };
 
+const RecommendCard = ({
+  place,
+  onAdd,
+  isAdding,
+}: {
+  place: PlaceRecommendationItem;
+  onAdd: (id: string) => void;
+  isAdding: boolean;
+}) => {
+  const mainCategory = place.categories?.find((c) => c.isMain)?.name || 'Place';
+
+  return (
+    <View className="mr-3 w-64 rounded border-2 border-black bg-white p-3 shadow-sm relative">
+      <View className="absolute -top-3 -right-3 rounded-full bg-black p-1.5 z-10 border-2 border-white">
+        <Sparkles size={14} color="white" />
+      </View>
+      <Typography variant="h5" numberOfLines={1} className="uppercase tracking-wider">
+        {place.name}
+      </Typography>
+      <Typography className="mt-1 text-sm text-gray-600 mb-3" numberOfLines={1}>
+        {mainCategory} • {place.rating > 0 ? `${place.rating.toFixed(1)} ★` : 'New'}
+      </Typography>
+      
+      <Button 
+        onPress={() => onAdd(place.id)}
+        disabled={isAdding}
+        className="w-full bg-black py-2.5 rounded-none"
+      >
+        <Typography className="text-white font-bold text-center text-[10px] uppercase tracking-widest">
+          {isAdding ? 'ADDING...' : 'ADD TO SESSION'}
+        </Typography>
+      </Button>
+    </View>
+  );
+};
+
 const MapCanvas = ({
   fullScreen,
   mapbox,
@@ -336,8 +375,10 @@ export default function GroupLocationMapbox({
   avatarCacheEpoch,
   memberAvatarUrls,
   places,
+  recommendedPlaces,
+  onAddRecommendPlace,
+  isAddingPlaceId,
   height = 220,
-  onSearchPress,
   onMapInteractionStart,
   onMapInteractionEnd,
 }: GroupLocationMapboxProps) {
@@ -396,9 +437,6 @@ export default function GroupLocationMapbox({
       <View className="rounded-2xl border border-[#ECECF0] bg-white p-4">
         <Typography variant="h5">Mapbox</Typography>
         <Typography className="mt-2 text-gray-500">{t('group.noPlacesDesc')}</Typography>
-        <Button rounded="full" className="mt-3" onPress={onSearchPress}>
-          {t('group.goToSearch')}
-        </Button>
       </View>
     );
   }
@@ -423,12 +461,31 @@ export default function GroupLocationMapbox({
           />
 
           <Pressable
-            className="absolute right-1 top-1 h-14 w-14 items-center justify-center rounded-full bg-white/95"
+            className="absolute right-2 top-2 h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm"
             onPress={() => setIsExpanded(true)}
             accessibilityRole="button"
           >
             <Expand size={18} color={Palette.black} />
           </Pressable>
+
+          {recommendedPlaces && recommendedPlaces.length > 0 && (
+            <View className="absolute bottom-4 left-0 right-0">
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              >
+                {recommendedPlaces.map((place) => (
+                  <RecommendCard
+                    key={place.id}
+                    place={place}
+                    onAdd={onAddRecommendPlace!}
+                    isAdding={isAddingPlaceId === place.id}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </View>
 

@@ -282,7 +282,8 @@
     "loadingMore": "Loading more...",
     "recommendations": "Recommendations",
     "needActiveMembers": "Location data needed",
-    "needActiveMembersDesc": "At least 3 members need to enable GPS for recommendations. Make sure all members have location enabled!"
+    "needActiveMembersDesc": "At least 2 members need to enable GPS for recommendations. Make sure all members have location enabled!",
+    "addLocation": "Add location"
   },
   "notification": {
     "groupInviteTitle": "Group Session Invite",
