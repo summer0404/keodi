@@ -449,6 +449,11 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         return parsed;
       }
 
+      // If senderName was already resolved from the enriched BE payload, skip store lookup
+      if (parsed.senderName && parsed.senderAvatarUrl) {
+        return parsed;
+      }
+
       const store = useGroupSessionStore.getState();
       const session = await store.fetchSessionById(parsed.sessionId, { force: false });
       if (!session?.members?.length) {
@@ -486,6 +491,11 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   const enrichVoteMemberFinalizedSenderName = useCallback(
     async (parsed: ParsedNotification) => {
       if (parsed.type !== 'vote.member_finalized' || !parsed.sessionId || !parsed.memberId) {
+        return parsed;
+      }
+
+      // If senderName was already resolved from the enriched BE payload, skip store lookup
+      if (parsed.senderName && parsed.senderAvatarUrl) {
         return parsed;
       }
 
@@ -527,6 +537,11 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         return parsed;
       }
 
+      // If senderName was already resolved from the enriched BE payload, skip store lookup
+      if (parsed.senderName && parsed.senderAvatarUrl) {
+        return parsed;
+      }
+
       const store = useGroupSessionStore.getState();
       const session = await store.fetchSessionById(parsed.sessionId, { force: false });
       if (!session?.members?.length) {
@@ -562,6 +577,11 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   const enrichSessionMemberLeftName = useCallback(
     async (parsed: ParsedNotification) => {
       if (parsed.type !== 'session.member_left' || !parsed.sessionId || !parsed.memberId) {
+        return parsed;
+      }
+
+      // If senderName was already resolved from the enriched BE payload, skip store lookup
+      if (parsed.senderName && parsed.senderAvatarUrl) {
         return parsed;
       }
 
@@ -605,19 +625,59 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     };
     const voteData = toRecord(payload.vote);
     const votePlace = toRecord(voteData.place);
+    const voteUser = toRecord(voteData.user);
+
+    // Enriched user objects sent by BE for different event types
+    const closedByUser = toRecord(payload.closedBy);
+    const topLevelUser = toRecord(payload.user);
+    const memberData = toRecord(payload.member);
+    const memberUser = toRecord(memberData.user);
+    const candidateData = toRecord(payload.candidate);
+    const addedByData = toRecord(candidateData.addedBy);
+    const addedByUser = toRecord(addedByData.user);
+    const removedByData = toRecord(candidateData.removedBy);
+    const removedByUser = toRecord(removedByData.user);
 
     const title = toStringOrNull(event.title) ?? toStringOrNull(payload.title);
     const body = toStringOrNull(event.body) ?? toStringOrNull(payload.body);
     const type = toStringOrNull(event.type) ?? toStringOrNull(payload.type);
 
+    // Resolve display name from enriched user objects, then fall back to legacy fields
+    const resolveUserDisplayName = (user: Record<string, unknown>) => {
+      const firstName = toStringOrNull(user.firstName);
+      const lastName = toStringOrNull(user.lastName);
+      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+      return fullName || null;
+    };
+
+    const enrichedSenderName =
+      resolveUserDisplayName(voteUser) ??
+      resolveUserDisplayName(closedByUser) ??
+      resolveUserDisplayName(topLevelUser) ??
+      resolveUserDisplayName(memberUser) ??
+      resolveUserDisplayName(addedByUser) ??
+      resolveUserDisplayName(removedByUser);
+
     const senderName =
+      enrichedSenderName ??
+      toStringOrNull(payload.nickname) ??
       toStringOrNull(payload.senderName) ??
       toStringOrNull(payload.inviterName) ??
       toStringOrNull(payload.fromName) ??
       toStringOrNull(voteData.nickname) ??
       toStringOrNull(voteData.memberName);
 
+    // Resolve avatar from enriched user objects, then fall back to legacy fields
+    const enrichedAvatarUrl =
+      toStringOrNull(voteUser.pictureUrl) ??
+      toStringOrNull(closedByUser.pictureUrl) ??
+      toStringOrNull(topLevelUser.pictureUrl) ??
+      toStringOrNull(memberUser.pictureUrl) ??
+      toStringOrNull(addedByUser.pictureUrl) ??
+      toStringOrNull(removedByUser.pictureUrl);
+
     const senderAvatarUrl =
+      enrichedAvatarUrl ??
       toStringOrNull(payload.senderAvatarUrl) ??
       toStringOrNull(payload.inviterAvatarUrl) ??
       toStringOrNull(payload.inviterPictureUrl) ??
@@ -641,11 +701,12 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     });
 
     const primaryLabel = toStringOrNull(payload.primaryActionLabel);
+    const resolvedVoterName =
+      resolveUserDisplayName(voteUser) ?? toStringOrNull(voteData.nickname);
     const i18nParams = {
       ...toI18nParams(payload.i18nParams ?? payload.params ?? payload.variables),
-      ...(toStringOrNull(voteData.nickname)
-        ? { voterName: toStringOrNull(voteData.nickname) as string }
-        : {}),
+      ...(resolvedVoterName ? { voterName: resolvedVoterName } : {}),
+      ...(senderName ? { memberName: senderName } : {}),
       ...(toStringOrNull(votePlace.name)
         ? { placeName: toStringOrNull(votePlace.name) as string }
         : {}),
@@ -684,6 +745,7 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
 
       const senderName =
         toStringOrNull(data.senderName) ??
+        toStringOrNull(data.accepterName) ??
         toStringOrNull(data.inviterName) ??
         toStringOrNull(data.fromName) ??
         toStringOrNull(data.nickname) ??
@@ -692,9 +754,10 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
 
       const senderAvatarUrl =
         toStringOrNull(data.senderAvatarUrl) ??
+        toStringOrNull(data.senderPictureUrl) ??
+        toStringOrNull(data.accepterPictureUrl) ??
         toStringOrNull(data.inviterAvatarUrl) ??
-        toStringOrNull(data.inviterPictureUrl) ??
-        toStringOrNull(data.senderPictureUrl);
+        toStringOrNull(data.inviterPictureUrl);
 
       const shareCode =
         toStringOrNull(data.shareCode)?.toUpperCase() ?? extractShareCodeFromText(body);
@@ -722,6 +785,10 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         ...(toStringOrNull(votePlace.name)
           ? { placeName: toStringOrNull(votePlace.name) as string }
           : {}),
+        ...(toStringOrNull(data.winningPlaceName)
+          ? { winningPlaceName: toStringOrNull(data.winningPlaceName) as string }
+          : {}),
+        ...(senderName ? { memberName: senderName } : {}),
       };
 
       return {
