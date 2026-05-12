@@ -527,7 +527,6 @@ export class GroupSessionService {
 
       const memberWithPictureUrl = await this.mapMemberPictureUrl(member);
 
-      // Add authenticated user to the session's group conversation
       if (userId) {
         const conv = await this.prismaService.conversation.findFirst({
           where: { sessionId: session.sessionId },
@@ -549,7 +548,7 @@ export class GroupSessionService {
         'session.member_joined',
         {
           sessionId: session.sessionId,
-          member: memberWithPictureUrl as unknown as Record<string, unknown>,
+          member: memberWithPictureUrl,
         },
       );
 
@@ -630,7 +629,6 @@ export class GroupSessionService {
         });
       }
 
-      // Fetch inviter info for notification
       const inviter = await this.prismaService.user.findUnique({
         where: { id: inviterId },
         select: { firstName: true, lastName: true, pictureUrl: true },
@@ -705,8 +703,18 @@ export class GroupSessionService {
         data: { status: GroupSessionStatus.CLOSED, closeAt: null },
       });
 
+
+      const closer = await this.prismaService.user.findUnique({
+        where: { id: userId },
+        select: { id: true, username: true, firstName: true, lastName: true, pictureUrl: true },
+      });
+      const closerWithPictureUrl = closer
+        ? await this.mapUserPictureUrl(closer)
+        : null;
+
       void this.notifySessionMembers(sessionId, 'session.closed', {
         sessionId,
+        closedBy: closerWithPictureUrl,
       });
 
       void this.logActivity(
@@ -828,6 +836,7 @@ export class GroupSessionService {
           memberId: vote.member.id,
           userId: vote.member.userId,
           nickname: vote.member.nickname,
+          user: memberWithPictureUrl.user,
           place: vote.place,
         },
       });
@@ -886,7 +895,6 @@ export class GroupSessionService {
         });
       }
 
-      // Resolve member: by userId for authenticated users, by guestId for guests
       const member = userId
         ? session.members.find((m) => m.userId === userId)
         : session.members.find((m) => m.guestId === guestId);
@@ -975,10 +983,32 @@ export class GroupSessionService {
         voteAutoFinalized = true;
       }
 
+      const finalizingMember =
+        await this.prismaService.groupSessionMember.findUnique({
+          where: { id: member.id },
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
+          },
+        });
+      const finalizingMemberWithPictureUrl = finalizingMember
+        ? await this.mapMemberPictureUrl(finalizingMember)
+        : null;
+
       // Notify all members: someone locked in their vote
       void this.notifySessionMembers(sessionId, 'vote.member_finalized', {
         sessionId,
         memberId: member.id,
+        userId: member.userId,
+        nickname: member.nickname,
+        user: finalizingMemberWithPictureUrl?.user ?? null,
         finalizedVotes,
         totalMembers,
         voteAutoFinalized,
@@ -1119,6 +1149,7 @@ export class GroupSessionService {
       ]);
 
       // Notify all authenticated members with push notification
+      const winningPlaceName = voteResults[0]?.place?.name ?? null;
       const kafka = this.kafkaService.getClient();
       for (const m of session.members) {
         if (!m.userId) continue;
@@ -1127,17 +1158,35 @@ export class GroupSessionService {
           userId: m.userId,
           type: NotificationType.GROUP_VOTE_FINALIZED,
           title: 'Vote Finalized!',
-          body: 'The session host has finalized the vote. Check out the results!',
-          data: { sessionId, winningPlaceId },
+          body: winningPlaceName
+            ? `The vote is in! ${winningPlaceName} wins. Tap to see the results.`
+            : 'The session host has finalized the vote. Check out the results!',
+          data: { sessionId, winningPlaceId, winningPlaceName },
           deepLink: `frontend://group/session/${sessionId}/results`,
           preferredChannel: NotificationPreferredChannel.BOTH,
           createdAt: new Date().toISOString(),
         });
       }
 
+      // Fetch winning place info for the notification
+      const winningPlace = winningPlaceId
+        ? await this.prismaService.place.findUnique({
+            where: { id: winningPlaceId },
+            select: {
+              id: true,
+              name: true,
+              featureImageUrl: true,
+              rating: true,
+              fullAddress: true,
+            },
+          })
+        : null;
+
       void this.notifySessionMembers(sessionId, 'vote.session_finalized', {
         sessionId,
         winningPlaceId,
+        winningPlace,
+        finalizedBy: userId,
       });
 
       return {
@@ -1536,12 +1585,37 @@ export class GroupSessionService {
           },
         );
 
+        // Fetch the member's info for the notification
+        const addedByMember =
+          await this.prismaService.groupSessionMember.findUnique({
+            where: { id: member.id },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  pictureUrl: true,
+                },
+              },
+            },
+          });
+        const addedByMemberWithPictureUrl = addedByMember
+          ? await this.mapMemberPictureUrl(addedByMember)
+          : null;
+
         void this.notifySessionMembers(sessionId, 'candidate.added', {
           sessionId,
           candidate: {
             placeId: candidate.placeId,
             place: candidate.place,
-            addedBy: member.id,
+            addedBy: {
+              memberId: member.id,
+              userId: addedByMemberWithPictureUrl?.userId ?? null,
+              nickname: addedByMemberWithPictureUrl?.nickname ?? null,
+              user: addedByMemberWithPictureUrl?.user ?? null,
+            },
           },
         });
 
@@ -1626,11 +1700,36 @@ export class GroupSessionService {
         where: { sessionId_placeId: { sessionId, placeId } },
       });
 
+      // Fetch the member's info for the notification
+      const removedByMember =
+        await this.prismaService.groupSessionMember.findUnique({
+          where: { id: member.id },
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true,
+                pictureUrl: true,
+              },
+            },
+          },
+        });
+      const removedByMemberWithPictureUrl = removedByMember
+        ? await this.mapMemberPictureUrl(removedByMember)
+        : null;
+
       void this.notifySessionMembers(sessionId, 'candidate.removed', {
         sessionId,
         candidate: {
           placeId,
-          removedBy: member.id,
+          removedBy: {
+            memberId: member.id,
+            userId: removedByMemberWithPictureUrl?.userId ?? null,
+            nickname: removedByMemberWithPictureUrl?.nickname ?? null,
+            user: removedByMemberWithPictureUrl?.user ?? null,
+          },
         },
       });
 
@@ -1675,7 +1774,17 @@ export class GroupSessionService {
 
       const member = await this.prismaService.groupSessionMember.findFirst({
         where: userId ? { userId, sessionId } : { guestId, sessionId },
-        include: { user: { select: { firstName: true, lastName: true } } },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              pictureUrl: true,
+            },
+          },
+        },
       });
 
       if (!member) {
@@ -1685,6 +1794,8 @@ export class GroupSessionService {
         });
       }
 
+      const memberWithPictureUrl = await this.mapMemberPictureUrl(member);
+
       await this.prismaService.groupSessionMember.delete({
         where: { id: member.id },
       });
@@ -1693,6 +1804,8 @@ export class GroupSessionService {
         sessionId,
         memberId: member.id,
         userId: member.userId,
+        nickname: member.nickname,
+        user: memberWithPictureUrl.user,
       });
 
       void this.logActivity(
