@@ -367,6 +367,8 @@
     "aiMode": "AI Mode",
     "done": "Done",
     "join": "Join",
-    "joining": "Joining..."
+    "joining": "Joining...",
+    "share": "Chia sẻ",
+    "direction": "Chỉ đường"
   }
 }

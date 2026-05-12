@@ -74,10 +74,9 @@ const isValidPlace = (place: MapPlace) =>
 const isValidMemberLocation = (location: MemberLocation) =>
   isFiniteCoordinate(location.latitude) && isFiniteCoordinate(location.longitude);
 
-// markerDot removed
-
 const CARD_WIDTH = 260;
 const CARD_GAP = 12;
+const RECOMMEND_CARD_HEIGHT = 150;
 
 const activeRecommendDot = {
   width: 18,
@@ -85,7 +84,7 @@ const activeRecommendDot = {
   borderRadius: 999,
   borderWidth: 2.5,
   borderColor: '#FFFFFF',
-  backgroundColor: '#0000ffff',
+  backgroundColor: 'rgb(255, 0, 0)',
 };
 
 const avatarMarkerStyle = {
@@ -101,10 +100,6 @@ const avatarMarkerStyle = {
 type CameraBounds = {
   ne: [number, number];
   sw: [number, number];
-  paddingTop: number;
-  paddingBottom: number;
-  paddingLeft: number;
-  paddingRight: number;
 };
 
 const calculateBoundsFromCoordinates = (
@@ -148,17 +143,9 @@ const calculateBoundsFromCoordinates = (
     maxLat = Math.max(maxLat, lat);
   });
 
-  // When recommendation cards are shown at the bottom, increase bottom padding
-  // so the camera shifts upward and markers aren't hidden behind the cards.
-  const bottomPadding = hasRecommendCards ? 160 : 40;
-
   return {
     ne: [maxLng, maxLat],
     sw: [minLng, minLat],
-    paddingTop: 40,
-    paddingBottom: bottomPadding,
-    paddingLeft: 20,
-    paddingRight: 20,
   };
 };
 
@@ -226,9 +213,9 @@ const RecommendCard = ({
   const displayAddress = place.fullAddress?.trim() ?? null;
 
   return (
-    <View style={{ width: CARD_WIDTH, marginRight: CARD_GAP }}>
+    <View style={{ width: CARD_WIDTH, marginRight: CARD_GAP, marginBottom: 5 }}>
       <Card
-        className="overflow-hidden w-full bg-white"
+        className="overflow-hidden w-full bg-white justify-center"
         style={{
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
@@ -236,17 +223,18 @@ const RecommendCard = ({
           shadowRadius: 8,
           elevation: 3,
           boxShadow: '0px 2px 8px rgba(0,0,0,0.18)',
+          height: RECOMMEND_CARD_HEIGHT,
         }}
       >
         <Pressable className="relative rounded-3xl p-3" onPress={() => onPress(place.id)}>
-          <View className="flex-row gap-3 items-center">
+          <View className="flex-row gap-3 items-start">
             <Image
               source={placeImageUrl ? { uri: placeImageUrl } : DEFAULT_PLACE_IMAGE}
-              style={{ width: 90, height: 72, borderRadius: 12 }}
+              style={{ width: 100, height: 80, borderRadius: 12, flexShrink: 0 }}
             />
 
             <View className="flex-1">
-              <Typography variant="h5" numberOfLines={2} className="flex-1">
+              <Typography variant="h5" numberOfLines={2} style={{ minHeight: 40 }}>
                 {place.name}
               </Typography>
 
@@ -323,6 +311,23 @@ const MapCanvas = ({
     return calculateBoundsFromCoordinates(userCoords, memberLocations, places, hasRecommendCards);
   }, [center, memberLocations, places, hasRecommendCards]);
 
+  const cameraPadding = useMemo(() => {
+    if (fullScreen) {
+      return {
+        paddingTop: 60,
+        paddingBottom: 60,
+        paddingLeft: 40,
+        paddingRight: 40,
+      };
+    }
+    return {
+      paddingTop: 40,
+      paddingBottom: hasRecommendCards ? 180 : 40,
+      paddingLeft: 30,
+      paddingRight: 30,
+    };
+  }, [fullScreen, hasRecommendCards]);
+
   return (
     <Mapbox.MapView
       style={{ width: '100%', height: '100%' }}
@@ -341,13 +346,14 @@ const MapCanvas = ({
     >
       {bounds && !fullScreen ? (
         // Use bounds-based camera for non-expanded view with multiple markers
-        <Mapbox.Camera bounds={bounds} animationDuration={600} />
+        <Mapbox.Camera bounds={bounds} animationDuration={600} padding={cameraPadding} />
       ) : (
         // Use center-based camera for expanded view or single marker
         <Mapbox.Camera
           centerCoordinate={center}
-          zoomLevel={fullScreen ? 14.5 : 13.2}
+          zoomLevel={fullScreen ? 14.5 : 13.8}
           animationDuration={600}
+          padding={cameraPadding}
         />
       )}
 
@@ -385,17 +391,36 @@ const MapCanvas = ({
       ))}
 
       {places.map((place) => (
-        <Mapbox.PointAnnotation
+        <MarkerView
           key={place.id}
           id={`place-${place.id}`}
           coordinate={[place.longitude, place.latitude]}
-          title={place.name}
           anchor={{ x: 0.5, y: 1 }} // Anchor at the bottom tip of the pin
         >
-          <View style={{ paddingBottom: 2 }}>
+          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <View 
+              style={{ 
+                backgroundColor: 'white', 
+                paddingHorizontal: 8, 
+                paddingVertical: 4, 
+                borderRadius: 8, 
+                borderWidth: 1,
+                borderColor: '#EF4444',
+                marginBottom: 4,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2
+              }}
+            >
+              <Typography variant="caption" className="text-[#EF4444]" numberOfLines={1}>
+                {place.name}
+              </Typography>
+            </View>
             <MapPin color="#EF4444" fill="#EF4444" size={32} />
           </View>
-        </Mapbox.PointAnnotation>
+        </MarkerView>
       ))}
 
       {/* Active recommended place marker */}
@@ -472,7 +497,7 @@ export default function GroupLocationMapbox({
   isAddingPlaceId,
   sessionStatus,
   voteStatus,
-  height = 220,
+  height,
   onMapInteractionStart,
   onMapInteractionEnd,
 }: GroupLocationMapboxProps) {
@@ -559,6 +584,7 @@ export default function GroupLocationMapbox({
     return {
       latitude: activePlace.latitude,
       longitude: activePlace.longitude,
+      name: activePlace.name,
     };
   }, [activeRecommendIndex, recommendedPlaces]);
 
