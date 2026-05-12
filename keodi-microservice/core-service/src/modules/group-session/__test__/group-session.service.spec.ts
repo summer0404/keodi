@@ -26,6 +26,7 @@ const mockPrismaService = {
   },
   groupSessionMember: {
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
@@ -64,6 +65,9 @@ const mockPrismaService = {
     count: jest.fn(),
   },
   $transaction: jest.fn(),
+  place: {
+    findUnique: jest.fn(),
+  },
 };
 
 const mockKafkaClient = { emit: jest.fn() };
@@ -667,6 +671,346 @@ describe('GroupSessionService', () => {
           }),
         }),
       );
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // Notification payload tests
+  // ──────────────────────────────────────────────
+  describe('notification payloads', () => {
+    const USER_INFO_FIELDS = ['id', 'username', 'firstName', 'lastName', 'pictureUrl'] as const;
+
+    const CDN_IMAGE_URL = 'https://cdn.example.com/image.jpg';
+
+    const mockUser = {
+      id: 'user-1',
+      username: 'johndoe',
+      firstName: 'John',
+      lastName: 'Doe',
+      pictureUrl: 's3://bucket/pic.jpg',
+    };
+
+    const mockMemberRow = {
+      id: 'member-1',
+      userId: 'user-1',
+      guestId: null,
+      nickname: 'JD',
+      user: mockUser,
+    };
+
+    const mockPlace = {
+      id: 'place-1',
+      name: 'Cafe A',
+      featureImageUrl: null,
+      rating: 4.5,
+      fullAddress: '123 St',
+    };
+
+    function getEmittedEvents(mockEmitFn: jest.Mock, eventType: string) {
+      return mockEmitFn.mock.calls
+        .filter(([, msg]: any) => msg?.event?.type === eventType)
+        .map(([, msg]: any) => msg.event);
+    }
+
+    function expectUserInfoFields(obj: Record<string, any>) {
+      for (const field of USER_INFO_FIELDS) {
+        expect(obj).toHaveProperty(field);
+      }
+    }
+
+    // ── session.member_joined ──────────────────
+    it('session.member_joined includes full member with user info', async () => {
+      const session = {
+        sessionId: 'sess-1',
+        shareCode: 'CODE',
+        status: GroupSessionStatus.ACTIVE,
+        createdBy: 'owner',
+        createdAt: new Date(),
+        members: [],
+        creator: null,
+      };
+      mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue(null);
+      mockPrismaService.conversation.findFirst.mockResolvedValue({ id: 'conv-1' });
+      mockPrismaService.conversationMember.upsert.mockResolvedValue({});
+      mockPrismaService.groupSessionMember.create.mockResolvedValue(mockMemberRow);
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'owner' },
+      ]);
+      mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      await service.join({ shareCode: 'CODE', userId: 'user-1' });
+
+      // Wait for fire-and-forget
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'session.member_joined');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event).toHaveProperty('sessionId', 'sess-1');
+      expect(event).toHaveProperty('member');
+      expect(event.member).toHaveProperty('user');
+      expectUserInfoFields(event.member.user);
+      // pictureUrl should be the resolved CDN URL
+      expect(event.member.user.pictureUrl).toBe(CDN_IMAGE_URL);
+    });
+
+    // ── session.closed ────────────────────────
+    it('session.closed includes closedBy with user info', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        createdBy: 'user-1',
+        status: GroupSessionStatus.ACTIVE,
+      });
+      mockPrismaService.groupSession.update.mockResolvedValue({
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.CLOSED,
+      });
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'user-2' },
+      ]);
+      mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
+
+      await service.close({ sessionId: 'sess-1', userId: 'user-1' });
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'session.closed');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event).toHaveProperty('sessionId', 'sess-1');
+      expect(event).toHaveProperty('closedBy');
+      expectUserInfoFields(event.closedBy);
+    });
+
+    // ── vote.cast ─────────────────────────────
+    it('vote.cast includes user info in vote payload', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.ACTIVE,
+        voteStatus: VoteStatus.OPEN,
+      });
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({
+        id: 'member-1',
+      });
+      const voteResult = {
+        id: 'vote-1',
+        sessionId: 'sess-1',
+        memberId: 'member-1',
+        placeId: 'place-1',
+        isFinalized: false,
+        place: mockPlace,
+        member: mockMemberRow,
+      };
+      mockPrismaService.$transaction.mockImplementation(async (fn: any) => fn(mockPrismaService));
+      mockPrismaService.sessionVote.findUnique.mockResolvedValue(null);
+      mockPrismaService.sessionVote.upsert.mockResolvedValue(voteResult);
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'user-2' },
+      ]);
+      mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
+
+      await service.castVote({ sessionId: 'sess-1', placeId: 'place-1', userId: 'user-1' });
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'vote.cast');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event.vote).toHaveProperty('memberId', 'member-1');
+      expect(event.vote).toHaveProperty('userId', 'user-1');
+      expect(event.vote).toHaveProperty('nickname', 'JD');
+      expect(event.vote).toHaveProperty('user');
+      expectUserInfoFields(event.vote.user);
+      expect(event.vote).toHaveProperty('place');
+      expect(event.vote.place).toHaveProperty('name', 'Cafe A');
+    });
+
+    // ── vote.member_finalized ─────────────────
+    it('vote.member_finalized includes user info', async () => {
+      const session = {
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.ACTIVE,
+        voteStatus: VoteStatus.OPEN,
+        members: [mockMemberRow],
+      };
+      mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
+      mockPrismaService.sessionVote.findUnique.mockResolvedValue({
+        id: 'vote-1',
+        memberId: 'member-1',
+        isFinalized: false,
+      });
+      mockPrismaService.sessionVote.update.mockResolvedValue({
+        id: 'vote-1',
+        isFinalized: true,
+        placeId: 'place-1',
+        place: { id: 'place-1', name: 'Cafe A' },
+      });
+      // finalizedVotes count — set to 0 so auto-finalize branch is NOT entered
+      mockPrismaService.sessionVote.count.mockResolvedValue(0);
+      mockPrismaService.groupSessionMember.findUnique.mockResolvedValue(mockMemberRow);
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'user-2' },
+      ]);
+      mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
+
+      await service.finalizeMemberVote({ sessionId: 'sess-1', userId: 'user-1' });
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'vote.member_finalized');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event).toHaveProperty('memberId', 'member-1');
+      expect(event).toHaveProperty('userId', 'user-1');
+      expect(event).toHaveProperty('nickname', 'JD');
+      expect(event).toHaveProperty('user');
+      expectUserInfoFields(event.user);
+      expect(event).toHaveProperty('finalizedVotes');
+      expect(event).toHaveProperty('totalMembers');
+    });
+
+    // ── vote.session_finalized ────────────────
+    it('vote.session_finalized includes winning place info', async () => {
+      const session = {
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.ACTIVE,
+        createdBy: 'user-1',
+        voteStatus: VoteStatus.OPEN,
+        members: [{ id: 'member-1', userId: 'user-1' }],
+        votes: [],
+      };
+      const winningPlace = mockPlace;
+      mockPrismaService.groupSession.findUnique.mockResolvedValue(session);
+      mockGroupSessionHelper.buildVoteResults.mockReturnValue([
+        { place: winningPlace },
+      ]);
+      mockPrismaService.$transaction.mockResolvedValue([{}, {}]);
+      mockPrismaService.place.findUnique.mockResolvedValue(winningPlace);
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'user-1' },
+      ]);
+      mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
+
+      await service.finalizeSessionVote({ sessionId: 'sess-1', userId: 'user-1' });
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'vote.session_finalized');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event).toHaveProperty('sessionId', 'sess-1');
+      expect(event).toHaveProperty('winningPlaceId', 'place-1');
+      expect(event).toHaveProperty('winningPlace');
+      expect(event.winningPlace).toHaveProperty('name', 'Cafe A');
+      expect(event.winningPlace).toHaveProperty('fullAddress');
+      expect(event).toHaveProperty('finalizedBy', 'user-1');
+    });
+
+    // ── candidate.added ──────────────────────
+    it('candidate.added includes addedBy with user info', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.ACTIVE,
+      });
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({
+        id: 'member-1',
+      });
+      mockPrismaService.groupSessionCandidate.findUnique.mockResolvedValue(null);
+      mockPrismaService.groupSessionCandidate.create.mockResolvedValue({
+        sessionId: 'sess-1',
+        placeId: 'place-1',
+        addedBy: 'member-1',
+        place: { id: 'place-1', name: 'Cafe A' },
+      });
+      mockPrismaService.groupSessionMember.findUnique.mockResolvedValue(mockMemberRow);
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'user-2' },
+      ]);
+
+      await service.addCandidate({ sessionId: 'sess-1', placeId: 'place-1', userId: 'user-1' });
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'candidate.added');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event.candidate).toHaveProperty('placeId', 'place-1');
+      expect(event.candidate).toHaveProperty('place');
+      expect(event.candidate).toHaveProperty('addedBy');
+      expect(event.candidate.addedBy).toHaveProperty('memberId', 'member-1');
+      expect(event.candidate.addedBy).toHaveProperty('userId', 'user-1');
+      expect(event.candidate.addedBy).toHaveProperty('nickname', 'JD');
+      expect(event.candidate.addedBy).toHaveProperty('user');
+      expectUserInfoFields(event.candidate.addedBy.user);
+    });
+
+    // ── candidate.removed ────────────────────
+    it('candidate.removed includes removedBy with user info', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.ACTIVE,
+      });
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue({
+        id: 'member-1',
+      });
+      mockPrismaService.groupSessionCandidate.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        placeId: 'place-1',
+        addedBy: 'member-1',
+      });
+      mockPrismaService.groupSessionCandidate.delete.mockResolvedValue({});
+      mockPrismaService.groupSessionMember.findUnique.mockResolvedValue(mockMemberRow);
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'user-2' },
+      ]);
+
+      await service.deleteCandidate({ sessionId: 'sess-1', placeId: 'place-1', userId: 'user-1' });
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'candidate.removed');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event.candidate).toHaveProperty('placeId', 'place-1');
+      expect(event.candidate).toHaveProperty('removedBy');
+      expect(event.candidate.removedBy).toHaveProperty('memberId', 'member-1');
+      expect(event.candidate.removedBy).toHaveProperty('userId', 'user-1');
+      expect(event.candidate.removedBy).toHaveProperty('nickname', 'JD');
+      expect(event.candidate.removedBy).toHaveProperty('user');
+      expectUserInfoFields(event.candidate.removedBy.user);
+    });
+
+    // ── session.member_left ──────────────────
+    it('session.member_left includes nickname and user info', async () => {
+      mockPrismaService.groupSession.findUnique.mockResolvedValue({
+        sessionId: 'sess-1',
+        status: GroupSessionStatus.ACTIVE,
+        createdBy: 'owner',
+      });
+      mockPrismaService.groupSessionMember.findFirst.mockResolvedValue(mockMemberRow);
+      mockPrismaService.groupSessionMember.delete.mockResolvedValue({});
+      mockPrismaService.groupSessionMember.findMany.mockResolvedValue([
+        { userId: 'owner' },
+      ]);
+      mockPrismaService.groupSessionActivity.create.mockResolvedValue({});
+
+      await service.leaveSession({ sessionId: 'sess-1', userId: 'user-1' });
+      await new Promise((r) => setImmediate(r));
+
+      const events = getEmittedEvents(mockKafkaClient.emit, 'session.member_left');
+      expect(events.length).toBeGreaterThanOrEqual(1);
+
+      const event = events[0];
+      expect(event).toHaveProperty('sessionId', 'sess-1');
+      expect(event).toHaveProperty('memberId', 'member-1');
+      expect(event).toHaveProperty('userId', 'user-1');
+      expect(event).toHaveProperty('nickname', 'JD');
+      expect(event).toHaveProperty('user');
+      expectUserInfoFields(event.user);
     });
   });
 });

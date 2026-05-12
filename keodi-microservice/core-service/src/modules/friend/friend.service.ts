@@ -93,11 +93,14 @@ export class FriendService {
 
       const sender = await this.prismaService.user.findUnique({
         where: { id: senderId },
-        select: { firstName: true, lastName: true },
+        select: { firstName: true, lastName: true, pictureUrl: true },
       });
       const senderName =
         [sender?.firstName, sender?.lastName].filter(Boolean).join(' ') ||
         'Someone';
+      const senderPictureUrl = sender?.pictureUrl
+        ? await this.imageService.getImageViewUrl(sender.pictureUrl)
+        : null;
 
       this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
         eventId: createId(),
@@ -105,7 +108,7 @@ export class FriendService {
         type: NotificationType.FRIEND_REQUEST,
         title: 'New Friend Request',
         body: `${senderName} sent you a friend request`,
-        data: { senderId, requestId: request.id },
+        data: { senderId, requestId: request.id, senderName, senderPictureUrl },
         deepLink: `frontend://friends/requests`,
         preferredChannel: NotificationPreferredChannel.BOTH,
         createdAt: new Date().toISOString(),
@@ -159,7 +162,7 @@ export class FriendService {
 
         const accepter = await prisma.user.findUnique({
           where: { id: userId },
-          select: { firstName: true, lastName: true },
+          select: { firstName: true, lastName: true, pictureUrl: true },
         });
 
         await this.conversationService.create({
@@ -171,6 +174,9 @@ export class FriendService {
         const accepterName =
           [accepter?.firstName, accepter?.lastName].filter(Boolean).join(' ') ||
           'Someone';
+        const accepterPictureUrl = accepter?.pictureUrl
+          ? await this.imageService.getImageViewUrl(accepter.pictureUrl)
+          : null;
 
         this.kafkaService.getClient().emit(NotificationTopics.Dispatch, {
           eventId: createId(),
@@ -178,7 +184,7 @@ export class FriendService {
           type: NotificationType.FRIEND_ACCEPTED,
           title: 'Friend Request Accepted',
           body: `${accepterName} accepted your friend request`,
-          data: { accepterId: userId },
+          data: { accepterId: userId, accepterName, accepterPictureUrl },
           deepLink: `frontend://friends`,
           preferredChannel: NotificationPreferredChannel.BOTH,
           createdAt: new Date().toISOString(),

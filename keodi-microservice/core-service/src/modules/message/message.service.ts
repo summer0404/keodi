@@ -129,6 +129,12 @@ export class MessageService {
       payload: resolvedMessage,
     });
 
+    const senderName =
+      [message.sender?.firstName, message.sender?.lastName]
+        .filter(Boolean)
+        .join(' ') || 'Someone';
+    const senderPictureUrl = resolvedMessage.sender?.pictureUrl ?? null;
+
     for (const userId of memberIds) {
       if (userId === senderId) continue;
 
@@ -139,12 +145,14 @@ export class MessageService {
         eventId: `chat-message-${message.id}-${userId}`,
         userId,
         type: NotificationType.CHAT_MESSAGE,
-        title: 'New message',
+        title: `${senderName}`,
         body: content.slice(0, 100),
         data: {
           conversationId,
           messageId: message.id,
           senderId,
+          senderName,
+          senderPictureUrl,
         },
         deepLink: `frontend://chat/${conversationId}`,
         preferredChannel: NotificationPreferredChannel.FCM,
