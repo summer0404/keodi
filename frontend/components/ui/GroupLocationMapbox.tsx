@@ -1,14 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, View, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Modal, Platform, Pressable, View, ScrollView, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import { Image } from 'expo-image';
-import { Expand, Navigation, Sparkles, X } from 'lucide-react-native';
+import { Expand, Star, X, MapPin } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
-import { DEFAULT_AVATAR_SOURCE } from '@/constants/helper';
+import { Card } from '@/components/ui/Card';
+import { DEFAULT_AVATAR_SOURCE, getPrimaryImageUrl, DEFAULT_PLACE_IMAGE } from '@/constants/helper';
 import { Palette } from '@/constants/theme';
+import { usePlacesStore } from '@/store/usePlacesStore';
 import type { PlaceRecommendationItem } from '@/types/api';
+import { t } from 'i18next';
 
 type Coordinates = {
   latitude: number;
@@ -47,6 +51,8 @@ type GroupLocationMapboxProps = {
   height?: number;
   onMapInteractionStart?: () => void;
   onMapInteractionEnd?: () => void;
+  sessionStatus?: string;
+  voteStatus?: string;
 };
 
 const getMapboxModule = (): MapboxModule | null => {
@@ -68,31 +74,18 @@ const isValidPlace = (place: MapPlace) =>
 const isValidMemberLocation = (location: MemberLocation) =>
   isFiniteCoordinate(location.latitude) && isFiniteCoordinate(location.longitude);
 
-const markerDot = {
-  width: 14,
-  height: 14,
-  borderRadius: 999,
-  borderWidth: 2,
-  borderColor: '#FFFFFF',
-  backgroundColor: '#EF4444',
-};
+// markerDot removed
 
-const userDot = {
-  width: 16,
-  height: 16,
-  borderRadius: 999,
-  borderWidth: 2,
-  borderColor: '#FFFFFF',
-  backgroundColor: '#2563EB',
-};
+const CARD_WIDTH = 260;
+const CARD_GAP = 12;
 
-const memberDot = {
-  width: 14,
-  height: 14,
+const activeRecommendDot = {
+  width: 18,
+  height: 18,
   borderRadius: 999,
-  borderWidth: 2,
+  borderWidth: 2.5,
   borderColor: '#FFFFFF',
-  backgroundColor: '#10B981',
+  backgroundColor: '#0000ffff',
 };
 
 const avatarMarkerStyle = {
@@ -117,7 +110,8 @@ type CameraBounds = {
 const calculateBoundsFromCoordinates = (
   userCoords: [number, number] | null,
   memberLocations: MemberLocation[],
-  places: MapPlace[]
+  places: MapPlace[],
+  hasRecommendCards?: boolean
 ): CameraBounds | null => {
   const allCoords: Array<[number, number]> = [];
 
@@ -154,24 +148,18 @@ const calculateBoundsFromCoordinates = (
     maxLat = Math.max(maxLat, lat);
   });
 
+  // When recommendation cards are shown at the bottom, increase bottom padding
+  // so the camera shifts upward and markers aren't hidden behind the cards.
+  const bottomPadding = hasRecommendCards ? 160 : 40;
+
   return {
     ne: [maxLng, maxLat],
     sw: [minLng, minLat],
     paddingTop: 40,
-    paddingBottom: 40,
+    paddingBottom: bottomPadding,
     paddingLeft: 20,
     paddingRight: 20,
   };
-};
-
-const buildAvatarSource = (pictureUrl: string | null | undefined) => {
-  const rawUrl = pictureUrl?.trim();
-
-  if (!rawUrl) {
-    return DEFAULT_AVATAR_SOURCE;
-  }
-
-  return { uri: rawUrl };
 };
 
 const withVersionQuery = (url: string, versions: Array<number | undefined | null>) => {
@@ -223,34 +211,74 @@ const RecommendCard = ({
   place,
   onAdd,
   isAdding,
+  onPress,
+  sessionStatus,
+  voteStatus,
 }: {
   place: PlaceRecommendationItem;
   onAdd: (id: string) => void;
   isAdding: boolean;
+  onPress: (id: string) => void;
+  sessionStatus?: string;
+  voteStatus?: string;
 }) => {
-  const mainCategory = place.categories?.find((c) => c.isMain)?.name || 'Place';
+  const placeImageUrl = getPrimaryImageUrl(place.featureImageUrl);
+  const displayAddress = place.fullAddress?.trim() ?? null;
 
   return (
-    <View className="mr-3 w-64 rounded border-2 border-black bg-white p-3 shadow-sm relative">
-      <View className="absolute -top-3 -right-3 rounded-full bg-black p-1.5 z-10 border-2 border-white">
-        <Sparkles size={14} color="white" />
-      </View>
-      <Typography variant="h5" numberOfLines={1} className="uppercase tracking-wider">
-        {place.name}
-      </Typography>
-      <Typography className="mt-1 text-sm text-gray-600 mb-3" numberOfLines={1}>
-        {mainCategory} • {place.rating > 0 ? `${place.rating.toFixed(1)} ★` : 'New'}
-      </Typography>
-      
-      <Button 
-        onPress={() => onAdd(place.id)}
-        disabled={isAdding}
-        className="w-full bg-black py-2.5 rounded-none"
+    <View style={{ width: CARD_WIDTH, marginRight: CARD_GAP }}>
+      <Card
+        className="overflow-hidden w-full bg-white"
+        style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.18,
+          shadowRadius: 8,
+          elevation: 3,
+          boxShadow: '0px 2px 8px rgba(0,0,0,0.18)',
+        }}
       >
-        <Typography className="text-white font-bold text-center text-[10px] uppercase tracking-widest">
-          {isAdding ? 'ADDING...' : 'ADD TO SESSION'}
-        </Typography>
-      </Button>
+        <Pressable className="relative rounded-3xl p-3" onPress={() => onPress(place.id)}>
+          <View className="flex-row gap-3 items-center">
+            <Image
+              source={placeImageUrl ? { uri: placeImageUrl } : DEFAULT_PLACE_IMAGE}
+              style={{ width: 90, height: 72, borderRadius: 12 }}
+            />
+
+            <View className="flex-1">
+              <Typography variant="h5" numberOfLines={2} className="flex-1">
+                {place.name}
+              </Typography>
+
+              <View className="mt-1 flex-row items-center gap-1">
+                <Star size={14} color={Palette.star} fill={Palette.star} strokeWidth={1.8} />
+                <Typography className="text-[#4B5563]">
+                  {place.rating > 0 ? place.rating.toFixed(1) : 'N/A'}
+                </Typography>
+              </View>
+
+              {displayAddress ? (
+                <Typography className="mt-0.5 text-[#6B7280]" numberOfLines={1}>
+                  {displayAddress}
+                </Typography>
+              ) : null}
+            </View>
+          </View>
+
+          {voteStatus !== 'FINALIZED' && (
+            <Button
+              onPress={(event: any) => {
+                event?.stopPropagation?.();
+                onAdd(place.id);
+              }}
+              disabled={isAdding}
+              className="mt-3"
+            >
+              {isAdding ? t('home.addingToGroup') : t('home.addToGroup')}
+            </Button>
+          )}
+        </Pressable>
+      </Card>
     </View>
   );
 };
@@ -266,6 +294,8 @@ const MapCanvas = ({
   memberAvatarUrls,
   memberLocations,
   places,
+  hasRecommendCards,
+  activeRecommendPlace,
   onMapInteractionStart,
   onMapInteractionEnd,
 }: {
@@ -279,6 +309,8 @@ const MapCanvas = ({
   memberAvatarUrls?: MemberAvatarMap;
   memberLocations: MemberLocation[];
   places: MapPlace[];
+  hasRecommendCards?: boolean;
+  activeRecommendPlace?: { latitude: number; longitude: number } | null;
   onMapInteractionStart?: () => void;
   onMapInteractionEnd?: () => void;
 }) => {
@@ -288,8 +320,8 @@ const MapCanvas = ({
   // Calculate bounds for all markers
   const bounds = useMemo(() => {
     const userCoords: [number, number] | null = center;
-    return calculateBoundsFromCoordinates(userCoords, memberLocations, places);
-  }, [center, memberLocations, places]);
+    return calculateBoundsFromCoordinates(userCoords, memberLocations, places, hasRecommendCards);
+  }, [center, memberLocations, places, hasRecommendCards]);
 
   return (
     <Mapbox.MapView
@@ -358,10 +390,70 @@ const MapCanvas = ({
           id={`place-${place.id}`}
           coordinate={[place.longitude, place.latitude]}
           title={place.name}
+          anchor={{ x: 0.5, y: 1 }} // Anchor at the bottom tip of the pin
         >
-          <View style={markerDot} />
+          <View style={{ paddingBottom: 2 }}>
+            <MapPin color="#EF4444" fill="#EF4444" size={32} />
+          </View>
         </Mapbox.PointAnnotation>
       ))}
+
+      {/* Active recommended place marker */}
+      {activeRecommendPlace && (
+        <MarkerView
+          id="active-recommend-place"
+          coordinate={[activeRecommendPlace.longitude, activeRecommendPlace.latitude]}
+          anchor={{ x: 0.5, y: 0.5 }}
+        >
+          <View style={activeRecommendDot} />
+        </MarkerView>
+      )}
+
+      {/* Polylines from user + members to the active recommended place */}
+      {activeRecommendPlace && (() => {
+        const destination: [number, number] = [
+          activeRecommendPlace.longitude,
+          activeRecommendPlace.latitude,
+        ];
+
+        const lines: Array<{ id: string; from: [number, number] }> = [];
+
+        // User line
+        lines.push({ id: 'user-route', from: center });
+
+        // Member lines
+        memberLocations.forEach((loc) => {
+          lines.push({
+            id: `member-route-${loc.memberId}`,
+            from: [loc.longitude, loc.latitude],
+          });
+        });
+
+        return lines.map((line) => (
+          <mapbox.ShapeSource
+            key={line.id}
+            id={`shape-${line.id}`}
+            shape={{
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: [line.from, destination],
+              },
+            }}
+          >
+            <mapbox.LineLayer
+              id={`line-${line.id}`}
+              style={{
+                lineColor: '#EF4444',
+                lineWidth: 2,
+                lineDasharray: [2, 3],
+                lineOpacity: 0.7,
+              }}
+            />
+          </mapbox.ShapeSource>
+        ));
+      })()}
     </Mapbox.MapView>
   );
 };
@@ -378,14 +470,19 @@ export default function GroupLocationMapbox({
   recommendedPlaces,
   onAddRecommendPlace,
   isAddingPlaceId,
+  sessionStatus,
+  voteStatus,
   height = 220,
   onMapInteractionStart,
   onMapInteractionEnd,
 }: GroupLocationMapboxProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { t } = useTranslation();
+  const upsertPlace = usePlacesStore((state) => state.upsertPlace);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMapboxReady, setIsMapboxReady] = useState(false);
+  const [activeRecommendIndex, setActiveRecommendIndex] = useState(0);
 
   const mapbox = useMemo(() => getMapboxModule(), []);
   const validMemberLocations = useMemo(
@@ -432,6 +529,39 @@ export default function GroupLocationMapbox({
     };
   }, [onMapInteractionEnd]);
 
+  const RECOMMEND_CARD_WIDTH = CARD_WIDTH + CARD_GAP;
+
+  const handleRecommendScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetX = event.nativeEvent.contentOffset.x;
+      // Use floor with a small offset to make the snap feel more natural
+      const index = Math.round(offsetX / RECOMMEND_CARD_WIDTH);
+      const safeCount = recommendedPlaces?.length ?? 0;
+      const clampedIndex = Math.max(0, Math.min(index, safeCount - 1));
+      
+      if (clampedIndex !== activeRecommendIndex) {
+        setActiveRecommendIndex(clampedIndex);
+      }
+    },
+    [recommendedPlaces?.length, activeRecommendIndex]
+  );
+
+  const activeRecommendPlace = useMemo(() => {
+    if (!recommendedPlaces || recommendedPlaces.length === 0) {
+      return null;
+    }
+
+    const activePlace = recommendedPlaces[activeRecommendIndex];
+    if (!activePlace || !Number.isFinite(activePlace.latitude) || !Number.isFinite(activePlace.longitude)) {
+      return null;
+    }
+
+    return {
+      latitude: activePlace.latitude,
+      longitude: activePlace.longitude,
+    };
+  }, [activeRecommendIndex, recommendedPlaces]);
+
   if (Platform.OS === 'web' || !mapbox || !isMapboxReady || !center) {
     return (
       <View className="rounded-2xl border border-[#ECECF0] bg-white p-4">
@@ -456,6 +586,8 @@ export default function GroupLocationMapbox({
             memberAvatarUrls={memberAvatarUrls}
             memberLocations={validMemberLocations}
             places={validPlaces}
+            hasRecommendCards={Boolean(recommendedPlaces && recommendedPlaces.length > 0)}
+            activeRecommendPlace={activeRecommendPlace}
             onMapInteractionStart={onMapInteractionStart}
             onMapInteractionEnd={onMapInteractionEnd}
           />
@@ -473,7 +605,12 @@ export default function GroupLocationMapbox({
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
+                contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
+                onScroll={handleRecommendScroll}
+                scrollEventThrottle={16}
+                snapToOffsets={recommendedPlaces.map((_, i) => i * RECOMMEND_CARD_WIDTH)}
+                decelerationRate="fast"
+                disableIntervalMomentum={true}
               >
                 {recommendedPlaces.map((place) => (
                   <RecommendCard
@@ -481,6 +618,40 @@ export default function GroupLocationMapbox({
                     place={place}
                     onAdd={onAddRecommendPlace!}
                     isAdding={isAddingPlaceId === place.id}
+                    sessionStatus={sessionStatus}
+                    voteStatus={voteStatus}
+                    onPress={(placeId) => {
+                      // Cache the recommendation as a PlaceItem so the detail page can display it
+                      const rec = recommendedPlaces.find((p) => p.id === placeId);
+                      if (rec) {
+                        upsertPlace({
+                          id: rec.id,
+                          fromGoogle: false,
+                          name: rec.name,
+                          description: rec.description,
+                          rating: rec.rating,
+                          googleMapLink: rec.googleMapLink,
+                          website: rec.website,
+                          phoneNumber: rec.phoneNumber,
+                          featureImageUrl: rec.featureImageUrl,
+                          ownerId: null,
+                          latitude: rec.latitude,
+                          longitude: rec.longitude,
+                          fullAddress: rec.fullAddress,
+                          ward: null,
+                          street: null,
+                          city: null,
+                          countryCode: null,
+                          createdAt: '',
+                          updatedAt: '',
+                          has_attributes: 0,
+                          isFavorite: false,
+                          openingHours: rec.openingHours as any,
+                          categories: rec.categories,
+                        });
+                      }
+                      router.push(`/place/${placeId}` as any);
+                    }}
                   />
                 ))}
               </ScrollView>

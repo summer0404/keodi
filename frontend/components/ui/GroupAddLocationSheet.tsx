@@ -11,8 +11,9 @@ import AlertScreen from '@/components/ui/AlertScreen';
 import { Card } from '@/components/ui/Card';
 import { DEFAULT_PLACE_IMAGE, getPrimaryImageUrl } from '@/constants/helper';
 import type { MemberLocation, PlaceRecommendationItem } from '@/types/api';
-import { Star } from 'lucide-react-native';
+import { Star, Sparkles } from 'lucide-react-native';
 import { Palette } from '@/constants/theme';
+import { t } from 'i18next';
 
 const cardHorizontalPadding = 16;
 
@@ -36,6 +37,8 @@ type GroupAddLocationSheetProps = {
   recommendationsError: string | null;
   isAddingPlaceId: string | null;
   onAddPlace: (placeId: string) => void;
+  sessionStatus?: string;
+  voteStatus?: string;
 };
 
 const isPlaceMatch = (place: PlaceRecommendationItem, query: string) => {
@@ -57,10 +60,14 @@ function AddLocationCard({
   place,
   onAddPlace,
   isAdding,
+  sessionStatus,
+  voteStatus,
 }: {
   place: PlaceRecommendationItem;
   onAddPlace: (placeId: string) => void;
   isAdding: boolean;
+  sessionStatus?: string;
+  voteStatus?: string;
 }) {
   const imageUrl = getPrimaryImageUrl(place.featureImageUrl);
 
@@ -76,42 +83,42 @@ function AddLocationCard({
         boxShadow: '0px 2px 8px rgba(0,0,0,0.16)',
       }}
     >
-      <View className="p-3">
-        <View className="flex-row gap-3 items-center">
-          <Image
-            source={imageUrl ? { uri: imageUrl } : DEFAULT_PLACE_IMAGE}
-            style={{ width: 118, height: 84, borderRadius: 14 }}
-            contentFit="cover"
-          />
-
-          <View className="flex-1">
-            <Typography variant="h5" numberOfLines={2}>
+      <Image
+        source={imageUrl ? { uri: imageUrl } : DEFAULT_PLACE_IMAGE}
+        style={{ width: '100%', height: 140 }}
+        contentFit="cover"
+      />
+      <View className="p-4">
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 mr-2">
+            <Typography variant="h5" numberOfLines={1} className="font-bold">
               {place.name}
             </Typography>
-
-            <View className="mt-1 flex-row items-center gap-1">
-              <Star size={14} color={Palette.star} fill={Palette.star} strokeWidth={1.8} />
-              <Typography className="text-[#4B5563]">
-                {place.rating > 0 ? place.rating.toFixed(1) : 'N/A'}
-              </Typography>
-            </View>
-
-            {place.fullAddress ? (
-              <Typography className="mt-1 text-[#6B7280]" numberOfLines={2}>
-                {place.fullAddress}
-              </Typography>
-            ) : null}
+            <Typography variant="caption" className="text-gray-500 mt-1" numberOfLines={1}>
+              {place.categories?.map((c) => c.name).join(' • ') || 'Place'}
+            </Typography>
+          </View>
+          <View className="flex-row items-center bg-gray-100 px-2 py-1 rounded-md">
+            <Star size={12} color={Palette.star} fill={Palette.star} />
+            <Typography variant="caption" className="ml-1 font-bold">
+              {place.rating > 0 ? place.rating.toFixed(1) : '4.8'}
+            </Typography>
           </View>
         </View>
 
-        <Button
-          rounded="full"
-          className="mt-3"
-          onPress={() => onAddPlace(place.id)}
-          disabled={isAdding}
-        >
-          {isAdding ? 'Adding...' : 'Add to Sessions'}
-        </Button>
+        {voteStatus !== 'FINALIZED' && (
+          <Button
+            variant="default"
+            size="sm"
+            className="mt-4 h-10 rounded-xl"
+            onPress={() => onAddPlace(place.id)}
+            disabled={isAdding}
+          >
+            <Typography className="text-white font-bold text-[13px]">
+              {isAdding ? t('home.addingToGroup') : `+ ${t('home.addToGroup')}`}
+            </Typography>
+          </Button>
+        )}
       </View>
     </Card>
   );
@@ -122,16 +129,13 @@ export default function GroupAddLocationSheet({
   onClose,
   userCoords,
   memberLocations,
-  memberAvatarUrls,
-  currentUserId,
-  userAvatarUrl,
-  currentUserAvatarVersion,
-  avatarCacheEpoch,
   recommendedPlaces,
   isLoadingRecommendations,
   recommendationsError,
   isAddingPlaceId,
   onAddPlace,
+  sessionStatus,
+  voteStatus,
 }: GroupAddLocationSheetProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -177,7 +181,7 @@ export default function GroupAddLocationSheet({
   }, [filteredPlaces.length, visible]);
 
   const activePlace = filteredPlaces[activeIndex] ?? filteredPlaces[0] ?? null;
-  const cardWidth = Math.min(width - cardHorizontalPadding * 2, 420);
+  const cardWidth = Math.min(width * 0.8, 420);
   const itemWidth = cardWidth + 12;
 
   const renderContent = () => {
@@ -215,7 +219,7 @@ export default function GroupAddLocationSheet({
     if (!filteredPlaces.length) {
       return (
         <View className="mt-4 rounded-2xl border border-[#ECECF0] bg-white p-4">
-          <Typography className="text-gray-500">No places found.</Typography>
+          <Typography className="text-gray-500">{t('group.noPlacesFound')}</Typography>
         </View>
       );
     }
@@ -233,7 +237,7 @@ export default function GroupAddLocationSheet({
           snapToAlignment="start"
           disableIntervalMomentum
           contentContainerStyle={{
-            paddingHorizontal: cardHorizontalPadding,
+            paddingBottom: 20,
           }}
           ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
           getItemLayout={(_, index) => ({
@@ -251,6 +255,8 @@ export default function GroupAddLocationSheet({
                 place={item}
                 onAddPlace={onAddPlace}
                 isAdding={isAddingPlaceId === item.id}
+                sessionStatus={sessionStatus}
+                voteStatus={voteStatus}
               />
             </View>
           )}
@@ -270,9 +276,9 @@ export default function GroupAddLocationSheet({
         >
           <View className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-300" />
 
-          <Typography variant="h4" className="text-black">
-            Add location
-          </Typography>
+          {/* <Typography variant="h4" className="text-black">
+            {t('group.addLocation')}
+          </Typography> */}
 
           <View className="mt-3">
             <SearchBar
@@ -283,6 +289,10 @@ export default function GroupAddLocationSheet({
               showSettings={false}
               showAI={false}
             />
+            <View className='flex-row items-center mt-4'>
+              <Sparkles size={20} color={Palette.black} />
+              <Typography variant='h4' className='ml-2'>{t('group.aiSuggestions')}</Typography>
+            </View>
           </View>
 
           {renderContent()}

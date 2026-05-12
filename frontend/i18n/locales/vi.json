@@ -283,7 +283,8 @@
     "recommendations": "Gợi ý địa điểm",
     "needActiveMembers": "Cần dữ liệu vị trí",
     "needActiveMembersDesc": "Cần ít nhất 2 thành viên bật GPS để nhận gợi ý. Hãy chắc chắn tất cả thành viên đã bật vị trí!",
-    "addLocation": "Thêm địa điểm"
+    "addLocation": "Thêm địa điểm",
+    "aiSuggestion": "AI đề xuất"
   },
   "notification": {
     "groupInviteTitle": "Lời mời tham gia nhóm",

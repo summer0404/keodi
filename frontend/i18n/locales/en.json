@@ -283,7 +283,8 @@
     "recommendations": "Recommendations",
     "needActiveMembers": "Location data needed",
     "needActiveMembersDesc": "At least 2 members need to enable GPS for recommendations. Make sure all members have location enabled!",
-    "addLocation": "Add location"
+    "addLocation": "Add location",
+    "aiSuggestions": "AI Suggestions"
   },
   "notification": {
     "groupInviteTitle": "Group Session Invite",
