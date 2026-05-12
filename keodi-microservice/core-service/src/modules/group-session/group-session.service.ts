@@ -131,7 +131,7 @@ export class GroupSessionService {
   private async notifySessionMembers(
     sessionId: string,
     eventType: string,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
   ): Promise<void> {
     const members = await this.prismaService.groupSessionMember.findMany({
       where: { sessionId },
@@ -527,7 +527,6 @@ export class GroupSessionService {
 
       const memberWithPictureUrl = await this.mapMemberPictureUrl(member);
 
-      // Add authenticated user to the session's group conversation
       if (userId) {
         const conv = await this.prismaService.conversation.findFirst({
           where: { sessionId: session.sessionId },
@@ -630,7 +629,6 @@ export class GroupSessionService {
         });
       }
 
-      // Fetch inviter info for notification
       const inviter = await this.prismaService.user.findUnique({
         where: { id: inviterId },
         select: { firstName: true, lastName: true, pictureUrl: true },
@@ -705,7 +703,7 @@ export class GroupSessionService {
         data: { status: GroupSessionStatus.CLOSED, closeAt: null },
       });
 
-      // Fetch closer's info for the notification
+
       const closer = await this.prismaService.user.findUnique({
         where: { id: userId },
         select: { id: true, username: true, firstName: true, lastName: true, pictureUrl: true },
@@ -897,7 +895,6 @@ export class GroupSessionService {
         });
       }
 
-      // Resolve member: by userId for authenticated users, by guestId for guests
       const member = userId
         ? session.members.find((m) => m.userId === userId)
         : session.members.find((m) => m.guestId === guestId);
@@ -986,7 +983,6 @@ export class GroupSessionService {
         voteAutoFinalized = true;
       }
 
-      // Fetch the finalizing member's info for the notification
       const finalizingMember =
         await this.prismaService.groupSessionMember.findUnique({
           where: { id: member.id },
