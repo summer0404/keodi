@@ -11,7 +11,7 @@ import AlertScreen from '@/components/ui/AlertScreen';
 import { Card } from '@/components/ui/Card';
 import { DEFAULT_PLACE_IMAGE, getPrimaryImageUrl } from '@/constants/helper';
 import type { MemberLocation, PlaceRecommendationItem } from '@/types/api';
-import { Star, Sparkles } from 'lucide-react-native';
+import { Star, Sparkles, RefreshCw } from 'lucide-react-native';
 import { Palette } from '@/constants/theme';
 import { t } from 'i18next';
 
@@ -39,6 +39,8 @@ type GroupAddLocationSheetProps = {
   onAddPlace: (placeId: string) => void;
   sessionStatus?: string;
   voteStatus?: string;
+  onRefreshRecommendations?: () => void;
+  isRefreshingRecommendations?: boolean;
 };
 
 const isPlaceMatch = (place: PlaceRecommendationItem, query: string) => {
@@ -136,6 +138,8 @@ export default function GroupAddLocationSheet({
   onAddPlace,
   sessionStatus,
   voteStatus,
+  onRefreshRecommendations,
+  isRefreshingRecommendations,
 }: GroupAddLocationSheetProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -260,6 +264,26 @@ export default function GroupAddLocationSheet({
               />
             </View>
           )}
+          ListFooterComponent={
+            onRefreshRecommendations ? (
+              <View style={{ width: 80, justifyContent: 'center', alignItems: 'center' }}>
+                <Pressable
+                  className={`h-14 w-14 items-center justify-center rounded-full bg-white shadow-md ${isRefreshingRecommendations ? 'opacity-50' : ''}`}
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
+                    elevation: 4,
+                  }}
+                  onPress={onRefreshRecommendations}
+                  disabled={isRefreshingRecommendations}
+                >
+                  <RefreshCw size={24} color={Palette.black} />
+                </Pressable>
+              </View>
+            ) : null
+          }
         />
       </View>
     );

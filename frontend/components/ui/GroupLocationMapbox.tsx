@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, View, ScrollView, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import { Image } from 'expo-image';
-import { Expand, Star, X, MapPin } from 'lucide-react-native';
+import { Expand, Star, X, MapPin, RefreshCw } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { DEFAULT_AVATAR_SOURCE, getPrimaryImageUrl, DEFAULT_PLACE_IMAGE } from '
 import { Palette } from '@/constants/theme';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import type { PlaceRecommendationItem } from '@/types/api';
+import clsx from 'clsx';
 import { t } from 'i18next';
 
 type Coordinates = {
@@ -53,6 +54,8 @@ type GroupLocationMapboxProps = {
   onMapInteractionEnd?: () => void;
   sessionStatus?: string;
   voteStatus?: string;
+  onRefreshRecommendations?: () => void;
+  isRefreshingRecommendations?: boolean;
 };
 
 const getMapboxModule = (): MapboxModule | null => {
@@ -500,6 +503,8 @@ export default function GroupLocationMapbox({
   height,
   onMapInteractionStart,
   onMapInteractionEnd,
+  onRefreshRecommendations,
+  isRefreshingRecommendations,
 }: GroupLocationMapboxProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -680,6 +685,28 @@ export default function GroupLocationMapbox({
                     }}
                   />
                 ))}
+
+                {onRefreshRecommendations ? (
+                  <View style={{ width: 80, justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+                    <Pressable
+                      className={clsx(
+                        "h-14 w-14 items-center justify-center rounded-full bg-white shadow-md",
+                        isRefreshingRecommendations && "opacity-50"
+                      )}
+                      style={{
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 4,
+                        elevation: 4,
+                      }}
+                      onPress={onRefreshRecommendations}
+                      disabled={isRefreshingRecommendations}
+                    >
+                      <RefreshCw size={24} color={Palette.black} />
+                    </Pressable>
+                  </View>
+                ) : null}
               </ScrollView>
             </View>
           )}

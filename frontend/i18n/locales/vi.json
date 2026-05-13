@@ -233,16 +233,22 @@
     "status": "Trạng thái",
     "voteStatus": "Trạng thái vote",
     "addSessionTitle": "Tạo phiên mới",
+    "selectRadiusTitle": "Chọn khoảng cách",
+    "selectRadiusSubtitle": "Xác định phạm vi xung quanh điểm chính giữa để tìm địa điểm lí tưởng",
+    "radiusLabel": "Bán kính",
+    "midpointLabel": "Điểm chính giữa",
     "personalizeTitle": "Cá nhân hóa gợi ý của bạn",
     "selectCategories": "Danh mục",
     "continue": "Tiếp tục",
     "inviteFriends": "Mời bạn bè",
+    "participants": "Thành viên",
     "recommendFriends": "Gợi ý",
     "loadingFriends": "Đang tải danh sách bạn bè...",
     "noFriends": "Chưa có bạn bè để gợi ý",
     "placeCandidates": "Địa điểm đề cử",
     "totalPlaces": "{{count}} địa điểm",
     "totalVotes": "{{count}} lượt vote",
+    "voteLabel": "lượt vote",
     "vote": "Bỏ phiếu",
     "voted": "Đã bỏ phiếu",
     "submit": "Chốt kèo",
@@ -284,7 +290,11 @@
     "needActiveMembers": "Cần dữ liệu vị trí",
     "needActiveMembersDesc": "Cần ít nhất 2 thành viên bật GPS để nhận gợi ý. Hãy chắc chắn tất cả thành viên đã bật vị trí!",
     "addLocation": "Thêm địa điểm",
-    "aiSuggestion": "AI đề xuất"
+    "aiSuggestion": "AI đề xuất",
+    "selectedCategories": "Đã chọn",
+    "noCategoriesFound": "Không tìm thấy danh mục nào",
+    "searchSuggestions": "Gợi ý tìm kiếm",
+    "warningCategories": "~ Hãy tìm kiếm bằng tiếng Anh nhé ~"
   },
   "notification": {
     "groupInviteTitle": "Lời mời tham gia nhóm",
@@ -369,6 +379,7 @@
     "join": "Tham gia",
     "joining": "Đang tham gia...",
     "share": "Chia sẻ",
-    "direction": "Chỉ đường"
+    "direction": "Chỉ đường",
+    "clearAll": "Xóa tất cả"
   }
 }

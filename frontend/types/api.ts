@@ -277,6 +277,7 @@ export interface GroupSessionItem {
   createdBy: string;
   shareCode: string;
   createdAt: string;
+  searchRadius?: number;
   status: string;
   voteStatus: string;
   finalizedAt: string | null;
@@ -519,6 +520,24 @@ export interface PlaceRecommendationItem {
   categories: PlaceCategory[];
 }
 
+export interface UpdateGroupRecommendationCategoriesRequest {
+  guestId?: string;
+  categoryIds: string[];
+}
+
+export interface UpdateGroupRecommendationCategoriesResponse {
+  message?: string;
+}
+
+export interface UpdateGroupRecommendationRadiusRequest {
+  guestId?: string;
+  searchRadius: number;
+}
+
+export interface UpdateGroupRecommendationRadiusResponse {
+  message?: string;
+}
+
 export type RealtimeLocationSnapshot = {
   sessionId?: string;
   locations?: Array<{
@@ -558,7 +577,7 @@ export interface PlaceCandidateResponse {
     rating: number;
     fullAddress: string | null;
   };
-};
+}
 
 export interface UserSettings {
   shareLocation: boolean;
@@ -571,4 +590,11 @@ export interface UserSettings {
   defaultMinRating: 'ABOVE_1' | 'ABOVE_2' | 'ABOVE_3' | 'ABOVE_4' | 'FIVE_STAR';
   language: 'VI' | 'EN';
   darkMode: boolean;
+}
+
+export interface CategorySearchResultItem {
+  id: string;
+  name: string;
+  placeCount: number;
+  score: number;
 }

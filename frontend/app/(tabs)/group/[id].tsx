@@ -460,6 +460,14 @@ export default function GroupDetailScreen() {
   const [isAddingPlaceId, setIsAddingPlaceId] = useState<string | null>(null);
   const [isFetchingWinningPlaceDetails, setIsFetchingWinningPlaceDetails] = useState(false);
   const swipeAnimations = useRef<Record<string, Animated.Value>>({});
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const tabBarStyle = useMemo(
     () => ({
@@ -507,6 +515,7 @@ export default function GroupDetailScreen() {
   const upsertPlace = usePlacesStore((state) => state.upsertPlace);
   const coords = useLocationStore((state) => state.coords);
   const ensureLocation = useLocationStore((state) => state.ensureLocation);
+  const [isRefreshingRecommendations, setIsRefreshingRecommendations] = useState(false);
   const locationSocketRef = useRef<Socket | null>(null);
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const coordsRef = useRef(coords);
@@ -703,6 +712,33 @@ export default function GroupDetailScreen() {
     [currentUserId, id]
   );
 
+  const handleRefreshRecommendations = useCallback(async () => {
+    const currentSession = id ? useGroupSessionStore.getState().sessionsById[id] : null;
+    if (!id || !currentSession || currentSession.status !== 'ACTIVE') {
+      return;
+    }
+
+    setIsRefreshingRecommendations(true);
+    setRecommendationsError(null);
+
+    try {
+      const guestId = !currentUserId
+        ? (currentSession.members?.[0]?.guestId ?? undefined)
+        : undefined;
+      const recommendations = await groupSessionsService.refreshRecommendations(id, guestId);
+      setRecommendedPlaces(recommendations);
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 422) {
+        setRecommendationsError('group.needActiveMembersDesc');
+      } else {
+        setRecommendationsError('group.failedToLoadRecommendations');
+      }
+      setRecommendedPlaces([]);
+    } finally {
+      setIsRefreshingRecommendations(false);
+    }
+  }, [id, currentUserId]);
+
   useFocusEffect(
     useCallback(() => {
       const activeRef = { current: true };
@@ -728,7 +764,7 @@ export default function GroupDetailScreen() {
   }, [ensureLocation]);
 
   const refreshGroupSessionData = useCallback(
-    async (sessionId: string) => {
+    async (sessionId: string, options?: { includeRecommendations?: boolean }) => {
       if (!sessionId) {
         return;
       }
@@ -747,11 +783,15 @@ export default function GroupDetailScreen() {
         upsertSession(refreshedSession);
         setVoteData(votes);
         setCandidateData(candidates);
+
+        if (options?.includeRecommendations && refreshedSession.status === 'ACTIVE') {
+          void loadRecommendations(isMountedRef);
+        }
       } catch {
         // Keep current data when realtime refresh fails.
       }
     },
-    [fetchSessionById, upsertSession]
+    [fetchSessionById, loadRecommendations, upsertSession]
   );
 
   useEffect(() => {
@@ -840,7 +880,7 @@ export default function GroupDetailScreen() {
       // This ensures new members are properly added to the session members list
       if (isNewMember) {
         setTimeout(() => {
-          void refreshGroupSessionData(id);
+          void refreshGroupSessionData(id, { includeRecommendations: true });
         }, 300);
       }
     };
@@ -1507,6 +1547,8 @@ export default function GroupDetailScreen() {
                         height={400}
                         onMapInteractionStart={() => setIsMapInteracting(true)}
                         onMapInteractionEnd={() => setIsMapInteracting(false)}
+                        onRefreshRecommendations={handleRefreshRecommendations}
+                        isRefreshingRecommendations={isRefreshingRecommendations}
                       />
                     ) : null}
 
@@ -1673,7 +1715,7 @@ export default function GroupDetailScreen() {
                                                   void handleDirectionWinner(result.place);
                                                 }}
                                               >
-                                                {t('home.direction')}
+                                                {t('button.direction')}
                                               </Button>
                                               <Button
                                                 variant="default"
@@ -1684,7 +1726,7 @@ export default function GroupDetailScreen() {
                                                   void handleShareWinner(result.place);
                                                 }}
                                               >
-                                                {t('home.shar123e')}
+                                                {t('button.share')}
                                               </Button>
                                             </View>
                                           </View>
@@ -1897,7 +1939,18 @@ export default function GroupDetailScreen() {
                                       <View className="flex-1 mr-2">
                                         <Typography variant="h4">{result.place.name}</Typography>
                                       </View>
-                                      <View className="flex-row items-center bg-gray-100 px-2 py-1 rounded-md">
+                                      <View className="justify-center items-center">
+                                        <Typography variant="h4">
+                                          {result.count}
+                                        </Typography>
+                                        <Typography variant="caption">
+                                          {t('group.voteLabel')}
+                                        </Typography>
+                                      </View>
+                                    </View>
+
+                                    <View className="mt-3 flex-row items-center justify-between">
+                                      <View className="flex-row items-center px-2 py-1 rounded-md">
                                         <Star size={14} color={Palette.star} fill={Palette.star} />
                                         <Typography variant="caption" className="ml-1">
                                           {result.place.rating > 0
@@ -1905,12 +1958,6 @@ export default function GroupDetailScreen() {
                                             : 'N/A'}
                                         </Typography>
                                       </View>
-                                    </View>
-
-                                    <View className="mt-3 flex-row items-center justify-between">
-                                      <Typography variant="caption" className="text-gray-500">
-                                        {t('group.totalVotes', { count: result.count })}
-                                      </Typography>
                                       <GroupSessionAvatarStack
                                         members={voters}
                                         size={28}
@@ -2126,7 +2173,7 @@ export default function GroupDetailScreen() {
                       </View>
                     ) : null}
 
-                    {sortedResults.length === 0 ? (
+                    {/* {sortedResults.length === 0 ? (
                       <AlertScreen
                         imageSrc={require('@/assets/images/nofriend.png')}
                         heading="group.needActiveMembers"
@@ -2134,7 +2181,7 @@ export default function GroupDetailScreen() {
                         primaryButtonText="group.inviteFriends"
                         primaryButtonAction={handleInvitePress}
                       />
-                    ) : null}
+                    ) : null} */}
                   </>
                 )}
               </>
@@ -2170,6 +2217,8 @@ export default function GroupDetailScreen() {
         onAddPlace={handleAddPlaceToSession}
         sessionStatus={session?.status}
         voteStatus={voteData?.voteStatus}
+        onRefreshRecommendations={handleRefreshRecommendations}
+        isRefreshingRecommendations={isRefreshingRecommendations}
       />
 
       <Modal

@@ -233,16 +233,22 @@
     "status": "Status",
     "voteStatus": "Vote status",
     "addSessionTitle": "Add new session",
+    "selectRadiusTitle": "Select radius",
+    "selectRadiusSubtitle": "Determine the range around the midpoint to find ideal places",
+    "radiusLabel": "Radius",
+    "midpointLabel": "Midpoint",
     "personalizeTitle": "Personalize Your Recommendations",
     "selectCategories": "Categories",
     "continue": "Continue",
     "inviteFriends": "Invite Friends",
+    "participants": "Participants",
     "recommendFriends": "Recommend",
     "loadingFriends": "Loading friends...",
     "noFriends": "No friends to recommend yet",
     "placeCandidates": "Place Candidates",
     "totalPlaces": "{{count}} places",
     "totalVotes": "{{count}} votes",
+    "voteLabel": "votes",
     "vote": "Vote",
     "voted": "Voted",
     "submit": "Submit",
@@ -284,7 +290,10 @@
     "needActiveMembers": "Location data needed",
     "needActiveMembersDesc": "At least 2 members need to enable GPS for recommendations. Make sure all members have location enabled!",
     "addLocation": "Add location",
-    "aiSuggestions": "AI Suggestions"
+    "aiSuggestions": "AI Suggestions",
+    "selectedCategories": "Selected Categories",
+    "noCategoriesFound": "No Categories Found",
+    "searchSuggestions": "Search Suggestions"
   },
   "notification": {
     "groupInviteTitle": "Group Session Invite",
@@ -321,7 +330,8 @@
     "joinNow": "Join now",
     "openNow": "Open now",
     "viewNow": "View now",
-    "explorNow": "Explore now"
+    "explorNow": "Explore now",
+    "warningCategories": "~ Please search in English ~"
   },
   "settings": {
     "title": "Settings",
@@ -368,7 +378,8 @@
     "done": "Done",
     "join": "Join",
     "joining": "Joining...",
-    "share": "Chia sẻ",
-    "direction": "Chỉ đường"
+    "share": "Share",
+    "direction": "Direction",
+    "clearAll": "Clear all"
   }
 }
