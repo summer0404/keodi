@@ -234,10 +234,14 @@ export class RecommendationService {
       ) AS places_with_distance
       WHERE distance <= ${searchRadius}
       ORDER BY distance ASC, rating DESC
-      LIMIT ${GROUP_SESSION_MAX_RECOMMENDATION_PLACES}
+      LIMIT ${GROUP_SESSION_MAX_RECOMMENDATION_PLACES * 3}
     `;
 
-    return await this.enrichPlacesWithRelations(placeRows);
+    // Shuffle the candidate pool so each refresh returns a different selection
+    const shuffled = [...placeRows].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, GROUP_SESSION_MAX_RECOMMENDATION_PLACES);
+
+    return await this.enrichPlacesWithRelations(selected);
   }
 
   private async getContentBasedPlaceCandidates(

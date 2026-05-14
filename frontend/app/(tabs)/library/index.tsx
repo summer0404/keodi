@@ -1,24 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
-import { ArrowLeft, Filter } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
-import { Select } from '@/components/ui/Select';
-import Typography from '@/components/ui/Typography';
-import PlaceCard from '@/components/ui/PlaceCard';
-import AlertScreen from '@/components/ui/AlertScreen';
-import { Palette } from '@/constants/theme';
 import { favoriteService } from '@/api/favorite';
 import { placesService } from '@/api/places';
-import type { FavoriteItem, PlaceSortBy } from '@/types/api';
+import AlertScreen from '@/components/ui/AlertScreen';
+import PlaceCard from '@/components/ui/PlaceCard';
+import { Select } from '@/components/ui/Select';
+import Typography from '@/components/ui/Typography';
 import { buildSortOrder, DEFAULT_LIMIT, DEFAULT_PAGE } from '@/constants/helper';
-import { useTranslation } from 'react-i18next';
+import { Palette } from '@/constants/theme';
 import { usePlacesStore } from '@/store/usePlacesStore';
+import type { FavoriteItem, PlaceSortBy } from '@/types/api';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, ArrowUpDown } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FlatList, Pressable, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
-
-type SegmentKey = 'favorite' | 'history';
 
 const appendUniqueFavorites = (prev: FavoriteItem[], next: FavoriteItem[]) => {
   const existingIds = new Set(prev.map((item) => item.id));
@@ -34,9 +32,7 @@ export default function FavoriteScreen() {
   const horizontalPadding = 16;
   const cardWidth = width - horizontalPadding * 2;
 
-  const [activeSegment, setActiveSegment] = useState<SegmentKey>('favorite');
   const [sortBy, setSortBy] = useState<PlaceSortBy>('createdAt');
-  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [favoritePlaces, setFavoritePlaces] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,15 +66,6 @@ export default function FavoriteScreen() {
       { label: t('home.sortByName'), value: 'name' },
     ],
     [t]
-  );
-
-  const categoryOptions = useMemo(
-    () => [
-      { label: 'All', value: 'all' },
-      { label: 'Cafe', value: 'cafe' },
-      { label: 'Restaurant', value: 'restaurant' },
-    ],
-    []
   );
 
   const fetchFavoritesPage = useCallback(
@@ -141,10 +128,6 @@ export default function FavoriteScreen() {
   );
 
   const reloadFavorites = useCallback(() => {
-    if (activeSegment !== 'favorite') {
-      return;
-    }
-
     requestVersionRef.current += 1;
     const requestVersion = requestVersionRef.current;
     inFlightPageRef.current = null;
@@ -153,7 +136,7 @@ export default function FavoriteScreen() {
     setHasMore(true);
 
     fetchFavoritesPage(DEFAULT_PAGE, 'replace', requestVersion);
-  }, [activeSegment, fetchFavoritesPage]);
+  }, [fetchFavoritesPage]);
 
   useEffect(() => {
     reloadFavorites();
@@ -165,14 +148,13 @@ export default function FavoriteScreen() {
     }, [reloadFavorites])
   );
 
-  // Scroll to top when sortBy or categoryFilter changes for better UX
+  // Scroll to top when sortBy changes for better UX
   useEffect(() => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, [sortBy, categoryFilter]);
+  }, [sortBy]);
 
   const handleLoadMore = useCallback(() => {
     if (
-      activeSegment !== 'favorite' ||
       !hasMoreRef.current ||
       isLoadingRef.current ||
       isLoadingMoreRef.current
@@ -181,7 +163,7 @@ export default function FavoriteScreen() {
     }
 
     fetchFavoritesPage(currentPageRef.current + 1, 'append', requestVersionRef.current);
-  }, [activeSegment, fetchFavoritesPage]);
+  }, [fetchFavoritesPage]);
 
   const handleOpenPlace = useCallback(
     async (item: FavoriteItem) => {
@@ -276,32 +258,8 @@ export default function FavoriteScreen() {
           <Typography variant="h4">{t('library.title')}</Typography>
         </View>
 
-        <View className="mt-4 flex-row rounded-xl bg-gray-200 p-1">
-          <Pressable
-            className={`flex-1 items-center rounded-lg py-2 ${
-              activeSegment === 'favorite' ? 'bg-white' : 'bg-transparent'
-            }`}
-            onPress={() => setActiveSegment('favorite')}
-          >
-            <Typography className={activeSegment === 'favorite' ? 'text-black' : 'text-gray-500'}>
-              {t('library.favorite')}
-            </Typography>
-          </Pressable>
-
-          <Pressable
-            className={`flex-1 items-center rounded-lg py-2 ${
-              activeSegment === 'history' ? 'bg-white' : 'bg-transparent'
-            }`}
-            onPress={() => setActiveSegment('history')}
-          >
-            <Typography className={activeSegment === 'history' ? 'text-black' : 'text-gray-500'}>
-              {t('library.history')}
-            </Typography>
-          </Pressable>
-        </View>
-
         <View className="mt-4 flex-row items-center gap-2">
-          <Filter size={18} color={Palette.black} strokeWidth={2} />
+          <ArrowUpDown size={18} color={Palette.black} strokeWidth={2} />
           <Select
             value={sortBy}
             onChange={(value) => {
@@ -312,76 +270,53 @@ export default function FavoriteScreen() {
             options={sortOptions}
             className="flex-1"
           />
-          <Select
-            value={categoryFilter}
-            onChange={(value) => {
-              if (typeof value === 'string') {
-                setCategoryFilter(value);
-              }
-            }}
-            options={categoryOptions}
-            className="flex-1"
-          />
         </View>
 
-        {activeSegment === 'favorite' ? (
-          <View className="mt-5 flex-row items-center justify-between">
-            <Typography variant="h5">{t('library.yourFavoritePlaces')}</Typography>
-            <View className="rounded-full bg-red-500 px-3 py-2">
-              <Typography variant="caption-sm" className="text-white font-bold">
-                {t('library.totalFavorites', { totalFavorites })}
-              </Typography>
-            </View>
+        <View className="mt-5 flex-row items-center justify-between">
+          <Typography variant="h5">{t('library.yourFavoritePlaces')}</Typography>
+          <View className="rounded-full bg-red-500 px-3 py-2">
+            <Typography variant="caption-sm" className="text-white font-bold">
+              {t('library.totalFavorites', { totalFavorites })}
+            </Typography>
           </View>
-        ) : null}
+        </View>
       </View>
 
-      {activeSegment === 'history' ? (
-        <View className="flex-1 px-4 pt-8">
-          <Typography variant="h4" className="text-center text-black">
-            {t('library.history')}
-          </Typography>
-          <Typography className="mt-2 text-center text-gray-500">
-            History screen will be implemented next.
-          </Typography>
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={favoritePlaces}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          ItemSeparatorComponent={itemSeparator}
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          initialNumToRender={4}
-          maxToRenderPerBatch={4}
-          windowSize={7}
-          updateCellsBatchingPeriod={100}
-          ListFooterComponent={listFooter}
-          ListEmptyComponent={
-            isLoading ? (
-              <Typography className="px-4 pt-3 text-gray-500">
-                {t('library.loadingFavorites')}
-              </Typography>
-            ) : (
-              <View className="px-4 pt-3">
-                <AlertScreen
-                  imageSrc={require('@/assets/images/404.png')}
-                  heading={t('library.noFavorites')}
-                  description={t('library.noFavoritesDescription')}
-                  primaryButtonText={t('library.goToHome')}
-                  primaryButtonAction={() => router.replace('/(tabs)')}
-                />
-              </View>
-            )
-          }
-          contentContainerStyle={{
-            paddingHorizontal: horizontalPadding,
-          }}
-        />
-      )}
+      <FlatList
+        ref={flatListRef}
+        data={favoritePlaces}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ItemSeparatorComponent={itemSeparator}
+        showsVerticalScrollIndicator={false}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={7}
+        updateCellsBatchingPeriod={100}
+        ListFooterComponent={listFooter}
+        ListEmptyComponent={
+          isLoading ? (
+            <Typography className="px-4 pt-3 text-gray-500">
+              {t('library.loadingFavorites')}
+            </Typography>
+          ) : (
+            <View className="px-4 pt-3">
+              <AlertScreen
+                imageSrc={require('@/assets/images/404.png')}
+                heading={t('library.noFavorites')}
+                description={t('library.noFavoritesDescription')}
+                primaryButtonText={t('library.goToHome')}
+                primaryButtonAction={() => router.replace('/(tabs)')}
+              />
+            </View>
+          )
+        }
+        contentContainerStyle={{
+          paddingHorizontal: horizontalPadding,
+        }}
+      />
     </View>
   );
 }

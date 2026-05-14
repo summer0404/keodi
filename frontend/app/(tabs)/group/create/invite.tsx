@@ -1,17 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Circle } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/Button';
-import Typography from '@/components/ui/Typography';
 import { friendsService } from '@/api/friends';
 import { groupSessionsService } from '@/api/groupSessions';
+import { Button } from '@/components/ui/Button';
+import Typography from '@/components/ui/Typography';
 import { DEFAULT_AVATAR_SOURCE, DEFAULT_LIMIT, DEFAULT_PAGE } from '@/constants/helper';
 import { Palette } from '@/constants/theme';
-import type { FriendItem } from '@/types/api';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { FriendItem, GroupSessionMember } from '@/types/api';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, CheckCircle2, Circle } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, SectionList, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const getFriendName = (item: FriendItem) => {
   const firstName = item.friend?.firstName?.trim() ?? '';
@@ -30,7 +31,11 @@ export default function GroupInviteScreen() {
   }>();
 
   const [friends, setFriends] = useState<FriendItem[]>([]);
+  const [sessionMembers, setSessionMembers] = useState<GroupSessionMember[]>([]);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const me = useAuthStore((s) => s.me);
+  const meFetchedAt = useAuthStore((s) => s.meFetchedAt);
+  const avatarCacheEpoch = useAuthStore((s) => s.avatarCacheEpoch);
   const [isLoadingMoreFriends, setIsLoadingMoreFriends] = useState(false);
   const [isSubmittingInvites, setIsSubmittingInvites] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -120,9 +125,47 @@ export default function GroupInviteScreen() {
     void fetchFriendsPage(DEFAULT_PAGE, 'replace');
   }, [fetchFriendsPage]);
 
+  useEffect(() => {
+    if (normalizedSessionId) {
+      groupSessionsService
+        .getGroupSessionById(normalizedSessionId)
+        .then((session) => {
+          setSessionMembers(session.members ?? []);
+        })
+        .catch(() => {
+          /* Silent fail */
+        });
+    }
+  }, [normalizedSessionId]);
+
   const selectedSet = useMemo(() => new Set(selectedFriendIds), [selectedFriendIds]);
 
-  const uniqueFriends = useMemo(() => friends, [friends]);
+  const sections = useMemo(() => {
+    const memberUserIds = new Set(sessionMembers.map((m) => m.userId).filter(Boolean));
+
+    const members = sessionMembers.map((m) => ({
+      ...m,
+      isMember: true,
+      uniqueKey: `member-${m.id}`,
+    }));
+
+    const friendsList = friends
+      .filter((f) => !memberUserIds.has(f.friendId))
+      .map((f) => ({
+        ...f,
+        isMember: false,
+        uniqueKey: `friend-${f.friendId ?? f.id}`,
+      }));
+
+    const result = [];
+    if (members.length > 0) {
+      result.push({ title: t('group.participants'), data: members });
+    }
+    if (friendsList.length > 0) {
+      result.push({ title: t('group.recommendFriends'), data: friendsList });
+    }
+    return result;
+  }, [sessionMembers, friends, t]);
 
   const toggleFriend = useCallback((friendId: string) => {
     setSelectedFriendIds((prev) => {
@@ -143,7 +186,9 @@ export default function GroupInviteScreen() {
 
   const handleDone = useCallback(async () => {
     if (!normalizedSessionId || selectedFriendIds.length === 0 || isSubmittingInvites) {
-      router.replace('/(tabs)/group');
+      router.replace(
+        normalizedSessionId ? (`/(tabs)/group/${normalizedSessionId}` as any) : ('/(tabs)/group' as any)
+      );
       return;
     }
 
@@ -163,51 +208,79 @@ export default function GroupInviteScreen() {
         return;
       }
 
-      router.replace('/(tabs)/group');
+      router.replace(`/(tabs)/group/${normalizedSessionId}` as any);
     } finally {
       setIsSubmittingInvites(false);
     }
   }, [isSubmittingInvites, normalizedSessionId, router, selectedFriendIds, t]);
 
-  const renderFriend = useCallback(
-    ({ item }: { item: FriendItem }) => {
+  const renderItem = useCallback(
+    ({ item }: { item: any }) => {
+      const isMember = item.isMember;
+      const userId = isMember ? item.userId : item.friendId;
+      const name = isMember
+        ? [item.user?.firstName, item.user?.lastName].filter(Boolean).join(' ') ||
+        item.nickname ||
+        'Unknown'
+        : getFriendName(item);
+
+      const pictureUrl = isMember ? item.user?.pictureUrl : item.friend?.pictureUrl;
+      const isMe = userId === me?.id;
+
+      let avatarSource = DEFAULT_AVATAR_SOURCE;
+      if (pictureUrl) {
+        const cacheBuster = isMe ? meFetchedAt || avatarCacheEpoch : avatarCacheEpoch;
+        avatarSource = { uri: cacheBuster ? `${pictureUrl}?t=${cacheBuster}` : pictureUrl };
+      }
+
+      if (isMember) {
+        return (
+          <View className="flex-row items-center justify-between rounded-xl bg-white px-3 py-2.5 opacity-80">
+            <View className="flex-row items-center gap-3">
+              <Image source={avatarSource} style={{ width: 36, height: 36, borderRadius: 9999 }} />
+              <Typography>{name}</Typography>
+            </View>
+            <CheckCircle2 size={16} color={Palette.black} fill={Palette.black} />
+          </View>
+        );
+      }
+
       const checked = selectedSet.has(item.friendId);
-      const friendName = getFriendName(item);
-      const avatar = item.friend?.pictureUrl
-        ? { uri: item.friend.pictureUrl }
-        : DEFAULT_AVATAR_SOURCE;
 
       return (
         <Pressable
-          key={`${item.id}-${item.friendId}-${item.userId}`}
           className="flex-row items-center justify-between rounded-xl bg-white px-3 py-2.5"
           onPress={() => toggleFriend(item.friendId)}
         >
           <View className="flex-row items-center gap-3">
-            <Image source={avatar} style={{ width: 36, height: 36, borderRadius: 9999 }} />
-            <Typography>{friendName}</Typography>
+            <Image source={avatarSource} style={{ width: 36, height: 36, borderRadius: 9999 }} />
+            <Typography>{name}</Typography>
           </View>
           <Circle size={16} fill={checked ? Palette.black : 'none'} stroke={Palette.black} />
         </Pressable>
       );
     },
-    [selectedSet, toggleFriend]
+    [me?.id, meFetchedAt, avatarCacheEpoch, selectedSet, toggleFriend]
   );
 
-  const keyExtractor = useCallback(
-    (item: FriendItem) => `${item.id}-${item.friendId}-${item.userId}`,
+  const keyExtractor = useCallback((item: any) => item.uniqueKey, []);
+
+  const renderSectionHeader = useCallback(
+    ({ section: { title } }: { section: { title: string } }) => (
+      <View className="mb-2 mt-4">
+        <Typography variant="h5">{title}</Typography>
+      </View>
+    ),
     []
   );
 
   const listHeader = (
     <View>
-      <Typography variant="h5">{t('group.recommendFriends')}</Typography>
-
       {isLoadingFriends ? (
         <Typography className="mt-3 text-gray-500">{t('group.loadingFriends')}</Typography>
       ) : null}
 
-      {!isLoadingFriends && uniqueFriends.length === 0 ? (
+      {!isLoadingFriends && sections.length === 0 ? (
         <Typography className="mt-3 text-gray-500">{t('group.noFriends')}</Typography>
       ) : null}
 
@@ -263,12 +336,14 @@ export default function GroupInviteScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={uniqueFriends}
+      <SectionList
+        sections={sections}
         keyExtractor={keyExtractor}
-        renderItem={renderFriend}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
+        stickySectionHeadersEnabled={false}
         contentContainerStyle={{
           paddingHorizontal: 16,
           rowGap: 8,

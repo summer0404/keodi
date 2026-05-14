@@ -47,6 +47,7 @@ type ParsedNotification = {
   bodyKey: string | null;
   primaryLabelKey: string | null;
   i18nParams: Record<string, string | number | boolean>;
+  isInitiatedByCurrentUser: boolean;
 };
 
 export type NotificationBanner = {
@@ -226,6 +227,11 @@ const normalizePath = (path: string | null) => {
   }
 
   return `/${path}`;
+};
+
+const hasVersionParam = (url: string | null): boolean => {
+  if (!url) return false;
+  return url.includes('?v=') || url.includes('&v=');
 };
 
 const resolveTargetPathFromEvent = (event: RealtimeNotificationEvent) => {
@@ -617,122 +623,165 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     [avatarCacheEpoch, currentUserAvatarVersion, currentUserId]
   );
 
-  const parseEvent = useCallback((event: RealtimeNotificationEvent): ParsedNotification => {
-    const eventData = toRecord(event.data);
-    const payload = {
-      ...toRecord(event),
-      ...eventData,
-    };
-    const voteData = toRecord(payload.vote);
-    const votePlace = toRecord(voteData.place);
-    const voteUser = toRecord(voteData.user);
+  const parseEvent = useCallback(
+    (event: RealtimeNotificationEvent): ParsedNotification => {
+      const eventData = toRecord(event.data);
+      const payload = {
+        ...toRecord(event),
+        ...eventData,
+      };
+      const voteData = toRecord(payload.vote);
+      const votePlace = toRecord(voteData.place);
+      const voteUser = toRecord(voteData.user);
 
-    // Enriched user objects sent by BE for different event types
-    const closedByUser = toRecord(payload.closedBy);
-    const topLevelUser = toRecord(payload.user);
-    const memberData = toRecord(payload.member);
-    const memberUser = toRecord(memberData.user);
-    const candidateData = toRecord(payload.candidate);
-    const addedByData = toRecord(candidateData.addedBy);
-    const addedByUser = toRecord(addedByData.user);
-    const removedByData = toRecord(candidateData.removedBy);
-    const removedByUser = toRecord(removedByData.user);
+      // Enriched user objects sent by BE for different event types
+      const closedByUser = toRecord(payload.closedBy);
+      const topLevelUser = toRecord(payload.user);
+      const memberData = toRecord(payload.member);
+      const memberUser = toRecord(memberData.user);
+      const candidateData = toRecord(payload.candidate);
+      const addedByData = toRecord(candidateData.addedBy);
+      const addedByUser = toRecord(addedByData.user);
+      const removedByData = toRecord(candidateData.removedBy);
+      const removedByUser = toRecord(removedByData.user);
 
-    const title = toStringOrNull(event.title) ?? toStringOrNull(payload.title);
-    const body = toStringOrNull(event.body) ?? toStringOrNull(payload.body);
-    const type = toStringOrNull(event.type) ?? toStringOrNull(payload.type);
+      const title = toStringOrNull(event.title) ?? toStringOrNull(payload.title);
+      const body = toStringOrNull(event.body) ?? toStringOrNull(payload.body);
+      const type = toStringOrNull(event.type) ?? toStringOrNull(payload.type);
 
-    // Resolve display name from enriched user objects, then fall back to legacy fields
-    const resolveUserDisplayName = (user: Record<string, unknown>) => {
-      const firstName = toStringOrNull(user.firstName);
-      const lastName = toStringOrNull(user.lastName);
-      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
-      return fullName || null;
-    };
+      // Resolve display name from enriched user objects, then fall back to legacy fields
+      const resolveUserDisplayName = (user: Record<string, unknown>) => {
+        const firstName = toStringOrNull(user.firstName);
+        const lastName = toStringOrNull(user.lastName);
+        const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+        return fullName || null;
+      };
 
-    const enrichedSenderName =
-      resolveUserDisplayName(voteUser) ??
-      resolveUserDisplayName(closedByUser) ??
-      resolveUserDisplayName(topLevelUser) ??
-      resolveUserDisplayName(memberUser) ??
-      resolveUserDisplayName(addedByUser) ??
-      resolveUserDisplayName(removedByUser);
+      const enrichedSenderName =
+        resolveUserDisplayName(voteUser) ??
+        resolveUserDisplayName(closedByUser) ??
+        resolveUserDisplayName(topLevelUser) ??
+        resolveUserDisplayName(memberUser) ??
+        resolveUserDisplayName(addedByUser) ??
+        resolveUserDisplayName(removedByUser);
 
-    const senderName =
-      enrichedSenderName ??
-      toStringOrNull(payload.nickname) ??
-      toStringOrNull(payload.senderName) ??
-      toStringOrNull(payload.inviterName) ??
-      toStringOrNull(payload.fromName) ??
-      toStringOrNull(voteData.nickname) ??
-      toStringOrNull(voteData.memberName);
+      const senderName =
+        enrichedSenderName ??
+        toStringOrNull(payload.nickname) ??
+        toStringOrNull(payload.senderName) ??
+        toStringOrNull(payload.inviterName) ??
+        toStringOrNull(payload.fromName) ??
+        toStringOrNull(voteData.nickname) ??
+        toStringOrNull(voteData.memberName);
 
-    // Resolve avatar from enriched user objects, then fall back to legacy fields
-    const enrichedAvatarUrl =
-      toStringOrNull(voteUser.pictureUrl) ??
-      toStringOrNull(closedByUser.pictureUrl) ??
-      toStringOrNull(topLevelUser.pictureUrl) ??
-      toStringOrNull(memberUser.pictureUrl) ??
-      toStringOrNull(addedByUser.pictureUrl) ??
-      toStringOrNull(removedByUser.pictureUrl);
+      // Resolve avatar from enriched user objects, then fall back to legacy fields
+      const enrichedAvatarUrl =
+        toStringOrNull(voteUser.pictureUrl) ??
+        toStringOrNull(closedByUser.pictureUrl) ??
+        toStringOrNull(topLevelUser.pictureUrl) ??
+        toStringOrNull(memberUser.pictureUrl) ??
+        toStringOrNull(addedByUser.pictureUrl) ??
+        toStringOrNull(removedByUser.pictureUrl);
 
-    const senderAvatarUrl =
-      enrichedAvatarUrl ??
-      toStringOrNull(payload.senderAvatarUrl) ??
-      toStringOrNull(payload.inviterAvatarUrl) ??
-      toStringOrNull(payload.inviterPictureUrl) ??
-      toStringOrNull(payload.senderPictureUrl);
+      const senderAvatarUrl =
+        enrichedAvatarUrl ??
+        toStringOrNull(payload.senderAvatarUrl) ??
+        toStringOrNull(payload.inviterAvatarUrl) ??
+        toStringOrNull(payload.inviterPictureUrl) ??
+        toStringOrNull(payload.senderPictureUrl);
 
-    const shareCode =
-      toStringOrNull(payload.shareCode)?.toUpperCase() ?? extractShareCodeFromText(body);
-    const sessionId =
-      toStringOrNull(payload.sessionId) ??
-      toStringOrNull(payload.groupSessionId) ??
-      toStringOrNull(event.sessionId);
-    const voteUserId = toStringOrNull(voteData.userId) ?? toStringOrNull(payload.userId);
-    const voteMemberId = toStringOrNull(voteData.memberId);
+      const shareCode =
+        toStringOrNull(payload.shareCode)?.toUpperCase() ?? extractShareCodeFromText(body);
+      const sessionId =
+        toStringOrNull(payload.sessionId) ??
+        toStringOrNull(payload.groupSessionId) ??
+        toStringOrNull(event.sessionId);
+      const voteUserId = toStringOrNull(voteData.userId) ?? toStringOrNull(payload.userId);
+      const voteMemberId = toStringOrNull(voteData.memberId);
 
-    const targetPath = resolveTargetPathFromEvent(event);
-    const actionKind = resolveActionKind({
-      type,
-      shareCode,
-      targetPath,
-      actionKind: toStringOrNull(payload.actionKind),
-    });
+      const targetPath = resolveTargetPathFromEvent(event);
+      const actionKind = resolveActionKind({
+        type,
+        shareCode,
+        targetPath,
+        actionKind: toStringOrNull(payload.actionKind),
+      });
 
-    const primaryLabel = toStringOrNull(payload.primaryActionLabel);
-    const resolvedVoterName =
-      resolveUserDisplayName(voteUser) ?? toStringOrNull(voteData.nickname);
-    const i18nParams = {
-      ...toI18nParams(payload.i18nParams ?? payload.params ?? payload.variables),
-      ...(resolvedVoterName ? { voterName: resolvedVoterName } : {}),
-      ...(senderName ? { memberName: senderName } : {}),
-      ...(toStringOrNull(votePlace.name)
-        ? { placeName: toStringOrNull(votePlace.name) as string }
-        : {}),
-    };
+      const primaryLabel = toStringOrNull(payload.primaryActionLabel);
+      const resolvedVoterName =
+        resolveUserDisplayName(voteUser) ?? toStringOrNull(voteData.nickname);
+      const i18nParams = {
+        ...toI18nParams(payload.i18nParams ?? payload.params ?? payload.variables),
+        ...(resolvedVoterName ? { voterName: resolvedVoterName } : {}),
+        ...(senderName ? { memberName: senderName } : {}),
+        ...(toStringOrNull(votePlace.name)
+          ? { placeName: toStringOrNull(votePlace.name) as string }
+          : {}),
+      };
 
-    return {
-      eventId: toStringOrNull(event.eventId),
-      title,
-      body,
-      type,
-      sessionId,
-      voteUserId,
-      voteMemberId,
-      memberId: toStringOrNull(payload.memberId),
-      senderName,
-      senderAvatarUrl,
-      targetPath,
-      shareCode,
-      actionKind,
-      primaryLabel,
-      titleKey: toStringOrNull(payload.titleKey),
-      bodyKey: toStringOrNull(payload.bodyKey),
-      primaryLabelKey: toStringOrNull(payload.primaryActionLabelKey),
-      i18nParams,
-    };
-  }, []);
+      const addedByUserId =
+        toStringOrNull(payload.addedByUserId) ??
+        toStringOrNull(addedByData.userId) ??
+        toStringOrNull(addedByUser.id);
+
+      const removedByUserId =
+        toStringOrNull(payload.removedByUserId) ??
+        toStringOrNull(removedByData.userId) ??
+        toStringOrNull(removedByUser.id);
+
+      const closedByUserId = toStringOrNull(closedByUser.id);
+
+      const memberJoinedUserId =
+        toStringOrNull(payload.userId) ??
+        toStringOrNull(memberData.userId) ??
+        toStringOrNull(memberUser.id);
+
+      const memberLeftUserId =
+        toStringOrNull(payload.userId) ??
+        toStringOrNull(memberData.userId) ??
+        toStringOrNull(memberUser.id);
+
+      const voteMemberFinalizedUserId =
+        toStringOrNull(payload.userId) ??
+        toStringOrNull(memberData.userId) ??
+        toStringOrNull(memberUser.id);
+
+      const voteSessionFinalizedUserId = toStringOrNull(payload.finalizedBy);
+
+      const isInitiatedByCurrentUser =
+        (type === 'vote.cast' && voteUserId === currentUserId) ||
+        (type === 'vote.member_finalized' && voteMemberFinalizedUserId === currentUserId) ||
+        (type === 'vote.session_finalized' && voteSessionFinalizedUserId === currentUserId) ||
+        (type === 'session.member_joined' && memberJoinedUserId === currentUserId) ||
+        (type === 'session.member_left' && memberLeftUserId === currentUserId) ||
+        (type === 'session.closed' && closedByUserId === currentUserId) ||
+        (type === 'candidate.added' && addedByUserId === currentUserId) ||
+        (type === 'candidate.removed' && removedByUserId === currentUserId);
+
+      return {
+        eventId: toStringOrNull(event.eventId),
+        title,
+        body,
+        type,
+        sessionId,
+        voteUserId,
+        voteMemberId,
+        memberId: toStringOrNull(payload.memberId),
+        senderName,
+        senderAvatarUrl,
+        targetPath,
+        shareCode,
+        actionKind,
+        primaryLabel,
+        titleKey: toStringOrNull(payload.titleKey),
+        bodyKey: toStringOrNull(payload.bodyKey),
+        primaryLabelKey: toStringOrNull(payload.primaryActionLabelKey),
+        i18nParams,
+        isInitiatedByCurrentUser,
+      };
+    },
+    [currentUserId]
+  );
 
   const parseRemoteMessage = useCallback(
     (message: FirebaseMessagingTypes.RemoteMessage): ParsedNotification => {
@@ -791,6 +840,47 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         ...(senderName ? { memberName: senderName } : {}),
       };
 
+      const addedByUserId =
+        toStringOrNull(data.addedByUserId) ??
+        toStringOrNull((data.addedBy as any)?.userId) ??
+        toStringOrNull((data.addedBy as any)?.user?.id);
+
+      const removedByUserId =
+        toStringOrNull(data.removedByUserId) ??
+        toStringOrNull((data.removedBy as any)?.userId) ??
+        toStringOrNull((data.removedBy as any)?.user?.id);
+
+      const closedByUserId =
+        toStringOrNull((data.closedBy as any)?.id) ??
+        toStringOrNull((data.closedBy as any)?.userId);
+
+      const memberJoinedUserId =
+        toStringOrNull(data.userId) ??
+        toStringOrNull((data.member as any)?.userId) ??
+        toStringOrNull((data.member as any)?.user?.id);
+
+      const memberLeftUserId =
+        toStringOrNull(data.userId) ??
+        toStringOrNull((data.member as any)?.userId) ??
+        toStringOrNull((data.member as any)?.user?.id);
+
+      const voteMemberFinalizedUserId =
+        toStringOrNull(data.userId) ??
+        toStringOrNull((data.member as any)?.userId) ??
+        toStringOrNull((data.member as any)?.user?.id);
+
+      const voteSessionFinalizedUserId = toStringOrNull(data.finalizedBy);
+
+      const isInitiatedByCurrentUser =
+        (type === 'vote.cast' && voteUserId === currentUserId) ||
+        (type === 'vote.member_finalized' && voteMemberFinalizedUserId === currentUserId) ||
+        (type === 'vote.session_finalized' && voteSessionFinalizedUserId === currentUserId) ||
+        (type === 'session.member_joined' && memberJoinedUserId === currentUserId) ||
+        (type === 'session.member_left' && memberLeftUserId === currentUserId) ||
+        (type === 'session.closed' && closedByUserId === currentUserId) ||
+        (type === 'candidate.added' && addedByUserId === currentUserId) ||
+        (type === 'candidate.removed' && removedByUserId === currentUserId);
+
       return {
         eventId: toStringOrNull(data.eventId),
         title,
@@ -810,9 +900,10 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         bodyKey: toStringOrNull(data.bodyKey),
         primaryLabelKey: toStringOrNull(data.primaryActionLabelKey),
         i18nParams,
+        isInitiatedByCurrentUser,
       };
     },
-    []
+    [currentUserId]
   );
 
   const toBannerModel = useCallback(
@@ -864,11 +955,22 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       const now = new Date();
       const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+      // Apply cache buster to avatar URL if not already versioned
+      const versionedAvatarUrl =
+        parsed.senderAvatarUrl && !hasVersionParam(parsed.senderAvatarUrl)
+          ? resolveVersionedAvatarUrl({
+              rawUrl: parsed.senderAvatarUrl,
+              avatarCacheEpoch,
+              currentUserAvatarVersion,
+              isCurrentUser: false,
+            })
+          : parsed.senderAvatarUrl;
+
       return {
         title,
         message,
         timeLabel,
-        senderAvatarUrl: parsed.senderAvatarUrl,
+        senderAvatarUrl: versionedAvatarUrl,
         dismissLabel,
         primaryLabel,
         hasPrimaryAction: parsed.actionKind !== 'none',
@@ -877,11 +979,16 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         actionKind: parsed.actionKind,
       };
     },
-    [t]
+    [t, avatarCacheEpoch, currentUserAvatarVersion]
   );
 
   const pushForegroundBanner = useCallback(
     async (parsed: ParsedNotification) => {
+      // Skip notification if initiated by current user
+      if (parsed.isInitiatedByCurrentUser) {
+        return;
+      }
+
       let enrichedParsed = parsed;
       if (parsed.type === 'vote.cast') {
         enrichedParsed = await enrichVoteCastSenderName(parsed);

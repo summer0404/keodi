@@ -1,5 +1,4 @@
 import type { PlaceItem } from '@/types/api';
-import type { LucideIcon } from 'lucide-react-native';
 import {
   Coffee,
   Dumbbell,
@@ -10,6 +9,7 @@ import {
   UtensilsCrossed,
   Wine,
 } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 
 export const sanitizeUsername = (text: string) => {
   return text
@@ -135,6 +135,7 @@ export type OpeningHoursGroup = {
 
 export const formatLocalTime = (timeStr: string | null | undefined) => {
   if (!timeStr) return null;
+
   const match = timeStr.match(/^(\d{2}):(\d{2})/);
   if (!match) return null;
 
@@ -145,6 +146,7 @@ export const formatLocalTime = (timeStr: string | null | undefined) => {
 
 const parseTimeToMinutes = (timeStr: string | null | undefined): number | null => {
   if (!timeStr) return null;
+
   const match = timeStr.match(/^(\d{2}):(\d{2})/);
   if (!match) return null;
   return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
@@ -467,6 +469,22 @@ export const extractWardCityFromFormattedAddress = (
   const ward = meaningfulParts.length >= 2 ? meaningfulParts[meaningfulParts.length - 2] : '';
 
   return { ward, city };
+};
+
+export const formatAddressDisplay = (
+  fullAddress: string | null | undefined,
+  street: string | null | undefined,
+  ward: string | null | undefined,
+  city: string | null | undefined,
+  language: string,
+  t: (key: string) => string
+) => {
+  const trimmedFull = fullAddress?.trim();
+  if (trimmedFull) return trimmedFull;
+
+  const localized = getLocalizedLocation(ward, city, language, t);
+  const parts = [street?.trim(), localized].filter(Boolean);
+  return parts.join(', ') || '';
 };
 
 export const buildSortOrder = (value: 'distance' | 'rating' | 'name' | 'createdAt') =>

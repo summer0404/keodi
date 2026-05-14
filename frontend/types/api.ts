@@ -277,6 +277,7 @@ export interface GroupSessionItem {
   createdBy: string;
   shareCode: string;
   createdAt: string;
+  searchRadius?: number;
   status: string;
   voteStatus: string;
   finalizedAt: string | null;
@@ -315,6 +316,7 @@ export interface GetFriendsRequest {
 
 export interface FriendUser {
   id: string;
+  username?: string | null;
   firstName: string | null;
   lastName: string | null;
   pictureUrl: string | null;
@@ -382,6 +384,10 @@ export interface GroupSessionCandidateItem {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   member: GroupSessionCandidateMember | null;
 }
@@ -416,6 +422,10 @@ export interface VotePlaceSessionResponse {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   member?: {
     id: string;
@@ -465,6 +475,10 @@ export interface GroupVoteDetail {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   member: GroupVoteMember;
 }
@@ -476,6 +490,10 @@ export interface GroupVoteResult {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   count: number;
   voters: GroupVoteMember[];
@@ -519,6 +537,24 @@ export interface PlaceRecommendationItem {
   categories: PlaceCategory[];
 }
 
+export interface UpdateGroupRecommendationCategoriesRequest {
+  guestId?: string;
+  categoryIds: string[];
+}
+
+export interface UpdateGroupRecommendationCategoriesResponse {
+  message?: string;
+}
+
+export interface UpdateGroupRecommendationRadiusRequest {
+  guestId?: string;
+  searchRadius: number;
+}
+
+export interface UpdateGroupRecommendationRadiusResponse {
+  message?: string;
+}
+
 export type RealtimeLocationSnapshot = {
   sessionId?: string;
   locations?: Array<{
@@ -557,8 +593,12 @@ export interface PlaceCandidateResponse {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
-};
+}
 
 export interface UserSettings {
   shareLocation: boolean;
@@ -571,4 +611,89 @@ export interface UserSettings {
   defaultMinRating: 'ABOVE_1' | 'ABOVE_2' | 'ABOVE_3' | 'ABOVE_4' | 'FIVE_STAR';
   language: 'VI' | 'EN';
   darkMode: boolean;
+}
+
+export interface CategorySearchResultItem {
+  id: string;
+  name: string;
+  placeCount: number;
+  score: number;
+}
+
+export interface SearchUsersRequest {
+  page?: number;
+  limit?: number;
+  keyword: string;
+}
+
+export interface SearchUserItem {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  pictureUrl: string | null;
+}
+
+export interface SearchUsersResponse {
+  users: SearchUserItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
+export interface SendFriendRequestRequest {
+  receiverId: string;
+}
+
+export interface FriendRequestItem {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: string;
+  createdAt: string;
+  sender?: {
+    id: string;
+    username?: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    pictureUrl: string | null;
+  };
+}
+
+export interface GenericSuccessResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface GetPendingRequestsRequest {
+  page: number;
+  limit: number;
+  sortOrder?: 'asc' | 'desc';
+  sortBy?: string;
+}
+
+export interface GetPendingRequestsResponse {
+  requests: FriendRequestItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
+export interface OtherUserProfile {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  pictureUrl: string | null;
+  dateOfBirth: string | null;
+  profileVisibility: 'PUBLIC' | 'FRIENDS_ONLY' | 'PRIVATE';
+  isProfileVisible: boolean;
+  isFriend: boolean;
+  hasPendingRequest: boolean;
+  pendingRequestId: string | null;
+  canSendFriendRequest: boolean;
 }

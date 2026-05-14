@@ -1,31 +1,31 @@
-import { groupSessionsService } from '@/api/groupSessions';
-import AlertScreen from '@/components/ui/AlertScreen';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
-import Typography from '@/components/ui/Typography';
-import { Palette } from '@/constants/theme';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useGroupSessionStore } from '@/store/useGroupSessionStore';
-import { usePinnedGroupSessionStore } from '@/store/usePinnedGroupSessionStore';
-import type { GroupSessionItem } from '@/types/api';
-import axios from 'axios';
-import clsx from 'clsx';
-import { ResizeMode, Video } from 'expo-av';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ArrowLeft, Copy, Pin, Plus, Share2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Modal,
   Pressable,
   TextInput,
   TouchableWithoutFeedback,
-  View,
   type ViewToken,
+  View,
 } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Plus, ArrowLeft, Share2, Pin, X, Copy } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import axios from 'axios';
+import AlertScreen from '@/components/ui/AlertScreen';
+import Typography from '@/components/ui/Typography';
+import { groupSessionsService } from '@/api/groupSessions';
+import { Palette } from '@/constants/theme';
+import type { GroupSessionItem } from '@/types/api';
+import { Card } from '@/components/ui/Card';
+import clsx from 'clsx';
+import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
+import { ResizeMode, Video } from 'expo-av';
+import { usePinnedGroupSessionStore } from '@/store/usePinnedGroupSessionStore';
+import { Button } from '@/components/ui/Button';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useGroupSessionStore } from '@/store/useGroupSessionStore';
 
 const REALTIME_REFRESH_INTERVAL_MS = 5000;
 
@@ -447,7 +447,7 @@ export default function GroupScreen() {
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
   const handleViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    ({ viewableItems }: { viewableItems: Array<ViewToken> }) => {
       if (viewableItems.length === 0 || displayedSessions.length === 0) {
         return;
       }
@@ -495,8 +495,9 @@ export default function GroupScreen() {
         />
 
         <Pressable
-          className={`h-12 min-w-[112px] items-center justify-center rounded-xl px-4 ${isJoining ? 'bg-black/70' : 'bg-black'
-            }`}
+          className={`h-12 min-w-[112px] items-center justify-center rounded-xl px-4 ${
+            isJoining ? 'bg-black/70' : 'bg-black'
+          }`}
           disabled={isJoining}
           onPress={() => {
             void handleJoinByShareCode();
@@ -637,8 +638,9 @@ export default function GroupScreen() {
 
           {displayedSessions.length > 0 ? (
             <Pressable
-              className={`h-10 w-10 items-center justify-center rounded-full ${isCreating ? 'opacity-50' : 'opacity-100'
-                }`}
+              className={`h-10 w-10 items-center justify-center rounded-full ${
+                isCreating ? 'opacity-50' : 'opacity-100'
+              }`}
               onPress={handleCreateSession}
               disabled={isCreating}
             >

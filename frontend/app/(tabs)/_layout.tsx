@@ -1,10 +1,9 @@
-import { useThemeColor } from '@/hooks/use-theme-color';
-import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
-import { Tabs, useRouter } from 'expo-router';
-import { Heart, Home, Search, Settings, Users } from 'lucide-react-native';
 import React from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
+import { Home, Search, Users, Heart, Settings } from 'lucide-react-native';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabIcon({
@@ -121,12 +120,10 @@ export default function TabsLayout() {
             router.replace('/(tabs)/group');
           },
         }}
-        options={({ route }) => ({
+        options={{
           popToTopOnBlur: true,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Users} />,
-          tabBarStyle:
-            getFocusedRouteNameFromRoute(route) === '[id]' ? { display: 'none' } : undefined,
-        })}
+        }}
       />
 
       <Tabs.Screen

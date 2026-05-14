@@ -1,13 +1,26 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Expand, Navigation, X } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
-import { DEFAULT_AVATAR_SOURCE } from '@/constants/helper';
+import { Card } from '@/components/ui/Card';
+import Typography from '@/components/ui/Typography';
+import { DEFAULT_AVATAR_SOURCE, DEFAULT_PLACE_IMAGE, formatAddressDisplay, getPrimaryImageUrl } from '@/constants/helper';
 import { Palette } from '@/constants/theme';
+import { usePlacesStore } from '@/store/usePlacesStore';
+import type { PlaceRecommendationItem } from '@/types/api';
+import clsx from 'clsx';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Expand, MapPin, RefreshCw, Star, X } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Coordinates = {
   latitude: number;
@@ -40,9 +53,17 @@ type GroupLocationMapboxProps = {
   avatarCacheEpoch?: number;
   memberAvatarUrls?: MemberAvatarMap;
   places: MapPlace[];
-  onSearchPress: () => void;
+  recommendedPlaces?: PlaceRecommendationItem[];
+  onAddRecommendPlace?: (placeId: string) => void;
+  isAddingPlaceId?: string | null;
+  height?: number;
   onMapInteractionStart?: () => void;
   onMapInteractionEnd?: () => void;
+  sessionStatus?: string;
+  voteStatus?: string;
+  onRefreshRecommendations?: () => void;
+  isRefreshingRecommendations?: boolean;
+  candidateIds?: Set<string>;
 };
 
 const getMapboxModule = (): MapboxModule | null => {
@@ -64,31 +85,17 @@ const isValidPlace = (place: MapPlace) =>
 const isValidMemberLocation = (location: MemberLocation) =>
   isFiniteCoordinate(location.latitude) && isFiniteCoordinate(location.longitude);
 
-const markerDot = {
-  width: 14,
-  height: 14,
-  borderRadius: 999,
-  borderWidth: 2,
-  borderColor: '#FFFFFF',
-  backgroundColor: '#EF4444',
-};
+const CARD_WIDTH = 260;
+const CARD_GAP = 12;
+const RECOMMEND_CARD_HEIGHT = 150;
 
-const userDot = {
-  width: 16,
-  height: 16,
+const activeRecommendDot = {
+  width: 18,
+  height: 18,
   borderRadius: 999,
-  borderWidth: 2,
+  borderWidth: 2.5,
   borderColor: '#FFFFFF',
-  backgroundColor: '#2563EB',
-};
-
-const memberDot = {
-  width: 14,
-  height: 14,
-  borderRadius: 999,
-  borderWidth: 2,
-  borderColor: '#FFFFFF',
-  backgroundColor: '#10B981',
+  backgroundColor: 'rgb(255, 0, 0)',
 };
 
 const avatarMarkerStyle = {
@@ -104,18 +111,15 @@ const avatarMarkerStyle = {
 type CameraBounds = {
   ne: [number, number];
   sw: [number, number];
-  paddingTop: number;
-  paddingBottom: number;
-  paddingLeft: number;
-  paddingRight: number;
 };
 
 const calculateBoundsFromCoordinates = (
   userCoords: [number, number] | null,
   memberLocations: MemberLocation[],
-  places: MapPlace[]
+  places: MapPlace[],
+  hasRecommendCards?: boolean
 ): CameraBounds | null => {
-  const allCoords: Array<[number, number]> = [];
+  const allCoords: [number, number][] = [];
 
   if (userCoords) {
     allCoords.push(userCoords);
@@ -153,24 +157,10 @@ const calculateBoundsFromCoordinates = (
   return {
     ne: [maxLng, maxLat],
     sw: [minLng, minLat],
-    paddingTop: 40,
-    paddingBottom: 40,
-    paddingLeft: 20,
-    paddingRight: 20,
   };
 };
 
-const buildAvatarSource = (pictureUrl: string | null | undefined) => {
-  const rawUrl = pictureUrl?.trim();
-
-  if (!rawUrl) {
-    return DEFAULT_AVATAR_SOURCE;
-  }
-
-  return { uri: rawUrl };
-};
-
-const withVersionQuery = (url: string, versions: Array<number | undefined | null>) => {
+const withVersionQuery = (url: string, versions: (number | undefined | null)[]) => {
   const validVersions = versions.filter((version): version is number => Boolean(version));
 
   if (validVersions.length === 0) {
@@ -183,7 +173,7 @@ const withVersionQuery = (url: string, versions: Array<number | undefined | null
 
 const getAvatarSource = (
   pictureUrl?: string | null,
-  versions: Array<number | undefined | null> = []
+  versions: (number | undefined | null)[] = []
 ) => {
   const rawUrl = pictureUrl?.trim();
 
@@ -215,6 +205,98 @@ const AvatarMarker = ({
   );
 };
 
+const RecommendCard = ({
+  place,
+  onAdd,
+  isAdding,
+  onPress,
+  sessionStatus,
+  voteStatus,
+  candidateIds,
+}: {
+  place: PlaceRecommendationItem;
+  onAdd: (id: string) => void;
+  isAdding: boolean;
+  onPress: (id: string) => void;
+  sessionStatus?: string;
+  voteStatus?: string;
+  candidateIds?: Set<string>;
+}) => {
+  const { t, i18n } = useTranslation();
+  const placeImageUrl = getPrimaryImageUrl(place.featureImageUrl);
+  const displayAddress =
+    formatAddressDisplay(
+      place.fullAddress,
+      (place as any).street ?? null,
+      (place as any).ward ?? null,
+      (place as any).city ?? null,
+      i18n.language ?? 'en',
+      t
+    ) || null;
+
+  return (
+    <View style={{ width: CARD_WIDTH, marginRight: CARD_GAP, marginBottom: 5 }}>
+      <Card
+        className="overflow-hidden w-full bg-white justify-center"
+        style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.18,
+          shadowRadius: 8,
+          elevation: 3,
+          boxShadow: '0px 2px 8px rgba(0,0,0,0.18)',
+          height: RECOMMEND_CARD_HEIGHT,
+        }}
+      >
+        <Pressable className="relative rounded-3xl p-3" onPress={() => onPress(place.id)}>
+          <View className="flex-row gap-3 items-start">
+            <Image
+              source={placeImageUrl ? { uri: placeImageUrl } : DEFAULT_PLACE_IMAGE}
+              style={{ width: 100, height: 80, borderRadius: 12, flexShrink: 0 }}
+            />
+
+            <View className="flex-1">
+              <Typography variant="h5" numberOfLines={2} style={{ minHeight: 40 }}>
+                {place.name}
+              </Typography>
+
+              <View className="mt-1 flex-row items-center gap-1">
+                <Star size={14} color={Palette.star} fill={Palette.star} strokeWidth={1.8} />
+                <Typography className="text-[#4B5563]">
+                  {place.rating > 0 ? place.rating.toFixed(1) : 'N/A'}
+                </Typography>
+              </View>
+
+              {displayAddress ? (
+                <Typography className="mt-0.5 text-[#6B7280]" numberOfLines={1}>
+                  {displayAddress}
+                </Typography>
+              ) : null}
+            </View>
+          </View>
+
+          {voteStatus !== 'FINALIZED' && (
+            <Button
+              onPress={(event: any) => {
+                event?.stopPropagation?.();
+                onAdd(place.id);
+              }}
+              disabled={isAdding || candidateIds?.has(place.id)}
+              className="mt-3"
+            >
+              {isAdding
+                ? t('home.addingToGroup')
+                : candidateIds?.has(place.id)
+                  ? t('home.alreadyAdded')
+                  : t('home.addToGroup')}
+            </Button>
+          )}
+        </Pressable>
+      </Card>
+    </View>
+  );
+};
+
 const MapCanvas = ({
   fullScreen,
   mapbox,
@@ -226,6 +308,8 @@ const MapCanvas = ({
   memberAvatarUrls,
   memberLocations,
   places,
+  hasRecommendCards,
+  activeRecommendPlace,
   onMapInteractionStart,
   onMapInteractionEnd,
 }: {
@@ -239,6 +323,8 @@ const MapCanvas = ({
   memberAvatarUrls?: MemberAvatarMap;
   memberLocations: MemberLocation[];
   places: MapPlace[];
+  hasRecommendCards?: boolean;
+  activeRecommendPlace?: { latitude: number; longitude: number } | null;
   onMapInteractionStart?: () => void;
   onMapInteractionEnd?: () => void;
 }) => {
@@ -248,8 +334,25 @@ const MapCanvas = ({
   // Calculate bounds for all markers
   const bounds = useMemo(() => {
     const userCoords: [number, number] | null = center;
-    return calculateBoundsFromCoordinates(userCoords, memberLocations, places);
-  }, [center, memberLocations, places]);
+    return calculateBoundsFromCoordinates(userCoords, memberLocations, places, hasRecommendCards);
+  }, [center, memberLocations, places, hasRecommendCards]);
+
+  const cameraPadding = useMemo(() => {
+    if (fullScreen) {
+      return {
+        paddingTop: 60,
+        paddingBottom: 60,
+        paddingLeft: 40,
+        paddingRight: 40,
+      };
+    }
+    return {
+      paddingTop: 40,
+      paddingBottom: hasRecommendCards ? 180 : 40,
+      paddingLeft: 30,
+      paddingRight: 30,
+    };
+  }, [fullScreen, hasRecommendCards]);
 
   return (
     <Mapbox.MapView
@@ -269,13 +372,14 @@ const MapCanvas = ({
     >
       {bounds && !fullScreen ? (
         // Use bounds-based camera for non-expanded view with multiple markers
-        <Mapbox.Camera bounds={bounds} animationDuration={600} />
+        <Mapbox.Camera bounds={bounds} animationDuration={600} padding={cameraPadding} />
       ) : (
         // Use center-based camera for expanded view or single marker
         <Mapbox.Camera
           centerCoordinate={center}
-          zoomLevel={fullScreen ? 14.5 : 13.2}
+          zoomLevel={fullScreen ? 14.5 : 13.8}
           animationDuration={600}
+          padding={cameraPadding}
         />
       )}
 
@@ -297,11 +401,10 @@ const MapCanvas = ({
         >
           <AvatarMarker
             pictureUrl={memberAvatarUrls?.[location.memberId]}
-            imageKey={`member-${location.memberId}-${avatarCacheEpoch ?? 'session'}-${
-              currentUserId && location.memberId === currentUserId
+            imageKey={`member-${location.memberId}-${avatarCacheEpoch ?? 'session'}-${currentUserId && location.memberId === currentUserId
                 ? (currentUserAvatarVersion ?? 'static')
                 : 'peer'
-            }`}
+              }`}
             versions={[
               avatarCacheEpoch,
               currentUserId && location.memberId === currentUserId
@@ -313,15 +416,95 @@ const MapCanvas = ({
       ))}
 
       {places.map((place) => (
-        <Mapbox.PointAnnotation
+        <MarkerView
           key={place.id}
           id={`place-${place.id}`}
           coordinate={[place.longitude, place.latitude]}
-          title={place.name}
+          anchor={{ x: 0.5, y: 1 }} // Anchor at the bottom tip of the pin
         >
-          <View style={markerDot} />
-        </Mapbox.PointAnnotation>
+          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <View
+              style={{
+                backgroundColor: 'white',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#EF4444',
+                marginBottom: 4,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+            >
+              <Typography variant="caption" className="text-[#EF4444]" numberOfLines={1}>
+                {place.name}
+              </Typography>
+            </View>
+            <MapPin color="#EF4444" fill="#EF4444" size={32} />
+          </View>
+        </MarkerView>
       ))}
+
+      {/* Active recommended place marker */}
+      {activeRecommendPlace && (
+        <MarkerView
+          id="active-recommend-place"
+          coordinate={[activeRecommendPlace.longitude, activeRecommendPlace.latitude]}
+          anchor={{ x: 0.5, y: 0.5 }}
+        >
+          <View style={activeRecommendDot} />
+        </MarkerView>
+      )}
+
+      {/* Polylines from user + members to the active recommended place */}
+      {activeRecommendPlace &&
+        (() => {
+          const destination: [number, number] = [
+            activeRecommendPlace.longitude,
+            activeRecommendPlace.latitude,
+          ];
+
+          const lines: { id: string; from: [number, number] }[] = [];
+
+          // User line
+          lines.push({ id: 'user-route', from: center });
+
+          // Member lines
+          memberLocations.forEach((loc) => {
+            lines.push({
+              id: `member-route-${loc.memberId}`,
+              from: [loc.longitude, loc.latitude],
+            });
+          });
+
+          return lines.map((line) => (
+            <Mapbox.ShapeSource
+              key={line.id}
+              id={`shape-${line.id}`}
+              shape={{
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: [line.from, destination],
+                },
+              }}
+            >
+              <Mapbox.LineLayer
+                id={`line-${line.id}`}
+                style={{
+                  lineColor: '#EF4444',
+                  lineWidth: 2,
+                  lineDasharray: [2, 3],
+                  lineOpacity: 0.7,
+                }}
+              />
+            </Mapbox.ShapeSource>
+          ));
+        })()}
     </Mapbox.MapView>
   );
 };
@@ -335,14 +518,25 @@ export default function GroupLocationMapbox({
   avatarCacheEpoch,
   memberAvatarUrls,
   places,
-  onSearchPress,
+  recommendedPlaces,
+  onAddRecommendPlace,
+  isAddingPlaceId,
+  sessionStatus,
+  voteStatus,
+  height,
   onMapInteractionStart,
   onMapInteractionEnd,
+  onRefreshRecommendations,
+  isRefreshingRecommendations,
+  candidateIds,
 }: GroupLocationMapboxProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { t } = useTranslation();
+  const upsertPlace = usePlacesStore((state) => state.upsertPlace);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMapboxReady, setIsMapboxReady] = useState(false);
+  const [activeRecommendIndex, setActiveRecommendIndex] = useState(0);
 
   const mapbox = useMemo(() => getMapboxModule(), []);
   const validMemberLocations = useMemo(
@@ -389,14 +583,49 @@ export default function GroupLocationMapbox({
     };
   }, [onMapInteractionEnd]);
 
+  const RECOMMEND_CARD_WIDTH = CARD_WIDTH + CARD_GAP;
+
+  const handleRecommendScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetX = event.nativeEvent.contentOffset.x;
+      // Use floor with a small offset to make the snap feel more natural
+      const index = Math.round(offsetX / RECOMMEND_CARD_WIDTH);
+      const safeCount = recommendedPlaces?.length ?? 0;
+      const clampedIndex = Math.max(0, Math.min(index, safeCount - 1));
+
+      if (clampedIndex !== activeRecommendIndex) {
+        setActiveRecommendIndex(clampedIndex);
+      }
+    },
+    [recommendedPlaces?.length, activeRecommendIndex]
+  );
+
+  const activeRecommendPlace = useMemo(() => {
+    if (!recommendedPlaces || recommendedPlaces.length === 0) {
+      return null;
+    }
+
+    const activePlace = recommendedPlaces[activeRecommendIndex];
+    if (
+      !activePlace ||
+      !Number.isFinite(activePlace.latitude) ||
+      !Number.isFinite(activePlace.longitude)
+    ) {
+      return null;
+    }
+
+    return {
+      latitude: activePlace.latitude,
+      longitude: activePlace.longitude,
+      name: activePlace.name,
+    };
+  }, [activeRecommendIndex, recommendedPlaces]);
+
   if (Platform.OS === 'web' || !mapbox || !isMapboxReady || !center) {
     return (
       <View className="rounded-2xl border border-[#ECECF0] bg-white p-4">
         <Typography variant="h5">Mapbox</Typography>
         <Typography className="mt-2 text-gray-500">{t('group.noPlacesDesc')}</Typography>
-        <Button rounded="full" className="mt-3" onPress={onSearchPress}>
-          {t('group.goToSearch')}
-        </Button>
       </View>
     );
   }
@@ -404,7 +633,7 @@ export default function GroupLocationMapbox({
   return (
     <>
       <View className="overflow-hidden rounded-2xl border border-[#ECECF0] bg-white">
-        <View style={{ height: 220 }}>
+        <View style={{ height }}>
           <MapCanvas
             fullScreen={false}
             mapbox={mapbox}
@@ -416,17 +645,106 @@ export default function GroupLocationMapbox({
             memberAvatarUrls={memberAvatarUrls}
             memberLocations={validMemberLocations}
             places={validPlaces}
+            hasRecommendCards={Boolean(recommendedPlaces && recommendedPlaces.length > 0)}
+            activeRecommendPlace={activeRecommendPlace}
             onMapInteractionStart={onMapInteractionStart}
             onMapInteractionEnd={onMapInteractionEnd}
           />
 
           <Pressable
-            className="absolute right-1 top-1 h-14 w-14 items-center justify-center rounded-full bg-white/95"
+            className="absolute right-2 top-2 h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm"
             onPress={() => setIsExpanded(true)}
             accessibilityRole="button"
           >
             <Expand size={18} color={Palette.black} />
           </Pressable>
+
+          {recommendedPlaces && recommendedPlaces.length > 0 && (
+            <View className="absolute bottom-4 left-0 right-0">
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
+                onScroll={handleRecommendScroll}
+                scrollEventThrottle={16}
+                snapToOffsets={recommendedPlaces.map((_, i) => i * RECOMMEND_CARD_WIDTH)}
+                decelerationRate="fast"
+                disableIntervalMomentum={true}
+              >
+                {recommendedPlaces.map((place) => (
+                  <RecommendCard
+                    key={place.id}
+                    place={place}
+                    onAdd={onAddRecommendPlace!}
+                    isAdding={isAddingPlaceId === place.id}
+                    sessionStatus={sessionStatus}
+                    voteStatus={voteStatus}
+                    candidateIds={candidateIds}
+                    onPress={(placeId) => {
+                      // Cache the recommendation as a PlaceItem so the detail page can display it
+                      const rec = recommendedPlaces.find((p) => p.id === placeId);
+                      if (rec) {
+                        upsertPlace({
+                          id: rec.id,
+                          fromGoogle: false,
+                          name: rec.name,
+                          description: rec.description,
+                          rating: rec.rating,
+                          googleMapLink: rec.googleMapLink,
+                          website: rec.website,
+                          phoneNumber: rec.phoneNumber,
+                          featureImageUrl: rec.featureImageUrl,
+                          ownerId: null,
+                          latitude: rec.latitude,
+                          longitude: rec.longitude,
+                          fullAddress: rec.fullAddress,
+                          ward: null,
+                          street: null,
+                          city: null,
+                          countryCode: null,
+                          createdAt: '',
+                          updatedAt: '',
+                          has_attributes: 0,
+                          isFavorite: false,
+                          openingHours: rec.openingHours as any,
+                          categories: rec.categories,
+                        });
+                      }
+                      router.push(`/place/${placeId}` as any);
+                    }}
+                  />
+                ))}
+
+                {onRefreshRecommendations ? (
+                  <View
+                    style={{
+                      width: 80,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 16,
+                    }}
+                  >
+                    <Pressable
+                      className={clsx(
+                        'h-14 w-14 items-center justify-center rounded-full bg-white shadow-md',
+                        isRefreshingRecommendations && 'opacity-50'
+                      )}
+                      style={{
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 4,
+                        elevation: 4,
+                      }}
+                      onPress={onRefreshRecommendations}
+                    >
+                      <RefreshCw size={24} color={Palette.black} />
+                    </Pressable>
+                  </View>
+                ) : null}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </View>
 

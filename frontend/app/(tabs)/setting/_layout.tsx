@@ -9,6 +9,7 @@ export default function SettingLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="friends" />
     </Stack>
   );
 }

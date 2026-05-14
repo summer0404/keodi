@@ -32,7 +32,7 @@ export const notificationService = {
 
     await apiClient.post(DEVICE_TOKEN_ENDPOINT, {
       token,
-      platform: Platform.OS,
+      platform: Platform.OS.toUpperCase(),
     });
 
     return true;

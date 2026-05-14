@@ -619,36 +619,27 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
 
     // Map from sent-message-id → readers who last read at that message
     const readersByMsgId = useMemo(() => {
-        console.log('[ReadReceipt] readReceipts:', JSON.stringify(readReceipts));
-        console.log('[ReadReceipt] currentUserId:', currentUserId);
         if (readReceipts.length === 0) {
-            console.log('[ReadReceipt] early-exit: no receipts');
             return {} as Record<string, ReaderInfo[]>;
         }
         const sentByMe = allMessages.filter((m) => m.senderId === currentUserId);
-        console.log('[ReadReceipt] sentByMe count:', sentByMe.length, sentByMe.map((m) => ({ id: m.id, createdAt: m.createdAt })));
         if (sentByMe.length === 0) {
-            console.log('[ReadReceipt] early-exit: no messages sent by me');
             return {} as Record<string, ReaderInfo[]>;
         }
 
         const map: Record<string, ReaderInfo[]> = {};
         for (const receipt of readReceipts) {
             if (receipt.userId === currentUserId) continue;
-            console.log('[ReadReceipt] processing receipt:', receipt.userId, 'readAt:', receipt.readAt);
             let latestReadMsg: MessageItem | undefined;
             for (let i = sentByMe.length - 1; i >= 0; i--) {
-                console.log('[ReadReceipt]  comparing msg createdAt:', sentByMe[i]!.createdAt, '<= readAt:', receipt.readAt, '->', sentByMe[i]!.createdAt <= receipt.readAt);
                 if (sentByMe[i]!.createdAt <= receipt.readAt) {
                     latestReadMsg = sentByMe[i];
                     break;
                 }
             }
             if (!latestReadMsg) {
-                console.log('[ReadReceipt]  no matching message found for receipt', receipt.userId);
                 continue;
             }
-            console.log('[ReadReceipt]  matched msg id:', latestReadMsg.id);
             const profile = memberMap[receipt.userId];
             const displayName = profile ? getSenderDisplayName(profile) : '';
             const initials =
@@ -657,7 +648,6 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
             if (!map[latestReadMsg.id]) map[latestReadMsg.id] = [];
             map[latestReadMsg.id]!.push({ userId: receipt.userId, initials, pictureUrl: profile?.pictureUrl ?? undefined });
         }
-        console.log('[ReadReceipt] final map:', JSON.stringify(map));
         return map;
     }, [allMessages, currentUserId, readReceipts, memberMap]);
 
@@ -675,15 +665,12 @@ export default function ChatView({ conversationId, initials, color, style }: Cha
 
     // Seed readReceipts store from conversation members' lastReadAt on initial load
     useEffect(() => {
-        console.log('[ReadReceipt] seed effect — conversation?.members:', JSON.stringify(conversation?.members?.map((m) => ({ userId: m.userId, lastReadAt: m.lastReadAt }))));
         if (!conversation?.members) return;
         for (const member of conversation.members) {
             if (member.userId === currentUserId) continue;
             if (!member.lastReadAt) {
-                console.log('[ReadReceipt] member', member.userId, 'has no lastReadAt, skipping');
                 continue;
             }
-            console.log('[ReadReceipt] seeding receipt for', member.userId, 'readAt:', member.lastReadAt);
             setReadReceipt(conversationId, member.userId, member.lastReadAt);
         }
     }, [conversation?.members, conversationId, currentUserId, setReadReceipt]);

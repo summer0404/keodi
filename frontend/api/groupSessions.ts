@@ -8,14 +8,18 @@ import type {
   GetGroupCandidatesResponse,
   GetGroupSessionsResponse,
   GroupSessionItem,
+  GroupVoteItem,
   InviteFriendResponse,
   JoinGroupSessionRequest,
   JoinGroupSessionResponse,
   PlaceCandidateResponse,
+  PlaceRecommendationItem,
+  UpdateGroupRecommendationCategoriesRequest,
+  UpdateGroupRecommendationCategoriesResponse,
+  UpdateGroupRecommendationRadiusRequest,
+  UpdateGroupRecommendationRadiusResponse,
   VotePlaceSessionRequest,
   VotePlaceSessionResponse,
-  GroupVoteItem,
-  PlaceRecommendationItem,
 } from '@/types/api';
 import { apiClient } from './client';
 
@@ -63,6 +67,10 @@ export const groupSessionsService = {
       `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/close`
     );
     return response.data;
+  },
+
+  leaveGroupSession: async (sessionId: string): Promise<void> => {
+    await apiClient.post(`${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/leave`);
   },
 
   createGroupSession: async (): Promise<CreateGroupSessionResponse> => {
@@ -167,6 +175,40 @@ export const groupSessionsService = {
       ? `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations?${query}`
       : `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations`;
     const response = await apiClient.get<PlaceRecommendationItem[]>(url);
+    return response.data;
+  },
+
+  refreshRecommendations: async (
+    sessionId: string,
+    guestId?: string
+  ): Promise<{ accepted: boolean }> => {
+    const payload = guestId ? { guestId } : {};
+    const response = await apiClient.post<{ accepted: boolean }>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations/refresh`,
+      payload
+    );
+    return response.data;
+  },
+
+  updateRecommendationCategories: async (
+    sessionId: string,
+    payload: UpdateGroupRecommendationCategoriesRequest
+  ): Promise<UpdateGroupRecommendationCategoriesResponse> => {
+    const response = await apiClient.patch<UpdateGroupRecommendationCategoriesResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations/categories`,
+      payload
+    );
+    return response.data;
+  },
+
+  updateRecommendationRadius: async (
+    sessionId: string,
+    payload: UpdateGroupRecommendationRadiusRequest
+  ): Promise<UpdateGroupRecommendationRadiusResponse> => {
+    const response = await apiClient.patch<UpdateGroupRecommendationRadiusResponse>(
+      `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations/radius`,
+      payload
+    );
     return response.data;
   },
 };

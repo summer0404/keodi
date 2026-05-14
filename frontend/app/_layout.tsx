@@ -1,23 +1,23 @@
+import '../global.css';
 import i18n from '@/i18n';
-import { Montserrat_400Regular, Montserrat_600SemiBold } from '@expo-google-fonts/montserrat';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { SplashScreen, Stack } from 'expo-router';
+import { Stack, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import 'react-native-reanimated';
+import { useFonts } from 'expo-font';
+import { Montserrat_400Regular, Montserrat_600SemiBold } from '@expo-google-fonts/montserrat';
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import 'react-native-reanimated';
-import '../global.css';
 
-import { configureGoogleSignIn } from '@/api/google-signin';
-import InAppNotificationCard from '@/components/ui/InAppNotificationCard';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useNotificationRuntime } from '@/hooks/use-notification-runtime';
-import { AppQueryProvider } from '@/providers/query-provider';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingStore } from '@/store/useSettingStore';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppQueryProvider } from '@/providers/query-provider';
+import { configureGoogleSignIn } from '@/api/google-signin';
+import { useNotificationRuntime } from '@/hooks/use-notification-runtime';
+import InAppNotificationCard from '@/components/ui/InAppNotificationCard';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
 configureGoogleSignIn();
