@@ -1,23 +1,27 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Pressable, ScrollView, View, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Search, X, MapPin } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { categoriesService } from '@/api/categories';
+import { groupSessionsService } from '@/api/groupSessions';
 import { Button } from '@/components/ui/Button';
+import SearchBar from '@/components/ui/SearchBar';
 import Typography from '@/components/ui/Typography';
 import { Palette } from '@/constants/theme';
-import { onboardingService } from '@/api/onboarding';
-import { groupSessionsService } from '@/api/groupSessions';
-import { categoriesService } from '@/api/categories';
 import { useAuthStore } from '@/store/useAuthStore';
-import SearchBar from '@/components/ui/SearchBar';
+import { useQuery } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, MapPin, Search, X } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type SelectedCategory = {
   id: string;
   name: string;
 };
+
+const SEARCH_SUGGESTIONS = [
+  'Coffee', 'Restaurant', 'Bar', 'Park', 'Cinema',
+  'Museum', 'Shopping', 'Gym', 'Beach', 'Spa',
+];
 
 export default function GroupCreateCategoryScreen() {
   const router = useRouter();
@@ -53,24 +57,12 @@ export default function GroupCreateCategoryScreen() {
     return Array.isArray(guestId) ? guestId[0] : guestId;
   }, [guestId]);
 
-  // Default categories for suggestions
-  const categoriesQuery = useQuery({
-    queryKey: ['onboarding-categories'],
-    queryFn: onboardingService.getCategories,
-    enabled: !!accessToken,
-  });
-
   // Auto-recommend search
   const searchQuery = useQuery({
     queryKey: ['search-categories', debouncedKeyword],
     queryFn: () => categoriesService.searchCategories(debouncedKeyword, 10),
     enabled: !!accessToken && debouncedKeyword.trim().length > 0,
   });
-
-  const selectableDefaultCategories = useMemo(
-    () => (categoriesQuery.data ?? []).filter((category) => category.isSelectable),
-    [categoriesQuery.data]
-  );
 
   const handleSelectFromSearch = (item: SelectedCategory) => {
     setSelectedItems((prev) => {
@@ -175,9 +167,8 @@ export default function GroupCreateCategoryScreen() {
                 searchQuery.data?.map((item, index) => (
                   <Pressable
                     key={item.id}
-                    className={`flex-row items-center px-4 py-3 ${
-                      index < searchQuery.data.length - 1 ? 'border-b border-gray-100' : ''
-                    } active:bg-gray-50`}
+                    className={`flex-row items-center px-4 py-3 ${index < searchQuery.data.length - 1 ? 'border-b border-gray-100' : ''
+                      } active:bg-gray-50`}
                     onPress={() => handleSelectFromSearch({ id: item.id, name: item.name })}
                   >
                     <Search size={16} color="#9CA3AF" />
@@ -198,20 +189,16 @@ export default function GroupCreateCategoryScreen() {
               {t('group.searchSuggestions')}
             </Typography>
             <View className="flex-row flex-wrap gap-2.5">
-              {categoriesQuery.isLoading ? (
-                <ActivityIndicator size="small" color={Palette.black} />
-              ) : (
-                selectableDefaultCategories.slice(0, 10).map((item) => (
-                  <Pressable
-                    key={item.id}
-                    className="flex-row items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 active:bg-gray-50"
-                    onPress={() => setKeyword(item.name)}
-                  >
-                    <Search size={14} color="#6B7280" />
-                    <Typography className="ml-1.5 text-gray-700">{item.name}</Typography>
-                  </Pressable>
-                ))
-              )}
+              {SEARCH_SUGGESTIONS.map((keyword) => (
+                <Pressable
+                  key={keyword}
+                  className="flex-row items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 active:bg-gray-50"
+                  onPress={() => setKeyword(keyword)}
+                >
+                  <Search size={14} color="#6B7280" />
+                  <Typography className="ml-1.5 text-gray-700">{keyword}</Typography>
+                </Pressable>
+              ))}
             </View>
           </View>
         )}
