@@ -181,6 +181,7 @@
     "lastName": "Last name",
     "dateOfBirth": "Date of birth",
     "editProfile": "Edit profile",
+    "profile": "Profile",
     "allWeek": "All week"
   },
   "library": {
@@ -385,5 +386,26 @@
     "share": "Share",
     "direction": "Direction",
     "clearAll": "Clear all"
+  },
+  "friends": {
+    "title": "Friends",
+    "addFriends": "Add friends",
+    "searchPlaceholder": "Search friends, users...",
+    "tabList": "Friends",
+    "tabRequests": "Requests",
+    "searchResults": "Search results",
+    "noFriends": "No friends yet",
+    "noFriendsDesc": "Search and add friends to share your favorite places together!",
+    "noRequests": "No pending friend requests",
+    "noResults": "No users found",
+    "accept": "Accept",
+    "reject": "Reject",
+    "cancel": "Cancel",
+    "add": "Add",
+    "requested": "Requested",
+    "removeFriend": "Remove friend",
+    "removeConfirmTitle": "Remove friend?",
+    "removeConfirmMessage": "Are you sure you want to remove this person from your friends list?",
+    "confirm": "Confirm"
   }
 }

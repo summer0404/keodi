@@ -12,9 +12,9 @@ import {
   View,
   type ImageSourcePropType,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
-import { ArrowLeft, CalendarDays, Camera, Eye, EyeClosed } from 'lucide-react-native';
+import { ArrowLeft, CalendarDays, Camera, Eye, EyeClosed, UserRoundPlus } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
@@ -130,11 +130,14 @@ type EditProfileValidationErrors = Partial<
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const { userId } = useLocalSearchParams<{ userId: string }>();
   const insets = useSafeAreaInsets();
   const horizontalPadding = 16;
   const accessToken = useAuthStore(
     (state: ReturnType<typeof useAuthStore.getState>) => state.accessToken
   );
+  const me = useAuthStore((state: ReturnType<typeof useAuthStore.getState>) => state.me);
+  const isViewOnly = !!userId && userId !== me?.id;
   const fetchMe = useAuthStore((state: ReturnType<typeof useAuthStore.getState>) => state.fetchMe);
   const setMe = useAuthStore((state: ReturnType<typeof useAuthStore.getState>) => state.setMe);
   const setPostLogoutNoticeKey = useAuthStore(
@@ -192,21 +195,20 @@ export default function EditProfileScreen() {
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const profile = await fetchMe({ force: true });
+        const profile = isViewOnly 
+          ? await userService.getUserProfile(userId)
+          : await fetchMe({ force: true });
+
         if (!mounted || !profile) return;
 
-        setInitialProfile(profile);
+        setInitialProfile(profile as any);
         setUsername(profile.username ?? '');
-        setEmail(profile.email ?? '');
+        setEmail((profile as any).email ?? '');
         setFirstName(profile.firstName ?? '');
         setLastName(profile.lastName ?? '');
         setPhoneNumber(profile.phoneNumber ?? '');
         setDateOfBirth(toDisplayDate(profile.dateOfBirth));
         setAvatarSource(profile.pictureUrl ? { uri: profile.pictureUrl } : DEFAULT_AVATAR_SOURCE);
-        // } catch {
-        // if (mounted) {
-        //   Alert.alert('Error', 'Unable to load profile information.');
-        // }
       } finally {
         if (mounted) {
           setIsLoadingProfile(false);
@@ -219,7 +221,7 @@ export default function EditProfileScreen() {
     return () => {
       mounted = false;
     };
-  }, [fetchMe]);
+  }, [fetchMe, userId, isViewOnly]);
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -494,7 +496,7 @@ export default function EditProfileScreen() {
           <Pressable onPress={() => router.back()} className="p-1">
             <ArrowLeft size={22} color={Palette.black} strokeWidth={2} />
           </Pressable>
-          <Typography variant="h4">{t('home.editProfile')}</Typography>
+          <Typography variant="h4">{isViewOnly ? t('home.profile') : t('home.editProfile')}</Typography>
         </View>
 
         {isLoadingProfile ? (
@@ -516,13 +518,28 @@ export default function EditProfileScreen() {
                 />
               </View>
 
-              <Pressable
-                onPress={handlePickAvatar}
-                className="-mt-6 ml-24 h-10 w-10 items-center justify-center rounded-full border border-[#d6d6d6] bg-white"
-                style={{ elevation: 2 }}
-              >
-                <Camera size={18} color={Palette.black} strokeWidth={2} />
-              </Pressable>
+              {!isViewOnly && (
+                <Pressable
+                  onPress={handlePickAvatar}
+                  className="-mt-6 ml-24 h-10 w-10 items-center justify-center rounded-full border border-[#d6d6d6] bg-white"
+                  style={{ elevation: 2 }}
+                >
+                  <Camera size={18} color={Palette.black} strokeWidth={2} />
+                </Pressable>
+              )}
+
+              {!isViewOnly && (
+                <View className="mt-4 w-full items-center">
+                  <Button
+                    onPress={() => router.push('/setting/friends' as any)}
+                    className="w-2/3 border py-2 px-6 shadow-md gap-2"
+                    rounded="md"
+                  >
+                    <UserRoundPlus size={18} color={Palette.white} strokeWidth={2} />
+                    {t('friends.addFriends').toUpperCase()}
+                  </Button>
+                </View>
+              )}
             </View>
 
             <View className="gap-3">
@@ -540,6 +557,7 @@ export default function EditProfileScreen() {
                   }}
                   className="rounded-xl border border-black/15 bg-white px-4 py-3 text-black"
                   autoCapitalize="none"
+                  editable={!isViewOnly}
                 />
                 {fieldErrors.username ? (
                   <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
@@ -569,6 +587,7 @@ export default function EditProfileScreen() {
                     value={firstName}
                     onChangeText={setFirstName}
                     className="rounded-xl border border-black/15 bg-white px-4 py-3 text-black"
+                    editable={!isViewOnly}
                   />
                 </View>
 
@@ -580,6 +599,7 @@ export default function EditProfileScreen() {
                     value={lastName}
                     onChangeText={setLastName}
                     className="rounded-xl border border-black/15 bg-white px-4 py-3 text-black"
+                    editable={!isViewOnly}
                   />
                 </View>
               </View>
@@ -598,6 +618,7 @@ export default function EditProfileScreen() {
                   }}
                   className="rounded-xl border border-black/15 bg-white px-4 py-3 text-black"
                   keyboardType="phone-pad"
+                  editable={!isViewOnly}
                 />
                 {fieldErrors.phoneNumber ? (
                   <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
@@ -624,8 +645,9 @@ export default function EditProfileScreen() {
                     placeholder="DD/MM/YYYY"
                     placeholderTextColor={Palette.grey}
                     maxLength={10}
+                    editable={!isViewOnly}
                   />
-                  <Pressable onPress={() => setShowDatePicker(true)}>
+                  <Pressable onPress={() => !isViewOnly && setShowDatePicker(true)}>
                     <CalendarDays size={18} color={Palette.grey} strokeWidth={2} />
                   </Pressable>
                 </View>
@@ -636,99 +658,105 @@ export default function EditProfileScreen() {
                 ) : null}
               </View>
 
-              <View>
-                <Typography variant="h5" className="mb-2 text-black">
-                  {t('auth.newPasswordTitle')}
-                </Typography>
-                <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
-                  <TextInput
-                    value={newPassword}
-                    onChangeText={(text) => {
-                      setNewPassword(text);
-                      if (fieldErrors.newPassword) {
-                        setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
-                      }
-                    }}
-                    secureTextEntry={!showNewPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    className="flex-1 py-3 text-black"
-                  />
-                  <Pressable onPress={() => setShowNewPassword((prev) => !prev)}>
-                    {showNewPassword ? (
-                      <EyeClosed size={18} color={Palette.grey} />
-                    ) : (
-                      <Eye size={18} color={Palette.grey} />
-                    )}
-                  </Pressable>
-                </View>
-                {fieldErrors.newPassword ? (
-                  <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
-                    {fieldErrors.newPassword}
+            {!isViewOnly && (
+              <>
+                <View>
+                  <Typography variant="h5" className="mb-2 text-black">
+                    {t('auth.newPasswordTitle')}
                   </Typography>
-                ) : null}
-              </View>
+                  <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
+                    <TextInput
+                      value={newPassword}
+                      onChangeText={(text) => {
+                        setNewPassword(text);
+                        if (fieldErrors.newPassword) {
+                          setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+                        }
+                      }}
+                      secureTextEntry={!showNewPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      className="flex-1 py-3 text-black"
+                    />
+                    <Pressable onPress={() => setShowNewPassword((prev) => !prev)}>
+                      {showNewPassword ? (
+                        <EyeClosed size={18} color={Palette.grey} />
+                      ) : (
+                        <Eye size={18} color={Palette.grey} />
+                      )}
+                    </Pressable>
+                  </View>
+                  {fieldErrors.newPassword ? (
+                    <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+                      {fieldErrors.newPassword}
+                    </Typography>
+                  ) : null}
+                </View>
 
-              <View>
-                <Typography variant="h5" className="mb-2 text-black">
-                  {t('auth.confirmPassword')}
-                </Typography>
-                <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
-                  <TextInput
-                    value={confirmNewPassword}
-                    onChangeText={(text) => {
-                      setConfirmNewPassword(text);
-                      if (fieldErrors.confirmNewPassword) {
-                        setFieldErrors((prev) => ({ ...prev, confirmNewPassword: undefined }));
-                      }
-                    }}
-                    secureTextEntry={!showConfirmNewPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    className="flex-1 py-3 text-black"
-                  />
-                  <Pressable onPress={() => setShowConfirmNewPassword((prev) => !prev)}>
-                    {showConfirmNewPassword ? (
-                      <EyeClosed size={18} color={Palette.grey} />
-                    ) : (
-                      <Eye size={18} color={Palette.grey} />
-                    )}
-                  </Pressable>
-                </View>
-                {fieldErrors.confirmNewPassword ? (
-                  <Typography className="text-red-500 mt-1 ml-1 leading-4">
-                    {fieldErrors.confirmNewPassword}
+                <View>
+                  <Typography variant="h5" className="mb-2 text-black">
+                    {t('auth.confirmPassword')}
                   </Typography>
-                ) : null}
-              </View>
+                  <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
+                    <TextInput
+                      value={confirmNewPassword}
+                      onChangeText={(text) => {
+                        setConfirmNewPassword(text);
+                        if (fieldErrors.confirmNewPassword) {
+                          setFieldErrors((prev) => ({ ...prev, confirmNewPassword: undefined }));
+                        }
+                      }}
+                      secureTextEntry={!showConfirmNewPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      className="flex-1 py-3 text-black"
+                    />
+                    <Pressable onPress={() => setShowConfirmNewPassword((prev) => !prev)}>
+                      {showConfirmNewPassword ? (
+                        <EyeClosed size={18} color={Palette.grey} />
+                      ) : (
+                        <Eye size={18} color={Palette.grey} />
+                      )}
+                    </Pressable>
+                  </View>
+                  {fieldErrors.confirmNewPassword ? (
+                    <Typography className="text-red-500 mt-1 ml-1 leading-4">
+                      {fieldErrors.confirmNewPassword}
+                    </Typography>
+                  ) : null}
+                </View>
+              </>
+            )}
             </View>
 
             {submitError ? (
               <Typography className="mt-2 text-red-500 mb-2 leading-4">{submitError}</Typography>
             ) : null}
 
-            <Animated.View
-              style={{
-                transform: [{ scale: successScale }],
-                alignSelf: 'center',
-                width: '66.666667%',
-              }}
-            >
-              <Button
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                className={`mt-4 py-3 mb-6 w-full items-center self-center ${
-                  isSubmitSuccess ? 'bg-green-500' : ''
-                }`}
-                rounded="xl"
+            {!isViewOnly && (
+              <Animated.View
+                style={{
+                  transform: [{ scale: successScale }],
+                  alignSelf: 'center',
+                  width: '66.666667%',
+                }}
               >
-                {isSubmitSuccess
-                  ? t('button.updateSuccess')
-                  : isSubmitting
-                    ? t('button.updating')
-                    : t('button.update')}
-              </Button>
-            </Animated.View>
+                <Button
+                  onPress={handleSubmit}
+                  disabled={isSubmitting}
+                  className={`mt-4 py-3 mb-6 w-full items-center self-center ${
+                    isSubmitSuccess ? 'bg-green-500' : ''
+                  }`}
+                  rounded="xl"
+                >
+                  {isSubmitSuccess
+                    ? t('button.updateSuccess')
+                    : isSubmitting
+                      ? t('button.updating')
+                      : t('button.update')}
+                </Button>
+              </Animated.View>
+            )}
           </>
         )}
       </ScrollView>

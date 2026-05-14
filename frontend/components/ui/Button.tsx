@@ -76,9 +76,16 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <Pressable className={buttonClassName} disabled={disabled} {...props}>
-      <Typography variant="h5" className={textClassName}>
-        {children}
-      </Typography>
+      {React.Children.map(children, (child) => {
+        if (typeof child === 'string' || typeof child === 'number') {
+          return (
+            <Typography variant="h5" className={textClassName}>
+              {child}
+            </Typography>
+          );
+        }
+        return child;
+      })}
     </Pressable>
   );
 };

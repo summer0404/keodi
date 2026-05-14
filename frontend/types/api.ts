@@ -316,6 +316,7 @@ export interface GetFriendsRequest {
 
 export interface FriendUser {
   id: string;
+  username?: string | null;
   firstName: string | null;
   lastName: string | null;
   pictureUrl: string | null;
@@ -617,4 +618,81 @@ export interface CategorySearchResultItem {
   name: string;
   placeCount: number;
   score: number;
+}
+
+export interface SearchUsersRequest {
+  page?: number;
+  limit?: number;
+  keyword: string;
+}
+
+export interface SearchUserItem {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  pictureUrl: string | null;
+}
+
+export interface SearchUsersResponse {
+  users: SearchUserItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
+export interface SendFriendRequestRequest {
+  receiverId: string;
+}
+
+export interface FriendRequestItem {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: string;
+  createdAt: string;
+  sender?: {
+    id: string;
+    username?: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    pictureUrl: string | null;
+  };
+}
+
+export interface GenericSuccessResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface GetPendingRequestsRequest {
+  page: number;
+  limit: number;
+  sortOrder?: 'asc' | 'desc';
+  sortBy?: string;
+}
+
+export interface GetPendingRequestsResponse {
+  requests: FriendRequestItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
+export interface OtherUserProfile {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  pictureUrl: string | null;
+  dateOfBirth: string | null;
+  profileVisibility: 'PUBLIC' | 'FRIENDS_ONLY' | 'PRIVATE';
+  isProfileVisible: boolean;
+  isFriend: boolean;
+  hasPendingRequest: boolean;
+  canSendFriendRequest: boolean;
 }

@@ -1,14 +1,22 @@
 import { apiClient } from './client';
-import { API_ENDPOINTS } from '@/constants/api';
+import { API_BASE_PATHS, API_ENDPOINTS } from '@/constants/api';
 import type {
   UpdatePictureRequest,
   UpdateUserProfileRequest,
   UpdateUserResponse,
   UpdateUsernameRequest,
   UserSettings,
+  OtherUserProfile,
 } from '@/types/api';
 
 export const userService = {
+  getUserProfile: async (userId: string): Promise<OtherUserProfile> => {
+    const response = await apiClient.get<OtherUserProfile>(
+      `${API_BASE_PATHS.USERS}/${userId}/profile`
+    );
+    return response.data;
+  },
+
   updateUsername: async (payload: UpdateUsernameRequest): Promise<UpdateUserResponse> => {
     const response = await apiClient.patch<UpdateUserResponse>(
       API_ENDPOINTS.UPDATE_USERNAME,

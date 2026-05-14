@@ -181,6 +181,7 @@
     "lastName": "Họ",
     "dateOfBirth": "Ngày sinh",
     "editProfile": "Hồ sơ người dùng",
+    "profile": "Hồ sơ",
     "allWeek": "Cả tuần"
   },
   "library": {
@@ -385,5 +386,26 @@
     "share": "Chia sẻ",
     "direction": "Chỉ đường",
     "clearAll": "Xóa tất cả"
+  },
+  "friends": {
+    "title": "Bạn bè",
+    "addFriends": "Thêm bạn bè",
+    "searchPlaceholder": "Tìm kiếm bạn bè, người dùng...",
+    "tabList": "Bạn bè",
+    "tabRequests": "Lời mời",
+    "searchResults": "Kết quả tìm kiếm",
+    "noFriends": "Chưa có bạn bè nào",
+    "noFriendsDesc": "Hãy tìm kiếm và thêm bạn bè để cùng nhau chia sẻ địa điểm nhé!",
+    "noRequests": "Không có lời mời kết bạn nào",
+    "noResults": "Không tìm thấy người dùng nào",
+    "accept": "Chấp nhận",
+    "reject": "Từ chối",
+    "cancel": "Hủy",
+    "add": "Thêm",
+    "requested": "Đã gửi",
+    "removeFriend": "Xóa bạn bè",
+    "removeConfirmTitle": "Xóa bạn bè?",
+    "removeConfirmMessage": "Bạn có chắc chắn muốn xóa người này khỏi danh sách bạn bè không?",
+    "confirm": "Xác nhận"
   }
 }
