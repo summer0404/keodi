@@ -1,4 +1,16 @@
+import { friendsService } from '@/api/friends';
+import { Button } from '@/components/ui/Button';
+import SearchBar from '@/components/ui/SearchBar';
+import Typography from '@/components/ui/Typography';
+import { DEFAULT_AVATAR_SOURCE } from '@/constants/helper';
+import { Palette } from '@/constants/theme';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { FriendItem, FriendRequestItem, SearchUserItem } from '@/types/api';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Check, Trash2, UserPlus, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -6,19 +18,7 @@ import {
   Pressable,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Check, Trash2, UserPlus, X } from 'lucide-react-native';
-import Typography from '@/components/ui/Typography';
-import SearchBar from '@/components/ui/SearchBar';
-import { Button } from '@/components/ui/Button';
-import { friendsService } from '@/api/friends';
-import { useAuthStore } from '@/store/useAuthStore';
-import { DEFAULT_AVATAR_SOURCE } from '@/constants/helper';
-import { Palette } from '@/constants/theme';
-import type { FriendItem, FriendRequestItem, SearchUserItem } from '@/types/api';
 
 export default function FriendsScreen() {
   const router = useRouter();
@@ -86,7 +86,7 @@ export default function FriendsScreen() {
 
       setSearchPage(page);
       setHasMoreSearch(page < (res.totalPages || 1));
-    } catch (error) {
+    } catch {
       if (!append) setSearchUsers([]);
     } finally {
       if (!append) setIsSearching(false);
@@ -133,7 +133,7 @@ export default function FriendsScreen() {
 
       setFriendsPage(page);
       setHasMoreFriends(page < (res.totalPages || 1));
-    } catch (error) {
+    } catch {
       if (!append) setFriends([]);
     } finally {
       if (!append) setIsFriendsLoading(false);
@@ -164,7 +164,7 @@ export default function FriendsScreen() {
 
       setRequestsPage(page);
       setHasMoreRequests(page < (res.totalPages || 1));
-    } catch (error) {
+    } catch {
       if (!append) setRequests([]);
     } finally {
       if (!append) setIsRequestsLoading(false);
@@ -195,31 +195,31 @@ export default function FriendsScreen() {
   };
 
   // Actions
-  const handleAddFriend = async (userId: string) => {
+  const handleAddFriend = useCallback(async (userId: string) => {
     try {
       setRequestedSet((prev) => new Set(prev).add(userId));
       await friendsService.sendFriendRequest({ receiverId: userId });
-    } catch (error) {
+    } catch {
       // Undo optimistically on failure
       setRequestedSet((prev) => {
         const next = new Set(prev);
         next.delete(userId);
         return next;
       });
-      Alert.alert('Error', 'Unable to send friend request.');
+      Alert.alert('Error', t('errors.unexpectedError'));
     }
-  };
+  }, [t]);
 
-  const handleRemoveFriend = async (friendId: string) => {
+  const handleRemoveFriend = useCallback(async (friendId: string) => {
     try {
       await friendsService.deleteFriend(friendId);
       setFriends((prev) => prev.filter((f) => f.id !== friendId));
-    } catch (error) {
-      Alert.alert('Error', 'Unable to remove friend.');
+    } catch {
+      Alert.alert('Error', t('errors.unexpectedError'));
     }
-  };
+  }, [t]);
 
-  const confirmRemoveFriend = (friendId: string) => {
+  const confirmRemoveFriend = useCallback((friendId: string) => {
     Alert.alert(
       t('friends.removeConfirmTitle'),
       t('friends.removeConfirmMessage'),
@@ -232,34 +232,34 @@ export default function FriendsScreen() {
         },
       ]
     );
-  };
+  }, [t, handleRemoveFriend]);
 
-  const handleAcceptRequest = async (requestId: string) => {
+  const handleAcceptRequest = useCallback(async (requestId: string) => {
     try {
       await friendsService.acceptFriendRequest(requestId);
       setRequests((prev) => prev.filter((r) => r.id !== requestId));
       // Reload friends list in background to sync state
       loadFriends(1, false);
-    } catch (error) {
-      Alert.alert('Error', 'Unable to accept request.');
+    } catch {
+      Alert.alert('Error', t('errors.unexpectedError'));
     }
-  };
+  }, [t, loadFriends]);
 
-  const handleRejectRequest = async (requestId: string) => {
+  const handleRejectRequest = useCallback(async (requestId: string) => {
     try {
       await friendsService.rejectFriendRequest(requestId);
       setRequests((prev) => prev.filter((r) => r.id !== requestId));
-    } catch (error) {
-      Alert.alert('Error', 'Unable to reject request.');
+    } catch {
+      Alert.alert('Error', t('errors.unexpectedError'));
     }
-  };
+  }, [t]);
 
-  const navigateToProfile = (userId: string) => {
+  const navigateToProfile = useCallback((userId: string) => {
     router.push({
       pathname: '/setting/edit-profile',
       params: { userId },
     } as any);
-  };
+  }, [router]);
 
   // Renderers
   const renderSearchItem = useCallback(
@@ -269,15 +269,15 @@ export default function FriendsScreen() {
 
       return (
         <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
-          <Pressable 
+          <Pressable
             onPress={() => navigateToProfile(item.id)}
             className="flex-row items-center flex-1 gap-3 pr-2"
           >
             <View className="h-12 w-12 overflow-hidden rounded-full bg-gray-100 border border-black/5">
               <Image
                 source={
-                  item.pictureUrl 
-                    ? { uri: (item.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch) ? `${item.pictureUrl}?t=${item.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch}` : item.pictureUrl } 
+                  item.pictureUrl
+                    ? { uri: (item.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch) ? `${item.pictureUrl}?t=${item.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch}` : item.pictureUrl }
                     : DEFAULT_AVATAR_SOURCE
                 }
                 style={{ width: '100%', height: '100%' }}
@@ -319,7 +319,7 @@ export default function FriendsScreen() {
         </View>
       );
     },
-    [requestedSet, t]
+    [requestedSet, t, navigateToProfile, handleAddFriend, me?.id, meFetchedAt, avatarCacheEpoch]
   );
 
   const renderFriendItem = useCallback(
@@ -331,15 +331,15 @@ export default function FriendsScreen() {
 
       return (
         <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
-          <Pressable 
+          <Pressable
             onPress={() => navigateToProfile(userObj.id)}
             className="flex-row items-center flex-1 gap-3 pr-2"
           >
             <View className="h-12 w-12 overflow-hidden rounded-full bg-gray-100 border border-black/5">
               <Image
                 source={
-                  userObj.pictureUrl 
-                    ? { uri: (userObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch) ? `${userObj.pictureUrl}?t=${userObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch}` : userObj.pictureUrl } 
+                  userObj.pictureUrl
+                    ? { uri: (userObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch) ? `${userObj.pictureUrl}?t=${userObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch}` : userObj.pictureUrl }
                     : DEFAULT_AVATAR_SOURCE
                 }
                 style={{ width: '100%', height: '100%' }}
@@ -368,7 +368,7 @@ export default function FriendsScreen() {
         </View>
       );
     },
-    [confirmRemoveFriend, t]
+    [confirmRemoveFriend, t, navigateToProfile, me?.id, meFetchedAt, avatarCacheEpoch]
   );
 
   const renderRequestItem = useCallback(
@@ -380,15 +380,15 @@ export default function FriendsScreen() {
 
       return (
         <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
-          <Pressable 
+          <Pressable
             onPress={() => navigateToProfile(senderObj.id)}
             className="flex-row items-center flex-1 gap-3 pr-2"
           >
             <View className="h-12 w-12 overflow-hidden rounded-full bg-gray-100 border border-black/5">
               <Image
                 source={
-                  senderObj.pictureUrl 
-                    ? { uri: (senderObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch) ? `${senderObj.pictureUrl}?t=${senderObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch}` : senderObj.pictureUrl } 
+                  senderObj.pictureUrl
+                    ? { uri: (senderObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch) ? `${senderObj.pictureUrl}?t=${senderObj.id === me?.id ? (meFetchedAt || avatarCacheEpoch) : avatarCacheEpoch}` : senderObj.pictureUrl }
                     : DEFAULT_AVATAR_SOURCE
                 }
                 style={{ width: '100%', height: '100%' }}
@@ -425,7 +425,7 @@ export default function FriendsScreen() {
         </View>
       );
     },
-    [handleAcceptRequest, handleRejectRequest, t]
+    [handleAcceptRequest, handleRejectRequest, t, navigateToProfile, me?.id, meFetchedAt, avatarCacheEpoch]
   );
 
   return (
@@ -498,9 +498,8 @@ export default function FriendsScreen() {
           <View className="flex-row border-b border-gray-100 px-4">
             <Pressable
               onPress={() => setActiveTab('friends')}
-              className={`flex-1 py-3 items-center border-b-2 ${
-                activeTab === 'friends' ? 'border-[#3B5BDB]' : 'border-transparent'
-              }`}
+              className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'friends' ? 'border-[#3B5BDB]' : 'border-transparent'
+                }`}
             >
               <Typography
                 variant="h5"
@@ -512,9 +511,8 @@ export default function FriendsScreen() {
 
             <Pressable
               onPress={() => setActiveTab('requests')}
-              className={`flex-1 py-3 items-center border-b-2 ${
-                activeTab === 'requests' ? 'border-[#3B5BDB]' : 'border-transparent'
-              }`}
+              className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'requests' ? 'border-[#3B5BDB]' : 'border-transparent'
+                }`}
             >
               <Typography
                 variant="h5"

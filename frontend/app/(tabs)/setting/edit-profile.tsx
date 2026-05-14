@@ -130,7 +130,7 @@ type EditProfileValidationErrors = Partial<
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { userId } = useLocalSearchParams<{ userId: string }>();
+  const { userId } = useLocalSearchParams<{ userId?: string }>();
   const insets = useSafeAreaInsets();
   const horizontalPadding = 16;
   const accessToken = useAuthStore(
@@ -201,9 +201,9 @@ export default function EditProfileScreen() {
 
         if (!mounted || !profile) return;
 
-        setInitialProfile(profile as any);
+        setInitialProfile(profile as AuthMeResponse);
         setUsername(profile.username ?? '');
-        setEmail((profile as any).email ?? '');
+        setEmail(profile.email ?? '');
         setFirstName(profile.firstName ?? '');
         setLastName(profile.lastName ?? '');
         setPhoneNumber(profile.phoneNumber ?? '');
