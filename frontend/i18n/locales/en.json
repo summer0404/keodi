@@ -403,6 +403,7 @@
     "cancel": "Cancel",
     "add": "Add",
     "requested": "Requested",
+    "alreadyFriends": "Friends",
     "removeFriend": "Remove friend",
     "removeConfirmTitle": "Remove friend?",
     "removeConfirmMessage": "Are you sure you want to remove this person from your friends list?",

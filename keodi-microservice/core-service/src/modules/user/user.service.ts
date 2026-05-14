@@ -318,6 +318,7 @@ export class UserService {
         isProfileVisible: canViewFullProfile,
         isFriend,
         hasPendingRequest,
+        pendingRequestId: pendingRequest?.id ?? null,
         canSendFriendRequest,
       };
     } catch (error) {

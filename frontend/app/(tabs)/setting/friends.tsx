@@ -1,5 +1,4 @@
 import { friendsService } from '@/api/friends';
-import { Button } from '@/components/ui/Button';
 import SearchBar from '@/components/ui/SearchBar';
 import Typography from '@/components/ui/Typography';
 import { DEFAULT_AVATAR_SOURCE } from '@/constants/helper';
@@ -8,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import type { FriendItem, FriendRequestItem, SearchUserItem } from '@/types/api';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Check, Trash2, UserPlus, X } from 'lucide-react-native';
+import { ArrowLeft, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -38,7 +37,6 @@ export default function FriendsScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
   const [hasMoreSearch, setHasMoreSearch] = useState(false);
-  const [requestedSet, setRequestedSet] = useState<Set<string>>(new Set());
 
   // Friends List State
   const [friends, setFriends] = useState<FriendItem[]>([]);
@@ -195,25 +193,10 @@ export default function FriendsScreen() {
   };
 
   // Actions
-  const handleAddFriend = useCallback(async (userId: string) => {
-    try {
-      setRequestedSet((prev) => new Set(prev).add(userId));
-      await friendsService.sendFriendRequest({ receiverId: userId });
-    } catch {
-      // Undo optimistically on failure
-      setRequestedSet((prev) => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
-      });
-      Alert.alert('Error', t('errors.unexpectedError'));
-    }
-  }, [t]);
-
   const handleRemoveFriend = useCallback(async (friendId: string) => {
     try {
       await friendsService.deleteFriend(friendId);
-      setFriends((prev) => prev.filter((f) => f.id !== friendId));
+      setFriends((prev) => prev.filter((f) => f.friendId !== friendId));
     } catch {
       Alert.alert('Error', t('errors.unexpectedError'));
     }
@@ -265,13 +248,12 @@ export default function FriendsScreen() {
   const renderSearchItem = useCallback(
     ({ item }: { item: SearchUserItem }) => {
       const fullName = `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.username;
-      const isRequested = requestedSet.has(item.id);
 
       return (
-        <View className="flex-row items-center justify-between py-3 border-b border-gray-100">
+        <View className="flex-row items-center py-3 border-b border-gray-100">
           <Pressable
             onPress={() => navigateToProfile(item.id)}
-            className="flex-row items-center flex-1 gap-3 pr-2"
+            className="flex-row items-center flex-1 gap-3"
           >
             <View className="h-12 w-12 overflow-hidden rounded-full bg-gray-100 border border-black/5">
               <Image
@@ -295,31 +277,10 @@ export default function FriendsScreen() {
               ) : null}
             </View>
           </Pressable>
-
-          {isRequested ? (
-            <View className="flex-row items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200">
-              <Check size={14} color={Palette.grey} strokeWidth={2} />
-              <Typography className="text-gray-500">
-                {t('friends.requested')}
-              </Typography>
-            </View>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={() => handleAddFriend(item.id)}
-              className="px-4 py-1.5 border border-[#3B5BDB] rounded-full"
-            >
-              <View className="flex-row items-center gap-1">
-                <UserPlus size={14} strokeWidth={2} />
-                <Typography>{t('friends.add')} </Typography>
-              </View>
-            </Button>
-          )}
         </View>
       );
     },
-    [requestedSet, t, navigateToProfile, handleAddFriend, me?.id, meFetchedAt, avatarCacheEpoch]
+    [t, navigateToProfile, me?.id, meFetchedAt, avatarCacheEpoch]
   );
 
   const renderFriendItem = useCallback(
@@ -359,7 +320,7 @@ export default function FriendsScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => confirmRemoveFriend(item.id)}
+            onPress={() => confirmRemoveFriend(item.friendId)}
             className="p-2 items-center justify-center rounded-full bg-gray-50 active:bg-gray-100"
             hitSlop={8}
           >

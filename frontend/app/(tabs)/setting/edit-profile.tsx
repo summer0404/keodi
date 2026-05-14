@@ -1,10 +1,34 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { authService } from '@/api/auth';
+import { friendsService } from '@/api/friends';
+import { userService } from '@/api/user';
+import { Button } from '@/components/ui/Button';
+import { ThreadsDatePicker } from '@/components/ui/DatePicker';
+import Typography from '@/components/ui/Typography';
+import {
+  DEFAULT_AVATAR_SOURCE,
+  MAX_AVATAR_FILE_BYTES,
+  normalizeNullable,
+  parseDateForPicker,
+  sanitizeUsername,
+  toApiDate,
+  toComparableDate,
+  toDisplayDate,
+} from '@/constants/helper';
+import { Palette } from '@/constants/theme';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { AuthMeResponse, OtherUserProfile, UpdatePictureRequest, UpdateUserProfileRequest } from '@/types/api';
 import axios from 'axios';
-import { z } from 'zod';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type TFunction } from 'i18next';
+import { ArrowLeft, CalendarDays, Camera, Clock, Eye, EyeClosed, UserCheck, UserRoundPlus } from 'lucide-react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Animated,
   Alert,
+  Animated,
   Easing,
   Pressable,
   ScrollView,
@@ -12,31 +36,8 @@ import {
   View,
   type ImageSourcePropType,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Image } from 'expo-image';
-import { ArrowLeft, CalendarDays, Camera, Eye, EyeClosed, UserRoundPlus } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
-import Typography from '@/components/ui/Typography';
-import { Button } from '@/components/ui/Button';
-import { ThreadsDatePicker } from '@/components/ui/DatePicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Palette } from '@/constants/theme';
-import {
-  sanitizeUsername,
-  DEFAULT_AVATAR_SOURCE,
-  MAX_AVATAR_FILE_BYTES,
-  toApiDate,
-  parseDateForPicker,
-  toDisplayDate,
-  toComparableDate,
-  normalizeNullable,
-} from '@/constants/helper';
-import { authService } from '@/api/auth';
-import { userService } from '@/api/user';
-import { useAuthStore } from '@/store/useAuthStore';
-import type { AuthMeResponse, UpdatePictureRequest, UpdateUserProfileRequest } from '@/types/api';
-import { useTranslation } from 'react-i18next';
-import { type TFunction } from 'i18next';
+import { z } from 'zod';
 
 const createEditProfileSchema = (t: TFunction) =>
   z
@@ -156,6 +157,9 @@ export default function EditProfileScreen() {
   const [submitError, setSubmitError] = useState('');
 
   const [initialProfile, setInitialProfile] = useState<AuthMeResponse | null>(null);
+  const [otherProfile, setOtherProfile] = useState<OtherUserProfile | null>(null);
+  const [isSendingFriendRequest, setIsSendingFriendRequest] = useState(false);
+  const [isCancellingFriendRequest, setIsCancellingFriendRequest] = useState(false);
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -195,12 +199,15 @@ export default function EditProfileScreen() {
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const profile = isViewOnly 
-          ? await userService.getUserProfile(userId)
+        const profile = isViewOnly
+          ? await userService.getUserProfile(userId!)
           : await fetchMe({ force: true });
 
         if (!mounted || !profile) return;
 
+        if (isViewOnly) {
+          setOtherProfile(profile as OtherUserProfile);
+        }
         setInitialProfile(profile as AuthMeResponse);
         setUsername(profile.username ?? '');
         setEmail(profile.email ?? '');
@@ -222,6 +229,33 @@ export default function EditProfileScreen() {
       mounted = false;
     };
   }, [fetchMe, userId, isViewOnly]);
+
+  const handleAddFriend = async () => {
+    if (!userId || !otherProfile?.canSendFriendRequest) return;
+    setIsSendingFriendRequest(true);
+    try {
+      const result = await friendsService.sendFriendRequest({ receiverId: userId });
+      setOtherProfile((prev) => prev ? { ...prev, hasPendingRequest: true, pendingRequestId: result.id, canSendFriendRequest: false } : prev);
+    } catch {
+      Alert.alert('Error', t('errors.unexpectedError'));
+    } finally {
+      setIsSendingFriendRequest(false);
+    }
+  };
+
+  const handleCancelFriendRequest = async () => {
+    const requestId = otherProfile?.pendingRequestId;
+    if (!requestId) return;
+    setIsCancellingFriendRequest(true);
+    try {
+      await friendsService.cancelFriendRequest(requestId);
+      setOtherProfile((prev) => prev ? { ...prev, hasPendingRequest: false, pendingRequestId: null, canSendFriendRequest: true } : prev);
+    } catch {
+      Alert.alert('Error', t('errors.unexpectedError'));
+    } finally {
+      setIsCancellingFriendRequest(false);
+    }
+  };
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -540,6 +574,41 @@ export default function EditProfileScreen() {
                   </Button>
                 </View>
               )}
+
+              {isViewOnly && otherProfile && (
+                <View className="mt-4 w-full items-center">
+                  {otherProfile.isFriend ? (
+                    <Button disabled className="w-2/3 border py-2 px-6 shadow-md gap-2" rounded="md">
+                      <UserCheck size={18} color={Palette.white} strokeWidth={2} />
+                      {t('friends.alreadyFriends').toUpperCase()}
+                    </Button>
+                  ) : otherProfile.hasPendingRequest ? (
+                    <Button
+                      onPress={otherProfile.pendingRequestId ? handleCancelFriendRequest : undefined}
+                      disabled={isCancellingFriendRequest || !otherProfile.pendingRequestId}
+                      className="w-2/3 border py-2 px-6 shadow-md gap-2"
+                      rounded="md"
+                    >
+                      {isCancellingFriendRequest
+                        ? <ActivityIndicator size="small" color={Palette.white} />
+                        : <Clock size={18} color={Palette.white} strokeWidth={2} />}
+                      {t('friends.requested').toUpperCase()}
+                    </Button>
+                  ) : otherProfile.canSendFriendRequest ? (
+                    <Button
+                      onPress={handleAddFriend}
+                      disabled={isSendingFriendRequest}
+                      className="w-2/3 border py-2 px-6 shadow-md gap-2"
+                      rounded="md"
+                    >
+                      {isSendingFriendRequest
+                        ? <ActivityIndicator size="small" color={Palette.white} />
+                        : <UserRoundPlus size={18} color={Palette.white} strokeWidth={2} />}
+                      {t('friends.add').toUpperCase()}
+                    </Button>
+                  ) : null}
+                </View>
+              )}
             </View>
 
             <View className="gap-3">
@@ -566,17 +635,19 @@ export default function EditProfileScreen() {
                 ) : null}
               </View>
 
-              <View>
-                <Typography variant="h5" className="mb-2 text-black">
-                  {t('auth.email')}
-                </Typography>
-                <TextInput
-                  value={email}
-                  editable={false}
-                  className="rounded-xl border border-black/15 bg-[#f6f6f6] px-4 py-3 text-[#6b7280]"
-                  autoCapitalize="none"
-                />
-              </View>
+              {!isViewOnly && (
+                <View>
+                  <Typography variant="h5" className="mb-2 text-black">
+                    {t('auth.email')}
+                  </Typography>
+                  <TextInput
+                    value={email}
+                    editable={false}
+                    className="rounded-xl border border-black/15 bg-[#f6f6f6] px-4 py-3 text-[#6b7280]"
+                    autoCapitalize="none"
+                  />
+                </View>
+              )}
 
               <View className="flex-row gap-3">
                 <View className="flex-1">
@@ -604,28 +675,30 @@ export default function EditProfileScreen() {
                 </View>
               </View>
 
-              <View>
-                <Typography variant="h5" className="mb-2 text-black">
-                  {t('home.phone')}
-                </Typography>
-                <TextInput
-                  value={phoneNumber}
-                  onChangeText={(text) => {
-                    setPhoneNumber(text);
-                    if (fieldErrors.phoneNumber) {
-                      setFieldErrors((prev) => ({ ...prev, phoneNumber: undefined }));
-                    }
-                  }}
-                  className="rounded-xl border border-black/15 bg-white px-4 py-3 text-black"
-                  keyboardType="phone-pad"
-                  editable={!isViewOnly}
-                />
-                {fieldErrors.phoneNumber ? (
-                  <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
-                    {fieldErrors.phoneNumber}
+              {!isViewOnly && (
+                <View>
+                  <Typography variant="h5" className="mb-2 text-black">
+                    {t('home.phone')}
                   </Typography>
-                ) : null}
-              </View>
+                  <TextInput
+                    value={phoneNumber}
+                    onChangeText={(text) => {
+                      setPhoneNumber(text);
+                      if (fieldErrors.phoneNumber) {
+                        setFieldErrors((prev) => ({ ...prev, phoneNumber: undefined }));
+                      }
+                    }}
+                    className="rounded-xl border border-black/15 bg-white px-4 py-3 text-black"
+                    keyboardType="phone-pad"
+                    editable={!isViewOnly}
+                  />
+                  {fieldErrors.phoneNumber ? (
+                    <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+                      {fieldErrors.phoneNumber}
+                    </Typography>
+                  ) : null}
+                </View>
+              )}
 
               <View>
                 <Typography variant="h5" className="mb-2 text-black">
@@ -658,75 +731,75 @@ export default function EditProfileScreen() {
                 ) : null}
               </View>
 
-            {!isViewOnly && (
-              <>
-                <View>
-                  <Typography variant="h5" className="mb-2 text-black">
-                    {t('auth.newPasswordTitle')}
-                  </Typography>
-                  <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
-                    <TextInput
-                      value={newPassword}
-                      onChangeText={(text) => {
-                        setNewPassword(text);
-                        if (fieldErrors.newPassword) {
-                          setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
-                        }
-                      }}
-                      secureTextEntry={!showNewPassword}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      className="flex-1 py-3 text-black"
-                    />
-                    <Pressable onPress={() => setShowNewPassword((prev) => !prev)}>
-                      {showNewPassword ? (
-                        <EyeClosed size={18} color={Palette.grey} />
-                      ) : (
-                        <Eye size={18} color={Palette.grey} />
-                      )}
-                    </Pressable>
-                  </View>
-                  {fieldErrors.newPassword ? (
-                    <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
-                      {fieldErrors.newPassword}
+              {!isViewOnly && (
+                <>
+                  <View>
+                    <Typography variant="h5" className="mb-2 text-black">
+                      {t('auth.newPasswordTitle')}
                     </Typography>
-                  ) : null}
-                </View>
+                    <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
+                      <TextInput
+                        value={newPassword}
+                        onChangeText={(text) => {
+                          setNewPassword(text);
+                          if (fieldErrors.newPassword) {
+                            setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+                          }
+                        }}
+                        secureTextEntry={!showNewPassword}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        className="flex-1 py-3 text-black"
+                      />
+                      <Pressable onPress={() => setShowNewPassword((prev) => !prev)}>
+                        {showNewPassword ? (
+                          <EyeClosed size={18} color={Palette.grey} />
+                        ) : (
+                          <Eye size={18} color={Palette.grey} />
+                        )}
+                      </Pressable>
+                    </View>
+                    {fieldErrors.newPassword ? (
+                      <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+                        {fieldErrors.newPassword}
+                      </Typography>
+                    ) : null}
+                  </View>
 
-                <View>
-                  <Typography variant="h5" className="mb-2 text-black">
-                    {t('auth.confirmPassword')}
-                  </Typography>
-                  <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
-                    <TextInput
-                      value={confirmNewPassword}
-                      onChangeText={(text) => {
-                        setConfirmNewPassword(text);
-                        if (fieldErrors.confirmNewPassword) {
-                          setFieldErrors((prev) => ({ ...prev, confirmNewPassword: undefined }));
-                        }
-                      }}
-                      secureTextEntry={!showConfirmNewPassword}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      className="flex-1 py-3 text-black"
-                    />
-                    <Pressable onPress={() => setShowConfirmNewPassword((prev) => !prev)}>
-                      {showConfirmNewPassword ? (
-                        <EyeClosed size={18} color={Palette.grey} />
-                      ) : (
-                        <Eye size={18} color={Palette.grey} />
-                      )}
-                    </Pressable>
-                  </View>
-                  {fieldErrors.confirmNewPassword ? (
-                    <Typography className="text-red-500 mt-1 ml-1 leading-4">
-                      {fieldErrors.confirmNewPassword}
+                  <View>
+                    <Typography variant="h5" className="mb-2 text-black">
+                      {t('auth.confirmPassword')}
                     </Typography>
-                  ) : null}
-                </View>
-              </>
-            )}
+                    <View className="rounded-xl border border-black/15 bg-white px-4 flex-row items-center justify-between">
+                      <TextInput
+                        value={confirmNewPassword}
+                        onChangeText={(text) => {
+                          setConfirmNewPassword(text);
+                          if (fieldErrors.confirmNewPassword) {
+                            setFieldErrors((prev) => ({ ...prev, confirmNewPassword: undefined }));
+                          }
+                        }}
+                        secureTextEntry={!showConfirmNewPassword}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        className="flex-1 py-3 text-black"
+                      />
+                      <Pressable onPress={() => setShowConfirmNewPassword((prev) => !prev)}>
+                        {showConfirmNewPassword ? (
+                          <EyeClosed size={18} color={Palette.grey} />
+                        ) : (
+                          <Eye size={18} color={Palette.grey} />
+                        )}
+                      </Pressable>
+                    </View>
+                    {fieldErrors.confirmNewPassword ? (
+                      <Typography className="text-red-500 mt-1 ml-1 leading-4">
+                        {fieldErrors.confirmNewPassword}
+                      </Typography>
+                    ) : null}
+                  </View>
+                </>
+              )}
             </View>
 
             {submitError ? (
@@ -744,9 +817,8 @@ export default function EditProfileScreen() {
                 <Button
                   onPress={handleSubmit}
                   disabled={isSubmitting}
-                  className={`mt-4 py-3 mb-6 w-full items-center self-center ${
-                    isSubmitSuccess ? 'bg-green-500' : ''
-                  }`}
+                  className={`mt-4 py-3 mb-6 w-full items-center self-center ${isSubmitSuccess ? 'bg-green-500' : ''
+                    }`}
                   rounded="xl"
                 >
                   {isSubmitSuccess

@@ -694,5 +694,6 @@ export interface OtherUserProfile {
   isProfileVisible: boolean;
   isFriend: boolean;
   hasPendingRequest: boolean;
+  pendingRequestId: string | null;
   canSendFriendRequest: boolean;
 }
