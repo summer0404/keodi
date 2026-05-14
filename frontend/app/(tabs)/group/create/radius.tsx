@@ -114,9 +114,9 @@ export default function GroupCreateRadiusScreen() {
         radiusSizeAnim.setValue(newSize);
       },
       onPanResponderRelease: () => {
-        // Finalize state on release
-        lastRadiusRef.current = radius;
-        const newSize = 120 + ((radius - 0.1) / 99.9) * 200;
+        // Finalize state on release — read from ref to avoid stale closure
+        const finalRadius = lastRadiusRef.current;
+        const newSize = 120 + ((finalRadius - 0.1) / 99.9) * 200;
         Animated.spring(radiusSizeAnim, {
           toValue: newSize,
           friction: 7,

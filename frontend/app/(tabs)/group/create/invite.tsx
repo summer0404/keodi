@@ -1,18 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { SectionList, Pressable, View } from 'react-native';
+import { friendsService } from '@/api/friends';
+import { groupSessionsService } from '@/api/groupSessions';
+import { Button } from '@/components/ui/Button';
+import Typography from '@/components/ui/Typography';
+import { DEFAULT_AVATAR_SOURCE, DEFAULT_LIMIT, DEFAULT_PAGE } from '@/constants/helper';
+import { Palette } from '@/constants/theme';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { FriendItem, GroupSessionMember } from '@/types/api';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, CheckCircle2, Circle } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/Button';
-import Typography from '@/components/ui/Typography';
-import { friendsService } from '@/api/friends';
-import { groupSessionsService } from '@/api/groupSessions';
-import { DEFAULT_AVATAR_SOURCE, DEFAULT_LIMIT, DEFAULT_PAGE } from '@/constants/helper';
-import { Palette } from '@/constants/theme';
-import type { FriendItem, GroupSessionMember } from '@/types/api';
-import { useAuthStore } from '@/store/useAuthStore';
+import { Pressable, SectionList, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const getFriendName = (item: FriendItem) => {
   const firstName = item.friend?.firstName?.trim() ?? '';
@@ -154,7 +154,7 @@ export default function GroupInviteScreen() {
       .map((f) => ({
         ...f,
         isMember: false,
-        uniqueKey: `friend-${f.id}`,
+        uniqueKey: `friend-${f.friendId ?? f.id}`,
       }));
 
     const result = [];
@@ -218,8 +218,8 @@ export default function GroupInviteScreen() {
       const userId = isMember ? item.userId : item.friendId;
       const name = isMember
         ? [item.user?.firstName, item.user?.lastName].filter(Boolean).join(' ') ||
-          item.nickname ||
-          'Unknown'
+        item.nickname ||
+        'Unknown'
         : getFriendName(item);
 
       const pictureUrl = isMember ? item.user?.pictureUrl : item.friend?.pictureUrl;

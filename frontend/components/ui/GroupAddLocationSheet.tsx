@@ -13,7 +13,6 @@ import { DEFAULT_PLACE_IMAGE, getPrimaryImageUrl } from '@/constants/helper';
 import type { MemberLocation, PlaceRecommendationItem } from '@/types/api';
 import { Star, Sparkles, RefreshCw } from 'lucide-react-native';
 import { Palette } from '@/constants/theme';
-import { t } from 'i18next';
 
 const cardHorizontalPadding = 16;
 
@@ -71,6 +70,7 @@ function AddLocationCard({
   sessionStatus?: string;
   voteStatus?: string;
 }) {
+  const { t } = useTranslation();
   const imageUrl = getPrimaryImageUrl(place.featureImageUrl);
 
   return (
@@ -277,7 +277,6 @@ export default function GroupAddLocationSheet({
                     elevation: 4,
                   }}
                   onPress={onRefreshRecommendations}
-                  disabled={isRefreshingRecommendations}
                 >
                   <RefreshCw size={24} color={Palette.black} />
                 </Pressable>
@@ -290,38 +289,38 @@ export default function GroupAddLocationSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 bg-black/45 justify-end">
-        <Pressable className="absolute inset-0" onPress={onClose} />
+        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+          <View className="flex-1 bg-black/45 justify-end">
+            <Pressable className="absolute inset-0" onPress={onClose} />
 
-        <View
-          className="w-full rounded-t-[28px] bg-white px-4 pb-6"
-          style={{ paddingTop: 14, paddingBottom: insets.bottom + 24 }}
-        >
-          <View className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-300" />
+            <View
+              className="w-full rounded-t-[28px] bg-white px-4 pb-6"
+              style={{ paddingTop: 14, paddingBottom: insets.bottom + 24 }}
+            >
+              <View className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-300" />
 
-          {/* <Typography variant="h4" className="text-black">
+              {/* <Typography variant="h4" className="text-black">
             {t('group.addLocation')}
           </Typography> */}
 
-          <View className="mt-3">
-            <SearchBar
-              value={query}
-              onChangeText={setQuery}
-              onSubmitEditing={handleSearch}
-              placeholder={t('search.title')}
-              showSettings={false}
-              showAI={false}
-            />
-            <View className='flex-row items-center mt-4'>
-              <Sparkles size={20} color={Palette.black} />
-              <Typography variant='h4' className='ml-2'>{t('group.aiSuggestions')}</Typography>
+              <View className="mt-3">
+                <SearchBar
+                  value={query}
+                  onChangeText={setQuery}
+                  onSubmitEditing={handleSearch}
+                  placeholder={t('search.title')}
+                  showSettings={false}
+                  showAI={false}
+                />
+                <View className='flex-row items-center mt-4'>
+                  <Sparkles size={20} color={Palette.black} />
+                  <Typography variant='h4' className='ml-2'>{t('group.aiSuggestions')}</Typography>
+                </View>
+              </View>
+
+              {renderContent()}
             </View>
           </View>
-
-          {renderContent()}
-        </View>
-      </View>
-    </Modal>
-  );
+        </Modal>
+        );
 }
