@@ -383,6 +383,10 @@ export interface GroupSessionCandidateItem {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   member: GroupSessionCandidateMember | null;
 }
@@ -417,6 +421,10 @@ export interface VotePlaceSessionResponse {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   member?: {
     id: string;
@@ -466,6 +474,10 @@ export interface GroupVoteDetail {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   member: GroupVoteMember;
 }
@@ -477,6 +489,10 @@ export interface GroupVoteResult {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
   count: number;
   voters: GroupVoteMember[];
@@ -576,6 +592,10 @@ export interface PlaceCandidateResponse {
     featureImageUrl: string | null;
     rating: number;
     fullAddress: string | null;
+    ward: string | null;
+    street: string | null;
+    city: string | null;
+    countryCode: string | null;
   };
 }
 

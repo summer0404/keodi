@@ -471,6 +471,22 @@ export const extractWardCityFromFormattedAddress = (
   return { ward, city };
 };
 
+export const formatAddressDisplay = (
+  fullAddress: string | null | undefined,
+  street: string | null | undefined,
+  ward: string | null | undefined,
+  city: string | null | undefined,
+  language: string,
+  t: (key: string) => string
+) => {
+  const trimmedFull = fullAddress?.trim();
+  if (trimmedFull) return trimmedFull;
+
+  const localized = getLocalizedLocation(ward, city, language, t);
+  const parts = [street?.trim(), localized].filter(Boolean);
+  return parts.join(', ') || '';
+};
+
 export const buildSortOrder = (value: 'distance' | 'rating' | 'name' | 'createdAt') =>
   value === 'rating' || value === 'createdAt' ? 'desc' : 'asc';
 

@@ -37,6 +37,8 @@ import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from '
 import { ArrowLeft, Copy, Heart, LogOut, Share2, Star, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { formatAddressDisplay } from '@/constants/helper';
+import i18n from 'i18next';
 import {
   Alert,
   Animated,
@@ -49,7 +51,7 @@ import {
   ScrollView,
   Share,
   TouchableWithoutFeedback,
-  View
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { io, type Socket } from 'socket.io-client';
@@ -1907,8 +1909,29 @@ export default function GroupDetailScreen() {
                                                   placesById[
                                                     result.place.id
                                                   ]?.fullAddress?.trim() ?? null;
-                                                const displayAddress =
-                                                  addressFromCandidate || addressFromCache;
+
+                                                const street =
+                                                  (result.place as any).street ??
+                                                  placesById[result.place.id]?.street ??
+                                                  null;
+                                                const ward =
+                                                  (result.place as any).ward ??
+                                                  placesById[result.place.id]?.ward ??
+                                                  null;
+                                                const city =
+                                                  (result.place as any).city ??
+                                                  placesById[result.place.id]?.city ??
+                                                  null;
+
+                                                const displayAddress = formatAddressDisplay(
+                                                  addressFromCandidate || addressFromCache,
+                                                  street,
+                                                  ward,
+                                                  city,
+                                                  i18n.language ?? 'en',
+                                                  // fallback to i18n.t for localization
+                                                  i18n.t.bind(i18n)
+                                                );
 
                                                 return displayAddress ? (
                                                   <Typography
@@ -1942,9 +1965,9 @@ export default function GroupDetailScreen() {
                                                     style={
                                                       isVotedFinalized
                                                         ? {
-                                                          borderColor: Palette.green,
-                                                          backgroundColor: Palette.green,
-                                                        }
+                                                            borderColor: Palette.green,
+                                                            backgroundColor: Palette.green,
+                                                          }
                                                         : undefined
                                                     }
                                                     onPress={(event) => {
@@ -1979,255 +2002,255 @@ export default function GroupDetailScreen() {
                                   </Animated.View>
                                 </>
                               ) : // When vote is finalized, show card without swipe/delete
-                                isFeaturedWinner ? (
-                                  <Card
-                                    className="overflow-hidden self-center w-full bg-white border-2 border-[#D4A217]"
-                                    style={{
-                                      shadowColor: '#000',
-                                      shadowOffset: { width: 0, height: 2 },
-                                      shadowOpacity: 0.16,
-                                      shadowRadius: 8,
-                                      elevation: 3,
-                                    }}
-                                  >
-                                    <View className="relative">
-                                      <Image
-                                        source={
-                                          placeImageUrl ? { uri: placeImageUrl } : DEFAULT_PLACE_IMAGE
-                                        }
-                                        style={{ width: '100%', height: 160 }}
-                                        contentFit="cover"
+                              isFeaturedWinner ? (
+                                <Card
+                                  className="overflow-hidden self-center w-full bg-white border-2 border-[#D4A217]"
+                                  style={{
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.16,
+                                    shadowRadius: 8,
+                                    elevation: 3,
+                                  }}
+                                >
+                                  <View className="relative">
+                                    <Image
+                                      source={
+                                        placeImageUrl ? { uri: placeImageUrl } : DEFAULT_PLACE_IMAGE
+                                      }
+                                      style={{ width: '100%', height: 160 }}
+                                      contentFit="cover"
+                                    />
+                                    <View className="absolute left-[-30px] top-[10px] w-[104px] -rotate-45 py-1 items-center z-10 bg-[#FACC15]">
+                                      <Typography variant="h5">#1</Typography>
+                                    </View>
+                                    <Pressable
+                                      onPress={(event) => {
+                                        event.stopPropagation();
+                                        void handleFavoriteToggle(result.place.id);
+                                      }}
+                                      disabled={favoriteLoadingMap[result.place.id]}
+                                      className="absolute top-2 right-2 h-9 w-9 items-center justify-center rounded-full bg-white/80"
+                                    >
+                                      <Heart
+                                        size={20}
+                                        color={isFavorite ? Palette.red : Palette.black}
+                                        fill={isFavorite ? Palette.red : 'transparent'}
+                                        strokeWidth={2}
                                       />
-                                      <View className="absolute left-[-30px] top-[10px] w-[104px] -rotate-45 py-1 items-center z-10 bg-[#FACC15]">
-                                        <Typography variant="h5">#1</Typography>
+                                    </Pressable>
+                                  </View>
+
+                                  <Pressable
+                                    onPress={() => router.push(`/place/${result.place.id}` as any)}
+                                    className="p-4"
+                                  >
+                                    <View className="flex-row items-start justify-between">
+                                      <View className="flex-1 mr-2">
+                                        <Typography variant="h4">{result.place.name}</Typography>
                                       </View>
-                                      <Pressable
-                                        onPress={(event) => {
-                                          event.stopPropagation();
-                                          void handleFavoriteToggle(result.place.id);
-                                        }}
-                                        disabled={favoriteLoadingMap[result.place.id]}
-                                        className="absolute top-2 right-2 h-9 w-9 items-center justify-center rounded-full bg-white/80"
-                                      >
-                                        <Heart
-                                          size={20}
-                                          color={isFavorite ? Palette.red : Palette.black}
-                                          fill={isFavorite ? Palette.red : 'transparent'}
-                                          strokeWidth={2}
-                                        />
-                                      </Pressable>
+                                      <View className="justify-center items-center">
+                                        <Typography variant="h4">{result.count}</Typography>
+                                        <Typography variant="caption">
+                                          {t('group.voteLabel')}
+                                        </Typography>
+                                      </View>
                                     </View>
 
-                                    <Pressable
-                                      onPress={() => router.push(`/place/${result.place.id}` as any)}
-                                      className="p-4"
-                                    >
-                                      <View className="flex-row items-start justify-between">
-                                        <View className="flex-1 mr-2">
-                                          <Typography variant="h4">{result.place.name}</Typography>
-                                        </View>
-                                        <View className="justify-center items-center">
-                                          <Typography variant="h4">{result.count}</Typography>
-                                          <Typography variant="caption">
-                                            {t('group.voteLabel')}
-                                          </Typography>
-                                        </View>
+                                    <View className="mt-3 flex-row items-center justify-between">
+                                      <View className="flex-row items-center px-2 py-1 rounded-md">
+                                        <Star size={14} color={Palette.star} fill={Palette.star} />
+                                        <Typography variant="caption" className="ml-1">
+                                          {result.place.rating > 0
+                                            ? result.place.rating.toFixed(1)
+                                            : 'N/A'}
+                                        </Typography>
                                       </View>
+                                      <GroupSessionAvatarStack
+                                        members={voters}
+                                        size={28}
+                                        currentUserId={currentUserId}
+                                        currentUserAvatarVersion={currentUserAvatarVersion}
+                                        avatarCacheEpoch={avatarCacheEpoch}
+                                      />
+                                    </View>
 
-                                      <View className="mt-3 flex-row items-center justify-between">
-                                        <View className="flex-row items-center px-2 py-1 rounded-md">
-                                          <Star size={14} color={Palette.star} fill={Palette.star} />
-                                          <Typography variant="caption" className="ml-1">
-                                            {result.place.rating > 0
-                                              ? result.place.rating.toFixed(1)
-                                              : 'N/A'}
-                                          </Typography>
-                                        </View>
-                                        <GroupSessionAvatarStack
-                                          members={voters}
-                                          size={28}
-                                          currentUserId={currentUserId}
-                                          currentUserAvatarVersion={currentUserAvatarVersion}
-                                          avatarCacheEpoch={avatarCacheEpoch}
-                                        />
-                                      </View>
-
-                                      <View className="mt-4 flex-row gap-3">
-                                        <Button
-                                          variant="outline"
-                                          rounded="full"
-                                          className="flex-1"
-                                          onPress={(event) => {
-                                            event.stopPropagation();
-                                            void handleDirectionWinner(result.place);
-                                          }}
-                                        >
-                                          {t('button.direction')}
-                                        </Button>
-                                        <Button
-                                          variant="default"
-                                          rounded="full"
-                                          className="flex-1"
-                                          onPress={(event) => {
-                                            event.stopPropagation();
-                                            void handleShareWinner(result.place);
-                                          }}
-                                        >
-                                          {t('button.share')}
-                                        </Button>
-                                      </View>
-                                    </Pressable>
-                                  </Card>
-                                ) : (
-                                  <Card
-                                    className="overflow-hidden self-center w-full bg-white"
-                                    style={{
-                                      shadowColor: '#000',
-                                      shadowOffset: { width: 0, height: 2 },
-                                      shadowOpacity: 0.18,
-                                      shadowRadius: 8,
-                                      elevation: 3,
-                                      borderWidth: isWinningPlace ? 2 : 0,
-                                      borderColor: isWinningPlace ? '#FACC15' : 'transparent',
-                                    }}
+                                    <View className="mt-4 flex-row gap-3">
+                                      <Button
+                                        variant="outline"
+                                        rounded="full"
+                                        className="flex-1"
+                                        onPress={(event) => {
+                                          event.stopPropagation();
+                                          void handleDirectionWinner(result.place);
+                                        }}
+                                      >
+                                        {t('button.direction')}
+                                      </Button>
+                                      <Button
+                                        variant="default"
+                                        rounded="full"
+                                        className="flex-1"
+                                        onPress={(event) => {
+                                          event.stopPropagation();
+                                          void handleShareWinner(result.place);
+                                        }}
+                                      >
+                                        {t('button.share')}
+                                      </Button>
+                                    </View>
+                                  </Pressable>
+                                </Card>
+                              ) : (
+                                <Card
+                                  className="overflow-hidden self-center w-full bg-white"
+                                  style={{
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.18,
+                                    shadowRadius: 8,
+                                    elevation: 3,
+                                    borderWidth: isWinningPlace ? 2 : 0,
+                                    borderColor: isWinningPlace ? '#FACC15' : 'transparent',
+                                  }}
+                                >
+                                  <Pressable
+                                    className="relative rounded-3xl p-3"
+                                    onPress={() => router.push(`/place/${result.place.id}` as any)}
                                   >
-                                    <Pressable
-                                      className="relative rounded-3xl p-3"
-                                      onPress={() => router.push(`/place/${result.place.id}` as any)}
-                                    >
-                                      <View className="flex-row gap-3 items-center">
-                                        <Image
-                                          source={
-                                            placeImageUrl
-                                              ? { uri: placeImageUrl }
-                                              : DEFAULT_PLACE_IMAGE
-                                          }
-                                          style={{
-                                            width: 135,
-                                            height: 95,
-                                            borderRadius: 12,
-                                          }}
-                                          contentFit="cover"
-                                        />
+                                    <View className="flex-row gap-3 items-center">
+                                      <Image
+                                        source={
+                                          placeImageUrl
+                                            ? { uri: placeImageUrl }
+                                            : DEFAULT_PLACE_IMAGE
+                                        }
+                                        style={{
+                                          width: 135,
+                                          height: 95,
+                                          borderRadius: 12,
+                                        }}
+                                        contentFit="cover"
+                                      />
 
-                                        <View className="flex-1">
-                                          <View className="flex-row items-center justify-between gap-2">
-                                            <Typography
-                                              variant="h5"
-                                              className="flex-1"
-                                              numberOfLines={2}
-                                            >
-                                              {result.place.name}
-                                            </Typography>
+                                      <View className="flex-1">
+                                        <View className="flex-row items-center justify-between gap-2">
+                                          <Typography
+                                            variant="h5"
+                                            className="flex-1"
+                                            numberOfLines={2}
+                                          >
+                                            {result.place.name}
+                                          </Typography>
 
-                                            <Pressable
-                                              onPress={(event) => {
-                                                event.stopPropagation();
-                                                void handleFavoriteToggle(result.place.id);
-                                              }}
-                                              disabled={favoriteLoadingMap[result.place.id]}
-                                              className="h-8 w-8 items-center justify-center rounded-full bg-white"
-                                            >
-                                              <Heart
-                                                size={18}
-                                                color={isFavorite ? Palette.red : Palette.black}
-                                                fill={isFavorite ? Palette.red : 'transparent'}
-                                                strokeWidth={2}
-                                              />
-                                            </Pressable>
-                                          </View>
-
-                                          <View className="mt-1 flex-row items-center justify-between">
-                                            <View className="flex-row items-center gap-1">
-                                              <Star
-                                                size={14}
-                                                color={Palette.star}
-                                                fill={Palette.star}
-                                                strokeWidth={1.8}
-                                              />
-                                              <Typography className="text-[#4B5563]">
-                                                {result.place.rating > 0
-                                                  ? result.place.rating.toFixed(1)
-                                                  : 'N/A'}
-                                              </Typography>
-                                            </View>
-
-                                            <Typography>
-                                              {t('group.totalVotes', { count: result.count })}
-                                            </Typography>
-                                          </View>
-
-                                          {(() => {
-                                            const addressFromCandidate =
-                                              result.place.fullAddress?.trim() ?? null;
-                                            const addressFromCache =
-                                              placesById[result.place.id]?.fullAddress?.trim() ??
-                                              null;
-                                            const displayAddress =
-                                              addressFromCandidate || addressFromCache;
-
-                                            return displayAddress ? (
-                                              <Typography
-                                                className="mt-1 text-[#6B7280]"
-                                                numberOfLines={1}
-                                              >
-                                                {displayAddress}
-                                              </Typography>
-                                            ) : null;
-                                          })()}
-
-                                          <View className="mt-2 flex-row items-center justify-between gap-2">
-                                            <GroupSessionAvatarStack
-                                              members={voters}
-                                              size={24}
-                                              currentUserId={currentUserId}
-                                              currentUserAvatarVersion={currentUserAvatarVersion}
-                                              avatarCacheEpoch={avatarCacheEpoch}
+                                          <Pressable
+                                            onPress={(event) => {
+                                              event.stopPropagation();
+                                              void handleFavoriteToggle(result.place.id);
+                                            }}
+                                            disabled={favoriteLoadingMap[result.place.id]}
+                                            className="h-8 w-8 items-center justify-center rounded-full bg-white"
+                                          >
+                                            <Heart
+                                              size={18}
+                                              color={isFavorite ? Palette.red : Palette.black}
+                                              fill={isFavorite ? Palette.red : 'transparent'}
+                                              strokeWidth={2}
                                             />
+                                          </Pressable>
+                                        </View>
 
-                                            {isActiveSession ? (
-                                              <Pressable
-                                                className={clsx(
-                                                  'min-w-[86px] items-center justify-center rounded-full border px-4 py-1.5',
-                                                  isVoted
-                                                    ? 'border-black bg-black'
-                                                    : 'border-black bg-white'
-                                                )}
-                                                style={
-                                                  isVotedFinalized
-                                                    ? {
+                                        <View className="mt-1 flex-row items-center justify-between">
+                                          <View className="flex-row items-center gap-1">
+                                            <Star
+                                              size={14}
+                                              color={Palette.star}
+                                              fill={Palette.star}
+                                              strokeWidth={1.8}
+                                            />
+                                            <Typography className="text-[#4B5563]">
+                                              {result.place.rating > 0
+                                                ? result.place.rating.toFixed(1)
+                                                : 'N/A'}
+                                            </Typography>
+                                          </View>
+
+                                          <Typography>
+                                            {t('group.totalVotes', { count: result.count })}
+                                          </Typography>
+                                        </View>
+
+                                        {(() => {
+                                          const addressFromCandidate =
+                                            result.place.fullAddress?.trim() ?? null;
+                                          const addressFromCache =
+                                            placesById[result.place.id]?.fullAddress?.trim() ??
+                                            null;
+                                          const displayAddress =
+                                            addressFromCandidate || addressFromCache;
+
+                                          return displayAddress ? (
+                                            <Typography
+                                              className="mt-1 text-[#6B7280]"
+                                              numberOfLines={1}
+                                            >
+                                              {displayAddress}
+                                            </Typography>
+                                          ) : null;
+                                        })()}
+
+                                        <View className="mt-2 flex-row items-center justify-between gap-2">
+                                          <GroupSessionAvatarStack
+                                            members={voters}
+                                            size={24}
+                                            currentUserId={currentUserId}
+                                            currentUserAvatarVersion={currentUserAvatarVersion}
+                                            avatarCacheEpoch={avatarCacheEpoch}
+                                          />
+
+                                          {isActiveSession ? (
+                                            <Pressable
+                                              className={clsx(
+                                                'min-w-[86px] items-center justify-center rounded-full border px-4 py-1.5',
+                                                isVoted
+                                                  ? 'border-black bg-black'
+                                                  : 'border-black bg-white'
+                                              )}
+                                              style={
+                                                isVotedFinalized
+                                                  ? {
                                                       borderColor: Palette.green,
                                                       backgroundColor: Palette.green,
                                                     }
-                                                    : undefined
-                                                }
-                                                onPress={(event) => {
-                                                  event.stopPropagation();
-                                                  void handleVotePress(result.place.id);
-                                                }}
-                                                disabled={
-                                                  isVotingPlaceId !== null ||
-                                                  session.voteStatus === 'FINALIZED' ||
-                                                  (isCurrentUserVoteFinalized && !isVoted)
-                                                }
+                                                  : undefined
+                                              }
+                                              onPress={(event) => {
+                                                event.stopPropagation();
+                                                void handleVotePress(result.place.id);
+                                              }}
+                                              disabled={
+                                                isVotingPlaceId !== null ||
+                                                session.voteStatus === 'FINALIZED' ||
+                                                (isCurrentUserVoteFinalized && !isVoted)
+                                              }
+                                            >
+                                              <Typography
+                                                className={isVoted ? 'text-white' : 'text-black'}
                                               >
-                                                <Typography
-                                                  className={isVoted ? 'text-white' : 'text-black'}
-                                                >
-                                                  {isVotingPlaceId === result.place.id
-                                                    ? '...'
-                                                    : isVoted
-                                                      ? t('group.voted')
-                                                      : t('group.vote')}
-                                                </Typography>
-                                              </Pressable>
-                                            ) : null}
-                                          </View>
+                                                {isVotingPlaceId === result.place.id
+                                                  ? '...'
+                                                  : isVoted
+                                                    ? t('group.voted')
+                                                    : t('group.vote')}
+                                              </Typography>
+                                            </Pressable>
+                                          ) : null}
                                         </View>
                                       </View>
-                                    </Pressable>
-                                  </Card>
-                                )}
+                                    </View>
+                                  </Pressable>
+                                </Card>
+                              )}
                             </View>
                           );
                         })}
@@ -2257,7 +2280,6 @@ export default function GroupDetailScreen() {
                         ) : null}
                       </View>
                     ) : null}
-
                   </>
                 )}
               </>

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { formatAddressDisplay } from '@/constants/helper';
 import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import SearchBar from '@/components/ui/SearchBar';
@@ -53,7 +54,9 @@ const isPlaceMatch = (place: PlaceRecommendationItem, query: string) => {
     return true;
   }
 
-  return [place.name, place.fullAddress, place.description]
+  const address = (place.fullAddress?.trim() ?? '').toLowerCase();
+
+  return [place.name, address, place.description]
     .filter(Boolean)
     .some((value) => value!.toLowerCase().includes(normalized));
 };
@@ -73,8 +76,17 @@ function AddLocationCard({
   voteStatus?: string;
   candidateIds?: Set<string>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const imageUrl = getPrimaryImageUrl(place.featureImageUrl);
+  const displayAddress =
+    formatAddressDisplay(
+      place.fullAddress,
+      (place as any).street ?? null,
+      (place as any).ward ?? null,
+      (place as any).city ?? null,
+      i18n.language ?? 'en',
+      t
+    ) || null;
 
   return (
     <Card
@@ -102,6 +114,11 @@ function AddLocationCard({
             <Typography variant="caption" className="text-gray-500 mt-1" numberOfLines={1}>
               {place.categories?.map((c) => c.name).join(' • ') || 'Place'}
             </Typography>
+            {displayAddress ? (
+              <Typography variant="caption" className="text-gray-500 mt-1" numberOfLines={1}>
+                {displayAddress}
+              </Typography>
+            ) : null}
           </View>
           <View className="flex-row items-center bg-gray-100 px-2 py-1 rounded-md">
             <Star size={12} color={Palette.star} fill={Palette.star} />
@@ -298,17 +315,17 @@ export default function GroupAddLocationSheet({
   };
 
   return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-          <View className="flex-1 bg-black/45 justify-end">
-            <Pressable className="absolute inset-0" onPress={onClose} />
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View className="flex-1 bg-black/45 justify-end">
+        <Pressable className="absolute inset-0" onPress={onClose} />
 
-            <View
-              className="w-full rounded-t-[28px] bg-white px-4 pb-6"
-              style={{ paddingTop: 14, paddingBottom: insets.bottom + 24 }}
-            >
-              <View className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-300" />
+        <View
+          className="w-full rounded-t-[28px] bg-white px-4 pb-6"
+          style={{ paddingTop: 14, paddingBottom: insets.bottom + 24 }}
+        >
+          <View className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-300" />
 
-              {/* <Typography variant="h4" className="text-black">
+          {/* <Typography variant="h4" className="text-black">
             {t('group.addLocation')}
           </Typography> */}
 
@@ -329,9 +346,9 @@ export default function GroupAddLocationSheet({
             </View>
           </View>
 
-              {renderContent()}
-            </View>
-          </View>
-        </Modal>
-        );
+          {renderContent()}
+        </View>
+      </View>
+    </Modal>
+  );
 }
