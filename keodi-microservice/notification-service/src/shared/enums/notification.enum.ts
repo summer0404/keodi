@@ -9,6 +9,7 @@ export enum NotificationType {
   RECOMMENDATION = 'RECOMMENDATION',
   REVIEW_LOW_RATING = 'REVIEW_LOW_RATING',
   REVIEW_FLAG_OUTCOME = 'REVIEW_FLAG_OUTCOME',
+  CHAT_MESSAGE = 'CHAT_MESSAGE',
 }
 
 export enum NotificationPreferredChannel {

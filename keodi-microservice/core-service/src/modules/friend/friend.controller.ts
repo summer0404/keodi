@@ -1,7 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FriendService } from './friend.service';
-import { FriendPaginationDto, UserCommonPaginationDto } from 'src/shared/dtos/user.dto';
+import {
+  FriendPaginationDto,
+  UserCommonPaginationDto,
+} from 'src/shared/dtos/user.dto';
 import { FriendTopics } from 'src/shared/constants/topic.constant';
 
 @Controller('friend')
@@ -29,8 +32,7 @@ export class FriendController {
   }
 
   @MessagePattern(FriendTopics.GetPendingRequests)
-  async getPendingRequests(
-    @Payload() data: FriendPaginationDto) {
+  async getPendingRequests(@Payload() data: FriendPaginationDto) {
     return this.friendService.getPendingRequests(data);
   }
 

@@ -7,13 +7,18 @@ describe('handleServiceErrorCatching', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('re-throws RpcException as-is', () => {
-    const rpcError = new RpcException({ status: HttpStatus.NOT_FOUND, message: 'Not found' });
+    const rpcError = new RpcException({
+      status: HttpStatus.NOT_FOUND,
+      message: 'Not found',
+    });
 
     expect(() => handleServiceErrorCatching(rpcError)).toThrow(rpcError);
   });
 
   it('wraps an unknown Error with INTERNAL_SERVER_ERROR status and sanitized message', () => {
-    const genericError = new Error('Can\'t reach database server at 127.0.0.1:5432');
+    const genericError = new Error(
+      "Can't reach database server at 127.0.0.1:5432",
+    );
 
     try {
       handleServiceErrorCatching(genericError);
@@ -27,7 +32,9 @@ describe('handleServiceErrorCatching', () => {
   });
 
   it('does not expose the original error message for unknown errors', () => {
-    const prismaError = new Error('Invalid prisma invocation: field xyz not found');
+    const prismaError = new Error(
+      'Invalid prisma invocation: field xyz not found',
+    );
 
     try {
       handleServiceErrorCatching(prismaError);
@@ -39,7 +46,10 @@ describe('handleServiceErrorCatching', () => {
   });
 
   it('always uses INTERNAL_SERVER_ERROR status for non-RpcException errors regardless of error.status', () => {
-    const errorWithStatus = { status: HttpStatus.BAD_REQUEST, message: 'Bad request data' };
+    const errorWithStatus = {
+      status: HttpStatus.BAD_REQUEST,
+      message: 'Bad request data',
+    };
 
     try {
       handleServiceErrorCatching(errorWithStatus);

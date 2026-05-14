@@ -1,7 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { SearchService } from './search.service';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
-import { CreateSearchDto, SearchTrendingScoreDto } from 'src/shared/dtos/search.dto';
+import {
+  CreateSearchDto,
+  SearchTrendingScoreDto,
+} from 'src/shared/dtos/search.dto';
 import { SearchTopics } from 'src/shared/constants/topic.constant';
 
 @Controller()
@@ -20,8 +23,10 @@ export class SearchController {
 
   @EventPattern(SearchTopics.UpdateTrendingForRedis)
   async updateTrendingForRedis(
-    @Payload() payload: {trendingSearches: SearchTrendingScoreDto[]}
+    @Payload() payload: { trendingSearches: SearchTrendingScoreDto[] },
   ) {
-    return await this.searchService.updateTrendingForRedis(payload.trendingSearches);
+    return await this.searchService.updateTrendingForRedis(
+      payload.trendingSearches,
+    );
   }
 }

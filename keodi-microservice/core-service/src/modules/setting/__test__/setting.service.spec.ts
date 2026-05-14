@@ -32,9 +32,13 @@ describe('SettingService', () => {
   // ──────────────────────────────────────────────
   describe('get', () => {
     it('upserts user settings and strips userId from response', async () => {
-      mockPrismaService.userSetting.upsert.mockResolvedValue({ userId: 'u1', theme: 'dark', language: 'en' });
+      mockPrismaService.userSetting.upsert.mockResolvedValue({
+        userId: 'u1',
+        theme: 'dark',
+        language: 'en',
+      });
 
-      const result = await service.get('u1') as any;
+      const result = (await service.get('u1')) as any;
 
       expect(mockPrismaService.userSetting.upsert).toHaveBeenCalledWith(
         expect.objectContaining({ where: { userId: 'u1' } }),
@@ -44,7 +48,9 @@ describe('SettingService', () => {
     });
 
     it('handles prisma errors via handleServiceErrorCatching', async () => {
-      mockPrismaService.userSetting.upsert.mockRejectedValue(new Error('DB error'));
+      mockPrismaService.userSetting.upsert.mockRejectedValue(
+        new Error('DB error'),
+      );
 
       await expect(service.get('u1')).rejects.toThrow(RpcException);
     });
@@ -57,14 +63,22 @@ describe('SettingService', () => {
     it('throws BAD_REQUEST when user does not exist', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('missing', { theme: 'dark' } as any)).rejects.toThrow(RpcException);
+      await expect(
+        service.update('missing', { theme: 'dark' } as any),
+      ).rejects.toThrow(RpcException);
     });
 
     it('upserts settings and strips userId from response', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1' });
-      mockPrismaService.userSetting.upsert.mockResolvedValue({ userId: 'u1', theme: 'light', language: 'en' });
+      mockPrismaService.userSetting.upsert.mockResolvedValue({
+        userId: 'u1',
+        theme: 'light',
+        language: 'en',
+      });
 
-      const result = await service.update('u1', { theme: 'light' } as any) as any;
+      const result = (await service.update('u1', {
+        theme: 'light',
+      } as any)) as any;
 
       expect(mockPrismaService.userSetting.upsert).toHaveBeenCalled();
       expect(result.userId).toBeUndefined();
@@ -73,7 +87,10 @@ describe('SettingService', () => {
 
     it('upserts settings with spread data payload', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1' });
-      mockPrismaService.userSetting.upsert.mockResolvedValue({ userId: 'u1', notificationsEnabled: false });
+      mockPrismaService.userSetting.upsert.mockResolvedValue({
+        userId: 'u1',
+        notificationsEnabled: false,
+      });
 
       await service.update('u1', { notificationsEnabled: false } as any);
 

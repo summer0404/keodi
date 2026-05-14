@@ -27,8 +27,15 @@ describe('ReviewController', () => {
 
   describe('create', () => {
     it('delegates to service.create with full DTO', async () => {
-      const dto = { userId: 'u1', placeId: 'p1', rating: 5, text: 'Great!' } as any;
-      mockReviewService.create.mockResolvedValue({ message: 'Review created successfully' });
+      const dto = {
+        userId: 'u1',
+        placeId: 'p1',
+        rating: 5,
+        text: 'Great!',
+      } as any;
+      mockReviewService.create.mockResolvedValue({
+        message: 'Review created successfully',
+      });
 
       const result = await controller.create(dto);
 
@@ -46,8 +53,17 @@ describe('ReviewController', () => {
 
   describe('getReviewsById', () => {
     it('delegates to service.getByPlaceId with DTO', async () => {
-      const dto = { placeId: 'p1', page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' } as any;
-      mockReviewService.getByPlaceId.mockResolvedValue({ reviews: [], total: 0 });
+      const dto = {
+        placeId: 'p1',
+        page: 1,
+        limit: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      } as any;
+      mockReviewService.getByPlaceId.mockResolvedValue({
+        reviews: [],
+        total: 0,
+      });
 
       const result = await controller.getReviewsById(dto);
 
@@ -56,17 +72,38 @@ describe('ReviewController', () => {
     });
 
     it('propagates errors from service.getByPlaceId', async () => {
-      const dto = { placeId: 'missing', page: 1, limit: 10, sortBy: 'createdAt', sortOrder: 'desc' } as any;
-      mockReviewService.getByPlaceId.mockRejectedValue(new Error('Place not found'));
+      const dto = {
+        placeId: 'missing',
+        page: 1,
+        limit: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      } as any;
+      mockReviewService.getByPlaceId.mockRejectedValue(
+        new Error('Place not found'),
+      );
 
-      await expect(controller.getReviewsById(dto)).rejects.toThrow('Place not found');
+      await expect(controller.getReviewsById(dto)).rejects.toThrow(
+        'Place not found',
+      );
     });
   });
 
   describe('getAdminReviews', () => {
     it('delegates to service.getAdminReviews with DTO', async () => {
-      const dto = { page: 1, limit: 10, sortOrder: 'desc', flagStatus: 'PENDING' } as any;
-      const response = { reviews: [], total: 0, page: 1, limit: 10, totalPages: 0 };
+      const dto = {
+        page: 1,
+        limit: 10,
+        sortOrder: 'desc',
+        flagStatus: 'PENDING',
+      } as any;
+      const response = {
+        reviews: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0,
+      };
       mockReviewService.getAdminReviews.mockResolvedValue(response);
 
       const result = await controller.getAdminReviews(dto);

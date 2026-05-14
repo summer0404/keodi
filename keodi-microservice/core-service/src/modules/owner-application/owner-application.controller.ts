@@ -29,7 +29,10 @@ export class OwnerApplicationController {
   async reject(
     @Payload() data: { applicationId: string; data: RejectOwnerApplicationDto },
   ) {
-    return await this.ownerApplicationService.reject(data.applicationId, data.data);
+    return await this.ownerApplicationService.reject(
+      data.applicationId,
+      data.data,
+    );
   }
 
   @MessagePattern(OwnerApplicationTopics.GetAll)

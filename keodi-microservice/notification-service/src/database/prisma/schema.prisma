@@ -70,6 +70,7 @@ enum NotificationType {
   NEARBY_PLACE
   RECOMMENDATION
   SYSTEM
+  CHAT_MESSAGE
 }
 
 enum NotificationChannel {
@@ -108,3 +109,4 @@ model Notification {
   @@index([createdAt])
   @@map("notifications")
 }
+

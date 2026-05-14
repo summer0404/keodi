@@ -17,7 +17,7 @@ export class SearchService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   async updateTrendingForRedis(trendingSearches: SearchTrendingScoreDto[]) {
     try {
@@ -38,11 +38,7 @@ export class SearchService {
   }
 
   async create(createSearchDto: CreateSearchDto) {
-    const {
-      rawQuery: rawQueryInput,
-      extractedTerm,
-      userId,
-    } = createSearchDto;
+    const { rawQuery: rawQueryInput, extractedTerm, userId } = createSearchDto;
 
     const rawQuery = rawQueryInput.trim();
     const normalizedTerm = extractedTerm?.trim().toLowerCase();

@@ -138,6 +138,7 @@ export const NotificationTopics = {
   Dispatch: 'notification.dispatch',
   PersistInbox: 'notification.persist-inbox',
   RealtimePush: 'notification.realtime.push',
+  ChatRealtimePush: 'notification.realtime.chat',
   OwnershipClaimApproved: 'notification.ownership-claim.approved',
   OwnershipClaimRejected: 'notification.ownership-claim.rejected',
   OwnershipRevoked: 'notification.ownership-claim.revoked',
@@ -148,4 +149,23 @@ export const NotificationTopics = {
   ReviewLowRating: 'notification.review.low-rating',
   ReviewFlagApproved: 'notification.review.flag-approved',
   ReviewFlagRejected: 'notification.review.flag-rejected',
+} as const;
+
+export const ConversationTopics = {
+  Create: 'conversation.create',
+  GetById: 'conversation.get-by-id',
+  List: 'conversation.list',
+  Update: 'conversation.update',
+} as const;
+
+export const MessageTopics = {
+  Send: 'message.send',
+  List: 'message.list',
+  Delete: 'message.delete',
+  MarkRead: 'message.mark-read',
+} as const;
+
+export const MemberTopics = {
+  Add: 'member.add',
+  Leave: 'member.leave',
 } as const;

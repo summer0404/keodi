@@ -1,21 +1,23 @@
-
 import { ApiProperty, OmitType } from '@nestjs/swagger';
-import { 
+import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsNotEmpty,
   IsNumber,
-  IsNotEmpty, 
+  IsOptional,
+  IsString,
   Max,
   MaxLength,
   Min,
-  IsOptional, 
-  IsString, 
 } from 'class-validator';
+import {
+  GROUP_SESSION_MAX_CATEGORY_COUNT,
+  GROUP_SESSION_MAX_SEARCH_RADIUS_KM,
+  GROUP_SESSION_MIN_SEARCH_RADIUS_KM,
+} from '../constants/group-session.constant';
 import { SessionStatus } from '../enums/group-session.enum';
 import { PaginationQueryDto, PaginationResponseDto } from './pagination.dto';
-import { GROUP_SESSION_MAX_CATEGORY_COUNT, GROUP_SESSION_MAX_SEARCH_RADIUS_KM, GROUP_SESSION_MIN_SEARCH_RADIUS_KM } from '../constants/group-session.constant';
-
 
 export class GroupSessionResponseDto {
   @ApiProperty({
@@ -339,7 +341,8 @@ export class UpdateGroupSessionRecommendationRadiusDto {
   @Min(GROUP_SESSION_MIN_SEARCH_RADIUS_KM)
   @Max(GROUP_SESSION_MAX_SEARCH_RADIUS_KM)
   @ApiProperty({
-    description: 'Search radius in kilometers for group session recommendations',
+    description:
+      'Search radius in kilometers for group session recommendations',
     example: 7.5,
     minimum: GROUP_SESSION_MIN_SEARCH_RADIUS_KM,
     maximum: GROUP_SESSION_MAX_SEARCH_RADIUS_KM,
@@ -437,13 +440,99 @@ export class LeaveSessionDto {
   guestId?: string;
 }
 
+export class GroupSessionCandidatePlaceDto {
+  @ApiProperty({ example: 'cm5x1y2z3a4b5c6d7e8f' })
+  id: string;
+
+  @ApiProperty({ example: 'Nhà hàng Ngon' })
+  name: string;
+
+  @ApiProperty({
+    example: 'https://cdn.example.com/feature.jpg',
+    nullable: true,
+  })
+  featureImageUrl: string | null;
+
+  @ApiProperty({ example: 4.5 })
+  rating: number;
+
+  @ApiProperty({
+    example: '123 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+    nullable: true,
+  })
+  fullAddress: string | null;
+
+  @ApiProperty({ example: 'Lê Lợi', nullable: true })
+  street: string | null;
+
+  @ApiProperty({ example: 'Phường Bến Nghé', nullable: true })
+  ward: string | null;
+
+  @ApiProperty({ example: 'TP. Hồ Chí Minh', nullable: true })
+  city: string | null;
+
+  @ApiProperty({ example: 'VN', nullable: true })
+  countryCode: string | null;
+}
+
+export class GroupSessionCandidateMemberPreviewDto {
+  @ApiProperty({ example: 'cm5x1y2z3a4b5c6d7e8f' })
+  id: string;
+
+  @ApiProperty({ example: 'cm5g8h9j0k1l2m3n4o5p', nullable: true })
+  userId: string | null;
+
+  @ApiProperty({ example: 'mws0v9cjcm3nuj5y8gochuu1', nullable: true })
+  guestId: string | null;
+
+  @ApiProperty({ example: 'Guest123', nullable: true })
+  nickname: string | null;
+
+  @ApiProperty({ type: () => UserPreviewDto, nullable: true })
+  user: UserPreviewDto | null;
+}
+
+export class GroupSessionCandidateDto {
+  @ApiProperty({ example: 'cm5x1y2z3a4b5c6d7e8f' })
+  sessionId: string;
+
+  @ApiProperty({ example: 'cm5x1y2z3a4b5c6d7e8f' })
+  placeId: string;
+
+  @ApiProperty({ example: 'cm5x1y2z3a4b5c6d7e8f' })
+  addedBy: string;
+
+  @ApiProperty({ example: '2026-02-10T10:30:00Z' })
+  createdAt: Date;
+
+  @ApiProperty({ type: () => GroupSessionCandidatePlaceDto })
+  place: GroupSessionCandidatePlaceDto;
+
+  @ApiProperty({ type: () => GroupSessionCandidateMemberPreviewDto })
+  member: GroupSessionCandidateMemberPreviewDto;
+}
+
+export class GetCandidatesResponseDto {
+  @ApiProperty({ example: 'cm5x1y2z3a4b5c6d7e8f' })
+  sessionId: string;
+
+  @ApiProperty({ type: [GroupSessionCandidateDto] })
+  candidates: GroupSessionCandidateDto[];
+
+  @ApiProperty({ example: 3 })
+  total: number;
+}
+
 export class GroupSessionActivityDto {
   @ApiProperty() id: string;
   @ApiProperty() sessionId: string;
   @ApiProperty() type: string;
   @ApiProperty({ nullable: true }) actorId: string | null;
   @ApiProperty({ nullable: true }) actorName: string | null;
-  @ApiProperty({ nullable: true, type: Object }) metadata: Record<string, unknown> | null;
+  @ApiProperty({ nullable: true, type: Object }) metadata: Record<
+    string,
+    unknown
+  > | null;
   @ApiProperty() createdAt: Date;
 }
 

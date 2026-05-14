@@ -17,6 +17,7 @@ import { AppQueryProvider } from '@/providers/query-provider';
 import { configureGoogleSignIn } from '@/api/google-signin';
 import { useNotificationRuntime } from '@/hooks/use-notification-runtime';
 import InAppNotificationCard from '@/components/ui/InAppNotificationCard';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
 configureGoogleSignIn();
@@ -68,34 +69,36 @@ export default function RootLayout() {
   };
 
   return (
-    <AppQueryProvider>
-      <SafeAreaProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack initialRouteName={getInitialRouteName()}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="place/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppQueryProvider>
+        <SafeAreaProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack initialRouteName={getInitialRouteName()}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="place/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            </Stack>
 
-          {banner ? (
-            <View
-              pointerEvents="box-none"
-              style={{ position: 'absolute', top: 56, left: 12, right: 12, zIndex: 999 }}
-            >
-              <InAppNotificationCard
-                model={banner}
-                onDismiss={dismissBanner}
-                onPrimary={openBanner}
-                primaryLoading={isPrimaryLoading}
-              />
-            </View>
-          ) : null}
+            {banner ? (
+              <View
+                pointerEvents="box-none"
+                style={{ position: 'absolute', top: 56, left: 12, right: 12, zIndex: 999 }}
+              >
+                <InAppNotificationCard
+                  model={banner}
+                  onDismiss={dismissBanner}
+                  onPrimary={openBanner}
+                  primaryLoading={isPrimaryLoading}
+                />
+              </View>
+            ) : null}
 
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </AppQueryProvider>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </AppQueryProvider>
+    </GestureHandlerRootView>
   );
 }

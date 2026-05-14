@@ -26,7 +26,11 @@ describe('SearchController', () => {
   });
 
   it('create – delegates to service.create with DTO', async () => {
-    const dto = { rawQuery: 'coffee', extractedTerm: 'coffee', userId: 'u1' } as any;
+    const dto = {
+      rawQuery: 'coffee',
+      extractedTerm: 'coffee',
+      userId: 'u1',
+    } as any;
     mockSearchService.create.mockResolvedValue({ id: 'search-1' });
 
     await controller.create(dto);
@@ -44,11 +48,15 @@ describe('SearchController', () => {
   });
 
   it('updateTrendingForRedis – delegates to service.updateTrendingForRedis', async () => {
-    const payload = { trendingSearches: [{ extractedTerm: 'coffee', score: 5 }] };
+    const payload = {
+      trendingSearches: [{ extractedTerm: 'coffee', score: 5 }],
+    };
     mockSearchService.updateTrendingForRedis.mockResolvedValue(undefined);
 
     await controller.updateTrendingForRedis(payload);
 
-    expect(mockSearchService.updateTrendingForRedis).toHaveBeenCalledWith(payload.trendingSearches);
+    expect(mockSearchService.updateTrendingForRedis).toHaveBeenCalledWith(
+      payload.trendingSearches,
+    );
   });
 });

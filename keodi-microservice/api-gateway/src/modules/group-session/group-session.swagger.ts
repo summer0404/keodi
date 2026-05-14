@@ -25,6 +25,7 @@ import {
   JoinGroupSessionResponseDto,
   GroupSessionRecommendationAccessDto,
   GetSessionActivitiesResponseDto,
+  GetCandidatesResponseDto,
 } from 'src/shared/dtos/group-session.dto';
 import { PlaceRecommendationResponseDto } from 'src/shared/dtos/place.dto';
 
@@ -205,7 +206,10 @@ export const ApiGetCandidates = () => {
       description:
         'Retrieve all places that have been added to the candidate pool for a group session.',
     }),
-    ApiOkResponse({ description: 'Candidates retrieved successfully' }),
+    ApiOkResponse({
+      description: 'Candidates retrieved successfully',
+      type: GetCandidatesResponseDto,
+    }),
     ApiNotFoundResponse({ description: 'Session not found' }),
   );
 };

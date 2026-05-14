@@ -26,7 +26,7 @@ export class UserService {
     private readonly prismaService: PrismaService,
     private readonly imageService: ImageService,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   async searchOthers(dto: SearchOthersDto) {
     const { userId, keyword, limit, page } = dto;
@@ -263,26 +263,26 @@ export class UserService {
         isSelf
           ? Promise.resolve(null)
           : this.prismaService.friendship.findUnique({
-            where: {
-              userId_friendId: {
-                userId: viewerId,
-                friendId: targetUserId,
+              where: {
+                userId_friendId: {
+                  userId: viewerId,
+                  friendId: targetUserId,
+                },
               },
-            },
-            select: { userId: true },
-          }),
+              select: { userId: true },
+            }),
         isSelf
           ? Promise.resolve(null)
           : this.prismaService.friendRequest.findFirst({
-            where: {
-              status: FriendRequestStatus.PENDING,
-              OR: [
-                { senderId: viewerId, receiverId: targetUserId },
-                { senderId: targetUserId, receiverId: viewerId },
-              ],
-            },
-            select: { id: true },
-          }),
+              where: {
+                status: FriendRequestStatus.PENDING,
+                OR: [
+                  { senderId: viewerId, receiverId: targetUserId },
+                  { senderId: targetUserId, receiverId: viewerId },
+                ],
+              },
+              select: { id: true },
+            }),
       ]);
 
       const isFriend = !!friendship;
@@ -302,13 +302,13 @@ export class UserService {
 
       const visibleProfileFields = canViewFullProfile
         ? {
-          phoneNumber: targetUser.phoneNumber,
-          dateOfBirth: targetUser.dateOfBirth,
-        }
+            phoneNumber: targetUser.phoneNumber,
+            dateOfBirth: targetUser.dateOfBirth,
+          }
         : {
-          phoneNumber: null,
-          dateOfBirth: null,
-        };
+            phoneNumber: null,
+            dateOfBirth: null,
+          };
 
       return {
         ...targetUser,

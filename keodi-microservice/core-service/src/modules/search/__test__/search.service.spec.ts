@@ -39,10 +39,18 @@ describe('SearchService', () => {
   // ──────────────────────────────────────────────
   describe('create', () => {
     it('trims rawQuery and normalizes extractedTerm before persisting', async () => {
-      const created = { id: 'search-1', rawQuery: 'coffee', extractedTerm: 'coffee' };
+      const created = {
+        id: 'search-1',
+        rawQuery: 'coffee',
+        extractedTerm: 'coffee',
+      };
       mockPrismaService.search.create.mockResolvedValue(created);
 
-      const result = await service.create({ rawQuery: '  coffee  ', extractedTerm: '  COFFEE  ', userId: 'u1' } as any);
+      const result = await service.create({
+        rawQuery: '  coffee  ',
+        extractedTerm: '  COFFEE  ',
+        userId: 'u1',
+      } as any);
 
       const call = mockPrismaService.search.create.mock.calls[0][0];
       expect(call.data.rawQuery).toBe('coffee');
@@ -52,7 +60,11 @@ describe('SearchService', () => {
     it('stores null extractedTerm when not provided', async () => {
       mockPrismaService.search.create.mockResolvedValue({ id: 'search-2' });
 
-      await service.create({ rawQuery: 'query', extractedTerm: undefined, userId: null } as any);
+      await service.create({
+        rawQuery: 'query',
+        extractedTerm: undefined,
+        userId: null,
+      } as any);
 
       const call = mockPrismaService.search.create.mock.calls[0][0];
       expect(call.data.extractedTerm).toBeNull();
@@ -61,7 +73,13 @@ describe('SearchService', () => {
     it('handles database errors via handleServiceErrorCatching', async () => {
       mockPrismaService.search.create.mockRejectedValue(new Error('DB down'));
 
-      await expect(service.create({ rawQuery: 'query', extractedTerm: null, userId: 'u1' } as any)).rejects.toThrow();
+      await expect(
+        service.create({
+          rawQuery: 'query',
+          extractedTerm: null,
+          userId: 'u1',
+        } as any),
+      ).rejects.toThrow();
     });
   });
 
@@ -93,7 +111,9 @@ describe('SearchService', () => {
       mockRedisService.zadd.mockResolvedValue(undefined);
       mockRedisService.expire.mockResolvedValue(undefined);
 
-      await service.updateTrendingForRedis([{ extractedTerm: 'coffee', score: 5 }]);
+      await service.updateTrendingForRedis([
+        { extractedTerm: 'coffee', score: 5 },
+      ]);
 
       expect(mockRedisService.zadd).toHaveBeenCalled();
       expect(mockRedisService.expire).toHaveBeenCalled();

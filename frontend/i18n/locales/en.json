@@ -324,7 +324,7 @@
     "recommendationBody": "We think you'll love {{placeName}}! Tap to explore.",
     "defaultTitle": "Notification",
     "defaultBody": "You have a new notification.",
-    "someone": "A friend",
+    "someone": "a friend",
     "somePlace": "a place",
     "dismiss": "Dismiss",
     "joinNow": "Join now",

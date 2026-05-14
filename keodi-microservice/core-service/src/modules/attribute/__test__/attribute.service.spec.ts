@@ -41,7 +41,7 @@ describe('AttributeService', () => {
     it('returns success message', async () => {
       mockPrismaService.attribute.createMany.mockResolvedValue({ count: 1 });
 
-      const result = await service.create({ name: ['outdoor'] }) as any;
+      const result = (await service.create({ name: ['outdoor'] })) as any;
 
       expect(result.message).toBe('Attributes created successfully');
     });
@@ -49,7 +49,7 @@ describe('AttributeService', () => {
     it('handles empty name array', async () => {
       mockPrismaService.attribute.createMany.mockResolvedValue({ count: 0 });
 
-      const result = await service.create({ name: [] }) as any;
+      const result = (await service.create({ name: [] })) as any;
 
       expect(mockPrismaService.attribute.createMany).toHaveBeenCalledWith(
         expect.objectContaining({ data: [] }),
@@ -58,7 +58,9 @@ describe('AttributeService', () => {
     });
 
     it('handles database errors', async () => {
-      mockPrismaService.attribute.createMany.mockRejectedValue(new Error('DB error'));
+      mockPrismaService.attribute.createMany.mockRejectedValue(
+        new Error('DB error'),
+      );
 
       await expect(service.create({ name: ['test'] })).rejects.toThrow();
     });

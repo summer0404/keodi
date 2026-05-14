@@ -35,6 +35,7 @@ import type {
   PlaceRecommendationItem,
 } from '@/types/api';
 import { Card } from '@/components/ui/Card';
+import GroupChatBubble from '@/components/ui/chat/GroupChatBubble';
 import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
 import AlertScreen from '@/components/ui/AlertScreen';
 import GroupLocationMapbox from '@/components/ui/GroupLocationMapbox';
@@ -77,15 +78,6 @@ const handleCopy = async (text: string | null | undefined) => {
   } catch {
     // Silent fail keeps the UI smooth when clipboard native module is unavailable.
   }
-};
-
-const normalizeWebsiteUrl = (website: string) => {
-  const trimmed = website.trim();
-  if (!trimmed) return '';
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-  return `https://${trimmed}`;
 };
 
 const extractLatLngFromGoogleLink = (url: string) => {
@@ -549,6 +541,24 @@ export default function GroupDetailScreen() {
 
     return nextAvatarUrls;
   }, [currentUserId, currentUserPictureUrl, session?.members]);
+
+  // Authenticated member IDs only (guests have userId === null)
+  const memberIds = useMemo(
+    () =>
+      (session?.members ?? [])
+        .map((m) => m.userId)
+        .filter((id): id is string => id !== null && id.trim().length > 0),
+    [session?.members]
+  );
+  // Display name used as the chat conversation name
+  const sessionChatName = useMemo(() => {
+    const creator = session?.creator;
+    if (creator) {
+      const name = `${creator.firstName ?? ''} ${creator.lastName ?? ''}`.trim();
+      if (name) return name;
+    }
+    return t('group.detailTitle');
+  }, [session?.creator, t]);
 
   useEffect(() => {
     coordsRef.current = coords;
@@ -1940,9 +1950,7 @@ export default function GroupDetailScreen() {
                                         <Typography variant="h4">{result.place.name}</Typography>
                                       </View>
                                       <View className="justify-center items-center">
-                                        <Typography variant="h4">
-                                          {result.count}
-                                        </Typography>
+                                        <Typography variant="h4">{result.count}</Typography>
                                         <Typography variant="caption">
                                           {t('group.voteLabel')}
                                         </Typography>
@@ -2416,6 +2424,15 @@ export default function GroupDetailScreen() {
           </View>
         </View>
       </Modal>
+      
+      {/* ── Group chat bubble (only shown when ≥ 2 authenticated members) ── */}
+      {session && hasMembers && memberIds.length >= 2 && (
+        <GroupChatBubble
+          sessionId={session.sessionId}
+          sessionName={sessionChatName}
+          memberIds={memberIds}
+        />
+      )}
     </View>
   );
 }

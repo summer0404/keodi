@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './common/guards/jwt.guard';
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
 import { AttributeModule } from './modules/attribute/attribute.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { CategoryModule } from './modules/category/category.module';
 import { DeviceTokenModule } from './modules/device-token/device-token.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
@@ -56,6 +57,7 @@ import { ProviderModule } from './providers/provider.module';
     SearchModule,
     NotificationRealtimeModule,
     NotificationInboxModule,
+    ChatModule,
     ProviderModule,
     SettingModule,
     OwnerApplicationModule,

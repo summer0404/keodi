@@ -100,7 +100,9 @@ export class GroupSessionController {
   }
 
   @MessagePattern(GroupSessionTopics.GetAll)
-  async getAll(@Payload() data: { userId: string; page: number; limit: number }) {
+  async getAll(
+    @Payload() data: { userId: string; page: number; limit: number },
+  ) {
     return await this.groupSessionService.getAll(
       data.userId,
       data.page,
@@ -161,7 +163,9 @@ export class GroupSessionController {
       guestId?: string;
     },
   ) {
-    return await this.groupSessionService.updateRecommendationSearchRadius(data);
+    return await this.groupSessionService.updateRecommendationSearchRadius(
+      data,
+    );
   }
 
   @MessagePattern(GroupSessionTopics.UpdateRecommendationCategories)
@@ -183,7 +187,9 @@ export class GroupSessionController {
   }
 
   @EventPattern(GroupSessionTopics.LogRecommendationsRefreshed)
-  async logRecommendationsRefreshed(@Payload() data: LogRecommendationsRefreshedDto) {
+  async logRecommendationsRefreshed(
+    @Payload() data: LogRecommendationsRefreshedDto,
+  ) {
     return await this.groupSessionService.logRecommendationsRefreshed(data);
   }
 }

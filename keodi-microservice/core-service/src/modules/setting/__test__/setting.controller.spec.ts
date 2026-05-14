@@ -40,7 +40,10 @@ describe('SettingController', () => {
       const dto = { theme: 'light' } as any;
       mockSettingService.update.mockResolvedValue({ theme: 'light' });
 
-      const result = await controller.update({ userId: 'u1', updateUserSettingDto: dto });
+      const result = await controller.update({
+        userId: 'u1',
+        updateUserSettingDto: dto,
+      });
 
       expect(mockSettingService.update).toHaveBeenCalledWith('u1', dto);
       expect(result).toEqual({ theme: 'light' });
@@ -49,7 +52,12 @@ describe('SettingController', () => {
     it('propagates errors from service.update', async () => {
       mockSettingService.update.mockRejectedValue(new Error('User not found'));
 
-      await expect(controller.update({ userId: 'missing', updateUserSettingDto: {} as any })).rejects.toThrow('User not found');
+      await expect(
+        controller.update({
+          userId: 'missing',
+          updateUserSettingDto: {} as any,
+        }),
+      ).rejects.toThrow('User not found');
     });
   });
 });
