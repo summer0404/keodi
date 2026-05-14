@@ -1,12 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { GroupSessionService } from '../group-session.service';
+import { Test, TestingModule } from '@nestjs/testing';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   GroupSessionTopics,
   RecommendationTopics,
 } from 'src/shared/constants/topic.constant';
-import { RedisKeys } from 'src/shared/constants/redis.constant';
+import { GroupSessionService } from '../group-session.service';
 
 const mockKafkaClient = {
   emit: jest.fn(),
@@ -73,7 +73,9 @@ describe('GroupSessionService', () => {
 
     it('should join without userId (guest flow)', async () => {
       const dto = { sessionId: 'session-1', inviteCode: 'code123' } as any;
-      mockKafkaService.sendWithTimeout.mockResolvedValue({ guestId: 'guest-1' });
+      mockKafkaService.sendWithTimeout.mockResolvedValue({
+        guestId: 'guest-1',
+      });
 
       await service.join(dto, undefined);
 
@@ -86,13 +88,19 @@ describe('GroupSessionService', () => {
 
   describe('inviteFriend', () => {
     it('should call GroupSessionTopics.InviteFriend with sessionId, inviterId, friendId', async () => {
-      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'invited' });
+      mockKafkaService.sendWithTimeout.mockResolvedValue({
+        message: 'invited',
+      });
 
       await service.inviteFriend('session-1', 'inviter-1', 'friend-1');
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         GroupSessionTopics.InviteFriend,
-        { sessionId: 'session-1', inviterId: 'inviter-1', friendId: 'friend-1' },
+        {
+          sessionId: 'session-1',
+          inviterId: 'inviter-1',
+          friendId: 'friend-1',
+        },
       );
     });
   });
@@ -112,20 +120,29 @@ describe('GroupSessionService', () => {
 
   describe('castVote', () => {
     it('should call GroupSessionTopics.CastVote with all params', async () => {
-      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'vote cast' });
+      mockKafkaService.sendWithTimeout.mockResolvedValue({
+        message: 'vote cast',
+      });
 
       await service.castVote('session-1', 'place-1', 'user-1', undefined);
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         GroupSessionTopics.CastVote,
-        { sessionId: 'session-1', placeId: 'place-1', userId: 'user-1', guestId: undefined },
+        {
+          sessionId: 'session-1',
+          placeId: 'place-1',
+          userId: 'user-1',
+          guestId: undefined,
+        },
       );
     });
   });
 
   describe('finalizeMemberVote', () => {
     it('should call GroupSessionTopics.FinalizeMemberVote', async () => {
-      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'vote finalized' });
+      mockKafkaService.sendWithTimeout.mockResolvedValue({
+        message: 'vote finalized',
+      });
 
       await service.finalizeMemberVote('session-1', 'user-1', undefined);
 
@@ -192,13 +209,20 @@ describe('GroupSessionService', () => {
 
   describe('addCandidate', () => {
     it('should call GroupSessionTopics.AddCandidate with all params', async () => {
-      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'candidate added' });
+      mockKafkaService.sendWithTimeout.mockResolvedValue({
+        message: 'candidate added',
+      });
 
       await service.addCandidate('session-1', 'place-1', 'user-1', undefined);
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         GroupSessionTopics.AddCandidate,
-        { sessionId: 'session-1', placeId: 'place-1', userId: 'user-1', guestId: undefined },
+        {
+          sessionId: 'session-1',
+          placeId: 'place-1',
+          userId: 'user-1',
+          guestId: undefined,
+        },
       );
     });
   });
@@ -218,13 +242,25 @@ describe('GroupSessionService', () => {
 
   describe('deleteCandidate', () => {
     it('should call GroupSessionTopics.DeleteCandidate with all params', async () => {
-      mockKafkaService.sendWithTimeout.mockResolvedValue({ message: 'deleted' });
+      mockKafkaService.sendWithTimeout.mockResolvedValue({
+        message: 'deleted',
+      });
 
-      await service.deleteCandidate('session-1', 'place-1', 'user-1', undefined);
+      await service.deleteCandidate(
+        'session-1',
+        'place-1',
+        'user-1',
+        undefined,
+      );
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         GroupSessionTopics.DeleteCandidate,
-        { sessionId: 'session-1', placeId: 'place-1', userId: 'user-1', guestId: undefined },
+        {
+          sessionId: 'session-1',
+          placeId: 'place-1',
+          userId: 'user-1',
+          guestId: undefined,
+        },
       );
     });
   });
@@ -247,7 +283,9 @@ describe('GroupSessionService', () => {
       const result = { places: [] };
       mockKafkaService.sendWithTimeout.mockResolvedValue(result);
 
-      const response = await service.getRecommendations('session-1', 'user-1', { guestId: undefined });
+      const response = await service.getRecommendations('session-1', 'user-1', {
+        guestId: undefined,
+      });
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         RecommendationTopics.GroupSessionGetRecommendations,
@@ -276,9 +314,12 @@ describe('GroupSessionService', () => {
       expect(mockCacheManager.del).toHaveBeenCalledWith(
         RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS('session-1'),
       );
-      expect(mockKafkaClient.emit).toHaveBeenCalledWith(
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         RecommendationTopics.GroupSessionInvalidateCache,
-        expect.objectContaining({ sessionId: 'session-1', reason: 'SEARCH_RADIUS_UPDATED' }),
+        expect.objectContaining({
+          sessionId: 'session-1',
+          reason: 'SEARCH_RADIUS_UPDATED',
+        }),
       );
       expect(result).toEqual(updatedRadius);
     });
@@ -298,10 +339,13 @@ describe('GroupSessionService', () => {
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         GroupSessionTopics.UpdateRecommendationCategories,
-        expect.objectContaining({ sessionId: 'session-1', categoryIds: ['cat-1', 'cat-2'] }),
+        expect.objectContaining({
+          sessionId: 'session-1',
+          categoryIds: ['cat-1', 'cat-2'],
+        }),
       );
       expect(mockCacheManager.del).toHaveBeenCalled();
-      expect(mockKafkaClient.emit).toHaveBeenCalledWith(
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         RecommendationTopics.GroupSessionInvalidateCache,
         expect.objectContaining({ reason: 'SELECTED_CATEGORIES_UPDATED' }),
       );
@@ -313,14 +357,21 @@ describe('GroupSessionService', () => {
     it('should invalidate cache and return accepted: true', async () => {
       mockCacheManager.del.mockResolvedValue(undefined);
 
-      const result = await service.refreshRecommendations('session-1', 'user-1', { guestId: undefined });
+      const result = await service.refreshRecommendations(
+        'session-1',
+        'user-1',
+        { guestId: undefined },
+      );
 
       expect(mockCacheManager.del).toHaveBeenCalledWith(
         RedisKeys.RECOMMENDATION.GROUP_SESSION_RECOMMENDATIONS('session-1'),
       );
-      expect(mockKafkaClient.emit).toHaveBeenCalledWith(
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         RecommendationTopics.GroupSessionInvalidateCache,
-        expect.objectContaining({ sessionId: 'session-1', reason: 'MANUAL_REFRESH' }),
+        expect.objectContaining({
+          sessionId: 'session-1',
+          reason: 'MANUAL_REFRESH',
+        }),
       );
       expect(result).toEqual({ accepted: true });
     });
