@@ -8,18 +8,18 @@ import type {
   GetGroupCandidatesResponse,
   GetGroupSessionsResponse,
   GroupSessionItem,
+  GroupVoteItem,
   InviteFriendResponse,
   JoinGroupSessionRequest,
   JoinGroupSessionResponse,
   PlaceCandidateResponse,
-  VotePlaceSessionRequest,
-  VotePlaceSessionResponse,
-  GroupVoteItem,
   PlaceRecommendationItem,
   UpdateGroupRecommendationCategoriesRequest,
   UpdateGroupRecommendationCategoriesResponse,
   UpdateGroupRecommendationRadiusRequest,
   UpdateGroupRecommendationRadiusResponse,
+  VotePlaceSessionRequest,
+  VotePlaceSessionResponse,
 } from '@/types/api';
 import { apiClient } from './client';
 
@@ -67,6 +67,10 @@ export const groupSessionsService = {
       `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/close`
     );
     return response.data;
+  },
+
+  leaveGroupSession: async (sessionId: string): Promise<void> => {
+    await apiClient.post(`${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/leave`);
   },
 
   createGroupSession: async (): Promise<CreateGroupSessionResponse> => {

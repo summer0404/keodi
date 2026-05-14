@@ -34,7 +34,7 @@ import { isAxiosError } from 'axios';
 import clsx from 'clsx';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { ArrowLeft, Copy, Heart, Share2, Star, Trash2, X } from 'lucide-react-native';
+import { ArrowLeft, Copy, Heart, LogOut, Share2, Star, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -101,6 +101,8 @@ const GroupSessionCard = ({
   avatarCacheEpoch,
   onClose,
   isClosing,
+  onLeave,
+  isLeaving,
 }: {
   item: GroupSessionItem;
   onShare: (session: GroupSessionItem) => void;
@@ -115,6 +117,8 @@ const GroupSessionCard = ({
   avatarCacheEpoch: number;
   onClose: (session: GroupSessionItem) => void;
   isClosing: boolean;
+  onLeave: (session: GroupSessionItem) => void;
+  isLeaving: boolean;
 }) => {
   const membersForDisplay = useMemo(() => {
     const members = item.members ?? [];
@@ -206,7 +210,7 @@ const GroupSessionCard = ({
               />
             </Pressable>
 
-            {currentUserId === item.creator?.id && (
+            {currentUserId === item.creator?.id ? (
               <Pressable
                 accessibilityRole="button"
                 className={clsx('h-10 w-10 items-center justify-center rounded-full', {
@@ -224,6 +228,29 @@ const GroupSessionCard = ({
                 onPress={() => onClose(item)}
               >
                 <X
+                  size={16}
+                  color={item.status !== 'ACTIVE' ? '#9CA3AF' : Palette.black}
+                  strokeWidth={2}
+                />
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                className={clsx('h-10 w-10 items-center justify-center rounded-full', {
+                  'bg-gray-200': item.status !== 'ACTIVE',
+                  'bg-white': item.status === 'ACTIVE',
+                })}
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.18,
+                  shadowRadius: 6,
+                  elevation: 3,
+                }}
+                disabled={item.status !== 'ACTIVE' || isLeaving}
+                onPress={() => onLeave(item)}
+              >
+                <LogOut
                   size={16}
                   color={item.status !== 'ACTIVE' ? '#9CA3AF' : Palette.black}
                   strokeWidth={2}
@@ -443,6 +470,8 @@ export default function GroupDetailScreen() {
   const [favoriteLoadingMap, setFavoriteLoadingMap] = useState<Record<string, boolean>>({});
   const [sessionToClose, setSessionToClose] = useState<GroupSessionItem | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [sessionToLeave, setSessionToLeave] = useState<GroupSessionItem | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
   const [isMapInteracting, setIsMapInteracting] = useState(false);
   const [memberLocationsById, setMemberLocationsById] = useState<Record<string, MemberLocation>>(
     {}
@@ -1408,6 +1437,39 @@ export default function GroupDetailScreen() {
     }
   }, [isClosing, sessionToClose, router]);
 
+  const openLeaveConfirm = useCallback((session: GroupSessionItem) => {
+    setSessionToLeave(session);
+  }, []);
+
+  const closeLeaveConfirmModal = useCallback(() => {
+    if (isLeaving) {
+      return;
+    }
+    setSessionToLeave(null);
+  }, [isLeaving]);
+
+  const handleConfirmLeave = useCallback(async () => {
+    if (!sessionToLeave || isLeaving) {
+      return;
+    }
+
+    setIsLeaving(true);
+    try {
+      const leftSessionId = sessionToLeave.sessionId;
+      await groupSessionsService.leaveGroupSession(leftSessionId);
+      useGroupSessionStore.setState((state) => ({
+        sessionIds: state.sessionIds.filter((sid) => sid !== leftSessionId),
+        sessionsById: Object.fromEntries(
+          Object.entries(state.sessionsById).filter(([sid]) => sid !== leftSessionId)
+        ),
+      }));
+      setSessionToLeave(null);
+      router.replace('/(tabs)/group' as any);
+    } finally {
+      setIsLeaving(false);
+    }
+  }, [isLeaving, sessionToLeave, router]);
+
   const handleDeleteCandidate = useCallback(
     async (placeId: string) => {
       if (!session || isDeletingCandidateId) {
@@ -1521,6 +1583,8 @@ export default function GroupDetailScreen() {
               avatarCacheEpoch={avatarCacheEpoch}
               onClose={openCloseConfirm}
               isClosing={isClosing}
+              onLeave={openLeaveConfirm}
+              isLeaving={isLeaving}
             />
 
             {hasMembers ? (
@@ -2222,6 +2286,61 @@ export default function GroupDetailScreen() {
         onRefreshRecommendations={handleRefreshRecommendations}
         isRefreshingRecommendations={isRefreshingRecommendations}
       />
+
+      <Modal
+        visible={Boolean(sessionToLeave)}
+        transparent
+        animationType="slide"
+        onRequestClose={closeLeaveConfirmModal}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <TouchableWithoutFeedback onPress={closeLeaveConfirmModal}>
+            <View className="absolute inset-0" />
+          </TouchableWithoutFeedback>
+
+          <View
+            className="w-full rounded-t-[24px] bg-white px-4 pb-8 shadow-xl"
+            style={{ paddingBottom: insets.bottom + 32 }}
+          >
+            <View className="mb-2 mt-3 items-center">
+              <View className="h-1 w-10 rounded-full bg-gray-300" />
+            </View>
+
+            <View className="mb-5 items-center">
+              <Typography variant="h4" className="text-center">
+                {t('group.leaveConfirmTitle')}
+              </Typography>
+              <Typography className="mt-2 text-center text-gray-500">
+                {t('group.leaveConfirmMessage', {
+                  shareCode: sessionToLeave?.shareCode ?? '',
+                })}
+              </Typography>
+            </View>
+
+            <View className="flex-row items-center gap-3">
+              <Button
+                variant="outline"
+                rounded="full"
+                className="flex-1"
+                onPress={closeLeaveConfirmModal}
+                disabled={isLeaving}
+              >
+                {t('auth.cancel')}
+              </Button>
+
+              <Button
+                variant="destructive"
+                rounded="full"
+                className="flex-1"
+                onPress={handleConfirmLeave}
+                disabled={isLeaving}
+              >
+                {isLeaving ? t('group.leavingGroup') : t('group.confirmLeave')}
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={Boolean(sessionToClose)}
