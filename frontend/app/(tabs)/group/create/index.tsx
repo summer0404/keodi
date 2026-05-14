@@ -19,7 +19,7 @@ type SelectedCategory = {
 };
 
 const SEARCH_SUGGESTIONS = [
-  'Coffee', 'Restaurant', 'Bar', 'Park', 'Cinema',
+  'Coffee', 'Restaurant', 'Bar', 'Park', 'Movie',
   'Museum', 'Shopping', 'Gym', 'Beach', 'Spa',
 ];
 
