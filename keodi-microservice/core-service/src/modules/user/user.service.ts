@@ -36,19 +36,7 @@ export class UserService {
         return { users: [], total: 0, page, totalPages: 0, limit };
 
       const offset = (page - 1) * limit;
-
-      const searchVector = Prisma.sql`
-        to_tsvector(
-          'simple',
-          f_unaccent(
-            COALESCE(u.username, '') || ' ' || COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')
-          )
-        )
-      `;
-
-      const searchQuery = Prisma.sql`
-        websearch_to_tsquery('simple', f_unaccent(${normalizedKeyword}))
-      `;
+      const likePattern = `%${normalizedKeyword}%`;
 
       const rawUsers = await this.prismaService.$queryRaw<
         {
@@ -69,9 +57,13 @@ export class UserService {
           COUNT(*) OVER() AS "totalCount"
         FROM users u
         WHERE u.id <> ${userId}
-          AND ${searchVector} @@ ${searchQuery}
+          AND (
+            f_unaccent(u.username) ILIKE f_unaccent(${likePattern})
+            OR f_unaccent(u.first_name) ILIKE f_unaccent(${likePattern})
+            OR f_unaccent(u.last_name) ILIKE f_unaccent(${likePattern})
+            OR f_unaccent(CONCAT(u.first_name, ' ', u.last_name)) ILIKE f_unaccent(${likePattern})
+          )
         ORDER BY
-          ts_rank_cd(${searchVector}, ${searchQuery}) DESC,
           u.first_name ASC NULLS LAST,
           u.last_name ASC NULLS LAST
         LIMIT ${limit}
