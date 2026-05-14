@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, View, ScrollView, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  View,
+  ScrollView,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { Expand, Star, X, MapPin, RefreshCw } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -55,6 +63,7 @@ type GroupLocationMapboxProps = {
   voteStatus?: string;
   onRefreshRecommendations?: () => void;
   isRefreshingRecommendations?: boolean;
+  candidateIds?: Set<string>;
 };
 
 const getMapboxModule = (): MapboxModule | null => {
@@ -203,6 +212,7 @@ const RecommendCard = ({
   onPress,
   sessionStatus,
   voteStatus,
+  candidateIds,
 }: {
   place: PlaceRecommendationItem;
   onAdd: (id: string) => void;
@@ -210,6 +220,7 @@ const RecommendCard = ({
   onPress: (id: string) => void;
   sessionStatus?: string;
   voteStatus?: string;
+  candidateIds?: Set<string>;
 }) => {
   const { t } = useTranslation();
   const placeImageUrl = getPrimaryImageUrl(place.featureImageUrl);
@@ -256,21 +267,25 @@ const RecommendCard = ({
               </View>
             </View>
 
-            {voteStatus !== 'FINALIZED' && (
-              <Button
-                onPress={(event: any) => {
-                  event?.stopPropagation?.();
-                  onAdd(place.id);
-                }}
-                disabled={isAdding}
-                className="mt-3"
-              >
-                {isAdding ? t('home.addingToGroup') : t('home.addToGroup')}
-              </Button>
-            )}
-          </Pressable>
-        </Card>
-      </View>
+          {voteStatus !== 'FINALIZED' && (
+            <Button
+              onPress={(event: any) => {
+                event?.stopPropagation?.();
+                onAdd(place.id);
+              }}
+              disabled={isAdding || candidateIds?.has(place.id)}
+              className="mt-3"
+            >
+              {isAdding
+                ? t('home.addingToGroup')
+                : candidateIds?.has(place.id)
+                  ? t('home.alreadyAdded')
+                  : t('home.addToGroup')}
+            </Button>
+          )}
+        </Pressable>
+      </Card>
+    </View>
   );
 };
 
@@ -447,7 +462,16 @@ const MapCanvas = ({
 
           // User line
           lines.push({ id: 'user-route', from: center });
+          // User line
+          lines.push({ id: 'user-route', from: center });
 
+          // Member lines
+          memberLocations.forEach((loc) => {
+            lines.push({
+              id: `member-route-${loc.memberId}`,
+              from: [loc.longitude, loc.latitude],
+            });
+          });
           // Member lines
           memberLocations.forEach((loc) => {
             lines.push({
@@ -485,33 +509,34 @@ const MapCanvas = ({
     );
   };
 
-  export default function GroupLocationMapbox({
-    userCoords,
-    memberLocations,
-    userAvatarUrl,
-    currentUserId,
-    currentUserAvatarVersion,
-    avatarCacheEpoch,
-    memberAvatarUrls,
-    places,
-    recommendedPlaces,
-    onAddRecommendPlace,
-    isAddingPlaceId,
-    sessionStatus,
-    voteStatus,
-    height,
-    onMapInteractionStart,
-    onMapInteractionEnd,
-    onRefreshRecommendations,
-    isRefreshingRecommendations,
-  }: GroupLocationMapboxProps) {
-    const insets = useSafeAreaInsets();
-    const router = useRouter();
-    const { t } = useTranslation();
-    const upsertPlace = usePlacesStore((state) => state.upsertPlace);
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [isMapboxReady, setIsMapboxReady] = useState(false);
-    const [activeRecommendIndex, setActiveRecommendIndex] = useState(0);
+export default function GroupLocationMapbox({
+  userCoords,
+  memberLocations,
+  userAvatarUrl,
+  currentUserId,
+  currentUserAvatarVersion,
+  avatarCacheEpoch,
+  memberAvatarUrls,
+  places,
+  recommendedPlaces,
+  onAddRecommendPlace,
+  isAddingPlaceId,
+  sessionStatus,
+  voteStatus,
+  height,
+  onMapInteractionStart,
+  onMapInteractionEnd,
+  onRefreshRecommendations,
+  isRefreshingRecommendations,
+  candidateIds,
+}: GroupLocationMapboxProps) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const upsertPlace = usePlacesStore((state) => state.upsertPlace);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isMapboxReady, setIsMapboxReady] = useState(false);
+  const [activeRecommendIndex, setActiveRecommendIndex] = useState(0);
 
     const mapbox = useMemo(() => getMapboxModule(), []);
     const validMemberLocations = useMemo(
@@ -580,10 +605,14 @@ const MapCanvas = ({
         return null;
       }
 
-      const activePlace = recommendedPlaces[activeRecommendIndex];
-      if (!activePlace || !Number.isFinite(activePlace.latitude) || !Number.isFinite(activePlace.longitude)) {
-        return null;
-      }
+    const activePlace = recommendedPlaces[activeRecommendIndex];
+    if (
+      !activePlace ||
+      !Number.isFinite(activePlace.latitude) ||
+      !Number.isFinite(activePlace.longitude)
+    ) {
+      return null;
+    }
 
       return {
         latitude: activePlace.latitude,
@@ -630,60 +659,61 @@ const MapCanvas = ({
               <Expand size={18} color={Palette.black} />
             </Pressable>
 
-            {recommendedPlaces && recommendedPlaces.length > 0 && (
-              <View className="absolute bottom-4 left-0 right-0">
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
-                  onScroll={handleRecommendScroll}
-                  scrollEventThrottle={16}
-                  snapToOffsets={recommendedPlaces.map((_, i) => i * RECOMMEND_CARD_WIDTH)}
-                  decelerationRate="fast"
-                  disableIntervalMomentum={true}
-                >
-                  {recommendedPlaces.map((place) => (
-                    <RecommendCard
-                      key={place.id}
-                      place={place}
-                      onAdd={onAddRecommendPlace!}
-                      isAdding={isAddingPlaceId === place.id}
-                      sessionStatus={sessionStatus}
-                      voteStatus={voteStatus}
-                      onPress={(placeId) => {
-                        // Cache the recommendation as a PlaceItem so the detail page can display it
-                        const rec = recommendedPlaces.find((p) => p.id === placeId);
-                        if (rec) {
-                          upsertPlace({
-                            id: rec.id,
-                            fromGoogle: false,
-                            name: rec.name,
-                            description: rec.description,
-                            rating: rec.rating,
-                            googleMapLink: rec.googleMapLink,
-                            website: rec.website,
-                            phoneNumber: rec.phoneNumber,
-                            featureImageUrl: rec.featureImageUrl,
-                            ownerId: null,
-                            latitude: rec.latitude,
-                            longitude: rec.longitude,
-                            fullAddress: rec.fullAddress,
-                            ward: null,
-                            street: null,
-                            city: null,
-                            countryCode: null,
-                            createdAt: '',
-                            updatedAt: '',
-                            has_attributes: 0,
-                            isFavorite: false,
-                            openingHours: rec.openingHours as any,
-                            categories: rec.categories,
-                          });
-                        }
-                        router.push(`/place/${placeId}` as any);
-                      }}
-                    />
-                  ))}
+          {recommendedPlaces && recommendedPlaces.length > 0 && (
+            <View className="absolute bottom-4 left-0 right-0">
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
+                onScroll={handleRecommendScroll}
+                scrollEventThrottle={16}
+                snapToOffsets={recommendedPlaces.map((_, i) => i * RECOMMEND_CARD_WIDTH)}
+                decelerationRate="fast"
+                disableIntervalMomentum={true}
+              >
+                {recommendedPlaces.map((place) => (
+                  <RecommendCard
+                    key={place.id}
+                    place={place}
+                    onAdd={onAddRecommendPlace!}
+                    isAdding={isAddingPlaceId === place.id}
+                    sessionStatus={sessionStatus}
+                    voteStatus={voteStatus}
+                    candidateIds={candidateIds}
+                    onPress={(placeId) => {
+                      // Cache the recommendation as a PlaceItem so the detail page can display it
+                      const rec = recommendedPlaces.find((p) => p.id === placeId);
+                      if (rec) {
+                        upsertPlace({
+                          id: rec.id,
+                          fromGoogle: false,
+                          name: rec.name,
+                          description: rec.description,
+                          rating: rec.rating,
+                          googleMapLink: rec.googleMapLink,
+                          website: rec.website,
+                          phoneNumber: rec.phoneNumber,
+                          featureImageUrl: rec.featureImageUrl,
+                          ownerId: null,
+                          latitude: rec.latitude,
+                          longitude: rec.longitude,
+                          fullAddress: rec.fullAddress,
+                          ward: null,
+                          street: null,
+                          city: null,
+                          countryCode: null,
+                          createdAt: '',
+                          updatedAt: '',
+                          has_attributes: 0,
+                          isFavorite: false,
+                          openingHours: rec.openingHours as any,
+                          categories: rec.categories,
+                        });
+                      }
+                      router.push(`/place/${placeId}` as any);
+                    }}
+                  />
+                ))}
 
                   {onRefreshRecommendations ? (
                     <View style={{ width: 80, justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>

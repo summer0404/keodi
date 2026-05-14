@@ -729,10 +729,32 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         toStringOrNull(removedByData.userId) ??
         toStringOrNull(removedByUser.id);
 
+      const closedByUserId = toStringOrNull(closedByUser.id);
+
+      const memberJoinedUserId =
+        toStringOrNull(payload.userId) ??
+        toStringOrNull(memberData.userId) ??
+        toStringOrNull(memberUser.id);
+
+      const memberLeftUserId =
+        toStringOrNull(payload.userId) ??
+        toStringOrNull(memberData.userId) ??
+        toStringOrNull(memberUser.id);
+
+      const voteMemberFinalizedUserId =
+        toStringOrNull(payload.userId) ??
+        toStringOrNull(memberData.userId) ??
+        toStringOrNull(memberUser.id);
+
+      const voteSessionFinalizedUserId = toStringOrNull(payload.finalizedBy);
+
       const isInitiatedByCurrentUser =
         (type === 'vote.cast' && voteUserId === currentUserId) ||
-        (type === 'session.member_joined' && toStringOrNull(payload.userId) === currentUserId) ||
-        (type === 'session.member_left' && toStringOrNull(payload.userId) === currentUserId) ||
+        (type === 'vote.member_finalized' && voteMemberFinalizedUserId === currentUserId) ||
+        (type === 'vote.session_finalized' && voteSessionFinalizedUserId === currentUserId) ||
+        (type === 'session.member_joined' && memberJoinedUserId === currentUserId) ||
+        (type === 'session.member_left' && memberLeftUserId === currentUserId) ||
+        (type === 'session.closed' && closedByUserId === currentUserId) ||
         (type === 'candidate.added' && addedByUserId === currentUserId) ||
         (type === 'candidate.removed' && removedByUserId === currentUserId);
 
@@ -828,10 +850,34 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         toStringOrNull((data.removedBy as any)?.userId) ??
         toStringOrNull((data.removedBy as any)?.user?.id);
 
+      const closedByUserId =
+        toStringOrNull((data.closedBy as any)?.id) ??
+        toStringOrNull((data.closedBy as any)?.userId);
+
+      const memberJoinedUserId =
+        toStringOrNull(data.userId) ??
+        toStringOrNull((data.member as any)?.userId) ??
+        toStringOrNull((data.member as any)?.user?.id);
+
+      const memberLeftUserId =
+        toStringOrNull(data.userId) ??
+        toStringOrNull((data.member as any)?.userId) ??
+        toStringOrNull((data.member as any)?.user?.id);
+
+      const voteMemberFinalizedUserId =
+        toStringOrNull(data.userId) ??
+        toStringOrNull((data.member as any)?.userId) ??
+        toStringOrNull((data.member as any)?.user?.id);
+
+      const voteSessionFinalizedUserId = toStringOrNull(data.finalizedBy);
+
       const isInitiatedByCurrentUser =
         (type === 'vote.cast' && voteUserId === currentUserId) ||
-        (type === 'session.member_joined' && toStringOrNull(data.userId) === currentUserId) ||
-        (type === 'session.member_left' && toStringOrNull(data.userId) === currentUserId) ||
+        (type === 'vote.member_finalized' && voteMemberFinalizedUserId === currentUserId) ||
+        (type === 'vote.session_finalized' && voteSessionFinalizedUserId === currentUserId) ||
+        (type === 'session.member_joined' && memberJoinedUserId === currentUserId) ||
+        (type === 'session.member_left' && memberLeftUserId === currentUserId) ||
+        (type === 'session.closed' && closedByUserId === currentUserId) ||
         (type === 'candidate.added' && addedByUserId === currentUserId) ||
         (type === 'candidate.removed' && removedByUserId === currentUserId);
 

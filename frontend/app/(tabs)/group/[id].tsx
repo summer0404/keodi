@@ -580,6 +580,15 @@ export default function GroupDetailScreen() {
         .filter((id): id is string => id !== null && id.trim().length > 0),
     [session?.members]
   );
+
+  // Candidate place IDs for filtering recommendations
+  const candidateIds = useMemo(() => {
+    if (!candidateData?.candidates) {
+      return new Set<string>();
+    }
+    return new Set(candidateData.candidates.map((c) => c.placeId));
+  }, [candidateData?.candidates]);
+
   // Display name used as the chat conversation name
   const sessionChatName = useMemo(() => {
     const creator = session?.creator;
@@ -1626,6 +1635,7 @@ export default function GroupDetailScreen() {
                         onMapInteractionEnd={() => setIsMapInteracting(false)}
                         onRefreshRecommendations={handleRefreshRecommendations}
                         isRefreshingRecommendations={isRefreshingRecommendations}
+                        candidateIds={candidateIds}
                       />
                     ) : null}
 
@@ -2285,6 +2295,7 @@ export default function GroupDetailScreen() {
         voteStatus={voteData?.voteStatus}
         onRefreshRecommendations={handleRefreshRecommendations}
         isRefreshingRecommendations={isRefreshingRecommendations}
+        candidateIds={candidateIds}
       />
 
       <Modal

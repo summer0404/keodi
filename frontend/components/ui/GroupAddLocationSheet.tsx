@@ -40,6 +40,7 @@ type GroupAddLocationSheetProps = {
   voteStatus?: string;
   onRefreshRecommendations?: () => void;
   isRefreshingRecommendations?: boolean;
+  candidateIds?: Set<string>;
 };
 
 const isPlaceMatch = (place: PlaceRecommendationItem, query: string) => {
@@ -63,12 +64,14 @@ function AddLocationCard({
   isAdding,
   sessionStatus,
   voteStatus,
+  candidateIds,
 }: {
   place: PlaceRecommendationItem;
   onAddPlace: (placeId: string) => void;
   isAdding: boolean;
   sessionStatus?: string;
   voteStatus?: string;
+  candidateIds?: Set<string>;
 }) {
   const { t } = useTranslation();
   const imageUrl = getPrimaryImageUrl(place.featureImageUrl);
@@ -114,10 +117,14 @@ function AddLocationCard({
             size="sm"
             className="mt-4 h-10 rounded-xl"
             onPress={() => onAddPlace(place.id)}
-            disabled={isAdding}
+            disabled={isAdding || candidateIds?.has(place.id)}
           >
             <Typography className="text-white font-bold text-[13px]">
-              {isAdding ? t('home.addingToGroup') : `+ ${t('home.addToGroup')}`}
+              {isAdding
+                ? t('home.addingToGroup')
+                : candidateIds?.has(place.id)
+                  ? t('home.alreadyAdded')
+                  : `+ ${t('home.addToGroup')}`}
             </Typography>
           </Button>
         )}
@@ -140,6 +147,7 @@ export default function GroupAddLocationSheet({
   voteStatus,
   onRefreshRecommendations,
   isRefreshingRecommendations,
+  candidateIds,
 }: GroupAddLocationSheetProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -261,6 +269,7 @@ export default function GroupAddLocationSheet({
                 isAdding={isAddingPlaceId === item.id}
                 sessionStatus={sessionStatus}
                 voteStatus={voteStatus}
+                candidateIds={candidateIds}
               />
             </View>
           )}
@@ -303,20 +312,22 @@ export default function GroupAddLocationSheet({
             {t('group.addLocation')}
           </Typography> */}
 
-              <View className="mt-3">
-                <SearchBar
-                  value={query}
-                  onChangeText={setQuery}
-                  onSubmitEditing={handleSearch}
-                  placeholder={t('search.title')}
-                  showSettings={false}
-                  showAI={false}
-                />
-                <View className='flex-row items-center mt-4'>
-                  <Sparkles size={20} color={Palette.black} />
-                  <Typography variant='h4' className='ml-2'>{t('group.aiSuggestions')}</Typography>
-                </View>
-              </View>
+          <View className="mt-3">
+            <SearchBar
+              value={query}
+              onChangeText={setQuery}
+              onSubmitEditing={handleSearch}
+              placeholder={t('search.title')}
+              showSettings={false}
+              showAI={false}
+            />
+            <View className="flex-row items-center mt-4">
+              <Sparkles size={20} color={Palette.black} />
+              <Typography variant="h4" className="ml-2">
+                {t('group.aiSuggestions')}
+              </Typography>
+            </View>
+          </View>
 
               {renderContent()}
             </View>
