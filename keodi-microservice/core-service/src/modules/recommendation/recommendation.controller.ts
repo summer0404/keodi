@@ -1,8 +1,8 @@
 import { Controller } from '@nestjs/common';
-import { RecommendationService } from './recommendation.service';
-import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
-import { CoordinateDto } from 'src/shared/dtos/place.dto';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { RecommendationTopics } from 'src/shared/constants/topic.constant';
+import { CoordinateDto } from 'src/shared/dtos/place.dto';
+import { RecommendationService } from './recommendation.service';
 
 @Controller()
 export class RecommendationController {
@@ -39,7 +39,7 @@ export class RecommendationController {
     );
   }
 
-  @EventPattern(RecommendationTopics.GroupSessionInvalidateCache)
+  @MessagePattern(RecommendationTopics.GroupSessionInvalidateCache)
   async invalidateGroupSessionRecommendationCache(
     @Payload()
     data: {
@@ -49,5 +49,6 @@ export class RecommendationController {
     await this.recommendationService.handleGroupSessionRecommendationCacheInvalidationEvent(
       data,
     );
+    return { success: true };
   }
 }

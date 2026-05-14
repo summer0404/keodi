@@ -90,6 +90,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(
       RecommendationTopics.GroupSessionGetRecommendations,
     );
+    this.kafkaClient.subscribeToResponseOf(
+      RecommendationTopics.GroupSessionInvalidateCache,
+    );
 
     //favorite topic
     this.kafkaClient.subscribeToResponseOf(FavoriteTopics.Add);

@@ -181,9 +181,9 @@ export const groupSessionsService = {
   refreshRecommendations: async (
     sessionId: string,
     guestId?: string
-  ): Promise<PlaceRecommendationItem[]> => {
+  ): Promise<{ accepted: boolean }> => {
     const payload = guestId ? { guestId } : {};
-    const response = await apiClient.post<PlaceRecommendationItem[]>(
+    const response = await apiClient.post<{ accepted: boolean }>(
       `${API_ENDPOINTS.GROUP_SESSIONS}/${sessionId}/recommendations/refresh`,
       payload
     );

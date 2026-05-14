@@ -158,6 +158,7 @@
     "details": "Details",
     "addToGroup": "Add to Group",
     "addingToGroup": "Adding to group...",
+    "alreadyAdded": "Already added",
     "addToGroupSuccess": "Added to group",
     "groupSessionNotFoundTitle": "No active group",
     "groupSessionNotFoundDesc": "Create or join a group session first.",

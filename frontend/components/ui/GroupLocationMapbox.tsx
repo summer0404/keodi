@@ -1,27 +1,26 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  View,
-  ScrollView,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-} from 'react-native';
-import { Image } from 'expo-image';
-import { Expand, Star, X, MapPin, RefreshCw } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { formatAddressDisplay } from '@/constants/helper';
-import Typography from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { DEFAULT_AVATAR_SOURCE, getPrimaryImageUrl, DEFAULT_PLACE_IMAGE } from '@/constants/helper';
+import Typography from '@/components/ui/Typography';
+import { DEFAULT_AVATAR_SOURCE, DEFAULT_PLACE_IMAGE, formatAddressDisplay, getPrimaryImageUrl } from '@/constants/helper';
 import { Palette } from '@/constants/theme';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import type { PlaceRecommendationItem } from '@/types/api';
 import clsx from 'clsx';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Expand, MapPin, RefreshCw, Star, X } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Coordinates = {
   latitude: number;
@@ -120,7 +119,7 @@ const calculateBoundsFromCoordinates = (
   places: MapPlace[],
   hasRecommendCards?: boolean
 ): CameraBounds | null => {
-  const allCoords: Array<[number, number]> = [];
+  const allCoords: [number, number][] = [];
 
   if (userCoords) {
     allCoords.push(userCoords);
@@ -161,7 +160,7 @@ const calculateBoundsFromCoordinates = (
   };
 };
 
-const withVersionQuery = (url: string, versions: Array<number | undefined | null>) => {
+const withVersionQuery = (url: string, versions: (number | undefined | null)[]) => {
   const validVersions = versions.filter((version): version is number => Boolean(version));
 
   if (validVersions.length === 0) {
@@ -174,7 +173,7 @@ const withVersionQuery = (url: string, versions: Array<number | undefined | null
 
 const getAvatarSource = (
   pictureUrl?: string | null,
-  versions: Array<number | undefined | null> = []
+  versions: (number | undefined | null)[] = []
 ) => {
   const rawUrl = pictureUrl?.trim();
 
@@ -402,11 +401,10 @@ const MapCanvas = ({
         >
           <AvatarMarker
             pictureUrl={memberAvatarUrls?.[location.memberId]}
-            imageKey={`member-${location.memberId}-${avatarCacheEpoch ?? 'session'}-${
-              currentUserId && location.memberId === currentUserId
+            imageKey={`member-${location.memberId}-${avatarCacheEpoch ?? 'session'}-${currentUserId && location.memberId === currentUserId
                 ? (currentUserAvatarVersion ?? 'static')
                 : 'peer'
-            }`}
+              }`}
             versions={[
               avatarCacheEpoch,
               currentUserId && location.memberId === currentUserId
@@ -469,20 +467,11 @@ const MapCanvas = ({
             activeRecommendPlace.latitude,
           ];
 
-          const lines: Array<{ id: string; from: [number, number] }> = [];
+          const lines: { id: string; from: [number, number] }[] = [];
 
           // User line
           lines.push({ id: 'user-route', from: center });
-          // User line
-          lines.push({ id: 'user-route', from: center });
 
-          // Member lines
-          memberLocations.forEach((loc) => {
-            lines.push({
-              id: `member-route-${loc.memberId}`,
-              from: [loc.longitude, loc.latitude],
-            });
-          });
           // Member lines
           memberLocations.forEach((loc) => {
             lines.push({

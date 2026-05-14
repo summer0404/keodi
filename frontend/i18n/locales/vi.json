@@ -158,6 +158,7 @@
     "details": "Chi tiết",
     "addToGroup": "Thêm vào nhóm",
     "addingToGroup": "Đang thêm vào nhóm...",
+    "alreadyAdded": "Đã thêm",
     "addToGroupSuccess": "Đã thêm vào nhóm",
     "groupSessionNotFoundTitle": "Không có nhóm hoạt động",
     "groupSessionNotFoundDesc": "Vui lòng tạo hoặc tham gia nhóm trước.",
