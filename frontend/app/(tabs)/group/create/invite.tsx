@@ -186,7 +186,9 @@ export default function GroupInviteScreen() {
 
   const handleDone = useCallback(async () => {
     if (!normalizedSessionId || selectedFriendIds.length === 0 || isSubmittingInvites) {
-      router.replace('/(tabs)/group');
+      router.replace(
+        normalizedSessionId ? (`/(tabs)/group/${normalizedSessionId}` as any) : ('/(tabs)/group' as any)
+      );
       return;
     }
 
@@ -206,7 +208,7 @@ export default function GroupInviteScreen() {
         return;
       }
 
-      router.replace('/(tabs)/group');
+      router.replace(`/(tabs)/group/${normalizedSessionId}` as any);
     } finally {
       setIsSubmittingInvites(false);
     }

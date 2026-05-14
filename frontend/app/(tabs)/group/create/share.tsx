@@ -1,18 +1,18 @@
-import React from 'react';
-import { Pressable, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Copy } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import Typography from '@/components/ui/Typography';
 import { Palette } from '@/constants/theme';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Copy } from 'lucide-react-native';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GroupShareScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { shareCode } = useLocalSearchParams<{ shareCode?: string }>();
+  const { shareCode, sessionId } = useLocalSearchParams<{ shareCode?: string; sessionId?: string }>();
   const handleCopy = async (text: string | null | undefined) => {
     if (!text?.trim()) return;
 
@@ -74,7 +74,14 @@ export default function GroupShareScreen() {
         className="border-t border-[#F0F0F3] bg-white px-4 pt-3"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
-        <Button className="w-full" onPress={() => router.replace('/(tabs)/group' as any)}>
+        <Button
+          className="w-full"
+          onPress={() =>
+            sessionId
+              ? router.navigate(`/(tabs)/group/${sessionId}` as any)
+              : router.navigate('/(tabs)/group' as any)
+          }
+        >
           {t('button.done')}
         </Button>
       </View>
