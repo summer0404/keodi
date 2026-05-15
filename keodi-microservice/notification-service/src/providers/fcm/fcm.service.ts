@@ -49,4 +49,37 @@ export class FcmService implements OnModuleInit {
     });
     return invalidTokens;
   }
+
+  async subscribeToTopic(tokens: string[], topic: string): Promise<void> {
+    if (!tokens.length) return;
+    try {
+      await admin.messaging().subscribeToTopic(tokens, topic);
+    } catch (error) {
+      this.logger.warn(
+        `FCM subscribeToTopic error for topic "${topic}": ${error?.message}`,
+      );
+    }
+  }
+
+  async unsubscribeFromTopic(tokens: string[], topic: string): Promise<void> {
+    if (!tokens.length) return;
+    try {
+      await admin.messaging().unsubscribeFromTopic(tokens, topic);
+    } catch (error) {
+      this.logger.warn(
+        `FCM unsubscribeFromTopic error for topic "${topic}": ${error?.message}`,
+      );
+    }
+  }
+
+  async sendToTopic(
+    topic: string,
+    payload: { title: string; body: string; data?: Record<string, string> },
+  ): Promise<void> {
+    await admin.messaging().send({
+      topic,
+      notification: { title: payload.title, body: payload.body },
+      data: payload.data,
+    });
+  }
 }

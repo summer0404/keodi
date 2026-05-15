@@ -1,8 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { DevicePlatform } from '@prisma/client';
-import { DeviceTokenService } from './device-token.service';
 import { DeviceTokenTopics } from 'src/shared/constants/topic.contant';
+import { DeviceTokenService } from './device-token.service';
 
 @Controller()
 export class DeviceTokenController {
@@ -29,7 +29,7 @@ export class DeviceTokenController {
   }
 
   @EventPattern(DeviceTokenTopics.DeactivateToken)
-  async deactive(@Payload() payload: { token: string }) {
-    return this.service.deactivateToken(payload.token);
+  async deactive(@Payload() payload: { token: string; userId?: string }) {
+    return this.service.deactivateToken(payload);
   }
 }
