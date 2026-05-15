@@ -13,6 +13,7 @@ describe('DeviceTokenService', () => {
       findUnique: jest.Mock;
       upsert: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
     };
   };
   let fcmService: jest.Mocked<FcmService>;
@@ -29,6 +30,7 @@ describe('DeviceTokenService', () => {
               findUnique: jest.fn(),
               upsert: jest.fn(),
               update: jest.fn(),
+              updateMany: jest.fn(),
             },
           },
         },
@@ -88,6 +90,7 @@ describe('DeviceTokenService', () => {
 
   describe('upsertToken', () => {
     it('calls prisma.upsert with create and update payloads', async () => {
+      prisma.userDeviceToken.findUnique.mockResolvedValue(null);
       prisma.userDeviceToken.upsert.mockResolvedValue(undefined);
       fcmService.subscribeToTopic.mockResolvedValue(undefined);
 
@@ -120,6 +123,7 @@ describe('DeviceTokenService', () => {
     });
 
     it('subscribes the token to the user topic and the all topic after upsert', async () => {
+      prisma.userDeviceToken.findUnique.mockResolvedValue(null);
       prisma.userDeviceToken.upsert.mockResolvedValue(undefined);
       fcmService.subscribeToTopic.mockResolvedValue(undefined);
 
@@ -141,6 +145,7 @@ describe('DeviceTokenService', () => {
     });
 
     it('works without optional deviceId and appVersion', async () => {
+      prisma.userDeviceToken.findUnique.mockResolvedValue(null);
       prisma.userDeviceToken.upsert.mockResolvedValue(undefined);
       fcmService.subscribeToTopic.mockResolvedValue(undefined);
 
@@ -165,7 +170,32 @@ describe('DeviceTokenService', () => {
       );
     });
 
+    it('unsubscribes from the previous owner topic when a token is reassigned', async () => {
+      prisma.userDeviceToken.findUnique.mockResolvedValue({
+        userId: 'old-user',
+      });
+      prisma.userDeviceToken.upsert.mockResolvedValue(undefined);
+      fcmService.subscribeToTopic.mockResolvedValue(undefined);
+      fcmService.unsubscribeFromTopic.mockResolvedValue(undefined);
+
+      await service.upsertToken({
+        userId: 'new-user',
+        token: 'shared-token',
+        platform: DevicePlatform.ANDROID,
+      });
+
+      expect(fcmService.unsubscribeFromTopic).toHaveBeenCalledWith(
+        ['shared-token'],
+        'user-old-user',
+      );
+      expect(fcmService.subscribeToTopic).toHaveBeenCalledWith(
+        ['shared-token'],
+        'user-new-user',
+      );
+    });
+
     it('propagates Prisma errors before FCM subscribe', async () => {
+      prisma.userDeviceToken.findUnique.mockResolvedValue(null);
       prisma.userDeviceToken.upsert.mockRejectedValue(
         new Error('upsert failed'),
       );
@@ -186,19 +216,19 @@ describe('DeviceTokenService', () => {
 
   describe('deactivateToken', () => {
     it('sets isActive false for the given token', async () => {
-      prisma.userDeviceToken.update.mockResolvedValue(undefined);
+      prisma.userDeviceToken.updateMany.mockResolvedValue(undefined);
       fcmService.unsubscribeFromTopic.mockResolvedValue(undefined);
 
       await service.deactivateToken({ token: 'bad-token', userId: 'user-1' });
 
-      expect(prisma.userDeviceToken.update).toHaveBeenCalledWith({
+      expect(prisma.userDeviceToken.updateMany).toHaveBeenCalledWith({
         where: { token: 'bad-token' },
         data: { isActive: false },
       });
     });
 
     it('unsubscribes the token from the user topic and the all topic when userId is provided', async () => {
-      prisma.userDeviceToken.update.mockResolvedValue(undefined);
+      prisma.userDeviceToken.updateMany.mockResolvedValue(undefined);
       fcmService.unsubscribeFromTopic.mockResolvedValue(undefined);
 
       await service.deactivateToken({ token: 'bad-token', userId: 'user-1' });
@@ -217,7 +247,7 @@ describe('DeviceTokenService', () => {
 
     it('falls back to a DB lookup when userId is not provided', async () => {
       prisma.userDeviceToken.findUnique.mockResolvedValue({ userId: 'user-2' });
-      prisma.userDeviceToken.update.mockResolvedValue(undefined);
+      prisma.userDeviceToken.updateMany.mockResolvedValue(undefined);
       fcmService.unsubscribeFromTopic.mockResolvedValue(undefined);
 
       await service.deactivateToken({ token: 'orphan-token' });
@@ -238,7 +268,7 @@ describe('DeviceTokenService', () => {
 
     it('still unsubscribes from the all topic even when DB lookup returns no record', async () => {
       prisma.userDeviceToken.findUnique.mockResolvedValue(null);
-      prisma.userDeviceToken.update.mockResolvedValue(undefined);
+      prisma.userDeviceToken.updateMany.mockResolvedValue(undefined);
       fcmService.unsubscribeFromTopic.mockResolvedValue(undefined);
 
       await service.deactivateToken({ token: 'ghost-token' });
@@ -251,7 +281,7 @@ describe('DeviceTokenService', () => {
     });
 
     it('propagates Prisma update errors', async () => {
-      prisma.userDeviceToken.update.mockRejectedValue(
+      prisma.userDeviceToken.updateMany.mockRejectedValue(
         new Error('update failed'),
       );
 

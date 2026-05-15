@@ -64,10 +64,7 @@ export class NotificationDispatcherService {
       delivered = true;
     }
 
-    if (
-      (!isOnline || channel === NotificationPreferredChannel.BOTH) &&
-      channel !== NotificationPreferredChannel.WEBSOCKET
-    ) {
+    if (channel !== NotificationPreferredChannel.WEBSOCKET) {
       try {
         const fcmData = event.data
           ? Object.fromEntries(

@@ -273,6 +273,21 @@ describe('NotificationDispatcherService', () => {
       );
     });
 
+    it('sends FCM when user is online and channel is FCM only', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.FCM,
+      });
+      notificationHelper.isOnline.mockResolvedValue(true);
+      fcmService.sendToTopic.mockResolvedValue(undefined);
+
+      await service.dispatch(event);
+
+      expect(fcmService.sendToTopic).toHaveBeenCalledWith(
+        fcmUserTopic(event.userId),
+        expect.objectContaining({ title: event.title, body: event.body }),
+      );
+    });
+
     it('also sends FCM when user is online and channel is BOTH', async () => {
       const event = buildEvent({
         preferredChannel: NotificationPreferredChannel.BOTH,

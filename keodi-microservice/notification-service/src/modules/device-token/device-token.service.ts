@@ -26,6 +26,11 @@ export class DeviceTokenService {
     deviceId?: string;
     appVersion?: string;
   }): Promise<void> {
+    const existing = await this.prisma.userDeviceToken.findUnique({
+      where: { token: payload.token },
+      select: { userId: true },
+    });
+
     await this.prisma.userDeviceToken.upsert({
       where: { token: payload.token },
       create: {
@@ -46,13 +51,25 @@ export class DeviceTokenService {
         updatedAt: new Date(),
       },
     });
-    await Promise.all([
+
+    const fcmOps: Promise<void>[] = [
       this.fcmService.subscribeToTopic(
         [payload.token],
         fcmUserTopic(payload.userId),
       ),
       this.fcmService.subscribeToTopic([payload.token], FCM_TOPIC_ALL),
-    ]);
+    ];
+
+    if (existing?.userId && existing.userId !== payload.userId) {
+      fcmOps.push(
+        this.fcmService.unsubscribeFromTopic(
+          [payload.token],
+          fcmUserTopic(existing.userId),
+        ),
+      );
+    }
+
+    await Promise.all(fcmOps);
   }
 
   async deactivateToken(payload: {
@@ -68,7 +85,7 @@ export class DeviceTokenService {
         })
       )?.userId;
 
-    await this.prisma.userDeviceToken.update({
+    await this.prisma.userDeviceToken.updateMany({
       where: { token: payload.token },
       data: { isActive: false },
     });
