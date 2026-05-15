@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.keodi.app",
-      "googleServicesFile": "$GOOGLE_SERVICE_INFO_PLIST",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "aps-environment": "development"
       },
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.keodi.app",
-      "googleServicesFile": "$GOOGLE_SERVICES_JSON",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "icon": "./assets/images/icon-new.png",
       "adaptiveIcon": {
@@ -55,14 +55,6 @@
           }
         }
       ],  
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/logo.png",
-          "color": "#ffffff",
-          "sounds": []
-        }
-      ],
       "expo-secure-store"
     ],
     "experiments": {

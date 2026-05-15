@@ -377,11 +377,32 @@ const trySetupFcm = async () => {
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
     if (!granted) {
+      if (__DEV__) {
+        console.log('[notification] FCM permission denied by user');
+      }
       return;
     }
 
     const token = await messaging().getToken();
+    if (__DEV__) {
+      console.log('[notification] FCM token obtained:', token);
+    }
     await syncTokenSafely(token);
+
+    // Auto-subscribe device to a global FCM topic so you can target all users
+    // from Firebase Console or backend without copying individual tokens.
+    const topicEnv = process.env.EXPO_PUBLIC_FCM_GLOBAL_TOPIC?.trim();
+    const topic = topicEnv || (__DEV__ ? 'dev-all' : 'all');
+    try {
+      await messaging().subscribeToTopic(topic);
+      if (__DEV__) {
+        console.log(`[notification] Subscribed to topic: ${topic}`);
+      }
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[notification] Topic subscribe failed', err);
+      }
+    }
   } catch (error) {
     if (__DEV__) {
       console.warn('[notification] FCM setup failed', error);
@@ -392,6 +413,20 @@ const trySetupFcm = async () => {
 const bindTokenRefresh = () => {
   return messaging().onTokenRefresh(async (token) => {
     await syncTokenSafely(token);
+
+    // Re-subscribe to topic when token is refreshed to keep device in topic groups
+    const topicEnv = process.env.EXPO_PUBLIC_FCM_GLOBAL_TOPIC?.trim();
+    const topic = topicEnv || (__DEV__ ? 'dev-all' : 'all');
+    try {
+      await messaging().subscribeToTopic(topic);
+      if (__DEV__) {
+        console.log(`[notification] Re-subscribed to topic: ${topic}`);
+      }
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[notification] Topic re-subscribe failed', err);
+      }
+    }
   });
 };
 
@@ -1013,6 +1048,7 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   const bindForegroundMessage = useCallback(() => {
     return messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
       const parsed = parseRemoteMessage(remoteMessage);
+      // Show in-app banner when app is active
       void pushForegroundBanner(parsed);
     });
   }, [parseRemoteMessage, pushForegroundBanner]);
