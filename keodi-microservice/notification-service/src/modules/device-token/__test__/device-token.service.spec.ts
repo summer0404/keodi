@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DevicePlatform } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { FcmService } from 'src/providers/fcm/fcm.service';
+import { FCM_TOPIC_ALL } from 'src/shared/constants/fcm.constant';
 import { DeviceTokenService } from '../device-token.service';
 
 describe('DeviceTokenService', () => {
@@ -118,7 +119,7 @@ describe('DeviceTokenService', () => {
       });
     });
 
-    it('subscribes the token to the user FCM topic after upsert', async () => {
+    it('subscribes the token to the user topic and the all topic after upsert', async () => {
       prisma.userDeviceToken.upsert.mockResolvedValue(undefined);
       fcmService.subscribeToTopic.mockResolvedValue(undefined);
 
@@ -132,6 +133,11 @@ describe('DeviceTokenService', () => {
         ['fcm-token'],
         'user-user-1',
       );
+      expect(fcmService.subscribeToTopic).toHaveBeenCalledWith(
+        ['fcm-token'],
+        FCM_TOPIC_ALL,
+      );
+      expect(fcmService.subscribeToTopic).toHaveBeenCalledTimes(2);
     });
 
     it('works without optional deviceId and appVersion', async () => {
@@ -152,6 +158,10 @@ describe('DeviceTokenService', () => {
       expect(fcmService.subscribeToTopic).toHaveBeenCalledWith(
         ['tok-ios'],
         'user-user-2',
+      );
+      expect(fcmService.subscribeToTopic).toHaveBeenCalledWith(
+        ['tok-ios'],
+        FCM_TOPIC_ALL,
       );
     });
 
@@ -187,7 +197,7 @@ describe('DeviceTokenService', () => {
       });
     });
 
-    it('unsubscribes the token from the user FCM topic when userId is provided', async () => {
+    it('unsubscribes the token from the user topic and the all topic when userId is provided', async () => {
       prisma.userDeviceToken.update.mockResolvedValue(undefined);
       fcmService.unsubscribeFromTopic.mockResolvedValue(undefined);
 
@@ -197,6 +207,11 @@ describe('DeviceTokenService', () => {
         ['bad-token'],
         'user-user-1',
       );
+      expect(fcmService.unsubscribeFromTopic).toHaveBeenCalledWith(
+        ['bad-token'],
+        FCM_TOPIC_ALL,
+      );
+      expect(fcmService.unsubscribeFromTopic).toHaveBeenCalledTimes(2);
       expect(prisma.userDeviceToken.findUnique).not.toHaveBeenCalled();
     });
 
@@ -215,15 +230,24 @@ describe('DeviceTokenService', () => {
         ['orphan-token'],
         'user-user-2',
       );
+      expect(fcmService.unsubscribeFromTopic).toHaveBeenCalledWith(
+        ['orphan-token'],
+        FCM_TOPIC_ALL,
+      );
     });
 
-    it('skips FCM unsubscribe when DB lookup returns no record', async () => {
+    it('still unsubscribes from the all topic even when DB lookup returns no record', async () => {
       prisma.userDeviceToken.findUnique.mockResolvedValue(null);
       prisma.userDeviceToken.update.mockResolvedValue(undefined);
+      fcmService.unsubscribeFromTopic.mockResolvedValue(undefined);
 
       await service.deactivateToken({ token: 'ghost-token' });
 
-      expect(fcmService.unsubscribeFromTopic).not.toHaveBeenCalled();
+      expect(fcmService.unsubscribeFromTopic).toHaveBeenCalledWith(
+        ['ghost-token'],
+        FCM_TOPIC_ALL,
+      );
+      expect(fcmService.unsubscribeFromTopic).toHaveBeenCalledTimes(1);
     });
 
     it('propagates Prisma update errors', async () => {

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DevicePlatform } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
 import { FcmService } from 'src/providers/fcm/fcm.service';
-import { fcmUserTopic } from 'src/shared/constants/fcm.constant';
+import { FCM_TOPIC_ALL, fcmUserTopic } from 'src/shared/constants/fcm.constant';
 
 @Injectable()
 export class DeviceTokenService {
@@ -46,10 +46,13 @@ export class DeviceTokenService {
         updatedAt: new Date(),
       },
     });
-    await this.fcmService.subscribeToTopic(
-      [payload.token],
-      fcmUserTopic(payload.userId),
-    );
+    await Promise.all([
+      this.fcmService.subscribeToTopic(
+        [payload.token],
+        fcmUserTopic(payload.userId),
+      ),
+      this.fcmService.subscribeToTopic([payload.token], FCM_TOPIC_ALL),
+    ]);
   }
 
   async deactivateToken(payload: {
@@ -70,11 +73,14 @@ export class DeviceTokenService {
       data: { isActive: false },
     });
 
-    if (userId) {
-      await this.fcmService.unsubscribeFromTopic(
-        [payload.token],
-        fcmUserTopic(userId),
-      );
-    }
+    await Promise.all([
+      userId
+        ? this.fcmService.unsubscribeFromTopic(
+            [payload.token],
+            fcmUserTopic(userId),
+          )
+        : Promise.resolve(),
+      this.fcmService.unsubscribeFromTopic([payload.token], FCM_TOPIC_ALL),
+    ]);
   }
 }
