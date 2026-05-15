@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { FcmService } from 'src/providers/fcm/fcm.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { fcmUserTopic } from 'src/shared/constants/fcm.constant';
 import { NOTIFICATION_SETTING_MAP } from 'src/shared/constants/notification.constant';
-import { NotificationHelper } from './notification.helper';
-import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
 import {
-  DeviceTokenTopics,
   NotificationTopics,
   SettingTopics,
 } from 'src/shared/constants/topic.contant';
@@ -13,6 +11,8 @@ import {
   NotificationPreferredChannel,
   NotificationStatus,
 } from 'src/shared/enums/notification.enum';
+import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
+import { NotificationHelper } from './notification.helper';
 
 @Injectable()
 export class NotificationDispatcherService {
@@ -69,30 +69,18 @@ export class NotificationDispatcherService {
       channel !== NotificationPreferredChannel.WEBSOCKET
     ) {
       try {
-        const tokensRes = await this.kafkaService.sendWithTimeout(
-          DeviceTokenTopics.GetActiveTokens,
-          {
-            userId: event.userId,
-          },
-        );
+        const fcmData = event.data
+          ? Object.fromEntries(
+              Object.entries(event.data).map(([k, v]) => [k, String(v)]),
+            )
+          : undefined;
 
-        const tokens: string[] = tokensRes?.tokens ?? [];
-        if (tokens.length) {
-          const invalidTokens = await this.fcmService.sendMulticast(tokens, {
-            title: event.title,
-            body: event.body,
-            data: event.data as Record<string, string> | undefined,
-          });
-
-          //Deactive invalid tokens
-          for (const token of invalidTokens) {
-            kafka.emit(DeviceTokenTopics.DeactivateToken, {
-              userId: event.userId,
-              token,
-            });
-          }
-          delivered = true;
-        }
+        await this.fcmService.sendToTopic(fcmUserTopic(event.userId), {
+          title: event.title,
+          body: event.body,
+          data: fcmData,
+        });
+        delivered = true;
       } catch (error) {}
     }
     if (delivered) {

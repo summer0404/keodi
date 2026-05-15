@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationDispatcherService } from '../notification.dispatcher.service';
 import { FcmService } from 'src/providers/fcm/fcm.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { NotificationHelper } from '../notification.helper';
+import { fcmUserTopic } from 'src/shared/constants/fcm.constant';
+import { NOTIFICATION_SETTING_MAP } from 'src/shared/constants/notification.constant';
+import {
+  NotificationTopics,
+  SettingTopics,
+} from 'src/shared/constants/topic.contant';
 import {
   NotificationPreferredChannel,
   NotificationStatus,
   NotificationType,
 } from 'src/shared/enums/notification.enum';
 import { DispatchNotificationEvent } from 'src/shared/interfaces/notification.interface';
-import {
-  DeviceTokenTopics,
-  NotificationTopics,
-  SettingTopics,
-} from 'src/shared/constants/topic.contant';
-import { NOTIFICATION_SETTING_MAP } from 'src/shared/constants/notification.constant';
+import { NotificationDispatcherService } from '../notification.dispatcher.service';
+import { NotificationHelper } from '../notification.helper';
 
 const buildEvent = (
   overrides: Partial<DispatchNotificationEvent> = {},
@@ -52,7 +52,7 @@ describe('NotificationDispatcherService', () => {
         {
           provide: FcmService,
           useValue: {
-            sendMulticast: jest.fn(),
+            sendToTopic: jest.fn(),
           },
         },
         {
@@ -64,7 +64,9 @@ describe('NotificationDispatcherService', () => {
       ],
     }).compile();
 
-    service = module.get<NotificationDispatcherService>(NotificationDispatcherService);
+    service = module.get<NotificationDispatcherService>(
+      NotificationDispatcherService,
+    );
     kafkaService = module.get(KafkaService);
     fcmService = module.get(FcmService);
     notificationHelper = module.get(NotificationHelper);
@@ -77,7 +79,8 @@ describe('NotificationDispatcherService', () => {
   describe('notification preference gate', () => {
     it('returns early when setting is explicitly false', async () => {
       const event = buildEvent({ type: NotificationType.GROUP_INVITE });
-      const settingKey = NOTIFICATION_SETTING_MAP[NotificationType.GROUP_INVITE]!;
+      const settingKey =
+        NOTIFICATION_SETTING_MAP[NotificationType.GROUP_INVITE]!;
       kafkaService.sendWithTimeout.mockResolvedValue({ [settingKey]: false });
 
       await service.dispatch(event);
@@ -88,8 +91,11 @@ describe('NotificationDispatcherService', () => {
 
     it('continues dispatch when setting is true', async () => {
       const event = buildEvent({ type: NotificationType.GROUP_INVITE });
-      const settingKey = NOTIFICATION_SETTING_MAP[NotificationType.GROUP_INVITE]!;
-      kafkaService.sendWithTimeout.mockResolvedValueOnce({ [settingKey]: true });
+      const settingKey =
+        NOTIFICATION_SETTING_MAP[NotificationType.GROUP_INVITE]!;
+      kafkaService.sendWithTimeout.mockResolvedValueOnce({
+        [settingKey]: true,
+      });
       notificationHelper.isOnline.mockResolvedValue(false);
       kafkaService.sendWithTimeout.mockResolvedValueOnce({ tokens: [] });
 
@@ -117,7 +123,9 @@ describe('NotificationDispatcherService', () => {
 
     it('continues dispatch when settings fetch throws (swallowed error)', async () => {
       const event = buildEvent({ type: NotificationType.GROUP_INVITE });
-      kafkaService.sendWithTimeout.mockRejectedValueOnce(new Error('kafka timeout'));
+      kafkaService.sendWithTimeout.mockRejectedValueOnce(
+        new Error('kafka timeout'),
+      );
       notificationHelper.isOnline.mockResolvedValue(false);
       kafkaService.sendWithTimeout.mockResolvedValueOnce({ tokens: [] });
 
@@ -173,7 +181,9 @@ describe('NotificationDispatcherService', () => {
 
   describe('WebSocket delivery (online user)', () => {
     it('emits RealtimePush when user is online and channel is WEBSOCKET', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.WEBSOCKET });
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.WEBSOCKET,
+      });
       notificationHelper.isOnline.mockResolvedValue(true);
 
       await service.dispatch(event);
@@ -185,7 +195,9 @@ describe('NotificationDispatcherService', () => {
     });
 
     it('emits RealtimePush when user is online and channel is BOTH', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.BOTH });
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.BOTH,
+      });
       notificationHelper.isOnline.mockResolvedValue(true);
       // Even with BOTH, FCM tokens may be empty
       kafkaService.sendWithTimeout.mockResolvedValue({ tokens: [] });
@@ -199,7 +211,9 @@ describe('NotificationDispatcherService', () => {
     });
 
     it('does NOT emit RealtimePush when user is offline', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.WEBSOCKET });
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.WEBSOCKET,
+      });
       notificationHelper.isOnline.mockResolvedValue(false);
 
       await service.dispatch(event);
@@ -211,7 +225,9 @@ describe('NotificationDispatcherService', () => {
     });
 
     it('does NOT emit RealtimePush when channel is FCM only, even if user is online', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.FCM });
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.FCM,
+      });
       notificationHelper.isOnline.mockResolvedValue(true);
       kafkaService.sendWithTimeout.mockResolvedValue({ tokens: [] });
 
@@ -227,66 +243,119 @@ describe('NotificationDispatcherService', () => {
   // ---- FCM path ----
 
   describe('FCM delivery', () => {
-    it('sends FCM multicast when user is offline and has tokens', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.BOTH });
+    it('sends to user FCM topic when user is offline and channel is BOTH', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.BOTH,
+      });
       notificationHelper.isOnline.mockResolvedValue(false);
-      kafkaService.sendWithTimeout.mockResolvedValue({ tokens: ['tok-1', 'tok-2'] });
-      fcmService.sendMulticast.mockResolvedValue([]);
+      fcmService.sendToTopic.mockResolvedValue(undefined);
 
       await service.dispatch(event);
 
-      expect(kafkaService.sendWithTimeout).toHaveBeenCalledWith(
-        DeviceTokenTopics.GetActiveTokens,
-        { userId: event.userId },
-      );
-      expect(fcmService.sendMulticast).toHaveBeenCalledWith(
-        ['tok-1', 'tok-2'],
-        { title: event.title, body: event.body, data: event.data as any },
+      expect(fcmService.sendToTopic).toHaveBeenCalledWith(
+        fcmUserTopic(event.userId),
+        { title: event.title, body: event.body, data: undefined },
       );
     });
 
-    it('deactivates invalid FCM tokens via Kafka event', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.FCM });
+    it('sends to user FCM topic when channel is FCM only, regardless of online state', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.FCM,
+      });
       notificationHelper.isOnline.mockResolvedValue(false);
-      kafkaService.sendWithTimeout.mockResolvedValue({ tokens: ['bad-token'] });
-      fcmService.sendMulticast.mockResolvedValue(['bad-token']);
+      fcmService.sendToTopic.mockResolvedValue(undefined);
 
       await service.dispatch(event);
 
-      expect(kafkaClient.emit).toHaveBeenCalledWith(
-        DeviceTokenTopics.DeactivateToken,
-        { userId: event.userId, token: 'bad-token' },
+      expect(fcmService.sendToTopic).toHaveBeenCalledWith(
+        fcmUserTopic(event.userId),
+        expect.objectContaining({ title: event.title, body: event.body }),
+      );
+    });
+
+    it('also sends FCM when user is online and channel is BOTH', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.BOTH,
+      });
+      notificationHelper.isOnline.mockResolvedValue(true);
+      fcmService.sendToTopic.mockResolvedValue(undefined);
+
+      await service.dispatch(event);
+
+      expect(fcmService.sendToTopic).toHaveBeenCalled();
+    });
+
+    it('coerces non-string data values to strings before sending', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.FCM,
+        data: {
+          count: 42 as unknown as string,
+          flag: true as unknown as string,
+        },
+      });
+      notificationHelper.isOnline.mockResolvedValue(false);
+      fcmService.sendToTopic.mockResolvedValue(undefined);
+
+      await service.dispatch(event);
+
+      expect(fcmService.sendToTopic).toHaveBeenCalledWith(
+        fcmUserTopic(event.userId),
+        expect.objectContaining({ data: { count: '42', flag: 'true' } }),
+      );
+    });
+
+    it('passes data as undefined when event.data is not set', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.FCM,
+        data: undefined,
+      });
+      notificationHelper.isOnline.mockResolvedValue(false);
+      fcmService.sendToTopic.mockResolvedValue(undefined);
+
+      await service.dispatch(event);
+
+      expect(fcmService.sendToTopic).toHaveBeenCalledWith(
+        fcmUserTopic(event.userId),
+        expect.objectContaining({ data: undefined }),
       );
     });
 
     it('skips FCM when user is online and channel is WEBSOCKET only', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.WEBSOCKET });
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.WEBSOCKET,
+      });
       notificationHelper.isOnline.mockResolvedValue(true);
 
       await service.dispatch(event);
 
-      expect(fcmService.sendMulticast).not.toHaveBeenCalled();
+      expect(fcmService.sendToTopic).not.toHaveBeenCalled();
     });
 
-    it('does not emit SENT when token list is empty', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.FCM });
+    it('swallows sendToTopic errors and does not throw', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.FCM,
+      });
       notificationHelper.isOnline.mockResolvedValue(false);
-      kafkaService.sendWithTimeout.mockResolvedValue({ tokens: [] });
+      fcmService.sendToTopic.mockRejectedValue(new Error('FCM unavailable'));
+
+      await expect(service.dispatch(event)).resolves.toBeUndefined();
+    });
+
+    it('does NOT emit SENT when sendToTopic throws', async () => {
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.FCM,
+      });
+      notificationHelper.isOnline.mockResolvedValue(false);
+      fcmService.sendToTopic.mockRejectedValue(new Error('FCM unavailable'));
 
       await service.dispatch(event);
 
-      expect(kafkaClient.emit).not.toHaveBeenCalledWith(
-        NotificationTopics.PersistInbox,
-        expect.objectContaining({ status: NotificationStatus.SENT }),
+      const sentCalls = kafkaClient.emit.mock.calls.filter(
+        (call) =>
+          call[0] === NotificationTopics.PersistInbox &&
+          call[1]?.status === NotificationStatus.SENT,
       );
-    });
-
-    it('swallows errors from token/FCM fetch and does not throw', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.FCM });
-      notificationHelper.isOnline.mockResolvedValue(false);
-      kafkaService.sendWithTimeout.mockRejectedValue(new Error('tokens unavailable'));
-
-      await expect(service.dispatch(event)).resolves.toBeUndefined();
+      expect(sentCalls).toHaveLength(0);
     });
   });
 
@@ -294,7 +363,9 @@ describe('NotificationDispatcherService', () => {
 
   describe('persist SENT', () => {
     it('emits PersistInbox with SENT status after successful delivery', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.BOTH });
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.BOTH,
+      });
       notificationHelper.isOnline.mockResolvedValue(true);
       kafkaService.sendWithTimeout.mockResolvedValue({ tokens: [] });
 
@@ -310,7 +381,9 @@ describe('NotificationDispatcherService', () => {
     });
 
     it('does NOT emit SENT when no delivery was made', async () => {
-      const event = buildEvent({ preferredChannel: NotificationPreferredChannel.WEBSOCKET });
+      const event = buildEvent({
+        preferredChannel: NotificationPreferredChannel.WEBSOCKET,
+      });
       notificationHelper.isOnline.mockResolvedValue(false);
 
       await service.dispatch(event);

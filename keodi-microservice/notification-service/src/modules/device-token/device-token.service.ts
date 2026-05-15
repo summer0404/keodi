@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { DevicePlatform } from '@prisma/client';
 import { PrismaService } from 'src/database/prisma.service';
+import { FcmService } from 'src/providers/fcm/fcm.service';
+import { fcmUserTopic } from 'src/shared/constants/fcm.constant';
 
 @Injectable()
 export class DeviceTokenService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fcmService: FcmService,
+  ) {}
 
   async getActiveTokens(userId: string): Promise<string[]> {
     const records = await this.prisma.userDeviceToken.findMany({
@@ -41,12 +46,35 @@ export class DeviceTokenService {
         updatedAt: new Date(),
       },
     });
+    await this.fcmService.subscribeToTopic(
+      [payload.token],
+      fcmUserTopic(payload.userId),
+    );
   }
 
-  async deactivateToken(token: string): Promise<void> {
+  async deactivateToken(payload: {
+    token: string;
+    userId?: string;
+  }): Promise<void> {
+    const userId =
+      payload.userId ??
+      (
+        await this.prisma.userDeviceToken.findUnique({
+          where: { token: payload.token },
+          select: { userId: true },
+        })
+      )?.userId;
+
     await this.prisma.userDeviceToken.update({
-      where: { token },
+      where: { token: payload.token },
       data: { isActive: false },
     });
+
+    if (userId) {
+      await this.fcmService.unsubscribeFromTopic(
+        [payload.token],
+        fcmUserTopic(userId),
+      );
+    }
   }
 }
