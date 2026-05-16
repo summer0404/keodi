@@ -52,8 +52,8 @@ export default function SearchResultsScreen() {
     radius: string;
     sortBy: string;
     sortOrder: string;
-    mode: string;
     minRating: string;
+    ai: string;
   }>();
 
   const searchTerm = params.search ?? '';
@@ -62,8 +62,8 @@ export default function SearchResultsScreen() {
   const radius = Number(params.radius) || 5;
   const sortBy = (params.sortBy as PlaceSortBy) || 'distance';
   const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'asc';
-  const searchMode = params.mode === 'contextual' ? 'contextual' : 'keyword';
   const minRating = Number(params.minRating) || 0;
+  const isAiMode = params.ai === '1';
 
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,24 +97,36 @@ export default function SearchResultsScreen() {
       }
 
       try {
-        const response = await placesService.searchPlaces({
-          search: searchTerm,
-          latitude,
-          longitude,
-          radius,
-          sortBy,
-          sortOrder,
-          page,
-          limit: DEFAULT_LIMIT,
-          mode: searchMode,
-        });
+        let received: PlaceItem[] = [];
+        let totalPages = page;
+
+        if (isAiMode) {
+          const response = await placesService.searchAIPlaces({
+            message: searchTerm,
+            latitude,
+            longitude,
+          });
+          received = response.places ?? [];
+          totalPages = 1;
+        } else {
+          const response = await placesService.searchPlaces({
+            search: searchTerm,
+            latitude,
+            longitude,
+            radius,
+            sortBy,
+            sortOrder,
+            page,
+            limit: DEFAULT_LIMIT,
+          });
+          received = response.places ?? [];
+          totalPages = response.totalPages ?? page;
+        }
 
         if (requestVersion !== requestVersionRef.current) return;
 
-        const received = response.places ?? [];
         cacheNearbyPlaces(received);
-        const totalPages = response.totalPages ?? page;
-        const nextHasMore = page < totalPages && received.length > 0;
+        const nextHasMore = !isAiMode && page < totalPages && received.length > 0;
 
         setCurrentPage(page);
         setHasMore(nextHasMore);
@@ -127,6 +139,8 @@ export default function SearchResultsScreen() {
         }
       } catch (error) {
         if (requestVersion !== requestVersionRef.current) return;
+
+        console.warn('[SearchResults] Fetch error:', error);
 
         if (isAxiosError(error) && error.response?.status === 404) {
           if (mode === 'replace') {
@@ -145,7 +159,7 @@ export default function SearchResultsScreen() {
         }
       }
     },
-    [searchTerm, latitude, longitude, radius, sortBy, sortOrder, searchMode]
+    [searchTerm, latitude, longitude, radius, sortBy, sortOrder, isAiMode]
   );
 
   useEffect(() => {
@@ -154,14 +168,15 @@ export default function SearchResultsScreen() {
     const version = requestVersionRef.current;
     inFlightPageRef.current = null;
     setCurrentPage(DEFAULT_PAGE);
-    setHasMore(true);
+    setHasMore(!isAiMode);
     fetchPage(DEFAULT_PAGE, 'replace', version);
-  }, [searchTerm, fetchPage]);
+  }, [searchTerm, fetchPage, isAiMode]);
 
   const handleLoadMore = useCallback(() => {
+    if (isAiMode) return;
     if (!hasMoreRef.current || isLoadingRef.current || isLoadingMoreRef.current) return;
     fetchPage(currentPageRef.current + 1, 'append', requestVersionRef.current);
-  }, [fetchPage]);
+  }, [fetchPage, isAiMode]);
 
   // I want to show all results as they are without filtering/sorting
   const displayedPlaces = places;

@@ -119,6 +119,7 @@ export interface PlaceItem {
   fromGoogle: boolean;
   name: string;
   description: string | null;
+  status?: string;
   rating: number;
   googleMapLink: string | null;
   website: string | null;
@@ -135,10 +136,11 @@ export interface PlaceItem {
   createdAt: string;
   updatedAt: string;
   distance?: number;
-  has_attributes: number;
+  has_attributes?: number;
   isFavorite: boolean;
   openingHours?: PlaceOpeningHour[];
   categories?: PlaceCategory[];
+  rankingScore?: number;
 }
 
 export interface GetNearbyPlacesResponse {
@@ -242,7 +244,6 @@ export interface SearchPlacesRequest {
   sortBy?: PlaceSortBy;
   radius?: number;
   search: string;
-  mode?: string;
 }
 
 export interface SearchPlacesResponse {
@@ -697,3 +698,20 @@ export interface OtherUserProfile {
   pendingRequestId: string | null;
   canSendFriendRequest: boolean;
 }
+
+export interface ChatSearchRequest{
+  latitude: number,
+  longitude: number,
+  message: string
+}
+
+export interface ChatSearchResponse{
+  message: string;
+  places: PlaceItem[];
+}
+
+export interface GetPlacesForYouRequest {
+  latitude: number;
+  longitude: number;
+}
+

@@ -183,7 +183,9 @@
     "dateOfBirth": "Date of birth",
     "editProfile": "Edit profile",
     "profile": "Profile",
-    "allWeek": "All week"
+    "allWeek": "All week",
+    "nearby": "Nearby",
+    "forYou": "For you"
   },
   "library": {
     "title": "My Library",

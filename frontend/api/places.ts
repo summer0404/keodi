@@ -9,11 +9,20 @@ import type {
   SearchPlacesRequest,
   SearchPlacesResponse,
   TrendingPlaceItem,
+  GetPlacesForYouRequest,
+  ChatSearchRequest,
+  ChatSearchResponse,
 } from '@/types/api';
 
 export const placesService = {
   getNearbyPlaces: async (params: GetNearbyPlacesRequest): Promise<GetNearbyPlacesResponse> => {
     const response = await apiClient.get<GetNearbyPlacesResponse>(API_ENDPOINTS.PLACES_NEAR_ME, {
+      params,
+    });
+    return response.data;
+  },
+  getPlaceForYou: async (params: GetPlacesForYouRequest): Promise<PlaceItem[]> => {
+    const response = await apiClient.get<PlaceItem[]>(API_ENDPOINTS.PLACES_FOR_YOU, {
       params,
     });
     return response.data;
@@ -33,10 +42,13 @@ export const placesService = {
     return response.data;
   },
   searchPlaces: async (params: SearchPlacesRequest): Promise<SearchPlacesResponse> => {
-    // console.log('placesService.searchPlaces ->', API_ENDPOINTS.PLACES_SEARCH, params);
     const response = await apiClient.get<SearchPlacesResponse>(API_ENDPOINTS.PLACES_SEARCH, {
       params,
     });
+    return response.data;
+  },
+  searchAIPlaces: async (params: ChatSearchRequest): Promise<ChatSearchResponse> => {
+    const response = await apiClient.post<ChatSearchResponse>(API_ENDPOINTS.PLACES_SEARCH_AI, params);
     return response.data;
   },
   getTrendingPlaces: async (): Promise<TrendingPlaceItem[]> => {
