@@ -141,7 +141,7 @@ export default function CategoriesOnboardingScreen() {
           disabled={!canContinue || submitMutation.isPending || categoriesQuery.isLoading}
           onPress={handleContinue}
         >
-          {submitMutation.isPending ? 'Loading...' : t('onboarding.button.continue')}
+          {submitMutation.isPending ? t('button.continuing') : t('button.continue')}
         </Button>
       </ScrollView>
     </ImageBackground>

@@ -183,7 +183,9 @@
     "dateOfBirth": "Ngày sinh",
     "editProfile": "Hồ sơ người dùng",
     "profile": "Hồ sơ",
-    "allWeek": "Cả tuần"
+    "allWeek": "Cả tuần",
+    "nearby": "Gần bạn",
+    "forYou": "Dành cho bạn"
   },
   "library": {
     "title": "Thư viện",
@@ -386,7 +388,9 @@
     "joining": "Đang tham gia...",
     "share": "Chia sẻ",
     "direction": "Chỉ đường",
-    "clearAll": "Xóa tất cả"
+    "clearAll": "Xóa tất cả",
+    "continue": "Tiếp tục",
+    "continuing": "Đang tiếp tục..."
   },
   "friends": {
     "title": "Bạn bè",

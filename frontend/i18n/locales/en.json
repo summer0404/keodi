@@ -183,7 +183,9 @@
     "dateOfBirth": "Date of birth",
     "editProfile": "Edit profile",
     "profile": "Profile",
-    "allWeek": "All week"
+    "allWeek": "All week",
+    "nearby": "Nearby",
+    "forYou": "For you"
   },
   "library": {
     "title": "My Library",
@@ -386,7 +388,9 @@
     "joining": "Joining...",
     "share": "Share",
     "direction": "Direction",
-    "clearAll": "Clear all"
+    "clearAll": "Clear all",
+    "continue": "Continue",
+    "countinuing": "Continuing..."
   },
   "friends": {
     "title": "Friends",

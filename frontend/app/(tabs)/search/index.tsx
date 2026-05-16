@@ -120,7 +120,7 @@ export default function SearchScreen() {
           radius: String(radius),
           sortBy,
           sortOrder: buildSortOrder(sortBy),
-          mode: isAIMode ? 'contextual' : 'keyword',
+          ai: isAIMode ? '1' : '0',
         },
       } as any);
     },

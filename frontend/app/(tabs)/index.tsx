@@ -57,6 +57,7 @@ export default function HomeScreen() {
   const cacheNearbyPlaces = usePlacesStore((s) => s.cacheNearbyPlaces);
   const setLastNearbyParams = usePlacesStore((s) => s.setLastNearbyParams);
   const setPlaceFavorite = usePlacesStore((s) => s.setPlaceFavorite);
+  const upsertPlace = usePlacesStore((s) => s.upsertPlace);
   const coords = useLocationStore((s) => s.coords);
   const isLocationLoading = useLocationStore((s) => s.isLocationLoading);
   const locationPermissionDenied = useLocationStore((s) => s.locationPermissionDenied);
@@ -73,10 +74,13 @@ export default function HomeScreen() {
 
   const [locationLabel, setLocationLabel] = useState(t('home.loadingLocation'));
   const [sortBy, setSortBy] = useState<PlaceSortBy>(DEFAULT_SORT_BY);
+  const [activeTab, setActiveTab] = useState<'nearby' | 'forYou'>('nearby');
   const settingRadius = useSettingStore((s) => s.defaultRadius);
   const [radius, setRadius] = useState(settingRadius ?? DEFAULT_RADIUS);
   const [nearbyPlaces, setNearbyPlaces] = useState<PlaceItem[]>([]);
+  const [forYouPlaces, setForYouPlaces] = useState<PlaceItem[]>([]);
   const [isPlacesLoading, setIsPlacesLoading] = useState(false);
+  const [isForYouLoading, setIsForYouLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(DEFAULT_PAGE);
   const [hasMorePlaces, setHasMorePlaces] = useState(true);
@@ -96,6 +100,7 @@ export default function HomeScreen() {
   const isLoadingMoreRef = useRef(isLoadingMore);
   const cacheNearbyPlacesRef = useRef(cacheNearbyPlaces);
   const setLastNearbyParamsRef = useRef(setLastNearbyParams);
+  const forYouRequestVersionRef = useRef(0);
 
   coordsRef.current = coords;
   radiusRef.current = radius;
@@ -182,6 +187,10 @@ export default function HomeScreen() {
 
   // Load more: read state via refs instead of closure
   const handleLoadMore = useCallback(() => {
+    if (activeTab !== 'nearby') {
+      return;
+    }
+
     if (
       !coordsRef.current ||
       !hasMorePlacesRef.current ||
@@ -191,7 +200,7 @@ export default function HomeScreen() {
       return;
     }
     fetchPlacesPage(currentPageRef.current + 1, 'append', requestVersionRef.current);
-  }, [fetchPlacesPage]);
+  }, [activeTab, fetchPlacesPage]);
 
   const fetchCurrentLocation = useCallback(
     async (options?: { force?: boolean }) => {
@@ -259,7 +268,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void fetchCurrentLocation();
-  }, [fetchCurrentLocation]);
+  }, []);
 
   // Effect only depends on coords/radius/sortBy — fetchPlacesPage is now stable so no need to include it in deps
   useEffect(() => {
@@ -283,10 +292,49 @@ export default function HomeScreen() {
     setRadius(settingRadius ?? DEFAULT_RADIUS);
   }, [settingRadius]);
 
+  useEffect(() => {
+    if (activeTab !== 'forYou') return;
+
+    const currentCoords = coordsRef.current;
+    if (!currentCoords) {
+      setForYouPlaces([]);
+      setIsForYouLoading(false);
+      return;
+    }
+
+    forYouRequestVersionRef.current += 1;
+    const requestVersion = forYouRequestVersionRef.current;
+    let active = true;
+
+    setIsForYouLoading(true);
+
+    placesService
+      .getPlaceForYou({
+        latitude: currentCoords.latitude,
+        longitude: currentCoords.longitude,
+      })
+      .then((data) => {
+        if (!active || requestVersion !== forYouRequestVersionRef.current) return;
+        setForYouPlaces(data ?? []);
+      })
+      .catch(() => {
+        if (!active || requestVersion !== forYouRequestVersionRef.current) return;
+        setForYouPlaces([]);
+      })
+      .finally(() => {
+        if (!active || requestVersion !== forYouRequestVersionRef.current) return;
+        setIsForYouLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeTab, coords]);
+
   // Scroll to top when radius or sortBy changes for better UX
   useEffect(() => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, [radius, sortBy]);
+  }, [activeTab, radius, sortBy]);
 
   // Render item separated out to avoid inline closure that gets recreated every render
   const renderItem = useCallback(
@@ -309,12 +357,14 @@ export default function HomeScreen() {
           }
 
           setNearbyPlaces((prev) => updateFavoriteInPlaces(prev, item.id, nextIsFavorite));
+          setForYouPlaces((prev) => updateFavoriteInPlaces(prev, item.id, nextIsFavorite));
           setPlaceFavorite(item.id, nextIsFavorite);
           return true;
         } catch (error) {
           // If place is already in favorites, keep the heart in favorited state.
           if (nextIsFavorite && isAxiosError(error) && error.response?.status === 409) {
             setNearbyPlaces((prev) => updateFavoriteInPlaces(prev, item.id, true));
+            setForYouPlaces((prev) => updateFavoriteInPlaces(prev, item.id, true));
             setPlaceFavorite(item.id, true);
             return true;
           }
@@ -324,7 +374,12 @@ export default function HomeScreen() {
       };
 
       return (
-        <Pressable onPress={() => router.push(`/place/${item.id}` as any)}>
+        <Pressable
+          onPress={() => {
+            upsertPlace(item);
+            router.push(`/place/${item.id}` as any);
+          }}
+        >
           <PlaceCard
             className=""
             style={{ width: cardWidth, elevation: 0 }}
@@ -348,7 +403,7 @@ export default function HomeScreen() {
         </Pressable>
       );
     },
-    [cardWidth, router, setPlaceFavorite, t]
+    [cardWidth, router, setPlaceFavorite, t, upsertPlace]
   );
 
   const itemSeparator = useCallback(() => <View style={{ height: 20 }} />, []);
@@ -357,7 +412,7 @@ export default function HomeScreen() {
 
   const listFooter = (
     <>
-      {isLoadingMore ? (
+      {activeTab === 'nearby' && isLoadingMore ? (
         <Typography className="mt-4 text-center text-gray-500">
           {t('home.loadingPlaces')}
         </Typography>
@@ -420,33 +475,66 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View className="mt-3 flex-row gap-3 items-center">
-          <ArrowUpDown size={18} color={Palette.black} strokeWidth={2} />
-          <Select
-            value={sortBy}
-            onChange={(value) => {
-              if (typeof value === 'string') setSortBy(value as PlaceSortBy);
-            }}
-            options={sortOptions}
-            className="flex-[1.2]"
-          />
+        <View className="flex-row border-b border-gray-100">
+          <Pressable
+            onPress={() => setActiveTab('nearby')}
+            className={`flex-1 py-3 items-center border-b-2 ${
+              activeTab === 'nearby' ? 'border-[#3B5BDB]' : 'border-transparent'
+            }`}
+          >
+            <Typography variant="h5" className={activeTab === 'nearby' ? '' : 'text-gray-400'}>
+              {t('home.nearby')}
+            </Typography>
+          </Pressable>
 
-          <MoveDiagonal size={18} color={Palette.black} strokeWidth={2} />
-          <Select
-            value={radius}
-            onChange={(value) => {
-              if (typeof value === 'number') setRadius(value);
-            }}
-            options={radiusOptions}
-            className="flex-1"
-          />
+          <Pressable
+            onPress={() => setActiveTab('forYou')}
+            className={`flex-1 py-3 items-center border-b-2 ${
+              activeTab === 'forYou' ? 'border-[#3B5BDB]' : 'border-transparent'
+            }`}
+          >
+            <Typography variant="h5" className={activeTab === 'forYou' ? '' : 'text-gray-400'}>
+              {t('home.forYou')}
+            </Typography>
+          </Pressable>
         </View>
 
-        {isPlacesLoading ? (
+        {activeTab === 'nearby' && (
+          <View className="mt-3 flex-row gap-3 items-center">
+            <>
+              <ArrowUpDown size={18} color={Palette.black} strokeWidth={2} />
+              <Select
+                value={sortBy}
+                onChange={(value) => {
+                  if (typeof value === 'string') setSortBy(value as PlaceSortBy);
+                }}
+                options={sortOptions}
+                className="flex-[1.2]"
+              />
+            </>
+            <>
+              <MoveDiagonal size={18} color={Palette.black} strokeWidth={2} />
+              <Select
+                value={radius}
+                onChange={(value) => {
+                  if (typeof value === 'number') setRadius(value);
+                }}
+                options={radiusOptions}
+                className="flex-1"
+              />
+            </>
+          </View>
+        )}
+
+        {(activeTab === 'nearby' ? isPlacesLoading : isForYouLoading) ? (
           <Typography className="mt-4 text-gray-500">{t('home.loadingPlaces')}</Typography>
         ) : null}
 
-        {!isPlacesLoading && nearbyPlaces.length === 0 ? (
+        {(
+          activeTab === 'nearby'
+            ? !isPlacesLoading && nearbyPlaces.length === 0
+            : !isForYouLoading && forYouPlaces.length === 0
+        ) ? (
           <AlertScreen
             imageSrc={require('@/assets/images/404.png')}
             heading="home.noPlaces"
@@ -461,13 +549,13 @@ export default function HomeScreen() {
 
       <FlatList
         ref={flatListRef}
-        data={nearbyPlaces}
+        data={activeTab === 'nearby' ? nearbyPlaces : forYouPlaces}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ItemSeparatorComponent={itemSeparator}
         showsVerticalScrollIndicator={false}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        onEndReached={activeTab === 'nearby' ? handleLoadMore : undefined}
+        onEndReachedThreshold={activeTab === 'nearby' ? 0.5 : undefined}
         // Performance tuning
         removeClippedSubviews={false} // true cause jank on Android when scrolling fast
         initialNumToRender={4}
