@@ -388,7 +388,9 @@
     "joining": "Đang tham gia...",
     "share": "Chia sẻ",
     "direction": "Chỉ đường",
-    "clearAll": "Xóa tất cả"
+    "clearAll": "Xóa tất cả",
+    "continue": "Tiếp tục",
+    "continuing": "Đang tiếp tục..."
   },
   "friends": {
     "title": "Bạn bè",

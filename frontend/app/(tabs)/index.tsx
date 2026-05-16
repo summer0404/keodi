@@ -268,7 +268,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void fetchCurrentLocation();
-  }, [fetchCurrentLocation]);
+  }, []);
 
   // Effect only depends on coords/radius/sortBy — fetchPlacesPage is now stable so no need to include it in deps
   useEffect(() => {
@@ -499,31 +499,30 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {(activeTab === 'nearby' || activeTab === 'forYou') && (
+        {activeTab === 'nearby' && (
           <View className="mt-3 flex-row gap-3 items-center">
-            {activeTab === 'nearby' && (
-              <>
-                <ArrowUpDown size={18} color={Palette.black} strokeWidth={2} />
-                <Select
-                  value={sortBy}
-                  onChange={(value) => {
-                    if (typeof value === 'string') setSortBy(value as PlaceSortBy);
-                  }}
-                  options={sortOptions}
-                  className="flex-[1.2]"
-                />
-              </>
-            )}
-
-            <MoveDiagonal size={18} color={Palette.black} strokeWidth={2} />
-            <Select
-              value={radius}
-              onChange={(value) => {
-                if (typeof value === 'number') setRadius(value);
-              }}
-              options={radiusOptions}
-              className="flex-1"
-            />
+            <>
+              <ArrowUpDown size={18} color={Palette.black} strokeWidth={2} />
+              <Select
+                value={sortBy}
+                onChange={(value) => {
+                  if (typeof value === 'string') setSortBy(value as PlaceSortBy);
+                }}
+                options={sortOptions}
+                className="flex-[1.2]"
+              />
+            </>
+            <>
+              <MoveDiagonal size={18} color={Palette.black} strokeWidth={2} />
+              <Select
+                value={radius}
+                onChange={(value) => {
+                  if (typeof value === 'number') setRadius(value);
+                }}
+                options={radiusOptions}
+                className="flex-1"
+              />
+            </>
           </View>
         )}
 

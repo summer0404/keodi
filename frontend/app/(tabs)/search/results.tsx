@@ -140,8 +140,6 @@ export default function SearchResultsScreen() {
       } catch (error) {
         if (requestVersion !== requestVersionRef.current) return;
 
-        console.warn('[SearchResults] Fetch error:', error);
-
         if (isAxiosError(error) && error.response?.status === 404) {
           if (mode === 'replace') {
             setPlaces([]);

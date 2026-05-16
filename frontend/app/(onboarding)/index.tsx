@@ -10,8 +10,10 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   View,
+  Pressable,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 const imageSlides = [
@@ -44,6 +46,9 @@ export default function OnboardingScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList<number> | null>(null);
   const { hasSeenOnboarding, setHasSeenOnboarding, _hasHydrated } = useSettingStore();
+  const insets = useSafeAreaInsets();
+  const { language, setLanguage } = useSettingStore();
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!_hasHydrated) {
@@ -61,6 +66,7 @@ export default function OnboardingScreen() {
 
   const completeOnboarding = () => {
     setHasSeenOnboarding(true);
+    setLangMenuOpen(false);
     router.replace('/login');
   };
 
@@ -71,6 +77,7 @@ export default function OnboardingScreen() {
     }
 
     const nextIndex = activeIndex + 1;
+    setLangMenuOpen(false);
     flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
   };
 
@@ -90,11 +97,48 @@ export default function OnboardingScreen() {
     </View>
   );
 
+  const LANGUAGE_FLAGS = [
+    { label: '🇻🇳', value: 'vi', name: 'Tiếng Việt' },
+    { label: '🇬🇧', value: 'en', name: 'English' },
+  ];
+
   const renderItem: ListRenderItem<number> = ({ item }) => {
     const slide = imageSlides[item];
     return (
       <ImageBackground source={slide.image} style={{ width }} className="flex-1 overflow-hidden">
         <View className="flex-1 bg-black/30 px-6 pb-20 pt-10 justify-end">
+          <View style={{ position: 'absolute', top: insets.top + 8, right: 16, zIndex: 20 }}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setLangMenuOpen((s) => !s)}
+              className="px-3 py-1 bg-white rounded-full flex-row items-center"
+            >
+              <Typography className="mr-2">
+                {LANGUAGE_FLAGS.find((f) => f.value === language)?.label}
+              </Typography>
+              <Typography variant="caption">
+                {LANGUAGE_FLAGS.find((f) => f.value === language)?.value?.toUpperCase()}
+              </Typography>
+            </Pressable>
+
+            {langMenuOpen && (
+              <View className="mt-2 rounded-lg overflow-hidden bg-white shadow-lg">
+                {LANGUAGE_FLAGS.map((flag) => (
+                  <Pressable
+                    key={flag.value}
+                    onPress={() => {
+                      setLanguage(flag.value);
+                      setLangMenuOpen(false);
+                    }}
+                    className="px-3 py-2 flex-row items-center gap-3"
+                  >
+                    <Typography>{flag.label}</Typography>
+                    <Typography>{flag.name}</Typography>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
           <Typography variant="h4" className="text-white justify-center items-center">
             {t(slide.titleKey)}
           </Typography>

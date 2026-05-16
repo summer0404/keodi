@@ -388,7 +388,9 @@
     "joining": "Joining...",
     "share": "Share",
     "direction": "Direction",
-    "clearAll": "Clear all"
+    "clearAll": "Clear all",
+    "continue": "Continue",
+    "countinuing": "Continuing..."
   },
   "friends": {
     "title": "Friends",
