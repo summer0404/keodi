@@ -11,6 +11,9 @@
     "ios": {
       "bundleIdentifier": "com.keodi.app",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "buildNumber": "1",
       "supportsTablet": true,
       "icon": "./assets/images/icon.png",
@@ -26,7 +29,6 @@
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/icon-new.png"
-        // "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -39,6 +41,8 @@
     "plugins": [
       "expo-router",
       "@rnmapbox/maps/app.plugin.js",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       [
         "expo-splash-screen",
         {
@@ -50,7 +54,7 @@
             "backgroundColor": "#000000"
           }
         }
-      ],
+      ],  
       "expo-secure-store"
     ],
     "experiments": {

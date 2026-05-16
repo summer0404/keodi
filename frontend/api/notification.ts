@@ -14,7 +14,8 @@ const logMissingDeviceTokenEndpoint = () => {
 
   if (__DEV__) {
     console.warn(
-      '[notification] Missing EXPO_PUBLIC_DEVICE_TOKEN_ENDPOINT. Skip syncing FCM token to backend.'
+      '[notification] ⚠️  Missing or invalid EXPO_PUBLIC_DEVICE_TOKEN_ENDPOINT. Device tokens will NOT sync to backend.',
+      { endpoint: DEVICE_TOKEN_ENDPOINT || '(not set)' }
     );
   }
 };
@@ -30,7 +31,7 @@ export const notificationService = {
       return false;
     }
 
-    await apiClient.post(DEVICE_TOKEN_ENDPOINT, {
+    await apiClient.put(DEVICE_TOKEN_ENDPOINT, {
       token,
       platform: Platform.OS.toUpperCase(),
     });
