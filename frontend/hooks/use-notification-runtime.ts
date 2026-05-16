@@ -16,6 +16,10 @@ type RuntimeArgs = {
   accessToken: string | null;
 };
 
+const FCM_TOPIC_ALL = 'all';
+
+const fcmUserTopic = (userId: string) => `user-${userId}`;
+
 type NotificationActionKind = 'none' | 'navigate' | 'join-group-by-sharecode';
 
 type RealtimeNotificationEvent = {
@@ -365,7 +369,11 @@ const syncTokenSafely = async (token: string) => {
   }
 };
 
-const trySetupFcm = async () => {
+const trySetupFcm = async (
+  syncRuntimeTopics: (userId: string | null) => Promise<void>,
+  currentUserId: string | null,
+  setFcmReady: (ready: boolean) => void
+): Promise<boolean> => {
   try {
     if (Platform.OS === 'ios') {
       await messaging().registerDeviceForRemoteMessages();
@@ -377,10 +385,11 @@ const trySetupFcm = async () => {
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
     if (!granted) {
+      setFcmReady(false);
       if (__DEV__) {
         console.log('[notification] FCM permission denied by user');
       }
-      return;
+      return false;
     }
 
     const token = await messaging().getToken();
@@ -388,45 +397,25 @@ const trySetupFcm = async () => {
       console.log('[notification] FCM token obtained:', token);
     }
     await syncTokenSafely(token);
-
-    // Auto-subscribe device to a global FCM topic so you can target all users
-    // from Firebase Console or backend without copying individual tokens.
-    const topicEnv = process.env.EXPO_PUBLIC_FCM_GLOBAL_TOPIC?.trim();
-    const topic = topicEnv || (__DEV__ ? 'dev-all' : 'all');
-    try {
-      await messaging().subscribeToTopic(topic);
-      if (__DEV__) {
-        console.log(`[notification] Subscribed to topic: ${topic}`);
-      }
-    } catch (err) {
-      if (__DEV__) {
-        console.warn('[notification] Topic subscribe failed', err);
-      }
-    }
+    setFcmReady(true);
+    await syncRuntimeTopics(currentUserId);
+    return true;
   } catch (error) {
+    setFcmReady(false);
     if (__DEV__) {
       console.warn('[notification] FCM setup failed', error);
     }
+    return false;
   }
 };
 
-const bindTokenRefresh = () => {
+const bindTokenRefresh = (
+  syncRuntimeTopics: (userId: string | null) => Promise<void>,
+  getCurrentUserId: () => string | null
+) => {
   return messaging().onTokenRefresh(async (token) => {
     await syncTokenSafely(token);
-
-    // Re-subscribe to topic when token is refreshed to keep device in topic groups
-    const topicEnv = process.env.EXPO_PUBLIC_FCM_GLOBAL_TOPIC?.trim();
-    const topic = topicEnv || (__DEV__ ? 'dev-all' : 'all');
-    try {
-      await messaging().subscribeToTopic(topic);
-      if (__DEV__) {
-        console.log(`[notification] Re-subscribed to topic: ${topic}`);
-      }
-    } catch (err) {
-      if (__DEV__) {
-        console.warn('[notification] Topic re-subscribe failed', err);
-      }
-    }
+    await syncRuntimeTopics(getCurrentUserId());
   });
 };
 
@@ -439,6 +428,60 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
   const [isPrimaryLoading, setIsPrimaryLoading] = useState(false);
   const lastHandledEventIdRef = useRef<string | null>(null);
   const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentUserIdRef = useRef<string | null>(currentUserId);
+  const subscribedUserTopicRef = useRef<string | null>(null);
+  const isFcmReadyRef = useRef(false);
+
+  currentUserIdRef.current = currentUserId;
+
+  const syncRuntimeTopics = useCallback(async (userId: string | null) => {
+    if (!isFcmReadyRef.current) {
+      return;
+    }
+
+    try {
+      await messaging().subscribeToTopic(FCM_TOPIC_ALL);
+      if (__DEV__) {
+        console.log(`[notification] Subscribed to topic: ${FCM_TOPIC_ALL}`);
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('[notification] Global topic subscribe failed', error);
+      }
+    }
+
+    const nextUserTopic = userId ? fcmUserTopic(userId) : null;
+    const previousUserTopic = subscribedUserTopicRef.current;
+
+    if (previousUserTopic && previousUserTopic !== nextUserTopic) {
+      try {
+        await messaging().unsubscribeFromTopic(previousUserTopic);
+        if (__DEV__) {
+          console.log(`[notification] Unsubscribed from topic: ${previousUserTopic}`);
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[notification] User topic unsubscribe failed', error);
+        }
+      }
+    }
+
+    if (nextUserTopic) {
+      try {
+        await messaging().subscribeToTopic(nextUserTopic);
+        if (__DEV__) {
+          console.log(`[notification] Subscribed to topic: ${nextUserTopic}`);
+        }
+        subscribedUserTopicRef.current = nextUserTopic;
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[notification] User topic subscribe failed', error);
+        }
+      }
+    } else {
+      subscribedUserTopicRef.current = null;
+    }
+  }, []);
 
   const dismissBanner = useCallback(() => {
     if (autoDismissTimerRef.current) {
@@ -448,6 +491,45 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     setIsPrimaryLoading(false);
     setBanner(null);
   }, []);
+
+  useEffect(() => {
+    if (!accessToken) {
+      isFcmReadyRef.current = false;
+      const previousUserTopic = subscribedUserTopicRef.current;
+      subscribedUserTopicRef.current = null;
+      if (previousUserTopic) {
+        void messaging()
+          .unsubscribeFromTopic(previousUserTopic)
+          .catch(() => {
+            if (__DEV__) {
+              console.warn('[notification] User topic cleanup failed', previousUserTopic);
+            }
+          });
+      }
+      return;
+    }
+
+    void trySetupFcm(syncRuntimeTopics, currentUserIdRef.current, (ready) => {
+      isFcmReadyRef.current = ready;
+    });
+  }, [accessToken, syncRuntimeTopics]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      void syncRuntimeTopics(null);
+      return;
+    }
+
+    void syncRuntimeTopics(currentUserId);
+  }, [accessToken, currentUserId, syncRuntimeTopics]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      return undefined;
+    }
+
+    return bindTokenRefresh(syncRuntimeTopics, () => currentUserIdRef.current);
+  }, [accessToken, syncRuntimeTopics]);
 
   const executeAction = useCallback(async (targetBanner: NotificationBanner) => {
     if (targetBanner.actionKind === 'join-group-by-sharecode') {
@@ -1100,8 +1182,6 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       return;
     }
 
-    void trySetupFcm();
-
     const socket = io(`${resolveSocketUrl()}/notifications`, {
       transports: ['websocket'],
       auth: {
@@ -1135,7 +1215,6 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     socket.on('notification.received', onNotificationReceived);
 
     const unsubscribeForegroundMessage = bindForegroundMessage();
-    const unsubscribeTokenRefresh = bindTokenRefresh();
     const unsubscribeOpened = messaging().onNotificationOpenedApp(handleOpenedRemoteMessage);
 
     void messaging()
@@ -1154,7 +1233,6 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       socket.off('notification.received', onNotificationReceived);
       socket.disconnect();
       unsubscribeForegroundMessage();
-      unsubscribeTokenRefresh();
       unsubscribeOpened();
     };
   }, [

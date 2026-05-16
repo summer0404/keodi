@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DevicePlatform } from '@prisma/client';
 import { DeviceTokenController } from '../device-token.controller';
 import { DeviceTokenService } from '../device-token.service';
-import { DevicePlatform } from '@prisma/client';
 
 describe('DeviceTokenController', () => {
   let controller: DeviceTokenController;
@@ -51,7 +51,9 @@ describe('DeviceTokenController', () => {
     it('propagates service errors', async () => {
       service.getActiveTokens.mockRejectedValue(new Error('service error'));
 
-      await expect(controller.getActive({ userId: 'user-3' })).rejects.toThrow('service error');
+      await expect(controller.getActive({ userId: 'user-3' })).rejects.toThrow(
+        'service error',
+      );
     });
   });
 
@@ -92,18 +94,35 @@ describe('DeviceTokenController', () => {
   // ---- deactive ----
 
   describe('deactive', () => {
-    it('delegates to service.deactivateToken with the token', async () => {
+    it('delegates to service.deactivateToken with token only', async () => {
       service.deactivateToken.mockResolvedValue(undefined);
 
       await controller.deactive({ token: 'bad-token' });
 
-      expect(service.deactivateToken).toHaveBeenCalledWith('bad-token');
+      expect(service.deactivateToken).toHaveBeenCalledWith({
+        token: 'bad-token',
+      });
+    });
+
+    it('delegates to service.deactivateToken with token and userId when both are present', async () => {
+      service.deactivateToken.mockResolvedValue(undefined);
+
+      await controller.deactive({ token: 'bad-token', userId: 'user-1' });
+
+      expect(service.deactivateToken).toHaveBeenCalledWith({
+        token: 'bad-token',
+        userId: 'user-1',
+      });
     });
 
     it('propagates service errors', async () => {
-      service.deactivateToken.mockRejectedValue(new Error('deactivation failed'));
+      service.deactivateToken.mockRejectedValue(
+        new Error('deactivation failed'),
+      );
 
-      await expect(controller.deactive({ token: 'tok' })).rejects.toThrow('deactivation failed');
+      await expect(controller.deactive({ token: 'tok' })).rejects.toThrow(
+        'deactivation failed',
+      );
     });
   });
 });

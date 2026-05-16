@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
-import { UpsertDeviceTokenDto } from 'src/shared/dtos/device-token.dto';
 import { DeviceTokenTopics } from 'src/shared/constants/topic.constant';
+import { UpsertDeviceTokenDto } from 'src/shared/dtos/device-token.dto';
 
 @Injectable()
 export class DeviceTokenService {
@@ -10,7 +10,7 @@ export class DeviceTokenService {
   upsert(userId: string, upsertDeviceTokenDto: UpsertDeviceTokenDto) {
     this.kafkaService.getClient().emit(DeviceTokenTopics.UpsertToken, {
       userId,
-      ...upsertDeviceTokenDto
+      ...upsertDeviceTokenDto,
     });
   }
 }
