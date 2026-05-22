@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { ImageService } from 'src/providers/image/image.service';
+import { ImageFolders } from 'src/shared/constants/image.constant';
 import { UserTopics } from 'src/shared/constants/topic.constant';
 import { UpdateUserProfileDto } from 'src/shared/dtos/user.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly kafkaService: KafkaService) {}
+  constructor(
+    private readonly kafkaService: KafkaService,
+    private readonly imageService: ImageService,
+  ) {}
 
   async searchUsers(
     userId: string,
@@ -40,10 +45,10 @@ export class UserService {
   }
 
   async updatePicture(userId: string, file: Buffer, type: string) {
+    const key = await this.imageService.uploadAndGetKey(ImageFolders.USER, file, type);
     return await this.kafkaService.sendWithTimeout(UserTopics.UpdatePicture, {
       userId,
-      file,
-      type,
+      key,
     });
   }
 

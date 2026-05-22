@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiBody,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -60,9 +61,23 @@ export function ApiListMessages() {
 
 export function ApiSendMessage() {
   return applyDecorators(
-    ApiOperation({ summary: 'Send a message (REST fallback)' }),
+    ApiOperation({
+      summary: 'Send a message',
+      description: 'Send a text message or an image. For IMAGE type, attach the image as the `file` field (multipart/form-data) — the server handles the upload automatically.',
+    }),
+    ApiConsumes('multipart/form-data'),
     ApiParam({ name: 'id', description: 'Conversation ID' }),
-    ApiBody({ type: SendMessageDto }),
+    ApiBody({
+      schema: {
+        type: 'object',
+        properties: {
+          content: { type: 'string', example: 'Hello!' },
+          type: { type: 'string', enum: ['TEXT', 'IMAGE', 'FILE', 'SYSTEM'], example: 'TEXT' },
+          replyToId: { type: 'string', example: 'msg-id' },
+          file: { type: 'string', format: 'binary', description: 'Image file (required when type=IMAGE)' },
+        },
+      },
+    }),
     ApiOkResponse({ description: 'Created message' }),
     ApiUnauthorizedResponse({ description: 'Unauthorized' }),
   );

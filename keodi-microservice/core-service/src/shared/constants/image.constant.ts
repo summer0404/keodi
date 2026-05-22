@@ -4,6 +4,7 @@ export const ImageConstants = {
   IMAGE_FOLDERS: {
     USER_IMAGES: 'user_images',
     PLACE_IMAGES: 'place_images',
+    CHAT_IMAGES: 'chat_images',
   },
 
   PUBLIC_IMAGE_FOLDERS: ['user_images', 'place_images'],

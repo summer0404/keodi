@@ -1,5 +1,6 @@
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { Test, TestingModule } from '@nestjs/testing';
+import { AiSearchCreditGuard } from 'src/common/guards/ai-search-quota.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
 import { RoleGuard } from 'src/common/guards/role.guard';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
@@ -35,6 +36,8 @@ describe('PlaceController (api-gateway)', () => {
       .overrideGuard(JwtAuthGuard)
       .useValue(mockGuard)
       .overrideGuard(RoleGuard)
+      .useValue(mockGuard)
+      .overrideGuard(AiSearchCreditGuard)
       .useValue(mockGuard)
       .overrideInterceptor(CacheInterceptor)
       .useValue(mockInterceptor)

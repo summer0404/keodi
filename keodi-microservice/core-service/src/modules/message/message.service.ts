@@ -5,6 +5,7 @@ import { ImageService } from 'src/modules/image/image.service';
 import { ConversationService } from 'src/modules/conversation/conversation.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { ChatNotificationBody } from 'src/shared/constants/chat.constant';
 import { ChatErrorMessages } from 'src/shared/constants/error.constant';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
@@ -55,8 +56,14 @@ export class MessageService {
         }
       : msg.replyTo;
 
+    const resolvedContent =
+      msg.type === MessageType.IMAGE
+        ? await this.imageService.getImageViewUrl(msg.content)
+        : msg.content;
+
     return {
       ...msg,
+      content: resolvedContent,
       sender: resolvedSender,
       replyTo: resolvedReplyTo,
     } as MessageWithSender;
@@ -135,6 +142,8 @@ export class MessageService {
         .join(' ') || 'Someone';
     const senderPictureUrl = resolvedMessage.sender?.pictureUrl ?? null;
 
+    const notificationBody = type === MessageType.IMAGE ? ChatNotificationBody.IMAGE_MESSAGE : content.slice(0, 100);
+
     for (const userId of memberIds) {
       if (userId === senderId) continue;
 
@@ -146,7 +155,7 @@ export class MessageService {
         userId,
         type: NotificationType.CHAT_MESSAGE,
         title: `${senderName}`,
-        body: content.slice(0, 100),
+        body: notificationBody,
         data: {
           conversationId,
           messageId: message.id,

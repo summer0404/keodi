@@ -1,10 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
 import { S3Service } from 'src/providers/s3/s3.service';
 import { ImageErrorMessages } from 'src/shared/constants/error.constant';
 import { ImageConstants } from 'src/shared/constants/image.constant';
-import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 
 @Injectable()
 export class ImageService {
@@ -24,60 +24,30 @@ export class ImageService {
     }
   }
 
-  async getImageViewUrl(key: string): Promise<string> {
-    try {
-      if (
-        key.startsWith(ImageConstants.PREFIX_URL.HTTP) ||
-        key.startsWith(ImageConstants.PREFIX_URL.HTTPS)
-      ) {
-        return key;
-      }
-
-      return await this.s3Service.generateImageViewPresignedUrl(key);
-    } catch (error) {
-      return handleServiceErrorCatching(error);
+  async generateUploadUrl(folder: string, mimeType?: string): Promise<{ uploadUrl: string; key: string }> {
+    if (mimeType) {
+      this.validateImageFile(mimeType);
     }
+    const key = `${folder}/${randomUUID()}`;
+    const uploadUrl = await this.s3Service.generateImageUploadPresignedUrl(key, mimeType);
+    return { uploadUrl, key };
   }
 
-  async uploadImage(
-    key: string,
-    file: Buffer | string | { data?: number[] },
-    type?: string,
-    imageId?: string,
-  ): Promise<{ id: string; key: string }> {
-    if (type) {
-      this.validateImageFile(type);
+  async persistImageRecord(key: string, imageId?: string): Promise<{ id: string; key: string }> {
+    const resolvedImageId = imageId?.trim();
+    const image = resolvedImageId
+      ? await this.prismaService.image.update({ where: { id: resolvedImageId }, data: { url: key } })
+      : await this.prismaService.image.create({ data: { url: key }, select: { id: true, url: true } });
+    return { id: image.id, key: image.url };
+  }
+
+  async getImageViewUrl(key: string): Promise<string> {
+    if (
+      key.startsWith(ImageConstants.PREFIX_URL.HTTP) ||
+      key.startsWith(ImageConstants.PREFIX_URL.HTTPS)
+    ) {
+      return key;
     }
-
-    try {
-      const fileBuffer = Buffer.isBuffer(file)
-        ? file
-        : typeof file === 'string'
-          ? Buffer.from(file, 'base64')
-          : Array.isArray(file.data)
-            ? Buffer.from(file.data)
-            : Buffer.from([]);
-
-      await this.s3Service.uploadImage(fileBuffer, key, type);
-
-      const resolvedImageId = imageId?.trim();
-
-      const image = resolvedImageId
-        ? await this.prismaService.image.update({
-            where: { id: resolvedImageId },
-            data: { url: key },
-          })
-        : await this.prismaService.image.create({
-            data: { url: key },
-            select: { id: true, url: true },
-          });
-
-      return {
-        id: image.id,
-        key: image.url,
-      };
-    } catch (error) {
-      return handleServiceErrorCatching(error);
-    }
+    return this.s3Service.generateImageViewPresignedUrl(key);
   }
 }

@@ -5,14 +5,17 @@ import { GetReviewsDto } from 'src/shared/dtos/review.dto';
 import { ReviewService } from '../review/review.service';
 import { UserAction } from 'src/shared/enums/user.enum';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { ImageService } from 'src/providers/image/image.service';
 import { IntelligenceTopics, PlaceTopics, RecommendationTopics } from 'src/shared/constants/topic.constant';
 import { AGENT_KAFKA_TIMEOUT_MS } from 'src/shared/constants/kafka.constant';
+import { ImageFolders } from 'src/shared/constants/image.constant';
 
 @Injectable()
 export class PlaceService {
     constructor(
         private readonly reviewService: ReviewService,
         private readonly kafkaService: KafkaService,
+        private readonly imageService: ImageService,
     ) { }
 
     async getNearbyPlaces(query: NearMeQueryDto, userId: string): Promise<NearMePlacesResponseDto> {
@@ -25,11 +28,15 @@ export class PlaceService {
         featureImage: Buffer,
         featureImageType: string,
     ): Promise<CreatePlaceResponseDto> {
+        const featureImageKey = await this.imageService.uploadAndGetKey(
+            ImageFolders.PLACE,
+            featureImage,
+            featureImageType,
+        );
         return await this.kafkaService.sendWithTimeout(PlaceTopics.Create, {
             ownerId,
             ...createPlaceDto,
-            featureImage,
-            featureImageType,
+            featureImageKey,
         });
     }
 
@@ -87,12 +94,14 @@ export class PlaceService {
         featureImage?: Buffer,
         featureImageType?: string,
     ): Promise<UpdatePlaceResponseDto> {
+        const featureImageKey = featureImage
+            ? await this.imageService.uploadAndGetKey(ImageFolders.PLACE, featureImage, featureImageType)
+            : undefined;
         return await this.kafkaService.sendWithTimeout(PlaceTopics.Update, {
             placeId,
             requesterId,
             ...updatePlaceDto,
-            featureImage,
-            featureImageType,
+            ...(featureImageKey ? { featureImageKey } : {}),
         });
     }
 

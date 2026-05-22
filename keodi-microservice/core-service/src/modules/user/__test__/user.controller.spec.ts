@@ -56,16 +56,12 @@ describe('UserController', () => {
   });
 
   it('updatePicture – delegates to service.updatePicture', async () => {
-    const data = { file: Buffer.from(''), userId: 'u1', type: 'image/jpeg' };
+    const data = { key: 'user_images/uuid-1', userId: 'u1' };
     mockUserService.updatePicture.mockResolvedValue({ message: 'ok' });
 
     await controller.updatePicture(data);
 
-    expect(mockUserService.updatePicture).toHaveBeenCalledWith(
-      data.file,
-      'u1',
-      'image/jpeg',
-    );
+    expect(mockUserService.updatePicture).toHaveBeenCalledWith('user_images/uuid-1', 'u1');
   });
 
   it('getById – delegates to service.getById', async () => {

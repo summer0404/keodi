@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from '../user.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { ImageService } from 'src/providers/image/image.service';
 import { UserTopics } from 'src/shared/constants/topic.constant';
 
 const mockKafkaClient = {
@@ -20,6 +21,7 @@ describe('UserService', () => {
       providers: [
         UserService,
         { provide: KafkaService, useValue: mockKafkaService },
+        { provide: ImageService, useValue: { uploadAndGetKey: jest.fn().mockResolvedValue('user_images/uuid-1') } },
       ],
     }).compile();
 
@@ -90,7 +92,7 @@ describe('UserService', () => {
   });
 
   describe('updatePicture', () => {
-    it('should call UserTopics.UpdatePicture with userId, file buffer and type', async () => {
+    it('should upload image then call UserTopics.UpdatePicture with userId and key', async () => {
       const fileBuffer = Buffer.from('image data');
       mockKafkaService.sendWithTimeout.mockResolvedValue({ pictureUrl: 'http://img.url' });
 
@@ -98,7 +100,7 @@ describe('UserService', () => {
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         UserTopics.UpdatePicture,
-        { userId: 'u1', file: fileBuffer, type: 'image/png' },
+        { userId: 'u1', key: 'user_images/uuid-1' },
       );
     });
   });

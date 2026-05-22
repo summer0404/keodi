@@ -24,14 +24,8 @@ export class UserController {
   }
 
   @MessagePattern(UserTopics.UpdatePicture)
-  async updatePicture(
-    @Payload() data: { file: Buffer; userId: string; type?: string },
-  ) {
-    return await this.userService.updatePicture(
-      data.file,
-      data.userId,
-      data.type,
-    );
+  async updatePicture(@Payload() data: { key: string; userId: string }) {
+    return await this.userService.updatePicture(data.key, data.userId);
   }
 
   @MessagePattern(UserTopics.Get)

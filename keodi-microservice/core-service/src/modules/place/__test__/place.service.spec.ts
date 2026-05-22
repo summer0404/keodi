@@ -56,7 +56,7 @@ const mockPrismaService = {
 };
 
 const mockImageService = {
-  uploadImage: jest.fn(),
+  persistImageRecord: jest.fn(),
   getImageViewUrl: jest.fn(),
 };
 
@@ -173,28 +173,23 @@ describe('PlaceService - update', () => {
       );
     });
 
-    it('updates featureImageUrl when featureImage buffer is provided', async () => {
+    it('updates featureImageUrl when featureImageKey is provided', async () => {
       mockPrismaService.place.findUnique.mockResolvedValue(basePlace);
-      mockImageService.uploadImage.mockResolvedValue({
-        key: 'places/new-image.jpg',
-        id: 'img-1',
-      });
       mockTx.place.update.mockResolvedValue({});
 
       const dto: UpdatePlaceDto = {
         placeId: 'place-1',
         requesterId: 'owner-1',
-        featureImage: Buffer.from('image-data'),
-        featureImageType: 'image/jpeg',
+        featureImageKey: 'place_images/new-uuid',
       };
       const result = await service.update(dto);
 
-      expect(mockImageService.uploadImage).toHaveBeenCalled();
+      expect(mockImageService.persistImageRecord).not.toHaveBeenCalled();
       expect(result).toEqual({ message: 'Place updated successfully' });
       expect(mockTx.place.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            featureImageUrl: 'places/new-image.jpg',
+            featureImageUrl: 'place_images/new-uuid',
           }),
         }),
       );

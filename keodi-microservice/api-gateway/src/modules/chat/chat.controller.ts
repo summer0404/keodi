@@ -9,7 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -96,13 +99,15 @@ export class ChatController {
   }
 
   @Post(':id/messages')
+  @UseInterceptors(FileInterceptor('file'))
   @ApiSendMessage()
   sendMessage(
     @CurrentUser() user: CurrentUserDto,
     @Param('id') id: string,
     @Body() dto: SendMessageDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.chatService.sendMessage(user.id, id, dto);
+    return this.chatService.sendMessage(user.id, id, dto, file);
   }
 
   @Delete(':id/messages/:msgId')

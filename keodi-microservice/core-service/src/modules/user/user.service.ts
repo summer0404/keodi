@@ -10,7 +10,6 @@ import { PrismaService } from 'src/database/prisma.service';
 import { ImageService } from 'src/modules/image/image.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { UserErrorMessages } from 'src/shared/constants/error.constant';
-import { ImageConstants } from 'src/shared/constants/image.constant';
 import { RedisKeys } from 'src/shared/constants/redis.constant';
 import {
   CreateUserDto,
@@ -141,7 +140,7 @@ export class UserService {
     }
   }
 
-  async updatePicture(file: Buffer, userId: string, type?: string) {
+  async updatePicture(key: string, userId: string) {
     try {
       const existingUser = await this.prismaService.user.findUnique({
         where: { id: userId },
@@ -153,7 +152,6 @@ export class UserService {
           message: UserErrorMessages.USER_NOT_FOUND,
         });
 
-      const key = `${ImageConstants.IMAGE_FOLDERS.USER_IMAGES}/user_${existingUser.id}_picture.jpg`;
       const existingPicture = await this.prismaService.userImage.findFirst({
         where: {
           userId: existingUser.id,
@@ -163,10 +161,8 @@ export class UserService {
           imageId: true,
         },
       });
-      const image = await this.imageService.uploadImage(
+      const image = await this.imageService.persistImageRecord(
         key,
-        file,
-        type,
         existingPicture?.imageId,
       );
 
