@@ -1,11 +1,12 @@
-import { Routes, Route, NavLink, useNavigate, Navigate } from "react-router-dom"
-import { useEffect, useState } from "react"
-import { ShieldCheck, Users, FileCheck, MapPin, LogOut } from "lucide-react"
 import keodiIcon from "@keodi/shared/assets/icon.png"
+import { FileCheck, Flag, LogOut, MapPin, ShieldCheck, Users } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom"
 
 import OwnerApplications from "../owner-applications/OwnerApplications"
 import OwnershipClaims from "../ownership-claims/OwnershipClaims"
 import PlaceReview from "../place-review/PlaceReview"
+import ReviewModeration from "../review-moderation/ReviewModeration"
 
 const ACCESS_TOKEN_KEY = "admin_access_token"
 
@@ -55,10 +56,9 @@ export default function Dashboard() {
           <NavLink
             to="/dashboard/owner-applications"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-neutral-900 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                ? "bg-neutral-900 text-white"
+                : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
               }`
             }
           >
@@ -68,10 +68,9 @@ export default function Dashboard() {
           <NavLink
             to="/dashboard/ownership-claims"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-neutral-900 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                ? "bg-neutral-900 text-white"
+                : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
               }`
             }
           >
@@ -81,15 +80,26 @@ export default function Dashboard() {
           <NavLink
             to="/dashboard/place-reviews"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-neutral-900 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                ? "bg-neutral-900 text-white"
+                : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
               }`
             }
           >
             <MapPin className="w-4 h-4" />
             Place Reviews
+          </NavLink>
+          <NavLink
+            to="/dashboard/review-moderation"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                ? "bg-neutral-900 text-white"
+                : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+              }`
+            }
+          >
+            <Flag className="w-4 h-4" />
+            Review Moderation
           </NavLink>
         </nav>
 
@@ -111,6 +121,7 @@ export default function Dashboard() {
           <Route path="owner-applications" element={<OwnerApplications />} />
           <Route path="ownership-claims" element={<OwnershipClaims />} />
           <Route path="place-reviews" element={<PlaceReview />} />
+          <Route path="review-moderation" element={<ReviewModeration />} />
         </Routes>
       </main>
     </div>

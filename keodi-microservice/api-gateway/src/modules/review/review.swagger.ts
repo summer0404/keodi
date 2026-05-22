@@ -4,7 +4,6 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
-  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -30,7 +29,8 @@ export function ApiGetOwnerReviews() {
   return applyDecorators(
     ApiOperation({
       summary: 'Get all reviews for my places',
-      description: 'Owner-only. Returns all reviews across all owned places with optional filters.',
+      description:
+        'Owner-only. Returns all reviews across all owned places with optional filters.',
     }),
     ApiOkResponse({
       description: 'Paginated list of reviews',
@@ -51,14 +51,17 @@ export function ApiRespondToReview() {
   return applyDecorators(
     ApiOperation({
       summary: 'Respond to a review',
-      description: 'Owner-only. Add a public response to a review on your place. One response per review.',
+      description:
+        'Owner-only. Add a public response to a review on your place. One response per review.',
     }),
     ApiCreatedResponse({
       description: 'Response added successfully',
       schema: { example: { message: 'Response added successfully' } },
     }),
     ApiNotFoundResponse({ description: 'Review not found' }),
-    ApiForbiddenResponse({ description: 'Review does not belong to your place' }),
+    ApiForbiddenResponse({
+      description: 'Review does not belong to your place',
+    }),
     ApiConflictResponse({ description: 'Review already has a response' }),
   );
 }
@@ -67,14 +70,17 @@ export function ApiUpdateReviewResponse() {
   return applyDecorators(
     ApiOperation({
       summary: 'Update your response to a review',
-      description: 'Owner-only. Edit an existing response. ownerResponseEditedAt will be updated.',
+      description:
+        'Owner-only. Edit an existing response. ownerResponseEditedAt will be updated.',
     }),
     ApiOkResponse({
       description: 'Response updated successfully',
       schema: { example: { message: 'Response updated successfully' } },
     }),
     ApiNotFoundResponse({ description: 'Review not found' }),
-    ApiForbiddenResponse({ description: 'Review does not belong to your place' }),
+    ApiForbiddenResponse({
+      description: 'Review does not belong to your place',
+    }),
     ApiConflictResponse({ description: 'No response exists to update' }),
   );
 }
@@ -90,7 +96,9 @@ export function ApiDeleteReviewResponse() {
       schema: { example: { message: 'Response deleted successfully' } },
     }),
     ApiNotFoundResponse({ description: 'Review not found' }),
-    ApiForbiddenResponse({ description: 'Review does not belong to your place' }),
+    ApiForbiddenResponse({
+      description: 'Review does not belong to your place',
+    }),
     ApiConflictResponse({ description: 'No response exists to delete' }),
   );
 }
@@ -99,15 +107,20 @@ export function ApiFlagReview() {
   return applyDecorators(
     ApiOperation({
       summary: 'Flag a review as inappropriate',
-      description: 'Owner-only. Flag a review with a reason. Creates a pending flag for admin review. Does not immediately hide the review.',
+      description:
+        'Owner-only. Flag a review with a reason. Creates a pending flag for admin review. Does not immediately hide the review.',
     }),
     ApiCreatedResponse({
       description: 'Review flagged successfully',
       schema: { example: { message: 'Review flagged successfully' } },
     }),
     ApiNotFoundResponse({ description: 'Review not found' }),
-    ApiForbiddenResponse({ description: 'Review does not belong to your place' }),
-    ApiConflictResponse({ description: 'Review already has a pending or resolved flag' }),
+    ApiForbiddenResponse({
+      description: 'Review does not belong to your place',
+    }),
+    ApiConflictResponse({
+      description: 'Review already has a pending or resolved flag',
+    }),
   );
 }
 
@@ -115,7 +128,8 @@ export function ApiGetAdminReviews() {
   return applyDecorators(
     ApiOperation({
       summary: 'Get all reviews (admin)',
-      description: 'Admin-only. Returns all reviews across all places with optional filters for flagStatus, placeId, rating, and date range.',
+      description:
+        'Admin-only. Returns all reviews across all places with optional filters for flagStatus, placeId, rating, and date range.',
     }),
     ApiOkResponse({
       description: 'Paginated list of reviews',
@@ -129,11 +143,33 @@ export function ApiGetAdminReviews() {
         },
       },
     }),
-    ApiQuery({ name: 'placeId', required: false, description: 'Filter by place ID' }),
-    ApiQuery({ name: 'flagStatus', required: false, enum: ['PENDING', 'APPROVED', 'REJECTED'], description: 'Filter by flag status' }),
-    ApiQuery({ name: 'rating', required: false, type: Number, description: 'Filter by rating (1-5)' }),
-    ApiQuery({ name: 'dateFrom', required: false, description: 'Start date (ISO 8601)' }),
-    ApiQuery({ name: 'dateTo', required: false, description: 'End date (ISO 8601)' }),
+    ApiQuery({
+      name: 'placeId',
+      required: false,
+      description: 'Filter by place ID',
+    }),
+    ApiQuery({
+      name: 'flagStatus',
+      required: false,
+      enum: ['PENDING', 'APPROVED', 'REJECTED'],
+      description: 'Filter by flag status',
+    }),
+    ApiQuery({
+      name: 'rating',
+      required: false,
+      type: Number,
+      description: 'Filter by rating (1-5)',
+    }),
+    ApiQuery({
+      name: 'dateFrom',
+      required: false,
+      description: 'Start date (ISO 8601)',
+    }),
+    ApiQuery({
+      name: 'dateTo',
+      required: false,
+      description: 'End date (ISO 8601)',
+    }),
   );
 }
 
@@ -141,7 +177,8 @@ export function ApiApproveReviewFlags() {
   return applyDecorators(
     ApiOperation({
       summary: 'Approve flags on a review (admin)',
-      description: 'Admin-only. Approves the pending flag, hides the review, and notifies the owner.',
+      description:
+        'Admin-only. Approves the pending flag, hides the review, and notifies the owner.',
     }),
     ApiOkResponse({
       description: 'Flag approved and review hidden',
@@ -156,7 +193,8 @@ export function ApiRejectReviewFlags() {
   return applyDecorators(
     ApiOperation({
       summary: 'Reject flags on a review (admin)',
-      description: 'Admin-only. Rejects the pending flag, review stays visible, and notifies the owner.',
+      description:
+        'Admin-only. Rejects the pending flag, review stays visible, and notifies the owner.',
     }),
     ApiOkResponse({
       description: 'Flag rejected and review remains visible',
