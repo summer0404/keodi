@@ -5,6 +5,7 @@ import { ConversationService } from 'src/modules/conversation/conversation.servi
 import { ImageService } from 'src/modules/image/image.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
+import { ChatNotificationBody } from 'src/shared/constants/chat.constant';
 import { MessageType } from 'src/shared/enums/chat.enum';
 import { NotificationType } from 'src/shared/enums/notification.enum';
 import { MessageService } from '../message.service';
@@ -30,6 +31,7 @@ const makeMessage = (overrides: Record<string, any> = {}) => ({
 });
 
 describe('MessageService', () => {
+  let module: TestingModule;
   let service: MessageService;
   let prismaService: {
     message: {
@@ -59,7 +61,7 @@ describe('MessageService', () => {
   const mockEmit = jest.fn();
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         MessageService,
         {
@@ -176,6 +178,41 @@ describe('MessageService', () => {
       ).rejects.toThrow(RpcException);
 
       expect(prismaService.message.create).not.toHaveBeenCalled();
+    });
+
+    it('throws BAD_REQUEST when replyToId does not exist in the conversation', async () => {
+      conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);
+      prismaService.message.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.send({
+          conversationId: 'conv-1',
+          senderId: 'user-1',
+          content: 'Hi',
+          replyToId: 'non-existent-msg',
+        }),
+      ).rejects.toThrow(RpcException);
+
+      expect(prismaService.message.create).not.toHaveBeenCalled();
+    });
+
+    it('sends correct notification body for IMAGE type messages', async () => {
+      const msg = makeMessage({ type: MessageType.IMAGE, content: 'chat_images/uuid-1' });
+      conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);
+      prismaService.message.create.mockResolvedValue(msg);
+      prismaService.conversation.update.mockResolvedValue({});
+      redisService.del.mockResolvedValue(undefined);
+      redisService.has.mockResolvedValue(false);
+
+      await service.send({
+        conversationId: 'conv-1',
+        senderId: 'user-1',
+        content: 'chat_images/uuid-1',
+        type: MessageType.IMAGE,
+      });
+
+      const dispatchCalls = mockEmit.mock.calls.filter(([topic]) => topic === 'notification.dispatch');
+      expect(dispatchCalls[0][1]).toMatchObject({ body: ChatNotificationBody.IMAGE_MESSAGE });
     });
 
     it('emits push dispatch only for offline members', async () => {

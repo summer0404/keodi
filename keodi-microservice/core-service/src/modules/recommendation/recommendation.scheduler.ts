@@ -30,7 +30,7 @@ export class RecommendationScheduler {
   }
 
   // @Cron('*/1 * * * *') // For testing, run every minute
-  @Cron('0 3 * * 0', { disabled: true })
+  @Cron('0 3 * * 0')
   async trainRankingModel() {
     this.logger.log(
       'Running recommendation scheduler to train ranking model...',

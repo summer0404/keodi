@@ -40,6 +40,7 @@ const mockImageService = {
     .fn()
     .mockResolvedValue('https://cdn.example.com/img.jpg'),
   uploadImage: jest.fn(),
+  persistImageRecord: jest.fn(),
 };
 
 const mockRedisService = {
@@ -282,6 +283,38 @@ describe('UserService', () => {
 
       expect(result.isProfileVisible).toBe(false);
       expect(result.phoneNumber).toBeNull();
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  // updatePicture
+  // ──────────────────────────────────────────────
+  describe('updatePicture', () => {
+    it('throws RpcException when key is missing', async () => {
+      await expect(service.updatePicture('', 'u1')).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when userId is missing', async () => {
+      await expect(service.updatePicture('user_images/abc', '')).rejects.toThrow(RpcException);
+    });
+
+    it('throws RpcException when user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      await expect(service.updatePicture('user_images/abc', 'u1')).rejects.toThrow(RpcException);
+    });
+
+    it('creates userImage and updates pictureUrl when no existing picture', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1', pictureUrl: null });
+      mockPrismaService.userImage.findFirst.mockResolvedValue(null);
+      mockImageService.persistImageRecord.mockResolvedValue({ id: 'img-1', key: 'user_images/abc' });
+      mockPrismaService.userImage.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const result = (await service.updatePicture('user_images/abc', 'u1')) as any;
+
+      expect(mockImageService.persistImageRecord).toHaveBeenCalledWith('user_images/abc', undefined);
+      expect(mockPrismaService.userImage.create).toHaveBeenCalled();
+      expect(result.message).toBe('Profile picture updated successfully');
     });
   });
 

@@ -42,6 +42,7 @@ import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RecommendationCacheInterceptor } from 'src/common/interceptors/recommendation-cache.interceptor';
 import { RoleGuard } from 'src/common/guards/role.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
+import { AiSearchCreditGuard } from 'src/common/guards/ai-search-quota.guard';
 import { Roles } from 'src/common/decorators/role.decorator';
 import { Role } from 'src/shared/enums/role.enum';
 
@@ -95,7 +96,7 @@ export class PlaceController {
     return await this.placeService.search(query, user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AiSearchCreditGuard)
   @Post('chat-search')
   @ApiChatSearch()
   async chatSearch(

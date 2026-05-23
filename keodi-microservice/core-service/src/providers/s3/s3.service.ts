@@ -5,10 +5,8 @@ import {
   PutObjectCommandInput,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { Injectable, Logger } from '@nestjs/common';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { FileErrorMessages } from 'src/shared/constants/error.constant';
 import { ImageConstants } from 'src/shared/constants/image.constant';
 
 @Injectable()
@@ -58,38 +56,14 @@ export class S3Service {
     return await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
   }
 
-  async uploadImage(
-    body: Buffer,
-    key: string,
-    contentType: string = 'image/jpeg',
-  ) {
-    try {
-      if (!body || body.length === 0) {
-        throw new RpcException({
-          status: HttpStatus.BAD_REQUEST,
-          message: FileErrorMessages.FILE_BODY_REQUIRED,
-        });
-      }
-
-      return await this.s3Client.send(
-        new PutObjectCommand({
-          Bucket: this.bucket,
-          Key: key,
-          Body: body,
-          ContentType: contentType,
-        }),
-      );
-    } catch (error) {
-      this.logger.error(error.message, error.stack);
-
-      if (error instanceof RpcException) {
-        throw error;
-      }
-
-      throw new RpcException({
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message || FileErrorMessages.FAILED_TO_UPLOAD_FILE,
-      });
-    }
+  async generateImageUploadPresignedUrl(key: string, contentType?: string): Promise<string> {
+    const params: PutObjectCommandInput = {
+      Bucket: this.bucket,
+      Key: key,
+      ...(contentType ? { ContentType: contentType } : {}),
+    };
+    const command = new PutObjectCommand(params);
+    return await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
   }
+
 }

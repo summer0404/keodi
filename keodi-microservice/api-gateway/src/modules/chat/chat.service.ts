@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { ApiErrorMessages } from 'src/shared/constants/error.constant';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { ImageService } from 'src/providers/image/image.service';
 import {
   ConversationTopics,
   MemberTopics,
@@ -13,10 +15,15 @@ import {
   SendMessageDto,
   UpdateConversationDto,
 } from 'src/shared/dtos/chat.dto';
+import { MessageType } from 'src/shared/enums/chat.enum';
+import { ImageFolders } from 'src/shared/constants/image.constant';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly kafkaService: KafkaService) {}
+  constructor(
+    private readonly kafkaService: KafkaService,
+    private readonly imageService: ImageService,
+  ) {}
 
   createConversation(userId: string, dto: CreateConversationDto) {
     return this.kafkaService.sendWithTimeout(ConversationTopics.Create, {
@@ -58,11 +65,24 @@ export class ChatService {
     });
   }
 
-  sendMessage(userId: string, conversationId: string, dto: SendMessageDto) {
+  async sendMessage(userId: string, conversationId: string, dto: SendMessageDto, file?: Express.Multer.File) {
+    let content = dto.content ?? '';
+
+    if (dto.type === MessageType.IMAGE) {
+      if (!file) {
+        throw new BadRequestException(ApiErrorMessages.IMAGE_FILE_REQUIRED);
+      }
+      content = await this.imageService.uploadAndGetKey(
+        ImageFolders.CHAT,
+        file.buffer,
+        file.mimetype,
+      );
+    }
+
     return this.kafkaService.sendWithTimeout(MessageTopics.Send, {
       conversationId,
       senderId: userId,
-      content: dto.content,
+      content,
       type: dto.type,
       replyToId: dto.replyToId,
     });

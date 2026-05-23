@@ -4,10 +4,12 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ConversationType, MessageType } from 'src/shared/enums/chat.enum';
 
@@ -51,9 +53,11 @@ export class UpdateConversationDto {
 }
 
 export class SendMessageDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @ValidateIf((o) => o.type !== MessageType.IMAGE)
+  @IsNotEmpty()
   @IsString()
-  content: string;
+  content?: string;
 
   @ApiPropertyOptional({ enum: MessageType })
   @IsOptional()

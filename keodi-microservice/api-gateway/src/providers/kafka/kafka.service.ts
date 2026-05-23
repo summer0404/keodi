@@ -10,6 +10,7 @@ import {
   FavoriteTopics,
   FriendTopics,
   GroupSessionTopics,
+  ImageTopics,
   IntelligenceTopics,
   MemberTopics,
   MessageTopics,
@@ -184,6 +185,9 @@ export class KafkaService implements OnModuleInit {
     this.kafkaClient.subscribeToResponseOf(MessageTopics.MarkRead);
     this.kafkaClient.subscribeToResponseOf(MemberTopics.Add);
     this.kafkaClient.subscribeToResponseOf(MemberTopics.Leave);
+
+    // image topics
+    this.kafkaClient.subscribeToResponseOf(ImageTopics.GetUploadUrl);
 
     await this.kafkaClient.connect();
   }

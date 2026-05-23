@@ -132,11 +132,8 @@ export class CreatePlaceDto {
   attributeIds?: string[];
 
   @IsNotEmpty()
-  featureImage: Buffer;
-
-  @IsOptional()
   @IsString()
-  featureImageType?: string;
+  featureImageKey: string;
 }
 
 export class UpdatePlaceDto {
@@ -216,9 +213,6 @@ export class UpdatePlaceDto {
   attributeIds?: string[];
 
   @IsOptional()
-  featureImage?: Buffer;
-
-  @IsOptional()
   @IsString()
-  featureImageType?: string;
+  featureImageKey?: string;
 }

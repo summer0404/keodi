@@ -42,6 +42,14 @@ export class RedisService {
     return this.redis.keys(pattern);
   }
 
+  async incr(key: string): Promise<number> {
+    return this.redis.incr(key);
+  }
+
+  async expireAt(key: string, unixSeconds: number): Promise<void> {
+    await this.redis.expireat(key, unixSeconds);
+  }
+
   async onModuleDestroy() {
     await this.redis.quit();
   }

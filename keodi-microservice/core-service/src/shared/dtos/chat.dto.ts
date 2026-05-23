@@ -35,6 +35,7 @@ export class SendMessagePayloadDto {
   replyToId?: string;
 }
 
+
 export class ListMessagesPayloadDto {
   conversationId: string;
   userId: string;

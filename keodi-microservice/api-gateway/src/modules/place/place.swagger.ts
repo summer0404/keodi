@@ -9,6 +9,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiCreatedResponse,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
@@ -451,9 +452,10 @@ export function ApiChatSearch() {
   return applyDecorators(
     ApiOperation({
       summary: 'AI Agent search (chat)',
-      description: 'Conversational place search powered by LLM agent. Supports emotional and abstract queries.',
+      description: 'Conversational place search powered by LLM agent. Supports emotional and abstract queries. Limited to 5 queries per day, resets at midnight (UTC+7).',
     }),
     ApiOkResponse({ description: 'Agent recommendations', type: AgentSearchResponseDto }),
     ApiUnauthorizedResponse({ description: 'Unauthorized' }),
+    ApiTooManyRequestsResponse({ description: 'Daily AI search quota exhausted (5 queries/day)' }),
   );
 }

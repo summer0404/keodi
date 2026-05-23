@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReviewService } from 'src/modules/review/review.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
+import { ImageService } from 'src/providers/image/image.service';
 import {
   IntelligenceTopics,
   PlaceTopics,
@@ -22,6 +23,10 @@ const mockReviewService = {
   getByPlaceId: jest.fn(),
 };
 
+const mockImageService = {
+  uploadAndGetKey: jest.fn().mockResolvedValue('place_images/uuid-1'),
+};
+
 describe('PlaceService', () => {
   let service: PlaceService;
 
@@ -31,6 +36,7 @@ describe('PlaceService', () => {
         PlaceService,
         { provide: KafkaService, useValue: mockKafkaService },
         { provide: ReviewService, useValue: mockReviewService },
+        { provide: ImageService, useValue: mockImageService },
       ],
     }).compile();
 
@@ -84,9 +90,12 @@ describe('PlaceService', () => {
         featureImageType,
       );
 
+      expect(mockImageService.uploadAndGetKey).toHaveBeenCalledWith(
+        'place_images', featureImage, featureImageType,
+      );
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         PlaceTopics.Create,
-        { ownerId, ...dto, featureImage, featureImageType },
+        { ownerId, ...dto, featureImageKey: 'place_images/uuid-1' },
       );
       expect(response).toEqual(result);
     });
@@ -275,6 +284,45 @@ describe('PlaceService', () => {
     });
   });
 
+  describe('chatSearch', () => {
+    const userId = 'user-1';
+    const dto = { message: 'quán cafe yên tĩnh', latitude: 10.76, longitude: 106.67 } as any;
+
+    it('should return empty places when agent returns no placeIds', async () => {
+      mockKafkaService.sendWithTimeout
+        .mockResolvedValueOnce({ message: 'No results found', placeIds: [] });
+
+      const result = await service.chatSearch(dto, userId);
+
+      expect(result).toEqual({ message: 'No results found', places: [] });
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return places when agent returns placeIds', async () => {
+      const agentResponse = { message: 'Here are some cafes', placeIds: ['p1', 'p2'] };
+      const places = [{ id: 'p1' }, { id: 'p2' }];
+      mockKafkaService.sendWithTimeout
+        .mockResolvedValueOnce(agentResponse)
+        .mockResolvedValueOnce(places);
+
+      const result = await service.chatSearch(dto, userId);
+
+      expect(result).toEqual({ message: agentResponse.message, places });
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledTimes(2);
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenNthCalledWith(
+        1,
+        IntelligenceTopics.AgentSearch,
+        { message: dto.message, userId, latitude: dto.latitude, longitude: dto.longitude },
+        expect.any(Number),
+      );
+      expect(mockKafkaService.sendWithTimeout).toHaveBeenNthCalledWith(
+        2,
+        PlaceTopics.GetByIdsWithDistance,
+        { ids: agentResponse.placeIds, userId, latitude: dto.latitude, longitude: dto.longitude },
+      );
+    });
+  });
+
   describe('update', () => {
     it('should call PlaceTopics.Update with placeId, requesterId, dto fields, featureImage and featureImageType', async () => {
       const placeId = 'place-1';
@@ -295,7 +343,7 @@ describe('PlaceService', () => {
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         PlaceTopics.Update,
-        { placeId, requesterId, ...dto, featureImage, featureImageType },
+        { placeId, requesterId, ...dto, featureImageKey: 'place_images/uuid-1' },
       );
       expect(response).toEqual(result);
     });

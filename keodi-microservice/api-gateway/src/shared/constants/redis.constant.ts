@@ -8,6 +8,9 @@ export const RedisKeys = {
     GROUP_SESSION_RECOMMENDATIONS: (sessionId: string) =>
       `group-session:${sessionId}:recommendations`,
   },
+  AI_SEARCH: {
+    DAILY_CREDIT: (userId: string) => `ai:search:credit:${userId}`,
+  },
   PRESENCE: (userId: string) => `presence:${userId}`,
   SESSION_MEMBER_LOCATION: (sessionId: string, userId: string) =>
     `session:${sessionId}:location:${userId}`,

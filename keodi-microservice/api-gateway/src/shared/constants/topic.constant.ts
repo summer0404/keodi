@@ -181,6 +181,10 @@ export const MessageTopics = {
   MarkRead: 'message.mark-read',
 } as const;
 
+export const ImageTopics = {
+  GetUploadUrl: 'image.get-upload-url',
+} as const;
+
 export const MemberTopics = {
   Add: 'member.add',
   Leave: 'member.leave',

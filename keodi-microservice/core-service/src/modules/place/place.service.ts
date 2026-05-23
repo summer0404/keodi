@@ -278,17 +278,15 @@ export class PlaceService {
         ),
       );
 
-      if (!createPlaceDto.featureImage) {
+      if (!createPlaceDto.featureImageKey) {
         throw new RpcException({
           status: HttpStatus.BAD_REQUEST,
           message: PlaceErrorMessages.PLACE_IMAGE_REQUIRED,
         });
       }
 
-      const featureImage = await this.imageService.uploadImage(
-        this.placeHelper.buildPlaceImageKey(createPlaceDto.featureImageType),
-        createPlaceDto.featureImage,
-        createPlaceDto.featureImageType,
+      const featureImage = await this.imageService.persistImageRecord(
+        createPlaceDto.featureImageKey,
       );
       const openingHours = this.placeHelper.normalizeOpeningHours(
         createPlaceDto.openingHours,
@@ -714,13 +712,8 @@ export class PlaceService {
       }
 
       let featureImageUrl: string | undefined;
-      if (updatePlaceDto.featureImage) {
-        const uploaded = await this.imageService.uploadImage(
-          this.placeHelper.buildPlaceImageKey(updatePlaceDto.featureImageType),
-          updatePlaceDto.featureImage,
-          updatePlaceDto.featureImageType,
-        );
-        featureImageUrl = uploaded.key;
+      if (updatePlaceDto.featureImageKey) {
+        featureImageUrl = updatePlaceDto.featureImageKey;
       }
 
       const normalizedOpeningHours =
