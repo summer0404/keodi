@@ -58,11 +58,11 @@ describe('ImageService', () => {
   });
 
   describe('generateUploadUrl', () => {
-    it('validates mime type and returns uploadUrl and key', async () => {
+    it('validates mime type and returns uploadUrl and s3Key', async () => {
       mockS3Service.generateImageUploadPresignedUrl.mockResolvedValue('https://s3.presigned/upload');
       const result = await service.generateUploadUrl('chat_images', 'image/jpeg');
       expect(result.uploadUrl).toBe('https://s3.presigned/upload');
-      expect(result.key).toContain('chat_images/');
+      expect(result.s3Key).toContain('chat_images/');
     });
 
     it('throws RpcException for disallowed mime type', async () => {
@@ -72,6 +72,11 @@ describe('ImageService', () => {
     it('skips mime validation when mimeType is not provided', async () => {
       mockS3Service.generateImageUploadPresignedUrl.mockResolvedValue('https://s3.presigned/upload');
       await expect(service.generateUploadUrl('chat_images')).resolves.toBeDefined();
+    });
+
+    it('throws RpcException when S3 presigned URL generation fails', async () => {
+      mockS3Service.generateImageUploadPresignedUrl.mockRejectedValue(new Error('S3 error'));
+      await expect(service.generateUploadUrl('chat_images', 'image/jpeg')).rejects.toThrow(RpcException);
     });
   });
 

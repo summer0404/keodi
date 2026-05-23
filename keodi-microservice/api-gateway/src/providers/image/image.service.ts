@@ -8,7 +8,7 @@ export class ImageService {
   constructor(private readonly kafkaService: KafkaService) {}
 
   async uploadAndGetKey(folder: string, buffer: Buffer, mimeType?: string): Promise<string> {
-    const { uploadUrl, key } = await this.kafkaService.sendWithTimeout(
+    const { uploadUrl, s3Key } = await this.kafkaService.sendWithTimeout(
       ImageTopics.GetUploadUrl,
       { folder, mimeType },
     );
@@ -23,6 +23,6 @@ export class ImageService {
       throw new InternalServerErrorException(SystemErrorMessage.IMAGE_UPLOAD_FAILED);
     }
 
-    return key;
+    return s3Key;
   }
 }

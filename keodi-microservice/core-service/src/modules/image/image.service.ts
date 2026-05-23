@@ -1,13 +1,15 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
 import { S3Service } from 'src/providers/s3/s3.service';
-import { ImageErrorMessages } from 'src/shared/constants/error.constant';
+import { ImageErrorMessages, INTERNAL_SERVER_ERROR } from 'src/shared/constants/error.constant';
 import { ImageConstants } from 'src/shared/constants/image.constant';
 
 @Injectable()
 export class ImageService {
+  private readonly logger = new Logger(ImageService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly s3Service: S3Service,
@@ -24,13 +26,21 @@ export class ImageService {
     }
   }
 
-  async generateUploadUrl(folder: string, mimeType?: string): Promise<{ uploadUrl: string; key: string }> {
+  async generateUploadUrl(folder: string, mimeType?: string): Promise<{ uploadUrl: string; s3Key: string }> {
     if (mimeType) {
       this.validateImageFile(mimeType);
     }
-    const key = `${folder}/${randomUUID()}`;
-    const uploadUrl = await this.s3Service.generateImageUploadPresignedUrl(key, mimeType);
-    return { uploadUrl, key };
+    const s3Key = `${folder}/${randomUUID()}`;
+    try {
+      const uploadUrl = await this.s3Service.generateImageUploadPresignedUrl(s3Key, mimeType);
+      return { uploadUrl, s3Key };
+    } catch (error) {
+      this.logger.error('Failed to generate presigned upload URL', error);
+      throw new RpcException({
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: INTERNAL_SERVER_ERROR,
+      });
+    }
   }
 
   async persistImageRecord(key: string, imageId?: string): Promise<{ id: string; key: string }> {

@@ -3,8 +3,9 @@ import { ImageController } from '../image.controller';
 import { ImageService } from '../image.service';
 
 const mockImageService = {
+  generateUploadUrl: jest.fn(),
+  persistImageRecord: jest.fn(),
   getImageViewUrl: jest.fn(),
-  uploadImage: jest.fn(),
 };
 
 describe('ImageController', () => {
@@ -24,8 +25,15 @@ describe('ImageController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('constructor injects ImageService', () => {
-    // ImageController has no message handlers; verify it was instantiated with the service
-    expect((controller as any).imageService).toBeDefined();
+  describe('getUploadUrl', () => {
+    it('delegates to imageService.generateUploadUrl and returns result', async () => {
+      const expected = { uploadUrl: 'https://s3.presigned/upload', s3Key: 'user_images/uuid' };
+      mockImageService.generateUploadUrl.mockResolvedValue(expected);
+
+      const result = await controller.getUploadUrl({ folder: 'user_images', mimeType: 'image/png' });
+
+      expect(mockImageService.generateUploadUrl).toHaveBeenCalledWith('user_images', 'image/png');
+      expect(result).toEqual(expected);
+    });
   });
 });
