@@ -86,6 +86,19 @@ export class MessageService {
       });
     }
 
+    if (replyToId) {
+      const replyTarget = await this.prismaService.message.findFirst({
+        where: { id: replyToId, conversationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!replyTarget) {
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: ChatErrorMessages.REPLY_MESSAGE_NOT_FOUND,
+        });
+      }
+    }
+
     const message = await this.prismaService.message.create({
       data: {
         conversationId,

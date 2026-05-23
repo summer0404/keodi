@@ -8,7 +8,7 @@ export class ImageController {
   constructor(private readonly imageService: ImageService) {}
 
   @MessagePattern(ImageTopics.GetUploadUrl)
-  async getUploadUrl(@Payload() payload: { folder: string; mimeType?: string }) {
-    return this.imageService.generateUploadUrl(payload.folder, payload.mimeType);
+  async getUploadUrl(@Payload() payload: { folder: string; mimeType?: string; userId?: string }) {
+    return this.imageService.generateUploadUrl(payload.folder, payload.mimeType, payload.userId);
   }
 }

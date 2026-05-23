@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from '../user.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ImageService } from 'src/providers/image/image.service';
+import { ImageFolders } from 'src/shared/constants/image.constant';
 import { UserTopics } from 'src/shared/constants/topic.constant';
 
 const mockKafkaClient = {
@@ -13,6 +14,10 @@ const mockKafkaService = {
   getClient: jest.fn().mockReturnValue(mockKafkaClient),
 };
 
+const mockImageService = {
+  uploadAndGetKey: jest.fn().mockResolvedValue('user_images/user_u1_picture.jpg'),
+};
+
 describe('UserService', () => {
   let service: UserService;
 
@@ -21,7 +26,7 @@ describe('UserService', () => {
       providers: [
         UserService,
         { provide: KafkaService, useValue: mockKafkaService },
-        { provide: ImageService, useValue: { uploadAndGetKey: jest.fn().mockResolvedValue('user_images/uuid-1') } },
+        { provide: ImageService, useValue: mockImageService },
       ],
     }).compile();
 
@@ -31,6 +36,7 @@ describe('UserService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockKafkaService.getClient.mockReturnValue(mockKafkaClient);
+    mockImageService.uploadAndGetKey.mockResolvedValue('user_images/user_u1_picture.jpg');
   });
 
   describe('searchUsers', () => {
@@ -92,15 +98,18 @@ describe('UserService', () => {
   });
 
   describe('updatePicture', () => {
-    it('should upload image then call UserTopics.UpdatePicture with userId and key', async () => {
+    it('passes userId to uploadAndGetKey and sends s3Key via Kafka', async () => {
       const fileBuffer = Buffer.from('image data');
       mockKafkaService.sendWithTimeout.mockResolvedValue({ pictureUrl: 'http://img.url' });
 
       await service.updatePicture('u1', fileBuffer, 'image/png');
 
+      expect(mockImageService.uploadAndGetKey).toHaveBeenCalledWith(
+        ImageFolders.USER, fileBuffer, 'image/png', 'u1',
+      );
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         UserTopics.UpdatePicture,
-        { userId: 'u1', s3Key: 'user_images/uuid-1' },
+        { userId: 'u1', s3Key: 'user_images/user_u1_picture.jpg' },
       );
     });
   });

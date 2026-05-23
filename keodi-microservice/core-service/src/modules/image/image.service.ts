@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
-import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/database/prisma.service';
 import { S3Service } from 'src/providers/s3/s3.service';
 import { ImageErrorMessages, INTERNAL_SERVER_ERROR } from 'src/shared/constants/error.constant';
@@ -26,11 +25,13 @@ export class ImageService {
     }
   }
 
-  async generateUploadUrl(folder: string, mimeType?: string): Promise<{ uploadUrl: string; s3Key: string }> {
+  async generateUploadUrl(folder: string, mimeType?: string, userId?: string): Promise<{ uploadUrl: string; s3Key: string }> {
     if (mimeType) {
       this.validateImageFile(mimeType);
     }
-    const s3Key = `${folder}/${randomUUID()}`;
+    const s3Key = userId
+      ? `${ImageConstants.IMAGE_FOLDERS.USER_IMAGES}/user_${userId}_picture.jpg`
+      : `${folder}/${Date.now()}`;
     try {
       const uploadUrl = await this.s3Service.generateImageUploadPresignedUrl(s3Key, mimeType);
       return { uploadUrl, s3Key };

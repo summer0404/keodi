@@ -2,6 +2,7 @@ import {
     ArgumentsHost,
     Catch,
     ExceptionFilter,
+    HttpException,
     HttpStatus,
 } from '@nestjs/common';
 import { TimeoutError } from 'rxjs';
@@ -18,6 +19,17 @@ export class ConvertToHttpExceptionFilter implements ExceptionFilter {
                 status: HttpStatus.GATEWAY_TIMEOUT,
                 message: SystemErrorMessage.SERVICE_REQUEST_TIMEOUT,
             });
+        }
+
+        if (exception instanceof HttpException) {
+            const status = exception.getStatus();
+            const res = exception.getResponse();
+            const message = typeof res === 'string'
+                ? res
+                : Array.isArray((res as any).message)
+                    ? (res as any).message[0]
+                    : (res as any).message;
+            return response.status(status).json({ status, message });
         }
 
         if (exception.response) {

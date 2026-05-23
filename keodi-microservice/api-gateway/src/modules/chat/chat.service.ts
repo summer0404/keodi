@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { ApiErrorMessages } from 'src/shared/constants/error.constant';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { ImageService } from 'src/providers/image/image.service';
 import {
@@ -67,7 +68,10 @@ export class ChatService {
   async sendMessage(userId: string, conversationId: string, dto: SendMessageDto, file?: Express.Multer.File) {
     let content = dto.content ?? '';
 
-    if (dto.type === MessageType.IMAGE && file) {
+    if (dto.type === MessageType.IMAGE) {
+      if (!file) {
+        throw new BadRequestException(ApiErrorMessages.IMAGE_FILE_REQUIRED);
+      }
       content = await this.imageService.uploadAndGetKey(
         ImageFolders.CHAT,
         file.buffer,

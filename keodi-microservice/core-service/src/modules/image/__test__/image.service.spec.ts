@@ -58,11 +58,17 @@ describe('ImageService', () => {
   });
 
   describe('generateUploadUrl', () => {
-    it('validates mime type and returns uploadUrl and s3Key', async () => {
+    it('uses Date.now() key for non-user uploads and returns uploadUrl and s3Key', async () => {
       mockS3Service.generateImageUploadPresignedUrl.mockResolvedValue('https://s3.presigned/upload');
       const result = await service.generateUploadUrl('chat_images', 'image/jpeg');
       expect(result.uploadUrl).toBe('https://s3.presigned/upload');
-      expect(result.s3Key).toContain('chat_images/');
+      expect(result.s3Key).toMatch(/^chat_images\/\d+$/);
+    });
+
+    it('uses fixed user key when userId is provided', async () => {
+      mockS3Service.generateImageUploadPresignedUrl.mockResolvedValue('https://s3.presigned/upload');
+      const result = await service.generateUploadUrl('user_images', 'image/jpeg', 'u1');
+      expect(result.s3Key).toBe('user_images/user_u1_picture.jpg');
     });
 
     it('throws RpcException for disallowed mime type', async () => {

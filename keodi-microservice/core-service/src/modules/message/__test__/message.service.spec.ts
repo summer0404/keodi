@@ -180,6 +180,22 @@ describe('MessageService', () => {
       expect(prismaService.message.create).not.toHaveBeenCalled();
     });
 
+    it('throws BAD_REQUEST when replyToId does not exist in the conversation', async () => {
+      conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);
+      prismaService.message.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.send({
+          conversationId: 'conv-1',
+          senderId: 'user-1',
+          content: 'Hi',
+          replyToId: 'non-existent-msg',
+        }),
+      ).rejects.toThrow(RpcException);
+
+      expect(prismaService.message.create).not.toHaveBeenCalled();
+    });
+
     it('sends correct notification body for IMAGE type messages', async () => {
       const msg = makeMessage({ type: MessageType.IMAGE, content: 'chat_images/uuid-1' });
       conversationService.getMembers.mockResolvedValue(['user-1', 'user-2']);

@@ -7,10 +7,10 @@ import { ImageTopics } from 'src/shared/constants/topic.constant';
 export class ImageService {
   constructor(private readonly kafkaService: KafkaService) {}
 
-  async uploadAndGetKey(folder: string, buffer: Buffer, mimeType?: string): Promise<string> {
+  async uploadAndGetKey(folder: string, buffer: Buffer, mimeType?: string, userId?: string): Promise<string> {
     const { uploadUrl, s3Key } = await this.kafkaService.sendWithTimeout(
       ImageTopics.GetUploadUrl,
-      { folder, mimeType },
+      { folder, mimeType, userId },
     );
 
     const response = await fetch(uploadUrl, {
