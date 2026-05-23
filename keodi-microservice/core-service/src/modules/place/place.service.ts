@@ -26,8 +26,7 @@ import {
   IntelligenceTopics,
   SearchTopics,
 } from 'src/shared/constants/topic.constant';
-import { LLM_THINKING_TAG } from 'src/shared/constants/search.constant';
-import { ExtractedIntent } from 'src/shared/types/search.type';
+import { LLM_THINKING_TAG, MAX_SEARCH_RESULTS_PER_MODE } from 'src/shared/constants/search.constant';
 import { PlaceHelper } from './place.helper';
 
 @Injectable()
@@ -206,56 +205,6 @@ export class PlaceService {
         `;
 
     return Number(totalResult[0].count);
-  }
-
-  private async queryPlacesByIntent(params: {
-    latitude: number;
-    longitude: number;
-    latDelta: number;
-    longDelta: number;
-    radius: number;
-    orderByClause: string;
-    limit: number;
-    offset: number;
-    extractedIntent: ExtractedIntent;
-  }): Promise<
-    [(RawPlace & { distance: number; similarity_score?: number })[], number]
-  > {
-    const {
-      latitude,
-      longitude,
-      latDelta,
-      longDelta,
-      radius,
-      orderByClause,
-      limit,
-      offset,
-      extractedIntent,
-    } = params;
-
-    return Promise.all([
-      this.queryPlacesInRadiusWithDistance(
-        latitude,
-        longitude,
-        latDelta,
-        longDelta,
-        radius,
-        orderByClause,
-        limit,
-        offset,
-        extractedIntent.embedding,
-        extractedIntent.keywords,
-      ),
-      this.countPlacesInRadius(
-        latitude,
-        longitude,
-        latDelta,
-        longDelta,
-        radius,
-        extractedIntent.embedding,
-        extractedIntent.keywords,
-      ),
-    ]);
   }
 
   async create(createPlaceDto: CreatePlaceDto) {
@@ -484,18 +433,35 @@ export class PlaceService {
     );
 
     try {
-      let extractedIntent: ExtractedIntent = {};
+      let embedding: number[] | undefined;
+      let ftsKeywords: string = search;
 
       try {
-        extractedIntent = await this.kafkaService.sendWithTimeout(
+        const extractedIntent = await this.kafkaService.sendWithTimeout(
           IntelligenceTopics.ExtractUserIntent,
           { search },
         );
+
+        embedding = extractedIntent.embedding;
+
+        if (
+          extractedIntent.keywords &&
+          !extractedIntent.keywords.includes(LLM_THINKING_TAG)
+        ) {
+          ftsKeywords = extractedIntent.keywords;
+        }
+
+        this.kafkaService.getClient().emit(SearchTopics.Create, {
+          userId,
+          rawQuery: search,
+          extractedTerm: extractedIntent.keywords,
+        });
+        
       } catch (error: any) {
         const errorMessage =
           error?.message ?? 'Unknown error when extracting user intent';
         this.logger.warn(
-          `ExtractUserIntent failed. Falling back to empty intent. reason=${errorMessage}`,
+          `ExtractUserIntent failed. Falling back to FTS only. reason=${errorMessage}`,
         );
 
         if (error?.message?.includes('EMBEDDING_FAILED')) {
@@ -506,42 +472,53 @@ export class PlaceService {
         }
       }
 
-      if (extractedIntent.keywords?.includes(LLM_THINKING_TAG)) {
-        this.logger.warn(
-          `Extracted keywords contain llm thinking step. Falling back to using embedding`,
-        );
-        extractedIntent.keywords = undefined;
-      }
+      const [ftsResults, semanticResults] = await Promise.all([
+        this.queryPlacesInRadiusWithDistance(
+          latitude,
+          longitude,
+          latDelta,
+          longDelta,
+          radius,
+          orderByClause,
+          MAX_SEARCH_RESULTS_PER_MODE,
+          0,
+          undefined,
+          ftsKeywords,
+        ),
+        embedding
+          ? this.queryPlacesInRadiusWithDistance(
+              latitude,
+              longitude,
+              latDelta,
+              longDelta,
+              radius,
+              orderByClause,
+              MAX_SEARCH_RESULTS_PER_MODE,
+              0,
+              embedding,
+              undefined,
+            )
+          : Promise.resolve([]),
+      ]);
 
-      this.kafkaService.getClient().emit(SearchTopics.Create, {
-        userId,
-        rawQuery: search,
-        extractedTerm: extractedIntent.keywords,
-      });
+      const ftsIds = new Set(ftsResults.map((p) => p.id));
+      const merged = [
+        ...ftsResults,
+        ...semanticResults.filter((p) => !ftsIds.has(p.id)),
+      ];
 
-      const [rawPlaces, total] = await this.queryPlacesByIntent({
-        latitude,
-        longitude,
-        latDelta,
-        longDelta,
-        radius,
-        orderByClause,
-        limit,
-        offset,
-        extractedIntent,
-      });
-
+      const total = merged.length;
+      const pageResults = merged.slice(offset, offset + limit);
       const places = await this.enrichPlacesWithFavoriteAndImage(
-        rawPlaces,
+        pageResults,
         userId,
       );
-      const totalPages = Math.ceil(total / limit);
 
       return {
         places,
         total,
         page,
-        totalPages,
+        totalPages: Math.ceil(total / limit),
         limit,
       };
     } catch (error) {
