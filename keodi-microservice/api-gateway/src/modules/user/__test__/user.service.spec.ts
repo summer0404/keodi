@@ -100,7 +100,7 @@ describe('UserService', () => {
 
       expect(mockKafkaService.sendWithTimeout).toHaveBeenCalledWith(
         UserTopics.UpdatePicture,
-        { userId: 'u1', key: 'user_images/uuid-1' },
+        { userId: 'u1', s3Key: 'user_images/uuid-1' },
       );
     });
   });

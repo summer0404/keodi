@@ -45,10 +45,10 @@ export class UserService {
   }
 
   async updatePicture(userId: string, file: Buffer, type: string) {
-    const key = await this.imageService.uploadAndGetKey(ImageFolders.USER, file, type);
+    const s3Key = await this.imageService.uploadAndGetKey(ImageFolders.USER, file, type);
     return await this.kafkaService.sendWithTimeout(UserTopics.UpdatePicture, {
       userId,
-      key,
+      s3Key,
     });
   }
 

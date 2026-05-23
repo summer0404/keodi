@@ -56,7 +56,7 @@ describe('UserController', () => {
   });
 
   it('updatePicture – delegates to service.updatePicture', async () => {
-    const data = { key: 'user_images/uuid-1', userId: 'u1' };
+    const data = { s3Key: 'user_images/uuid-1', userId: 'u1' };
     mockUserService.updatePicture.mockResolvedValue({ message: 'ok' });
 
     await controller.updatePicture(data);

@@ -24,8 +24,8 @@ export class UserController {
   }
 
   @MessagePattern(UserTopics.UpdatePicture)
-  async updatePicture(@Payload() data: { key: string; userId: string }) {
-    return await this.userService.updatePicture(data.key, data.userId);
+  async updatePicture(@Payload() data: { s3Key: string; userId: string }) {
+    return await this.userService.updatePicture(data.s3Key, data.userId);
   }
 
   @MessagePattern(UserTopics.Get)
