@@ -397,7 +397,7 @@ export default function SettingScreen() {
           </Card>
 
           {/* Dark Mode */}
-          <Card>
+          {/* <Card>
             <View className="flex-row items-center justify-between px-4 py-4">
               <View className="flex-row items-center gap-3">
                 <Moon size={20} color={Palette.black} strokeWidth={1.9} />
@@ -411,7 +411,7 @@ export default function SettingScreen() {
                 thumbColor={Palette.white}
               />
             </View>
-          </Card>
+          </Card> */}
 
           {/* Logout */}
           <Card>

@@ -1149,9 +1149,40 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
     [executeAction, parseRemoteMessage, toBannerModel]
   );
 
+  const requestNotificationPermissions = useCallback(async () => {
+    try {
+      if (Platform.OS === 'ios') {
+        await messaging().registerDeviceForRemoteMessages();
+      }
+
+      const authStatus = await messaging().requestPermission();
+      const granted =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+      if (granted) {
+        const token = await messaging().getToken();
+        if (__DEV__) {
+          console.log('[notification] FCM token obtained:', token);
+        }
+        await syncTokenSafely(token);
+        isFcmReadyRef.current = true;
+        await syncRuntimeTopics(currentUserIdRef.current);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('[notification] Permission request failed', error);
+      }
+      return false;
+    }
+  }, [syncRuntimeTopics]);
+
   const runtime = useMemo(
-    () => ({ banner, dismissBanner, openBanner, isPrimaryLoading }),
-    [banner, dismissBanner, openBanner, isPrimaryLoading]
+    () => ({ banner, dismissBanner, openBanner, isPrimaryLoading, requestNotificationPermissions }),
+    [banner, dismissBanner, openBanner, isPrimaryLoading, requestNotificationPermissions]
   );
 
   useEffect(() => {

@@ -18,13 +18,16 @@
       "supportsTablet": true,
       "icon": "./assets/images/icon.png",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
       "package": "com.keodi.app",
+      "usesCleartextTraffic": true,
       "googleServicesFile": "./google-services.json",
       "versionCode": 1,
+      "permissions": ["android.permission.POST_NOTIFICATIONS"],
       "icon": "./assets/images/icon-new.png",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",

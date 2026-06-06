@@ -9,6 +9,7 @@ import { Palette } from '@/constants/theme';
 import { usePlacesStore } from '@/store/usePlacesStore';
 import type { FavoriteItem, PlaceSortBy } from '@/types/api';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScrollToTop } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ArrowUpDown } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -45,6 +46,7 @@ export default function FavoriteScreen() {
   const requestVersionRef = useRef(0);
   const inFlightPageRef = useRef<number | null>(null);
   const flatListRef = useRef<FlatList<FavoriteItem>>(null);
+  useScrollToTop(flatListRef);
 
   const sortByRef = useRef(sortBy);
   const currentPageRef = useRef(currentPage);
@@ -154,11 +156,7 @@ export default function FavoriteScreen() {
   }, [sortBy]);
 
   const handleLoadMore = useCallback(() => {
-    if (
-      !hasMoreRef.current ||
-      isLoadingRef.current ||
-      isLoadingMoreRef.current
-    ) {
+    if (!hasMoreRef.current || isLoadingRef.current || isLoadingMoreRef.current) {
       return;
     }
 

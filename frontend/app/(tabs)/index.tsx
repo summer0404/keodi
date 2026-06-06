@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { MapPin, MoveDiagonal, ArrowUpDown } from 'lucide-react-native';
 import Typography from '@/components/ui/Typography';
 import PlaceCard from '@/components/ui/PlaceCard';
+import HomeNotificationCenter from '@/components/ui/HomeNotificationCenter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { placesService } from '@/api/places';
 import { Select } from '@/components/ui/Select';
@@ -37,6 +38,7 @@ import { useLocationStore } from '@/store/useLocationStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSettingStore } from '@/store/useSettingStore';
 import { isAxiosError } from 'axios';
+import { useScrollToTop } from '@react-navigation/native';
 
 const appendUniquePlaces = (prev: PlaceItem[], next: PlaceItem[]) => {
   const existingIds = new Set(prev.map((item) => item.id));
@@ -89,6 +91,7 @@ export default function HomeScreen() {
   const requestVersionRef = useRef(0);
   const inFlightPageRef = useRef<number | null>(null);
   const flatListRef = useRef<FlatList<PlaceItem>>(null);
+  useScrollToTop(flatListRef);
 
   // Sync refs with latest state — does not cause re-render
   const coordsRef = useRef(coords);
@@ -410,6 +413,10 @@ export default function HomeScreen() {
 
   const keyExtractor = useCallback((item: PlaceItem) => item.id, []);
 
+  const handleScrollToTop = useCallback(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
   const listFooter = (
     <>
       {activeTab === 'nearby' && isLoadingMore ? (
@@ -432,11 +439,13 @@ export default function HomeScreen() {
         }}
       >
         <View className="flex-row items-center justify-between">
-          <Image
-            source={require('@/assets/images/logo.png')}
-            style={{ width: 100, height: 42 }}
-            contentFit="contain"
-          />
+          <Pressable onPress={handleScrollToTop} hitSlop={8}>
+            <Image
+              source={require('@/assets/images/logo.png')}
+              style={{ width: 100, height: 42 }}
+              contentFit="contain"
+            />
+          </Pressable>
 
           <View className="flex-row items-center gap-3">
             <Pressable
@@ -449,6 +458,8 @@ export default function HomeScreen() {
               <MapPin size={14} color={Palette.grey} strokeWidth={2} />
               <Typography className="text-gray-600">{locationLabel}</Typography>
             </Pressable>
+
+            <HomeNotificationCenter />
 
             <Pressable onPress={() => router.push('/setting/edit-profile' as any)}>
               <View className="h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">

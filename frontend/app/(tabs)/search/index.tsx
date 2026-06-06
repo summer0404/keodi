@@ -242,6 +242,7 @@ export default function SearchScreen() {
             onAIPress={() => setIsAIMode((prev) => !prev)}
             placeholder={t('search.title')}
           />
+          <Typography className="mt-3 text-blue-500">{t('search.searchAlert')}</Typography>
         </View>
 
         {isLocationLoading ? (

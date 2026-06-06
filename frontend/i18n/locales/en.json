@@ -201,7 +201,10 @@
   "search": {
     "title": "Search",
     "recent": "Recent",
+    "searchAlert": "You have 5 free AI search attempts. Try it now!",
     "trending": "Trending",
+    "aiQuotaExceeded": "AI search limit reached",
+    "aiQuotaExceededDesc": "You have used all AI search attempts. Please upgrade your plan.",
     "noResults": "Oops! \n No results found",
     "noResultsDesc": "We couldn’t find what you’re looking for\nMaybe try a different keyword \nor check your filters?",
     "clearSearch": "Clear search and try again",
@@ -409,9 +412,22 @@
     "add": "Add",
     "requested": "Requested",
     "alreadyFriends": "Friends",
+    "sendMessage": "Message",
     "removeFriend": "Remove friend",
     "removeConfirmTitle": "Remove friend?",
     "removeConfirmMessage": "Are you sure you want to remove this person from your friends list?",
     "confirm": "Confirm"
+  },
+  "chat": {
+    "defaultTitle": "Conversation",
+    "directSubtitle": "Direct message",
+    "loading": "Loading..."
+  },
+  "notificationInbox": {
+    "title": "Notifications",
+    "readAll": "Read all",
+    "empty": "No notifications yet",
+    "loading": "Loading notifications...",
+    "Seen": "Seen"
   }
 }

@@ -7,7 +7,8 @@ export const API_BASE_PATHS = {
   GROUP_SESSIONS: '/api/v1/group-sessions',
   USERS: '/api/v1/users',
   CONVERSATIONS: '/api/v1/conversations',
-  SETTINGS: '/api/v1/settings', 
+  NOTIFICATIONS: '/api/v1/notifications',
+  SETTINGS: '/api/v1/settings',
 } as const;
 
 export const API_ENDPOINTS = {
@@ -37,5 +38,6 @@ export const API_ENDPOINTS = {
   FRIENDS_REQUEST: `${API_BASE_PATHS.FRIENDS}/request`,
   FRIENDS_REQUESTS_PENDING: `${API_BASE_PATHS.FRIENDS}/requests/pending`,
   CONVERSATIONS: API_BASE_PATHS.CONVERSATIONS,
+  NOTIFICATIONS: API_BASE_PATHS.NOTIFICATIONS,
   SETTINGS: API_BASE_PATHS.SETTINGS,
 } as const;

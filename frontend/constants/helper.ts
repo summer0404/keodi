@@ -29,6 +29,89 @@ export const extractWaitSeconds = (message?: string) => {
   return Number.isNaN(seconds) ? null : seconds;
 };
 
+export const markdownToPlainText = (value: string) => {
+  return value
+    .replace(/\r\n/g, '\n')
+    .replace(/```[\s\S]*?```/g, (match) => match.replace(/```/g, '').trim())
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s{0,3}[-*+]\s+/gm, '')
+    .replace(/^\s{0,3}\d+\.\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\\([*_`\[\]()>#+\-.!])/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+export type MarkdownDisplayInline =
+  | {
+      type: 'text';
+      value: string;
+    }
+  | {
+      type: 'bold';
+      value: string;
+    };
+
+export type MarkdownDisplayLine =
+  | {
+      type: 'line';
+      prefix: string;
+      parts: MarkdownDisplayInline[];
+    }
+  | {
+      type: 'break';
+    };
+
+const parseMarkdownInline = (value: string): MarkdownDisplayInline[] => {
+  const parts: MarkdownDisplayInline[] = [];
+  const pattern = /\*\*([^*]+?)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(value)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', value: value.slice(lastIndex, match.index) });
+    }
+
+    parts.push({ type: 'bold', value: match[1] });
+    lastIndex = pattern.lastIndex;
+  }
+
+  if (lastIndex < value.length) {
+    parts.push({ type: 'text', value: value.slice(lastIndex) });
+  }
+
+  return parts.length > 0 ? parts : [{ type: 'text', value }];
+};
+
+export const parseMarkdownDisplay = (value: string): MarkdownDisplayLine[] => {
+  const normalized = value.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+
+  return lines.map((line): MarkdownDisplayLine => {
+    if (!line.trim()) {
+      return { type: 'break' };
+    }
+
+    const orderedMatch = line.match(/^\s*(\d+)\.\s+(.*)$/);
+    const prefix = orderedMatch ? `${orderedMatch[1]}. ` : '';
+    const content = orderedMatch ? orderedMatch[2] : line;
+
+    return {
+      type: 'line',
+      prefix,
+      parts: parseMarkdownInline(content),
+    };
+  });
+};
+
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 10;
 
