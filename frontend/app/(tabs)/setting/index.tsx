@@ -396,23 +396,6 @@ export default function SettingScreen() {
             )}
           </Card>
 
-          {/* Dark Mode */}
-          {/* <Card>
-            <View className="flex-row items-center justify-between px-4 py-4">
-              <View className="flex-row items-center gap-3">
-                <Moon size={20} color={Palette.black} strokeWidth={1.9} />
-                <Typography variant="h5">{t('settings.darkMode')}</Typography>
-              </View>
-
-              <Switch
-                value={settings.darkMode}
-                onValueChange={(value) => handleSettingChange('darkMode', value)}
-                trackColor={{ false: '#d4d4d8', true: '#111827' }}
-                thumbColor={Palette.white}
-              />
-            </View>
-          </Card> */}
-
           {/* Logout */}
           <Card>
             <Pressable

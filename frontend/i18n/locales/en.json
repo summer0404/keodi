@@ -201,10 +201,10 @@
   "search": {
     "title": "Search",
     "recent": "Recent",
-    "searchAlert": "You have 5 free AI search attempts. Try it now!",
+    "searchAlert": "You have 5 free AI search attempts per day. Try it now!",
     "trending": "Trending",
     "aiQuotaExceeded": "AI search limit reached",
-    "aiQuotaExceededDesc": "You have used all AI search attempts. Please upgrade your plan.",
+    "aiQuotaExceededDesc": "You have used all AI search attempts for today. Please upgrade your plan or come back tomorrow!",
     "noResults": "Oops! \n No results found",
     "noResultsDesc": "We couldn’t find what you’re looking for\nMaybe try a different keyword \nor check your filters?",
     "clearSearch": "Clear search and try again",
