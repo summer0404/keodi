@@ -122,7 +122,7 @@ export default function ConversationList({ style }: ConversationListProps) {
                     item={item}
                     onPress={() =>
                         router.push({
-                            pathname: '/(tabs)/group/[id]',
+                            pathname: item.hasSessionIcon ? '/(tabs)/group/[id]' : '/chat/[id]',
                             params: {
                                 id: item.id,
                                 name: item.name,

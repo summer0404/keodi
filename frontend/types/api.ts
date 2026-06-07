@@ -699,13 +699,47 @@ export interface OtherUserProfile {
   canSendFriendRequest: boolean;
 }
 
-export interface ChatSearchRequest{
-  latitude: number,
-  longitude: number,
-  message: string
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown> | null;
+  deepLink: string | null;
+  channel: string;
+  status: string;
+  isRead: boolean;
+  deliveredAt: string | null;
+  readAt: string | null;
+  createdAt: string;
 }
 
-export interface ChatSearchResponse{
+export interface NotificationInboxResponse {
+  notifications: NotificationItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  unreadCount: number;
+}
+
+export interface UnreadNotificationCountResponse {
+  count: number;
+}
+
+export interface GetNotificationInboxRequest {
+  page: number;
+  limit: number;
+  unreadOnly?: boolean;
+}
+
+export interface ChatSearchRequest {
+  latitude: number;
+  longitude: number;
+  message: string;
+}
+
+export interface ChatSearchResponse {
   message: string;
   places: PlaceItem[];
 }
@@ -714,4 +748,3 @@ export interface GetPlacesForYouRequest {
   latitude: number;
   longitude: number;
 }
-

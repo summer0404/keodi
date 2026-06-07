@@ -1,4 +1,5 @@
 import { authService } from '@/api/auth';
+import { chatService } from '@/api/chat';
 import { friendsService } from '@/api/friends';
 import { userService } from '@/api/user';
 import { Button } from '@/components/ui/Button';
@@ -16,13 +17,28 @@ import {
 } from '@/constants/helper';
 import { Palette } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { AuthMeResponse, OtherUserProfile, UpdatePictureRequest, UpdateUserProfileRequest } from '@/types/api';
+import type {
+  AuthMeResponse,
+  OtherUserProfile,
+  UpdatePictureRequest,
+  UpdateUserProfileRequest,
+} from '@/types/api';
 import axios from 'axios';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { type TFunction } from 'i18next';
-import { ArrowLeft, CalendarDays, Camera, Clock, Eye, EyeClosed, UserCheck, UserRoundPlus } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  CalendarDays,
+  Camera,
+  Clock,
+  Eye,
+  EyeClosed,
+  MessageCircle,
+  UserCheck,
+  UserRoundPlus,
+} from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -160,6 +176,7 @@ export default function EditProfileScreen() {
   const [otherProfile, setOtherProfile] = useState<OtherUserProfile | null>(null);
   const [isSendingFriendRequest, setIsSendingFriendRequest] = useState(false);
   const [isCancellingFriendRequest, setIsCancellingFriendRequest] = useState(false);
+  const [isOpeningChat, setIsOpeningChat] = useState(false);
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -235,7 +252,16 @@ export default function EditProfileScreen() {
     setIsSendingFriendRequest(true);
     try {
       const result = await friendsService.sendFriendRequest({ receiverId: userId });
-      setOtherProfile((prev) => prev ? { ...prev, hasPendingRequest: true, pendingRequestId: result.id, canSendFriendRequest: false } : prev);
+      setOtherProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              hasPendingRequest: true,
+              pendingRequestId: result.id,
+              canSendFriendRequest: false,
+            }
+          : prev
+      );
     } catch {
       Alert.alert('Error', t('errors.unexpectedError'));
     } finally {
@@ -249,11 +275,41 @@ export default function EditProfileScreen() {
     setIsCancellingFriendRequest(true);
     try {
       await friendsService.cancelFriendRequest(requestId);
-      setOtherProfile((prev) => prev ? { ...prev, hasPendingRequest: false, pendingRequestId: null, canSendFriendRequest: true } : prev);
+      setOtherProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              hasPendingRequest: false,
+              pendingRequestId: null,
+              canSendFriendRequest: true,
+            }
+          : prev
+      );
     } catch {
       Alert.alert('Error', t('errors.unexpectedError'));
     } finally {
       setIsCancellingFriendRequest(false);
+    }
+  };
+
+  const handleOpenDirectChat = async () => {
+    if (!userId || !otherProfile?.isFriend || isOpeningChat) return;
+
+    setIsOpeningChat(true);
+    try {
+      const conversation = await chatService.createConversation({
+        type: 'DIRECT',
+        memberIds: [userId],
+      });
+
+      router.push({
+        pathname: '/chat/[id]',
+        params: { id: conversation.id },
+      } as any);
+    } catch {
+      Alert.alert('Error', t('errors.unexpectedError'));
+    } finally {
+      setIsOpeningChat(false);
     }
   };
 
@@ -530,7 +586,9 @@ export default function EditProfileScreen() {
           <Pressable onPress={() => router.back()} className="p-1">
             <ArrowLeft size={22} color={Palette.black} strokeWidth={2} />
           </Pressable>
-          <Typography variant="h4">{isViewOnly ? t('home.profile') : t('home.editProfile')}</Typography>
+          <Typography variant="h4">
+            {isViewOnly ? t('home.profile') : t('home.editProfile')}
+          </Typography>
         </View>
 
         {isLoadingProfile ? (
@@ -570,7 +628,7 @@ export default function EditProfileScreen() {
                     rounded="md"
                   >
                     <UserRoundPlus size={18} color={Palette.white} strokeWidth={2} />
-                    {t('friends.addFriends').toUpperCase()}
+                    {t('friends.alreadyFriends').toUpperCase()}
                   </Button>
                 </View>
               )}
@@ -578,20 +636,44 @@ export default function EditProfileScreen() {
               {isViewOnly && otherProfile && (
                 <View className="mt-4 w-full items-center">
                   {otherProfile.isFriend ? (
-                    <Button disabled className="w-2/3 border py-2 px-6 shadow-md gap-2" rounded="md">
-                      <UserCheck size={18} color={Palette.white} strokeWidth={2} />
-                      {t('friends.alreadyFriends').toUpperCase()}
-                    </Button>
+                    <View className="w-full flex-row items-center justify-center items-center gap-3">
+                      <Button
+                        disabled
+                        className="flex-1 border py-2 px-6 shadow-md gap-2"
+                        rounded="md"
+                      >
+                        <UserCheck size={18} color={Palette.white} strokeWidth={2} />
+                        {t('friends.alreadyFriends').toUpperCase()}
+                      </Button>
+
+                      <Button
+                        onPress={handleOpenDirectChat}
+                        disabled={isOpeningChat}
+                        className="flex-1 border py-2 px-6 shadow-md gap-2 bg-[#0E0E0E]"
+                        rounded="md"
+                      >
+                        {isOpeningChat ? (
+                          <ActivityIndicator size="small" color={Palette.white} />
+                        ) : (
+                          <MessageCircle size={18} color={Palette.white} strokeWidth={2} />
+                        )}
+                        {t('friends.sendMessage').toUpperCase()}
+                      </Button>
+                    </View>
                   ) : otherProfile.hasPendingRequest ? (
                     <Button
-                      onPress={otherProfile.pendingRequestId ? handleCancelFriendRequest : undefined}
+                      onPress={
+                        otherProfile.pendingRequestId ? handleCancelFriendRequest : undefined
+                      }
                       disabled={isCancellingFriendRequest || !otherProfile.pendingRequestId}
                       className="w-2/3 border py-2 px-6 shadow-md gap-2"
                       rounded="md"
                     >
-                      {isCancellingFriendRequest
-                        ? <ActivityIndicator size="small" color={Palette.white} />
-                        : <Clock size={18} color={Palette.white} strokeWidth={2} />}
+                      {isCancellingFriendRequest ? (
+                        <ActivityIndicator size="small" color={Palette.white} />
+                      ) : (
+                        <Clock size={18} color={Palette.white} strokeWidth={2} />
+                      )}
                       {t('friends.requested').toUpperCase()}
                     </Button>
                   ) : otherProfile.canSendFriendRequest ? (
@@ -601,9 +683,11 @@ export default function EditProfileScreen() {
                       className="w-2/3 border py-2 px-6 shadow-md gap-2"
                       rounded="md"
                     >
-                      {isSendingFriendRequest
-                        ? <ActivityIndicator size="small" color={Palette.white} />
-                        : <UserRoundPlus size={18} color={Palette.white} strokeWidth={2} />}
+                      {isSendingFriendRequest ? (
+                        <ActivityIndicator size="small" color={Palette.white} />
+                      ) : (
+                        <UserRoundPlus size={18} color={Palette.white} strokeWidth={2} />
+                      )}
                       {t('friends.add').toUpperCase()}
                     </Button>
                   ) : null}
@@ -817,8 +901,9 @@ export default function EditProfileScreen() {
                 <Button
                   onPress={handleSubmit}
                   disabled={isSubmitting}
-                  className={`mt-4 py-3 mb-6 w-full items-center self-center ${isSubmitSuccess ? 'bg-green-500' : ''
-                    }`}
+                  className={`mt-4 py-3 mb-6 w-full items-center self-center ${
+                    isSubmitSuccess ? 'bg-green-500' : ''
+                  }`}
                   rounded="xl"
                 >
                   {isSubmitSuccess
