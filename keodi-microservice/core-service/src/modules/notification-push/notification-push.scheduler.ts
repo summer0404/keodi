@@ -13,6 +13,7 @@ import {
   NotificationType,
 } from 'src/shared/enums/notification.enum';
 import { PlaceSortBy, SortOrder } from 'src/shared/enums/sort.enum';
+import { buildDeepLink } from 'src/shared/utils/deep-link.util';
 import { getSearchRadiusKm } from 'src/shared/utils/search.utils';
 
 interface UserLocation {
@@ -121,7 +122,7 @@ export class NotificationPushScheduler {
         title: 'Places Near You',
         body: `Check out ${topPlace.name} and ${places.length - 1} more places nearby!`,
         data: { placeId: topPlace.id },
-        deepLink: `frontend://place/${topPlace.id}`,
+        deepLink: buildDeepLink(`place/${topPlace.id}`),
         preferredChannel: NotificationPreferredChannel.FCM,
         createdAt: new Date().toISOString(),
       });
@@ -153,7 +154,7 @@ export class NotificationPushScheduler {
         title: 'Recommended For You',
         body: `We think you'll love ${topPlace.name}! Tap to explore.`,
         data: { placeId: topPlace.id },
-        deepLink: `frontend://place/${topPlace.id}`,
+        deepLink: buildDeepLink(`place/${topPlace.id}`),
         preferredChannel: NotificationPreferredChannel.FCM,
         createdAt: new Date().toISOString(),
       });

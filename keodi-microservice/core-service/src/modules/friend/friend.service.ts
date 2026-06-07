@@ -10,15 +10,16 @@ import {
 } from 'src/shared/constants/error.constant';
 import { NotificationTopics } from 'src/shared/constants/topic.constant';
 import { FriendPaginationDto } from 'src/shared/dtos/user.dto';
+import { ConversationType } from 'src/shared/enums/chat.enum';
 import {
   NotificationPreferredChannel,
   NotificationType,
 } from 'src/shared/enums/notification.enum';
 import { FriendSortBy } from 'src/shared/enums/sort.enum';
+import { buildDeepLink } from 'src/shared/utils/deep-link.util';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
-import { ImageService } from '../image/image.service';
 import { ConversationService } from '../conversation/conversation.service';
-import { ConversationType } from 'src/shared/enums/chat.enum';
+import { ImageService } from '../image/image.service';
 
 @Injectable()
 export class FriendService {
@@ -109,7 +110,7 @@ export class FriendService {
         title: 'New Friend Request',
         body: `${senderName} sent you a friend request`,
         data: { senderId, requestId: request.id, senderName, senderPictureUrl },
-        deepLink: `frontend://friends/requests`,
+        deepLink: buildDeepLink('friends/requests'),
         preferredChannel: NotificationPreferredChannel.BOTH,
         createdAt: new Date().toISOString(),
       });
@@ -185,7 +186,7 @@ export class FriendService {
           title: 'Friend Request Accepted',
           body: `${accepterName} accepted your friend request`,
           data: { accepterId: userId, accepterName, accepterPictureUrl },
-          deepLink: `frontend://friends`,
+          deepLink: buildDeepLink('friends'),
           preferredChannel: NotificationPreferredChannel.BOTH,
           createdAt: new Date().toISOString(),
         });

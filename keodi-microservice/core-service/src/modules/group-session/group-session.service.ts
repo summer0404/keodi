@@ -31,6 +31,7 @@ import {
   NotificationType,
 } from 'src/shared/enums/notification.enum';
 import { ActivityActor } from 'src/shared/interfaces/group-session.interface';
+import { buildDeepLink, buildShareLink } from 'src/shared/utils/deep-link.util';
 import { handleServiceErrorCatching } from 'src/shared/utils/error.util';
 import { ConversationService } from '../conversation/conversation.service';
 import { ImageService } from '../image/image.service';
@@ -378,7 +379,10 @@ export class GroupSessionService {
         sessionId: session.sessionId,
       });
 
-      return session;
+      return {
+        ...session,
+        shareLink: buildShareLink(session.shareCode),
+      };
     } catch (error) {
       handleServiceErrorCatching(error);
     }
@@ -472,6 +476,7 @@ export class GroupSessionService {
             members: membersWithPictureUrl,
             memberCount: session.members.length,
             member: existingMemberWithPictureUrl,
+            shareLink: buildShareLink(session.shareCode),
             alreadyJoined: true,
           };
         }
@@ -498,6 +503,7 @@ export class GroupSessionService {
             members: membersWithPictureUrl,
             memberCount: session.members.length,
             member: existingMemberWithPictureUrl,
+            shareLink: buildShareLink(session.shareCode),
             alreadyJoined: true,
           };
         }
@@ -562,6 +568,7 @@ export class GroupSessionService {
       return {
         sessionId: session.sessionId,
         shareCode: session.shareCode,
+        shareLink: buildShareLink(session.shareCode),
         createdBy: session.createdBy,
         creator: creatorWithPictureUrl,
         createdAt: session.createdAt,
@@ -653,7 +660,7 @@ export class GroupSessionService {
           inviterName,
           inviterPictureUrl,
         },
-        deepLink: `frontend://group?shareCode=${session.shareCode}`,
+        deepLink: buildDeepLink(`group?shareCode=${session.shareCode}`),
         preferredChannel: NotificationPreferredChannel.BOTH,
         createdAt: new Date().toISOString(),
       });
@@ -661,6 +668,7 @@ export class GroupSessionService {
       return {
         sessionId,
         shareCode: session.shareCode,
+        shareLink: buildShareLink(session.shareCode),
         inviterId,
         friendId,
       };
@@ -703,10 +711,15 @@ export class GroupSessionService {
         data: { status: GroupSessionStatus.CLOSED, closeAt: null },
       });
 
-
       const closer = await this.prismaService.user.findUnique({
         where: { id: userId },
-        select: { id: true, username: true, firstName: true, lastName: true, pictureUrl: true },
+        select: {
+          id: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          pictureUrl: true,
+        },
       });
       const closerWithPictureUrl = closer
         ? await this.mapUserPictureUrl(closer)
@@ -1030,7 +1043,7 @@ export class GroupSessionService {
             title: 'Vote Finalized!',
             body: 'All members have voted. Check out the results!',
             data: { sessionId },
-            deepLink: `frontend://group/session/${sessionId}/results`,
+            deepLink: buildDeepLink(`group/session/${sessionId}/results`),
             preferredChannel: NotificationPreferredChannel.BOTH,
             createdAt: new Date().toISOString(),
           });
@@ -1162,7 +1175,7 @@ export class GroupSessionService {
             ? `The vote is in! ${winningPlaceName} wins. Tap to see the results.`
             : 'The session host has finalized the vote. Check out the results!',
           data: { sessionId, winningPlaceId, winningPlaceName },
-          deepLink: `frontend://group/session/${sessionId}/results`,
+          deepLink: buildDeepLink(`group/session/${sessionId}/results`),
           preferredChannel: NotificationPreferredChannel.BOTH,
           createdAt: new Date().toISOString(),
         });

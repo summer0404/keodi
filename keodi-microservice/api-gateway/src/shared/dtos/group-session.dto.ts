@@ -39,6 +39,13 @@ export class GroupSessionResponseDto {
   shareCode: string;
 
   @ApiProperty({
+    description:
+      'Shareable HTTPS link to join the session (universal/app link)',
+    example: 'https://keodi.vohuka.id.vn/join/AB12CD34',
+  })
+  shareLink: string;
+
+  @ApiProperty({
     description: 'Session creation timestamp',
     example: '2026-02-10T10:30:00Z',
   })
@@ -218,6 +225,13 @@ export class JoinGroupSessionResponseDto {
     example: 'AB12CD',
   })
   shareCode: string;
+
+  @ApiProperty({
+    description:
+      'Shareable HTTPS link to join the session (universal/app link)',
+    example: 'https://keodi.vohuka.id.vn/join/AB12CD',
+  })
+  shareLink: string;
 
   @ApiProperty({
     description: 'ID of the session creator',

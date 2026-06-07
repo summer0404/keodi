@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaService } from 'src/database/prisma.service';
-import { ImageService } from 'src/modules/image/image.service';
 import { ConversationService } from 'src/modules/conversation/conversation.service';
+import { ImageService } from 'src/modules/image/image.service';
 import { KafkaService } from 'src/providers/kafka/kafka.service';
 import { RedisService } from 'src/providers/redis/redis.service';
 import { ChatNotificationBody } from 'src/shared/constants/chat.constant';
@@ -21,7 +21,7 @@ import {
   NotificationType,
 } from 'src/shared/enums/notification.enum';
 import { MessageWithSender } from 'src/shared/types/message.type';
-
+import { buildDeepLink } from 'src/shared/utils/deep-link.util';
 
 @Injectable()
 export class MessageService {
@@ -155,7 +155,10 @@ export class MessageService {
         .join(' ') || 'Someone';
     const senderPictureUrl = resolvedMessage.sender?.pictureUrl ?? null;
 
-    const notificationBody = type === MessageType.IMAGE ? ChatNotificationBody.IMAGE_MESSAGE : content.slice(0, 100);
+    const notificationBody =
+      type === MessageType.IMAGE
+        ? ChatNotificationBody.IMAGE_MESSAGE
+        : content.slice(0, 100);
 
     for (const userId of memberIds) {
       if (userId === senderId) continue;
@@ -176,7 +179,7 @@ export class MessageService {
           senderName,
           senderPictureUrl,
         },
-        deepLink: `frontend://chat/${conversationId}`,
+        deepLink: buildDeepLink(`chat/${conversationId}`),
         preferredChannel: NotificationPreferredChannel.FCM,
         createdAt: new Date().toISOString(),
       });

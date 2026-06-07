@@ -36,7 +36,7 @@ export class NotificationItemDto {
   @ApiProperty({
     required: false,
     nullable: true,
-    example: 'keodi://friends/requests',
+    example: 'https://keodi.vohuka.id.vn/app/friends/requests',
   })
   deepLink: string | null;
 
