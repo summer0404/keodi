@@ -277,6 +277,7 @@ export interface GroupSessionItem {
   sessionId: string;
   createdBy: string;
   shareCode: string;
+  shareLink?: string;
   createdAt: string;
   searchRadius?: number;
   status: string;
@@ -301,6 +302,7 @@ export interface CreateGroupSessionResponse {
   sessionId: string;
   createdBy: string;
   shareCode: string;
+  shareLink: string;
   createdAt: string;
   status: string;
   voteStatus: string;
@@ -354,6 +356,7 @@ export interface JoinGroupSessionResponse extends GroupSessionItem {
 export interface InviteFriendResponse {
   sessionId: string;
   shareCode: string;
+  shareLink?: string;
   inviterId: string;
   friendId: string;
 }

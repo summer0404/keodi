@@ -25,9 +25,10 @@ export default function GroupInviteScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { sessionId, shareCode } = useLocalSearchParams<{
+  const { sessionId, shareCode, shareLink } = useLocalSearchParams<{
     sessionId?: string;
     shareCode?: string;
+    shareLink?: string;
   }>();
 
   const [friends, setFriends] = useState<FriendItem[]>([]);
@@ -58,6 +59,14 @@ export default function GroupInviteScreen() {
 
     return shareCode;
   }, [shareCode]);
+
+  const normalizedShareLink = useMemo(() => {
+    if (Array.isArray(shareLink)) {
+      return shareLink[0];
+    }
+
+    return shareLink;
+  }, [shareLink]);
 
   const appendUniqueFriends = useCallback((prev: FriendItem[], next: FriendItem[]) => {
     const seen = new Set(prev.map((item) => `${item.id}-${item.friendId}-${item.userId}`));
@@ -327,6 +336,7 @@ export default function GroupInviteScreen() {
                 params: {
                   sessionId: normalizedSessionId,
                   shareCode: normalizedShareCode,
+                  shareLink: normalizedShareLink,
                 },
               } as any)
             }

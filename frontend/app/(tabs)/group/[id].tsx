@@ -30,6 +30,7 @@ import {
   RealtimeLocationSnapshot,
   RealtimeLocationUpdated,
 } from '@/types/api';
+import { buildShareLink } from '@/utils/deep-link';
 import { isAxiosError } from 'axios';
 import clsx from 'clsx';
 import { Image } from 'expo-image';
@@ -1160,6 +1161,7 @@ export default function GroupDetailScreen() {
         params: {
           sessionId: currentSession.sessionId,
           shareCode: currentSession.shareCode,
+          shareLink: currentSession.shareLink ?? buildShareLink(currentSession.shareCode),
         },
       } as any);
     },
@@ -1182,6 +1184,7 @@ export default function GroupDetailScreen() {
       params: {
         sessionId: session.sessionId,
         shareCode: session.shareCode,
+        shareLink: session.shareLink ?? buildShareLink(session.shareCode),
       },
     });
   }, [router, session]);

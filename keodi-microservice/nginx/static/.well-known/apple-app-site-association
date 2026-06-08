@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_YOUR_APPLE_TEAM_ID.com.keodi.app"],
+        "components": [
+          { "/": "/app/*", "comment": "All in-app deep links" },
+          { "/": "/join/*", "comment": "Group session share links" }
+        ]
+      }
+    ]
+  }
+}

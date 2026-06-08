@@ -129,7 +129,8 @@
     "invalidImageFormat": "Only JPG, JPEG, PNG, and WEBP files are supported",
     "unableToUpdateProfile": "Unable to update profile. Please try again",
     "SESSION_NOT_FOUND": "Group session not found. Please check the share code and try again",
-    "SESSION_NOT_ACTIVE": "Group session is not active. Please check the share code and try again"
+    "SESSION_NOT_ACTIVE": "Group session is not active. Please check the share code and try again",
+    "invalidLink": "Invalid or expired link"
   },
   "home": {
     "greeting": "Hi @{{username}},",
@@ -304,7 +305,10 @@
     "aiSuggestions": "AI Suggestions",
     "selectedCategories": "Selected Categories",
     "noCategoriesFound": "No Categories Found",
-    "searchSuggestions": "Search Suggestions"
+    "searchSuggestions": "Search Suggestions",
+    "shareLink": "Share Link",
+    "shareMessage": "Join my group session on Keodi! {{link}}",
+    "joiningSession": "Joining session…"
   },
   "notification": {
     "groupInviteTitle": "Group Session Invite",
@@ -393,7 +397,8 @@
     "direction": "Direction",
     "clearAll": "Clear all",
     "continue": "Continue",
-    "countinuing": "Continuing..."
+    "countinuing": "Continuing...",
+    "cancel": "Cancel"
   },
   "friends": {
     "title": "Friends",

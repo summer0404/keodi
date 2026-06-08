@@ -18,6 +18,7 @@ import Typography from '@/components/ui/Typography';
 import { groupSessionsService } from '@/api/groupSessions';
 import { Palette } from '@/constants/theme';
 import type { GroupSessionItem } from '@/types/api';
+import { buildShareLink } from '@/utils/deep-link';
 import { Card } from '@/components/ui/Card';
 import clsx from 'clsx';
 import GroupSessionAvatarStack from '@/components/ui/GroupSessionAvatarStack';
@@ -346,6 +347,7 @@ export default function GroupScreen() {
         params: {
           sessionId: created.sessionId,
           shareCode: created.shareCode,
+          shareLink: created.shareLink ?? buildShareLink(created.shareCode),
         },
       } as any);
     } finally {
@@ -360,6 +362,7 @@ export default function GroupScreen() {
         params: {
           sessionId: session.sessionId,
           shareCode: session.shareCode,
+          shareLink: session.shareLink ?? buildShareLink(session.shareCode),
         },
       } as any);
     },

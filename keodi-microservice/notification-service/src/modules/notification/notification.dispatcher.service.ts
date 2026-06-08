@@ -66,16 +66,20 @@ export class NotificationDispatcherService {
 
     if (channel !== NotificationPreferredChannel.WEBSOCKET) {
       try {
-        const fcmData = event.data
+        const fcmData: Record<string, string> = event.data
           ? Object.fromEntries(
               Object.entries(event.data).map(([k, v]) => [k, String(v)]),
             )
-          : undefined;
+          : {};
+
+        if (event.deepLink) {
+          fcmData['deepLink'] = event.deepLink;
+        }
 
         await this.fcmService.sendToTopic(fcmUserTopic(event.userId), {
           title: event.title,
           body: event.body,
-          data: fcmData,
+          data: Object.keys(fcmData).length > 0 ? fcmData : undefined,
         });
         delivered = true;
       } catch (error) {}

@@ -11,6 +11,7 @@ import { groupSessionsService } from '@/api/groupSessions';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useGroupSessionStore } from '@/store/useGroupSessionStore';
 import type { GroupSessionMember } from '@/types/api';
+import { resolveDeepLinkPath } from '@/utils/deep-link';
 
 type RuntimeArgs = {
   accessToken: string | null;
@@ -221,18 +222,6 @@ const resolveTemplateKeysByType = (type: string | null) => {
   }
 };
 
-const normalizePath = (path: string | null) => {
-  if (!path) {
-    return null;
-  }
-
-  if (path.startsWith('/')) {
-    return path;
-  }
-
-  return `/${path}`;
-};
-
 const hasVersionParam = (url: string | null): boolean => {
   if (!url) return false;
   return url.includes('?v=') || url.includes('&v=');
@@ -247,7 +236,7 @@ const resolveTargetPathFromEvent = (event: RealtimeNotificationEvent) => {
     toStringOrNull(eventData.path);
 
   if (deepLink) {
-    return normalizePath(deepLink);
+    return resolveDeepLinkPath(deepLink);
   }
 
   const sessionId =
@@ -267,7 +256,7 @@ const resolveTargetPathFromRemoteMessage = (message: FirebaseMessagingTypes.Remo
 
   const deepLink = toStringOrNull(data.deepLink) ?? toStringOrNull(data.path);
   if (deepLink) {
-    return normalizePath(deepLink);
+    return resolveDeepLinkPath(deepLink);
   }
 
   const sessionId = toStringOrNull(data.sessionId) ?? toStringOrNull(data.groupSessionId);

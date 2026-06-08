@@ -20,7 +20,10 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": ["remote-notification"]
-      }
+      },
+      "associatedDomains": [
+        "applinks:keodi.vohuka.id.vn"
+      ]
     },
     "android": {
       "package": "com.keodi.app",
@@ -34,7 +37,26 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "keodi.vohuka.id.vn",
+              "pathPrefix": "/app"
+            },
+            {
+              "scheme": "https",
+              "host": "keodi.vohuka.id.vn",
+              "pathPrefix": "/join"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "output": "static",

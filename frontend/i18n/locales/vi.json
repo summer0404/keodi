@@ -129,7 +129,8 @@
     "invalidImageFormat": "Chỉ hỗ trợ tệp JPG, JPEG, PNG, và WEBP",
     "unableToUpdateProfile": "Không thể cập nhật hồ sơ. Vui lòng thử lại",
     "SESSION_NOT_FOUND": "Không tìm thấy phiên nhóm. Vui lòng kiểm tra lại mã chia sẻ",
-    "SESSION_NOT_ACTIVE": "Phiên nhóm không hoạt động. Vui lòng kiểm tra lại mã chia sẻ"
+    "SESSION_NOT_ACTIVE": "Phiên nhóm không hoạt động. Vui lòng kiểm tra lại mã chia sẻ",
+    "invalidLink": "Liên kết không hợp lệ hoặc đã hết hạn"
   },
   "home": {
     "greeting": "Hi @{{username}},",
@@ -305,7 +306,10 @@
     "selectedCategories": "Đã chọn",
     "noCategoriesFound": "Không tìm thấy danh mục nào",
     "searchSuggestions": "Gợi ý tìm kiếm",
-    "warningCategories": "~ Hãy tìm kiếm bằng tiếng Anh nhé ~"
+    "warningCategories": "~ Hãy tìm kiếm bằng tiếng Anh nhé ~",
+    "shareLink": "Chia sẻ liên kết",
+    "shareMessage": "Tham gia nhóm của tôi trên Keodi! {{link}}",
+    "joiningSession": "Đang tham gia nhóm…"
   },
   "notification": {
     "groupInviteTitle": "Lời mời tham gia nhóm",
@@ -393,7 +397,8 @@
     "direction": "Chỉ đường",
     "clearAll": "Xóa tất cả",
     "continue": "Tiếp tục",
-    "continuing": "Đang tiếp tục..."
+    "continuing": "Đang tiếp tục...",
+    "cancel": "Hủy"
   },
   "friends": {
     "title": "Bạn bè",
