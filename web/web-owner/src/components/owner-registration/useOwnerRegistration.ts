@@ -42,9 +42,10 @@ export function useOwnerRegistration() {
 
   const onSubmit = async (data: RegisterOwnerFormValues) => {
     try {
-      const { confirmPassword, countryCode, ...rest } = data;
+      const { confirmPassword, countryCode, businessWebsite, ...rest } = data;
       const payload = {
         ...rest,
+        ...(businessWebsite ? { businessWebsite } : {}),
         businessPhone: `${countryCode}${rest.businessPhone}`,
       };
       await registerOwner(payload, import.meta.env.VITE_API_BASE_URL)

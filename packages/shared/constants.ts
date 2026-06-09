@@ -11,7 +11,7 @@ export const API_ENDPOINTS = (baseUrl: string) => ({
   },
   PLACES: {
     ROOT: `${baseUrl}/places`,
-    SEARCH: "http://157.66.218.6/api/v1/places/search",
+    SEARCH: `${baseUrl}/places/search`,
     ADMIN: `${baseUrl}/places/admin`,
     APPROVE: (id: string) => `${baseUrl}/places/${id}/approve`,
     REJECT: (id: string) => `${baseUrl}/places/${id}/reject`,
