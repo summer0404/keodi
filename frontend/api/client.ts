@@ -112,30 +112,10 @@ apiClient.interceptors.response.use(
     const { clearTokens, setTokens } = useAuthStore.getState();
 
     try {
-      const { refreshToken } = useAuthStore.getState();
-
-      const { data, headers } = await apiClient.post(API_ENDPOINTS.REFRESH, undefined, {
-        headers: refreshToken ? {
-          Cookie: `refreshToken=${refreshToken}`
-        } : undefined
-      });
-
-      const setCookieHeader = headers['set-cookie'];
-      let extractedRefreshToken = data.refreshToken;
-      
-      if (!extractedRefreshToken && setCookieHeader) {
-        const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
-        for (const cookieStr of cookies) {
-          const match = cookieStr.match(/refreshToken=([^;]+)/);
-          if (match) {
-            extractedRefreshToken = match[1];
-            break;
-          }
-        }
-      }
+      const { data } = await apiClient.post(API_ENDPOINTS.REFRESH, undefined);
 
       // Update access token in frontend state.
-      await setTokens(data.accessToken, extractedRefreshToken || refreshToken || '');
+      await setTokens(data.accessToken);
       processQueue(null, data.accessToken);
 
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
