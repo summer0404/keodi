@@ -101,7 +101,7 @@ export default function RegisterScreen() {
               error.message ??
               'Register failed.';
 
-            if (status === 400 && message === 'Username already exists') {
+            if (status === 400 && message === 'USERNAME_ALREADY_EXISTS') {
               setError('username', {
                 type: 'server',
                 message: t('errors.usernameExists'),
@@ -109,7 +109,7 @@ export default function RegisterScreen() {
               return;
             }
 
-            if (status === 400 && message === 'Email already exists') {
+            if (status === 400 && message === 'EMAIL_ALREADY_EXISTS') {
               setError('email', {
                 type: 'server',
                 message: t('errors.emailExists'),

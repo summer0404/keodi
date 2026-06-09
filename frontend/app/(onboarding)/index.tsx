@@ -39,6 +39,8 @@ const imageSlides = [
 
 const onboardingPages = [0, 1, 2];
 
+import { useAuthStore } from '@/store/useAuthStore';
+
 export default function OnboardingScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -49,16 +51,22 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { language, setLanguage } = useSettingStore();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const authHydrated = useAuthStore((s) => s._hasHydrated);
 
   useEffect(() => {
-    if (!_hasHydrated) {
+    if (!_hasHydrated || !authHydrated) {
       return;
     }
 
     if (hasSeenOnboarding) {
-      router.replace('/login');
+      if (accessToken) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/login');
+      }
     }
-  }, [_hasHydrated, hasSeenOnboarding, router]);
+  }, [_hasHydrated, authHydrated, hasSeenOnboarding, accessToken, router]);
 
   if (!_hasHydrated || hasSeenOnboarding) {
     return <View className="flex-1 bg-black" />;

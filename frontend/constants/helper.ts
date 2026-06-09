@@ -598,7 +598,7 @@ export interface Category {
 export const DEFAULT_AVATAR_SOURCE = require('@/assets/images/default-avatar.webp');
 export const DEFAULT_PLACE_IMAGE = require('@/assets/images/img-cover.webp');
 
-export const MAX_AVATAR_FILE_BYTES = 1024 * 1024;
+export const MAX_AVATAR_FILE_BYTES = 50 * 1024 * 1024;
 
 export const toDisplayDate = (value: string | null | undefined) => {
   if (!value) return '';

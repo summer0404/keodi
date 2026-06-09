@@ -6,7 +6,7 @@ import { Palette } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { FriendItem, FriendRequestItem, SearchUserItem } from '@/types/api';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FriendsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
@@ -30,7 +31,17 @@ export default function FriendsScreen() {
 
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests'>(
+    params.tab === 'requests' ? 'requests' : 'friends'
+  );
+
+  useEffect(() => {
+    if (params.tab === 'requests') {
+      setActiveTab('requests');
+    } else if (params.tab === 'friends') {
+      setActiveTab('friends');
+    }
+  }, [params.tab]);
 
   // Search Results State
   const [searchUsers, setSearchUsers] = useState<SearchUserItem[]>([]);

@@ -31,14 +31,42 @@ export const authService = {
   },
   login: async (payload: LoginRequest): Promise<LoginResponse> => {
     const response = await apiClient.post<LoginResponse>(API_ENDPOINTS.LOGIN, payload);
-    return response.data;
+    
+    const setCookieHeader = response.headers['set-cookie'];
+    let extractedRefreshToken = response.data.refreshToken;
+    
+    if (!extractedRefreshToken && setCookieHeader) {
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+      for (const cookieStr of cookies) {
+        const match = cookieStr.match(/refreshToken=([^;]+)/);
+        if (match) {
+          extractedRefreshToken = match[1];
+          break;
+        }
+      }
+    }
+    return { ...response.data, refreshToken: extractedRefreshToken || '' };
   },
-  googleLoginMobile: async (token: string): Promise<{ accessToken: string }> => {
+  googleLoginMobile: async (token: string): Promise<{ accessToken: string; refreshToken?: string }> => {
     const response = await apiClient.post<{ accessToken: string }>(
       API_ENDPOINTS.GOOGLE_LOGIN_MOBILE,
       { token }
     );
-    return response.data;
+
+    const setCookieHeader = response.headers['set-cookie'];
+    let extractedRefreshToken = '';
+    
+    if (setCookieHeader) {
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+      for (const cookieStr of cookies) {
+        const match = cookieStr.match(/refreshToken=([^;]+)/);
+        if (match) {
+          extractedRefreshToken = match[1];
+          break;
+        }
+      }
+    }
+    return { ...response.data, refreshToken: extractedRefreshToken };
   },
   resendVerifyEmail: async (userId: string): Promise<ResendVerifyEmailResponse> => {
     const response = await apiClient.get<ResendVerifyEmailResponse>(

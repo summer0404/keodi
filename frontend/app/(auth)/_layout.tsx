@@ -4,10 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useEffect } from 'react';
 
+import { useAuthStore } from '@/store/useAuthStore';
+
 export default function AuthLayout() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useTranslation();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const authHydrated = useAuthStore((s) => s._hasHydrated);
 
   const isForgotPassword = pathname.endsWith('/forgot-password');
   const isNewPassword = pathname.endsWith('/new-password');
@@ -16,10 +20,15 @@ export default function AuthLayout() {
   const isCheckEmail = pathname.endsWith('/check-email');
 
   useEffect(() => {
+    if (authHydrated && accessToken) {
+      router.replace('/(tabs)');
+      return;
+    }
+
     if (!isLogin && !isSignup && !isForgotPassword && !isNewPassword && !isCheckEmail) {
       router.replace('/login');
     }
-  }, [pathname]);
+  }, [pathname, authHydrated, accessToken]);
 
   return (
     <KeyboardAvoidingView

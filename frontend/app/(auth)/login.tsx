@@ -72,7 +72,7 @@ export default function LoginScreen() {
       }
 
       const result = await googleLoginMutation.mutateAsync(signInResponse.data.idToken);
-      await setTokens(result.accessToken, '');
+      await setTokens(result.accessToken, result.refreshToken ?? '');
 
       if (hasCompletedCategoryOnboarding) {
         router.replace('/(tabs)');

@@ -44,22 +44,7 @@ type GroupAddLocationSheetProps = {
   candidateIds?: Set<string>;
 };
 
-const isPlaceMatch = (place: PlaceRecommendationItem, query: string) => {
-  if (!query) {
-    return true;
-  }
 
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return true;
-  }
-
-  const address = (place.fullAddress?.trim() ?? '').toLowerCase();
-
-  return [place.name, address, place.description]
-    .filter(Boolean)
-    .some((value) => value!.toLowerCase().includes(normalized));
-};
 
 function AddLocationCard({
   place,
@@ -194,10 +179,7 @@ export default function GroupAddLocationSheet({
     [memberLocations.length, userCoords]
   );
 
-  const filteredPlaces = useMemo(
-    () => recommendedPlaces.filter((place) => isPlaceMatch(place, query)),
-    [query, recommendedPlaces]
-  );
+  const filteredPlaces = recommendedPlaces;
 
   useEffect(() => {
     if (!visible) {
@@ -324,17 +306,12 @@ export default function GroupAddLocationSheet({
           style={{ paddingTop: 14, paddingBottom: insets.bottom + 24 }}
         >
           <View className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-300" />
-
-          {/* <Typography variant="h4" className="text-black">
-            {t('group.addLocation')}
-          </Typography> */}
-
           <View className="mt-3">
             <SearchBar
               value={query}
               onChangeText={setQuery}
               onSubmitEditing={handleSearch}
-              placeholder={t('search.title')}
+              placeholder={t('search.recommend')}
               showSettings={false}
               showAI={false}
             />

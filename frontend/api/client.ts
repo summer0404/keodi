@@ -112,12 +112,30 @@ apiClient.interceptors.response.use(
     const { clearTokens, setTokens } = useAuthStore.getState();
 
     try {
-      // Call refresh endpoint without sending refresh token in body.
-      // Backend is expected to read httpOnly cookie and return a new access token.
-      const { data } = await apiClient.post(API_ENDPOINTS.REFRESH);
+      const { refreshToken } = useAuthStore.getState();
 
-      // Update access token in frontend state. Do not store refresh token client-side.
-      await setTokens(data.accessToken, data.refreshToken ?? '');
+      const { data, headers } = await apiClient.post(API_ENDPOINTS.REFRESH, undefined, {
+        headers: refreshToken ? {
+          Cookie: `refreshToken=${refreshToken}`
+        } : undefined
+      });
+
+      const setCookieHeader = headers['set-cookie'];
+      let extractedRefreshToken = data.refreshToken;
+      
+      if (!extractedRefreshToken && setCookieHeader) {
+        const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+        for (const cookieStr of cookies) {
+          const match = cookieStr.match(/refreshToken=([^;]+)/);
+          if (match) {
+            extractedRefreshToken = match[1];
+            break;
+          }
+        }
+      }
+
+      // Update access token in frontend state.
+      await setTokens(data.accessToken, extractedRefreshToken || refreshToken || '');
       processQueue(null, data.accessToken);
 
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
