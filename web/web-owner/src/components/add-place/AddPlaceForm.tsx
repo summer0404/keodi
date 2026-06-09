@@ -184,7 +184,6 @@ export default function AddPlaceForm() {
     }
   };
 
-  const watchMainCat = form.watch("mainCategoryId");
   const watchSecCats = form.watch("secondaryCategoryIds") || [];
 
   if (success) {

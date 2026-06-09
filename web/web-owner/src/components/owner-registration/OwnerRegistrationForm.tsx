@@ -21,7 +21,6 @@ export default function OwnerRegistrationForm() {
     form,
     navigate,
     currentStep,
-    setCurrentStep,
     showPassword,
     setShowPassword,
     showConfirmPassword,
@@ -332,7 +331,7 @@ export default function OwnerRegistrationForm() {
               <div className="pt-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-neutral-700">Proof Documents</label>
                 <div className="mt-2 space-y-3">
-                  {proofDocs.map((doc, index) => (
+                  {proofDocs.map((_, index) => (
                     <div key={index} className="flex items-start space-x-2">
                       <FormField
                         control={form.control}
