@@ -9,23 +9,12 @@ import type { AuthMeResponse } from '@/types/api';
 
 const TOKEN_KEYS = {
   ACCESS_TOKEN: 'auth_access_token',
+  // Kept only for legacy cleanup in clearTokens
   REFRESH_TOKEN: 'auth_refresh_token',
 } as const;
 
 const DEFAULT_ME_CACHE_TTL_MS = 60 * 1000;
 let fetchMePromise: Promise<AuthMeResponse | null> | null = null;
-
-const debugToken = (token: string | null) => {
-  if (!token) {
-    return null;
-  }
-
-  if (token.length <= 12) {
-    return `${token.slice(0, 3)}...(${token.length})`;
-  }
-
-  return `${token.slice(0, 6)}...${token.slice(-4)} (${token.length})`;
-};
 
 // const logAuthStore = (event: string, payload: Record<string, unknown>) => {
 //   if (!__DEV__) {
@@ -37,7 +26,7 @@ const debugToken = (token: string | null) => {
 
 interface AuthState {
   accessToken: string | null;
-  refreshToken: string | null;
+  canRefresh: boolean;
   postLogoutNoticeKey: string | null;
   me: AuthMeResponse | null;
   meFetchedAt: number;
@@ -45,7 +34,7 @@ interface AuthState {
   isFetchingMe: boolean;
   _hasHydrated: boolean;
 
-  setTokens: (accessToken: string, refreshToken: string) => Promise<void>;
+  setTokens: (accessToken: string) => Promise<void>;
   clearTokens: () => Promise<void>;
   setPostLogoutNoticeKey: (noticeKey: string | null) => void;
   consumePostLogoutNoticeKey: () => string | null;
@@ -56,7 +45,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   accessToken: null,
-  refreshToken: null,
+  canRefresh: false,
   postLogoutNoticeKey: null,
   me: null,
   meFetchedAt: 0,
@@ -64,7 +53,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   isFetchingMe: false,
   _hasHydrated: false,
 
-  setTokens: async (accessToken: string, refreshToken: string) => {
+  setTokens: async (accessToken: string) => {
     if (accessToken) {
       // await AsyncStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
       await SecureStore.setItemAsync(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
@@ -73,17 +62,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       await SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
     }
 
-    if (refreshToken) {
-      // await AsyncStorage.setItem(TOKEN_KEYS.REFRESH_TOKEN, refreshToken);
-      await SecureStore.setItemAsync(TOKEN_KEYS.REFRESH_TOKEN, refreshToken);
-    } else {
-      // await AsyncStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
-      await SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH_TOKEN);
-    }
-
     set({
       accessToken: accessToken || null,
-      refreshToken: refreshToken || null,
+      canRefresh: Boolean(accessToken),
       postLogoutNoticeKey: null,
       me: null,
       meFetchedAt: 0,
@@ -92,8 +73,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // logAuthStore('setTokens', {
     //   hasAccessToken: Boolean(accessToken),
     //   accessToken: debugToken(accessToken || null),
-    //   hasRefreshToken: Boolean(refreshToken),
-    //   refreshToken: debugToken(refreshToken || null),
     // });
   },
 
@@ -102,11 +81,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       // AsyncStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN),
       // AsyncStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN),
       SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS_TOKEN),
-      SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH_TOKEN),
+      SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH_TOKEN), // clean up any legacy stored refresh token
     ]);
     set({
       accessToken: null,
-      refreshToken: null,
+      canRefresh: false,
       me: null,
       meFetchedAt: 0,
       avatarCacheEpoch: Date.now(),
@@ -183,15 +162,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   hydrate: async () => {
-    const [accessToken, refreshToken] = await Promise.all([
-      // AsyncStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN),
-      // AsyncStorage.getItem(TOKEN_KEYS.REFRESH_TOKEN),
-      SecureStore.getItemAsync(TOKEN_KEYS.ACCESS_TOKEN),
-      SecureStore.getItemAsync(TOKEN_KEYS.REFRESH_TOKEN),
-    ]);
+    const accessToken = await SecureStore.getItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
+    // await AsyncStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN),
     set({
       accessToken,
-      refreshToken,
+      canRefresh: Boolean(accessToken),
       me: accessToken ? get().me : null,
       meFetchedAt: accessToken ? get().meFetchedAt : 0,
       avatarCacheEpoch: get().avatarCacheEpoch || Date.now(),
@@ -200,8 +175,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // logAuthStore('hydrate', {
     //   hasAccessToken: Boolean(accessToken),
     //   accessToken: debugToken(accessToken),
-    //   hasRefreshToken: Boolean(refreshToken),
-    //   refreshToken: debugToken(refreshToken),
     // });
   },
 }));

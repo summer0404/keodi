@@ -86,11 +86,17 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+    const currentAccessToken = useAuthStore.getState().accessToken;
+    const originalAuthorization = originalRequest.headers?.Authorization;
+    const expectedAuthorization = currentAccessToken ? `Bearer ${currentAccessToken}` : null;
 
     // Only intercept 401 for non-auth endpoints and non-retried requests
     if (
       error.response?.status !== 401 ||
       originalRequest._retry ||
+      !useAuthStore.getState().canRefresh ||
+      !expectedAuthorization ||
+      originalAuthorization !== expectedAuthorization ||
       isRefreshBypassedRequest(originalRequest.url)
     ) {
       return Promise.reject(error);
@@ -112,12 +118,10 @@ apiClient.interceptors.response.use(
     const { clearTokens, setTokens } = useAuthStore.getState();
 
     try {
-      // Call refresh endpoint without sending refresh token in body.
-      // Backend is expected to read httpOnly cookie and return a new access token.
-      const { data } = await apiClient.post(API_ENDPOINTS.REFRESH);
+      const { data } = await apiClient.post(API_ENDPOINTS.REFRESH, undefined);
 
-      // Update access token in frontend state. Do not store refresh token client-side.
-      await setTokens(data.accessToken, data.refreshToken ?? '');
+      // Update access token in frontend state.
+      await setTokens(data.accessToken);
       processQueue(null, data.accessToken);
 
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;

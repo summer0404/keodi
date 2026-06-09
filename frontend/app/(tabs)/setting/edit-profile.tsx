@@ -171,6 +171,7 @@ export default function EditProfileScreen() {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<EditProfileValidationErrors>({});
   const [submitError, setSubmitError] = useState('');
+  const [avatarError, setAvatarError] = useState('');
 
   const [initialProfile, setInitialProfile] = useState<AuthMeResponse | null>(null);
   const [otherProfile, setOtherProfile] = useState<OtherUserProfile | null>(null);
@@ -336,16 +337,16 @@ export default function EditProfileScreen() {
 
     const selected = result.assets[0];
     if (!selected.uri) {
-      setSubmitError('Unable to read selected image. Please try another one.');
+      setAvatarError(t('errors.imageUnableToRead'));
       return;
     }
 
     if (selected.fileSize && selected.fileSize > MAX_AVATAR_FILE_BYTES) {
-      setSubmitError('Please choose an image smaller than 1MB.');
+      setAvatarError(t('errors.imageSize50MB'));
       return;
     }
 
-    setSubmitError('');
+    setAvatarError('');
     setAvatarSource({ uri: selected.uri });
 
     const mime = selected.mimeType ?? 'image/jpeg';
@@ -395,6 +396,7 @@ export default function EditProfileScreen() {
     const nextPassword = newPassword.trim();
     const nextConfirmPassword = confirmNewPassword.trim();
     setSubmitError('');
+    setAvatarError('');
 
     const normalizedDob = dateOfBirth.trim().length === 0 ? null : toApiDate(dateOfBirth);
 
@@ -466,7 +468,24 @@ export default function EditProfileScreen() {
       }
 
       if (shouldUpdatePicture && avatarFile) {
-        await userService.updatePicture(avatarFile);
+        try {
+          await userService.updatePicture(avatarFile);
+        } catch (picError) {
+          if (axios.isAxiosError(picError)) {
+            const statusCode = picError.response?.status;
+            if (statusCode === 413) {
+              setAvatarError(t('errors.imageTooLarge'));
+            } else if (statusCode === 422) {
+              setAvatarError(t('errors.invalidImageFormat'));
+            } else {
+              setAvatarError(t('errors.unableToUpdateProfile'));
+            }
+          } else {
+            setAvatarError(t('errors.unableToUpdateProfile'));
+          }
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       if (shouldUpdatePassword) {
@@ -555,12 +574,12 @@ export default function EditProfileScreen() {
         }
 
         if (statusCode === 413) {
-          setSubmitError(t('errors.imageTooLarge'));
+          setAvatarError(t('errors.imageTooLarge'));
           return;
         }
 
         if (statusCode === 422) {
-          setSubmitError(t('errors.invalidImageFormat'));
+          setAvatarError(t('errors.invalidImageFormat'));
           return;
         }
       }
@@ -619,6 +638,12 @@ export default function EditProfileScreen() {
                   <Camera size={18} color={Palette.black} strokeWidth={2} />
                 </Pressable>
               )}
+
+              {avatarError ? (
+                <Typography className="mt-4 text-red-500 leading-4 text-center px-4">
+                  {avatarError}
+                </Typography>
+              ) : null}
 
               {!isViewOnly && (
                 <View className="mt-4 w-full items-center">
@@ -713,7 +738,7 @@ export default function EditProfileScreen() {
                   editable={!isViewOnly}
                 />
                 {fieldErrors.username ? (
-                  <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+                  <Typography className="text-red-500 mt-1 ml-1 leading-4">
                     {fieldErrors.username}
                   </Typography>
                 ) : null}
@@ -777,7 +802,7 @@ export default function EditProfileScreen() {
                     editable={!isViewOnly}
                   />
                   {fieldErrors.phoneNumber ? (
-                    <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+                    <Typography className="text-red-500 mt-1 ml-1 leading-4">
                       {fieldErrors.phoneNumber}
                     </Typography>
                   ) : null}
@@ -809,7 +834,7 @@ export default function EditProfileScreen() {
                   </Pressable>
                 </View>
                 {fieldErrors.dateOfBirth ? (
-                  <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+                  <Typography className="text-red-500 mt-1 ml-1 leading-4">
                     {fieldErrors.dateOfBirth}
                   </Typography>
                 ) : null}
@@ -844,7 +869,7 @@ export default function EditProfileScreen() {
                       </Pressable>
                     </View>
                     {fieldErrors.newPassword ? (
-                      <Typography className="text-red-500 text-[11px] mt-1 ml-1 leading-4">
+                      <Typography className="text-red-500 mt-1 ml-1 leading-4">
                         {fieldErrors.newPassword}
                       </Typography>
                     ) : null}

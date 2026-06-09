@@ -72,7 +72,7 @@ export default function LoginScreen() {
       }
 
       const result = await googleLoginMutation.mutateAsync(signInResponse.data.idToken);
-      await setTokens(result.accessToken, '');
+      await setTokens(result.accessToken);
 
       if (hasCompletedCategoryOnboarding) {
         router.replace('/(tabs)');
@@ -136,7 +136,7 @@ export default function LoginScreen() {
         rememberMe,
       } satisfies LoginRequest);
 
-      await setTokens(result.accessToken, rememberMe ? result.refreshToken : '');
+      await setTokens(result.accessToken);
       if (hasCompletedCategoryOnboarding) {
         router.replace('/(tabs)');
       } else {

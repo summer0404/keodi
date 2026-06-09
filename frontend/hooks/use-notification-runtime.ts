@@ -212,6 +212,18 @@ const resolveTemplateKeysByType = (type: string | null) => {
         bodyKey: 'notification.recommendationBody',
         primaryLabelKey: 'notification.explorNow',
       };
+    case 'FRIEND_REQUEST':
+      return {
+        titleKey: 'notification.friendRequestTitle',
+        bodyKey: 'notification.friendRequestBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
+    case 'FRIEND_ACCEPTED':
+      return {
+        titleKey: 'notification.friendAcceptedTitle',
+        bodyKey: 'notification.friendAcceptedBody',
+        primaryLabelKey: 'notification.viewNow',
+      };
     default:
       return {
         titleKey: 'notification.defaultTitle',
@@ -226,11 +238,34 @@ const normalizePath = (path: string | null) => {
     return null;
   }
 
-  if (path.startsWith('/')) {
-    return path;
+  // Remove schema/protocol if present (e.g. frontend:// or keodi://)
+  let cleanPath = path.replace(/^[a-zA-Z0-9+-.]+:\/\//, '');
+
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
   }
 
-  return `/${path}`;
+  // Map backend routes to correct Expo Router routes
+  if (cleanPath === '/friends/requests') {
+    return '/setting/friends?tab=requests';
+  }
+
+  if (cleanPath === '/friends') {
+    return '/setting/friends';
+  }
+
+  const sessionResultsRegex = /^\/group\/session\/([^/]+)\/results$/;
+  const match = cleanPath.match(sessionResultsRegex);
+  if (match) {
+    const sessionId = match[1];
+    return `/(tabs)/group/${sessionId}`;
+  }
+
+  if (cleanPath === '/group' || cleanPath.startsWith('/group?')) {
+    return cleanPath.replace(/^\/group/, '/(tabs)/group');
+  }
+
+  return cleanPath;
 };
 
 const hasVersionParam = (url: string | null): boolean => {
@@ -786,6 +821,7 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         enrichedSenderName ??
         toStringOrNull(payload.nickname) ??
         toStringOrNull(payload.senderName) ??
+        toStringOrNull(payload.accepterName) ??
         toStringOrNull(payload.inviterName) ??
         toStringOrNull(payload.fromName) ??
         toStringOrNull(voteData.nickname) ??
@@ -803,6 +839,7 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
       const senderAvatarUrl =
         enrichedAvatarUrl ??
         toStringOrNull(payload.senderAvatarUrl) ??
+        toStringOrNull(payload.accepterPictureUrl) ??
         toStringOrNull(payload.inviterAvatarUrl) ??
         toStringOrNull(payload.inviterPictureUrl) ??
         toStringOrNull(payload.senderPictureUrl);
@@ -1025,6 +1062,8 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
 
   const toBannerModel = useCallback(
     (parsed: ParsedNotification): NotificationBanner => {
+      const isFriendRequest = parsed.type === 'FRIEND_REQUEST';
+      const isFriendAccepted = parsed.type === 'FRIEND_ACCEPTED';
       const isGroupInvite = parsed.type === 'GROUP_INVITE';
       const isGroupVoteFinalized = parsed.type === 'GROUP_VOTE_FINALIZED';
       const isVoteCast = parsed.type === 'vote.cast';
@@ -1040,7 +1079,13 @@ export function useNotificationRuntime({ accessToken }: RuntimeArgs) {
         ? resolveGroupVoteFinalizedBodyKey(parsed.body)
         : template.bodyKey;
       const forceLocalizedTemplate =
-        isGroupInvite || isGroupVoteFinalized || isVoteCast || isSessionEvent || isCandidateEvent;
+        isGroupInvite ||
+        isGroupVoteFinalized ||
+        isVoteCast ||
+        isSessionEvent ||
+        isCandidateEvent ||
+        isFriendRequest ||
+        isFriendAccepted;
       const i18nValues = {
         name: senderName,
         voterName: parsed.i18nParams.voterName ?? senderName,

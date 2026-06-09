@@ -447,21 +447,27 @@ export default function HomeScreen() {
             />
           </Pressable>
 
-          <View className="flex-row items-center gap-3">
+          <View className="flex-1 ml-4 flex-row items-center justify-end gap-3">
             <Pressable
               onPress={() => {
                 void fetchCurrentLocation({ force: true });
               }}
               disabled={isLocationLoading}
-              className="flex-row items-center gap-1.5"
+              className="flex-row items-center gap-1.5 shrink"
             >
               <MapPin size={14} color={Palette.grey} strokeWidth={2} />
-              <Typography className="text-gray-600">{locationLabel}</Typography>
+              <Typography
+                className="text-gray-600 shrink"
+              >
+                {locationLabel}
+              </Typography>
             </Pressable>
 
-            <HomeNotificationCenter />
+            <View className="shrink-0">
+              <HomeNotificationCenter />
+            </View>
 
-            <Pressable onPress={() => router.push('/setting/edit-profile' as any)}>
+            <Pressable onPress={() => router.push('/setting/edit-profile' as any)} className="shrink-0">
               <View className="h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">
                 <Image
                   source={
