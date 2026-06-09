@@ -16,18 +16,6 @@ const TOKEN_KEYS = {
 const DEFAULT_ME_CACHE_TTL_MS = 60 * 1000;
 let fetchMePromise: Promise<AuthMeResponse | null> | null = null;
 
-const debugToken = (token: string | null) => {
-  if (!token) {
-    return null;
-  }
-
-  if (token.length <= 12) {
-    return `${token.slice(0, 3)}...(${token.length})`;
-  }
-
-  return `${token.slice(0, 6)}...${token.slice(-4)} (${token.length})`;
-};
-
 // const logAuthStore = (event: string, payload: Record<string, unknown>) => {
 //   if (!__DEV__) {
 //     return;
@@ -38,6 +26,7 @@ const debugToken = (token: string | null) => {
 
 interface AuthState {
   accessToken: string | null;
+  canRefresh: boolean;
   postLogoutNoticeKey: string | null;
   me: AuthMeResponse | null;
   meFetchedAt: number;
@@ -56,6 +45,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   accessToken: null,
+  canRefresh: false,
   postLogoutNoticeKey: null,
   me: null,
   meFetchedAt: 0,
@@ -74,6 +64,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
     set({
       accessToken: accessToken || null,
+      canRefresh: Boolean(accessToken),
       postLogoutNoticeKey: null,
       me: null,
       meFetchedAt: 0,
@@ -94,6 +85,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     ]);
     set({
       accessToken: null,
+      canRefresh: false,
       me: null,
       meFetchedAt: 0,
       avatarCacheEpoch: Date.now(),
@@ -174,6 +166,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // await AsyncStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN),
     set({
       accessToken,
+      canRefresh: Boolean(accessToken),
       me: accessToken ? get().me : null,
       meFetchedAt: accessToken ? get().meFetchedAt : 0,
       avatarCacheEpoch: get().avatarCacheEpoch || Date.now(),

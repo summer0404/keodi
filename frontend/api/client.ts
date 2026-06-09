@@ -86,11 +86,17 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+    const currentAccessToken = useAuthStore.getState().accessToken;
+    const originalAuthorization = originalRequest.headers?.Authorization;
+    const expectedAuthorization = currentAccessToken ? `Bearer ${currentAccessToken}` : null;
 
     // Only intercept 401 for non-auth endpoints and non-retried requests
     if (
       error.response?.status !== 401 ||
       originalRequest._retry ||
+      !useAuthStore.getState().canRefresh ||
+      !expectedAuthorization ||
+      originalAuthorization !== expectedAuthorization ||
       isRefreshBypassedRequest(originalRequest.url)
     ) {
       return Promise.reject(error);
